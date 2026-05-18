@@ -1,0 +1,162 @@
+{
+  "project": "District Award Travel",
+  "version": "1.0.0",
+  "last_updated": "2026-05-18",
+  "engineers": {
+    "marcus": {
+      "name": "Marcus Webb",
+      "role": "Lead Backend & API Engineer",
+      "focus": ["backend", "api", "database", "scraping"]
+    },
+    "jordan": {
+      "name": "Jordan Reyes",
+      "role": "Automation & Browser Engineer",
+      "focus": ["automation", "browser", "scraping", "booking"]
+    },
+    "priya": {
+      "name": "Priya Kapoor",
+      "role": "Frontend & Platform Engineer",
+      "focus": ["frontend", "ui", "dashboard", "ux"]
+    }
+  },
+  "backlog": [
+    {
+      "id": "TASK-001",
+      "title": "Build core platform database schema",
+      "assigned_to": "marcus",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Create SQLite database schema for: clients, points_balances (per program per client), award_searches, booking_pipeline, transfer_bonuses, and flight_inventory tables. Use SQLAlchemy ORM models in Python. Include seed data with 3 sample clients.",
+      "acceptance_criteria": [
+        "All tables created with proper foreign keys",
+        "SQLAlchemy models in platform/src/models/",
+        "Migration script in platform/src/migrations/",
+        "Seed data script with 3 sample clients and their points balances",
+        "README section documenting the schema"
+      ],
+      "tech": ["Python", "SQLAlchemy", "SQLite"],
+      "estimated_hours": 3
+    },
+    {
+      "id": "TASK-002",
+      "title": "Build FastAPI backend server with all core routes",
+      "assigned_to": "marcus",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Create a FastAPI server (platform/src/api/server.py) with routes for: GET /clients, POST /clients, GET /clients/{id}/points, POST /points/update, GET /awards/search, GET /pipeline, POST /pipeline/add, GET /transfer-bonuses. All routes return proper JSON. Include CORS for local frontend.",
+      "acceptance_criteria": [
+        "FastAPI server runs on port 8000",
+        "All 8 routes functional and returning mock data",
+        "Pydantic schemas for all request/response models",
+        "Auto-docs at /docs",
+        "requirements.txt updated"
+      ],
+      "tech": ["Python", "FastAPI", "Pydantic"],
+      "estimated_hours": 4
+    },
+    {
+      "id": "TASK-003",
+      "title": "Build award availability scraper for United MileagePlus",
+      "assigned_to": "marcus",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build a Python scraper (platform/src/scrapers/united.py) that queries United MileagePlus award calendar availability. Use requests + BeautifulSoup. Target route: JFK to any Saver award in J or F class. Output structured JSON: {route, date, cabin, miles_required, taxes, available_seats, scraped_at}. Include rate limiting and retry logic.",
+      "acceptance_criteria": [
+        "Scraper runs without crashing on 5 test queries",
+        "Returns structured award data as JSON",
+        "Rate limiting: max 1 request per 3 seconds",
+        "Saves results to tasks/results/united_{date}.json",
+        "Error handling for blocked/rate-limited responses"
+      ],
+      "tech": ["Python", "requests", "BeautifulSoup"],
+      "estimated_hours": 5
+    },
+    {
+      "id": "TASK-004",
+      "title": "Build complete platform dashboard UI",
+      "assigned_to": "priya",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Build the main District Award Travel business dashboard as a single-page HTML/CSS/JavaScript app (platform/public/index.html). Must include: 1) Client list with points balances per program 2) Booking pipeline with kanban-style stages (Searching, Seat Found, Holding, Booked, Complete) 3) Transfer bonus tracker with countdown timers 4) Award search results feed 5) Dark theme matching brand (#080c10 bg, #00ff88 accent). Fetch live data from FastAPI backend at localhost:8000.",
+      "acceptance_criteria": [
+        "All 5 dashboard sections rendered",
+        "Fetches live data from API (with graceful fallback to mock data)",
+        "Dark theme, professional business UI",
+        "Mobile responsive",
+        "Real-time auto-refresh every 30 seconds"
+      ],
+      "tech": ["HTML", "CSS", "JavaScript", "Fetch API"],
+      "estimated_hours": 6
+    },
+    {
+      "id": "TASK-005",
+      "title": "Build client points tracker with transfer math",
+      "assigned_to": "priya",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/public/clients.html — a detailed client management page. Each client shows: all loyalty program balances, current transfer bonus opportunities with math (e.g., 'Transfer 50k Amex now: get 65k ANA = $1,105 value at 1.7cpp'), booking history, and recommended next action. Include a form to add/edit client points balances.",
+      "acceptance_criteria": [
+        "Client list with expandable details",
+        "Transfer bonus math computed and displayed",
+        "Add/edit client form functional",
+        "Value calculations shown in cpp (cents per point)",
+        "Connects to FastAPI backend"
+      ],
+      "tech": ["HTML", "CSS", "JavaScript"],
+      "estimated_hours": 4
+    },
+    {
+      "id": "TASK-006",
+      "title": "Build Playwright login automation for ANA Mileage Club",
+      "assigned_to": "jordan",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/src/automation/ana_login.js using Playwright. Must: 1) Launch headless Chromium 2) Navigate to ana.co.jp award search 3) Handle login with credentials from .env 4) Search for award availability on a given route/date 5) Extract available seats as structured JSON 6) Handle 2FA if present (log warning, save screenshot) 7) Use playwright-extra with stealth plugin to avoid bot detection.",
+      "acceptance_criteria": [
+        "Script runs headlessly end-to-end",
+        "Extracts award seat data as JSON",
+        "Stealth plugin active",
+        "Screenshot saved on any error for debugging",
+        ".env used for credentials (never hardcoded)",
+        "package.json and node_modules setup included"
+      ],
+      "tech": ["Node.js", "Playwright", "playwright-extra", "puppeteer-extra-plugin-stealth"],
+      "estimated_hours": 5
+    },
+    {
+      "id": "TASK-007",
+      "title": "Build transfer bonus monitor for all major issuers",
+      "assigned_to": "jordan",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/src/automation/transfer_monitor.js — a Node.js script that checks all known credit card transfer bonus promotions. Maintain a JSON database (tasks/transfer_bonuses.json) of current bonuses with: issuer, to_program, bonus_percent, expires_date, last_verified. Scrape or check known bonus pages for Amex, Chase, Capital One, Citi. Alert if new bonus detected by writing to tasks/alerts.json.",
+      "acceptance_criteria": [
+        "Checks all 4 major issuers",
+        "Updates transfer_bonuses.json with current data",
+        "Detects NEW bonuses vs previously known",
+        "Writes to alerts.json for new discoveries",
+        "Runs as a standalone cron-able script"
+      ],
+      "tech": ["Node.js", "axios", "cheerio"],
+      "estimated_hours": 4
+    },
+    {
+      "id": "TASK-008",
+      "title": "Build nightly orchestrator report email",
+      "assigned_to": "marcus",
+      "priority": "medium",
+      "status": "pending",
+      "description": "Build platform/src/reports/morning_report.py — a script that compiles everything the agents found overnight and formats it as an HTML email summary. Include: new award seats found, transfer bonuses detected, clients with bookable opportunities, pipeline status changes, and any errors. Send via SMTP (use environment variables for credentials). Run as final step of nightly orchestration.",
+      "acceptance_criteria": [
+        "Pulls data from all results JSON files",
+        "Generates clean HTML email",
+        "Sends via SMTP with env-var credentials",
+        "Subject line: 'DAT Morning Brief — {date} — {N} opportunities found'",
+        "Falls back to saving HTML to logs/ if SMTP not configured"
+      ],
+      "tech": ["Python", "smtplib", "Jinja2"],
+      "estimated_hours": 3
+    }
+  ],
+  "completed": []
+}

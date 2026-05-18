@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>District Award Travel — Company Roster</title>
+<style>
+  :root {
+    --bg: #080c10;
+    --bg2: #0d1117;
+    --card: #0f1621;
+    --card2: #141e2e;
+    --border: #1a2540;
+    --green: #00ff88;
+    --blue: #00aaff;
+    --purple: #9b59ff;
+    --yellow: #ffd700;
+    --orange: #ff8c00;
+    --cyan: #00ffff;
+    --red: #ff4466;
+    --gold: #ffc107;
+    --text: #e8edf5;
+    --muted: #7a8ba0;
+    --dim: #3d5068;
+    --mono: 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; }
+
+  /* scanline */
+  body::before {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,.01) 2px, rgba(0,255,136,.01) 4px);
+  }
+
+  header {
+    background: rgba(8,12,16,.97); border-bottom: 1px solid var(--border);
+    padding: 0 40px; height: 68px; display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-box {
+    width: 38px; height: 38px; background: linear-gradient(135deg,var(--green),#00cc66);
+    border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    font-size: 19px; box-shadow: 0 0 18px rgba(0,255,136,.3);
+  }
+  .logo-text .t1 { font-size: 13px; font-weight: 700; color: var(--green); letter-spacing: .08em; text-transform: uppercase; }
+  .logo-text .t2 { font-size: 10px; color: var(--muted); letter-spacing: .12em; font-family: var(--mono); }
+
+  .header-right { display: flex; align-items: center; gap: 20px; }
+  .hstat { font-family: var(--mono); font-size: 11px; }
+  .hstat .l { color: var(--dim); }
+  .hstat .v { color: var(--green); font-weight: 700; }
+  .live-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,255,136,.07); border: 1px solid rgba(0,255,136,.22);
+    border-radius: 20px; padding: 4px 12px; font-family: var(--mono); font-size: 10px; color: var(--green);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.85)} }
+
+  .wrap { max-width: 1500px; margin: 0 auto; padding: 36px 32px 60px; }
+
+  /* page header */
+  .page-head { margin-bottom: 36px; }
+  .page-head h1 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; }
+  .page-head h1 span { color: var(--green); }
+  .page-head p { margin-top: 6px; color: var(--muted); font-size: 13px; max-width: 680px; line-height: 1.6; }
+
+  /* tier labels */
+  .tier-label {
+    display: flex; align-items: center; gap: 14px;
+    font-family: var(--mono); font-size: 10px; color: var(--green);
+    text-transform: uppercase; letter-spacing: .14em;
+    margin: 36px 0 16px;
+  }
+  .tier-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .tier-count { background: rgba(0,255,136,.1); border: 1px solid rgba(0,255,136,.2); border-radius: 10px; padding: 2px 8px; font-size: 9px; }
+
+  /* grid */
+  .grid { display: grid; gap: 14px; }
+  .grid-1 { grid-template-columns: repeat(auto-fill, minmax(340px,1fr)); }
+  .grid-eng { grid-template-columns: repeat(3,1fr); }
+  @media(max-width:900px){ .grid-eng { grid-template-columns: 1fr; } }
+
+  /* card */
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 13px;
+    padding: 20px; position: relative; overflow: hidden; cursor: default;
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+  }
+  .card:hover { border-color: rgba(0,255,136,.3); transform: translateY(-2px); box-shadow: 0 10px 32px rgba(0,0,0,.5); }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 13px 13px 0 0;
+    background: var(--accent, rgba(0,255,136,.5));
+  }
+
+  /* ceo badge */
+  .ceo-badge {
+    position: absolute; top: 14px; right: 14px;
+    background: linear-gradient(135deg,#b8860b,#ffd700,#b8860b);
+    color: #000; font-size: 8px; font-weight: 800; letter-spacing: .1em;
+    padding: 2px 8px; border-radius: 10px; text-transform: uppercase;
+  }
+  .ai-badge {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(0,170,255,.15); border: 1px solid rgba(0,170,255,.3);
+    color: var(--blue); font-size: 8px; font-weight: 700; letter-spacing: .08em;
+    padding: 2px 8px; border-radius: 10px; font-family: var(--mono);
+  }
+
+  .card-top { display: flex; align-items: flex-start; gap: 13px; margin-bottom: 14px; }
+  .avatar {
+    width: 48px; height: 48px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0; border: 1px solid var(--avatar-border, rgba(0,255,136,.25));
+    background: var(--avatar-bg, rgba(0,255,136,.08));
+  }
+  .card-identity { flex: 1; min-width: 0; padding-right: 70px; }
+  .card-name { font-size: 15px; font-weight: 700; }
+  .card-title { font-size: 10px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+  .card-dept {
+    display: inline-block; margin-top: 5px;
+    font-family: var(--mono); font-size: 8px; letter-spacing: .08em;
+    padding: 2px 7px; border-radius: 4px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--border); color: var(--dim);
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 13px 0; }
+
+  .focus-label { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: .1em; font-family: var(--mono); margin-bottom: 5px; }
+  .focus-text { font-size: 11px; color: var(--muted); line-height: 1.55; }
+
+  .card-footer { margin-top: 14px; display: flex; align-items: center; justify-content: space-between; }
+  .kpi-wrap { flex: 1; }
+  .kpi-label { font-size: 8px; color: var(--dim); font-family: var(--mono); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
+  .kpi-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+  .kpi-tag { font-family: var(--mono); font-size: 9px; padding: 2px 7px; border-radius: 4px; background: rgba(255,255,255,.03); border: 1px solid var(--border); color: var(--dim); }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 5px; white-space: nowrap; flex-shrink: 0;
+    font-family: var(--mono); font-size: 9px; padding: 3px 9px; border-radius: 20px;
+    background: rgba(0,255,136,.07); border: 1px solid rgba(0,255,136,.18); color: var(--green);
+  }
+  .status-pill.blue { background: rgba(0,170,255,.07); border-color: rgba(0,170,255,.2); color: var(--blue); }
+  .status-pill.purple { background: rgba(155,89,255,.07); border-color: rgba(155,89,255,.2); color: var(--purple); }
+  .status-pill.yellow { background: rgba(255,215,0,.07); border-color: rgba(255,215,0,.2); color: var(--yellow); }
+  .status-pill.cyan { background: rgba(0,255,255,.07); border-color: rgba(0,255,255,.2); color: var(--cyan); }
+  .status-pill.orange { background: rgba(255,140,0,.07); border-color: rgba(255,140,0,.2); color: var(--orange); }
+  .sdot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: pulse 1.4s ease-in-out infinite; }
+
+  /* reports-to chain */
+  .reports-to { font-size: 9px; color: var(--dim); font-family: var(--mono); margin-top: 8px; }
+  .reports-to span { color: var(--muted); }
+
+  /* eng card special */
+  .eng-card { border-color: rgba(0,170,255,.2); }
+  .eng-card::before { background: rgba(0,170,255,.5); }
+  .active-hours { display: flex; align-items: center; gap: 6px; margin-top: 10px; font-family: var(--mono); font-size: 10px; color: var(--blue); }
+  .active-hours::before { content: '⏱'; }
+
+  /* org chart hint */
+  .org-flow {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 10px; color: var(--dim);
+    margin-bottom: 28px; padding: 12px 16px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .org-node { padding: 4px 10px; border-radius: 6px; background: rgba(0,255,136,.06); border: 1px solid rgba(0,255,136,.15); color: var(--green); }
+  .org-arr { color: var(--dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-box">✈</div>
+    <div class="logo-text">
+      <div class="t1">District Award Travel</div>
+      <div class="t2">Company Roster &amp; Org Structure</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="hstat"><span class="l">HEADCOUNT </span><span class="v" id="hc">16</span></div>
+    <div class="hstat"><span class="l">AI ENGINEERS </span><span class="v">3</span></div>
+    <div class="hstat"><span class="l">DEPTS </span><span class="v">9</span></div>
+    <div class="live-pill"><div class="dot"></div>ALL SYSTEMS ACTIVE</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="page-head">
+    <h1>District Award Travel — <span>Full Company Roster</span></h1>
+    <p>Every leader, engineer, and department head across the District Award Travel autonomous operations platform. Famous executives hold strategic seats. Three AI engineers build the product nightly.</p>
+  </div>
+
+  <!-- Org chain -->
+  <div class="org-flow">
+    <span style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.1em;">Reporting Chain:</span>
+    <span class="org-node">Nick Jensen · CEO</span>
+    <span class="org-arr">→</span>
+    <span class="org-node">Elon · CTO</span>
+    <span class="org-arr">/</span>
+    <span class="org-node">Warren · CFO</span>
+    <span class="org-arr">/</span>
+    <span class="org-node">Steve · CXO</span>
+    <span class="org-arr">/</span>
+    <span class="org-node">Mark · Growth</span>
+    <span class="org-arr">/</span>
+    <span class="org-node">Reed · Product</span>
+    <span class="org-arr">→</span>
+    <span class="org-node">VPs &amp; Directors</span>
+    <span class="org-arr">→</span>
+    <span class="org-node">AI Engineers</span>
+  </div>
+
+  <!-- C-SUITE -->
+  <div class="tier-label">C-Suite Executive Leadership <span class="tier-count">4 members</span></div>
+  <div class="grid grid-1" id="csuite-grid"></div>
+
+  <!-- VP LEVEL -->
+  <div class="tier-label">VP &amp; Director Level <span class="tier-count">12 members</span></div>
+  <div class="grid grid-1" id="vp-grid"></div>
+
+  <!-- ENGINEERS -->
+  <div class="tier-label">AI Engineering Team — Active Nightly <span class="tier-count">3 agents</span></div>
+  <div class="grid grid-eng" id="eng-grid"></div>
+
+</div>
+
+<script>
+const ORG = {
+  csuite: [
+    {
+      name:"Nick Jensen", title:"Chief Executive Officer & Chief Booking Automation Officer",
+      dept:"Executive", emoji:"🎯", accent:"rgba(0,255,136,.5)",
+      avatarBg:"rgba(0,255,136,.1)", avatarBorder:"rgba(0,255,136,.3)",
+      statusClass:"", statusText:"🟢 Active · CEO",
+      focus:"Overall company vision, client relationships, overarching automation strategy, and final approval on all bookings above 200k miles. The founding operator of District Award Travel.",
+      kpis:["Client Satisfaction","Miles Redeemed/Mo","System Uptime"],
+      reportsTo:null, isCeo:true
+    },
+    {
+      name:"Elon Musk", title:"Chief Technology Officer",
+      dept:"Technology", emoji:"🚀", accent:"rgba(255,140,0,.5)",
+      avatarBg:"rgba(255,140,0,.1)", avatarBorder:"rgba(255,140,0,.3)",
+      statusClass:"orange", statusText:"🚀 Architecting Stack",
+      focus:"End-to-end technical architecture. Moves fast, cuts unnecessary systems, demands every automation be 10x faster than the prior version. Owns the infrastructure roadmap and sets engineering velocity.",
+      kpis:["Latency (ms)","Deploy Frequency","Engineer Output/Wk"],
+      reportsTo:"Nick Jensen", isCeo:true
+    },
+    {
+      name:"Warren Buffett", title:"Chief Financial Officer",
+      dept:"Finance & Strategy", emoji:"💰", accent:"rgba(255,215,0,.5)",
+      avatarBg:"rgba(255,215,0,.1)", avatarBorder:"rgba(255,215,0,.3)",
+      statusClass:"yellow", statusText:"💰 Reviewing Margins",
+      focus:"Point valuation economics, margin per booking, ROI on every search query. Ensures no compute cycle is spent on a route that does not meet the minimum cents-per-point threshold. Capital allocation across loyalty programs.",
+      kpis:["Avg cpp/booking","Cost/API Call","Margin/Client"],
+      reportsTo:"Nick Jensen", isCeo:true
+    },
+    {
+      name:"Steve Jobs", title:"Chief Experience Officer",
+      dept:"Client Experience", emoji:"🍎", accent:"rgba(255,255,255,.3)",
+      avatarBg:"rgba(255,255,255,.05)", avatarBorder:"rgba(255,255,255,.15)",
+      statusClass:"", statusText:"🍎 Refining Experience",
+      focus:"Every client touchpoint from first consultation to landing in First Class. Owns dashboard UX, morning briefing design, booking confirmation flow, and post-travel follow-up. If it feels clunky, Steve removes it.",
+      kpis:["Client NPS","Dashboard Score","Time-to-Booking"],
+      reportsTo:"Nick Jensen", isCeo:true
+    }
+  ],
+
+  vps: [
+    {
+      name:"Satya Nadella", title:"VP of Platform & Cloud Operations",
+      dept:"Platform Engineering", emoji:"☁️", accent:"rgba(0,170,255,.5)",
+      avatarBg:"rgba(0,170,255,.1)", avatarBorder:"rgba(0,170,255,.3)",
+      statusClass:"blue", statusText:"☁️ Scaling Platform",
+      focus:"Tech stack stability, all third-party integrations, and the roadmap to cloud-hybrid architecture. Ensures nothing breaks when the team scales from 10 to 1,000 clients.",
+      kpis:["Uptime %","Integration Rate","Deploy Freq"],
+      reportsTo:"Elon Musk"
+    },
+    {
+      name:"Mark Zuckerberg", title:"VP of Growth & Data Intelligence",
+      dept:"Growth", emoji:"📊", accent:"rgba(0,170,255,.4)",
+      avatarBg:"rgba(0,170,255,.08)", avatarBorder:"rgba(0,170,255,.2)",
+      statusClass:"blue", statusText:"📊 Analyzing Funnels",
+      focus:"Client acquisition funnel, behavioral data on which routes clients actually book vs. pass on, A/B testing the morning briefing, and building the referral network without paid advertising.",
+      kpis:["Acquisition Cost","Referral Rate","Route Accept %"],
+      reportsTo:"Nick Jensen"
+    },
+    {
+      name:"Reed Hastings", title:"VP of Product",
+      dept:"Product", emoji:"🎬", accent:"rgba(220,20,60,.5)",
+      avatarBg:"rgba(220,20,60,.08)", avatarBorder:"rgba(220,20,60,.25)",
+      statusClass:"orange", statusText:"🎬 Roadmap Review",
+      focus:"Owns the product roadmap. Decides what gets built next based on client usage data and business leverage. Ruthlessly deprioritizes low-impact features. Runs weekly sprint reviews with the engineering team.",
+      kpis:["Feature Adoption","Backlog Velocity","Features Shipped/Mo"],
+      reportsTo:"Nick Jensen"
+    },
+    {
+      name:"Brian Chesky", title:"VP of Client Partnerships & VIP Services",
+      dept:"Client Success", emoji:"🏆", accent:"rgba(255,215,0,.4)",
+      avatarBg:"rgba(255,215,0,.08)", avatarBorder:"rgba(255,215,0,.2)",
+      statusClass:"yellow", statusText:"🏆 Managing VIPs",
+      focus:"High-touch relationships with top-tier clients. Manages VIP service layer, custom award search requests, white-glove booking support, and partnership deals with travel agencies.",
+      kpis:["VIP Retention %","Custom Booking Rate","Partnership Revenue"],
+      reportsTo:"Steve Jobs"
+    },
+    {
+      name:"Jack Dorsey", title:"VP of Systems Simplicity & Infrastructure Minimalism",
+      dept:"Engineering", emoji:"⬛", accent:"rgba(255,255,255,.2)",
+      avatarBg:"rgba(255,255,255,.04)", avatarBorder:"rgba(255,255,255,.1)",
+      statusClass:"", statusText:"⬛ Pruning Stack",
+      focus:"Actively fights complexity. Quarterly audits the entire stack and removes anything that does not produce direct client value. Owns the principle that fewer moving parts beats more features every time.",
+      kpis:["Lines Removed/Qtr","Dependency Count","MTTR"],
+      reportsTo:"Elon Musk"
+    },
+    {
+      name:"Bill Gates", title:"Principal Inventory Systems Architect",
+      dept:"Data & Infrastructure", emoji:"🗄️", accent:"rgba(0,170,255,.5)",
+      avatarBg:"rgba(0,170,255,.1)", avatarBorder:"rgba(0,170,255,.3)",
+      statusClass:"blue", statusText:"🔵 Syncing Alliance Data",
+      focus:"Normalizing incoming award availability data, optimizing multi-carrier route caching, and ensuring long-term code integrity for heavy global alliance searches. Owns the database schema.",
+      kpis:["DB Query Time","Cache Hit Rate","Data Integrity Score"],
+      reportsTo:"Satya Nadella"
+    },
+    {
+      name:"Tim Cook", title:"VP of Transfer Partner & Point Operations",
+      dept:"Operations", emoji:"💳", accent:"rgba(255,215,0,.5)",
+      avatarBg:"rgba(255,215,0,.1)", avatarBorder:"rgba(255,215,0,.3)",
+      statusClass:"yellow", statusText:"🟡 Calibrating Transfers",
+      focus:"Monitoring transfer times across all major issuers, automating transfer-bonus tracking, and minimizing delays for time-sensitive award holds. Owns Amex, Chase, Capital One, and Citi relationships.",
+      kpis:["Avg Transfer Time","Bonus Capture Rate","Transfer Fail Rate"],
+      reportsTo:"Warren Buffett"
+    },
+    {
+      name:"Jeff Bezos", title:"VP of Scraping Infrastructure & Scalability",
+      dept:"Infrastructure", emoji:"⚙️", accent:"rgba(255,140,0,.5)",
+      avatarBg:"rgba(255,140,0,.1)", avatarBorder:"rgba(255,140,0,.3)",
+      statusClass:"orange", statusText:"🟢 Monitoring (42ms)",
+      focus:"Distributed scraping fleet, minimizing latency, auto-scaling Docker containers during peak award release windows, and maintaining scrapers that stay ahead of airline bot detection.",
+      kpis:["Scrape Success %","Pipeline Latency","IP Ban Rate"],
+      reportsTo:"Elon Musk"
+    },
+    {
+      name:"Sam Altman", title:"VP of AI Award Pricing & Strategy",
+      dept:"AI & Intelligence", emoji:"🧠", accent:"rgba(155,89,255,.5)",
+      avatarBg:"rgba(155,89,255,.1)", avatarBorder:"rgba(155,89,255,.3)",
+      statusClass:"purple", statusText:"🟣 Tuning LLM Models",
+      focus:"Deploying local LLMs to analyze mixed-cabin itineraries, evaluate hidden-city opportunities, and determine maximum point yield. Every EXECUTE/SKIP decision is mathematically grounded.",
+      kpis:["Valuation Accuracy %","EXECUTE Rate","Cost/Inference"],
+      reportsTo:"Elon Musk"
+    },
+    {
+      name:"Jensen Huang", title:"VP of Real-Time Compute & Route Inference",
+      dept:"AI & Intelligence", emoji:"⚡", accent:"rgba(0,255,255,.5)",
+      avatarBg:"rgba(0,255,255,.1)", avatarBorder:"rgba(0,255,255,.3)",
+      statusClass:"cyan", statusText:"⚡ Accelerating Matrices",
+      focus:"GPU-accelerated route matrix computations, vector database searches for complex open-jaw itineraries, and thousands of concurrent route calculations per second. Owns all compute decisions.",
+      kpis:["Compute Time (ms)","Routes/Second","GPU Utilization %"],
+      reportsTo:"Elon Musk"
+    },
+    {
+      name:"Andrew Ng", title:"Director of Agentic Booking Frameworks",
+      dept:"AI & Intelligence", emoji:"🧪", accent:"rgba(255,140,0,.4)",
+      avatarBg:"rgba(255,140,0,.08)", avatarBorder:"rgba(255,140,0,.2)",
+      statusClass:"orange", statusText:"🧪 Testing Booking Flows",
+      focus:"Agentic AI that navigates airline checkout flows end-to-end — injecting passenger data, holding seats, managing multi-pax splits, and completing bookings without human intervention.",
+      kpis:["Booking Auto Rate","Agent Error Rate","Seat-Hold Convert %"],
+      reportsTo:"Sam Altman"
+    },
+    {
+      name:"Naval Ravikant", title:"Director of Search Philosophy & Leverage",
+      dept:"Strategy", emoji:"♾️", accent:"rgba(0,255,136,.4)",
+      avatarBg:"rgba(0,255,136,.08)", avatarBorder:"rgba(0,255,136,.2)",
+      statusClass:"", statusText:"🟢 Pruning Search Trees",
+      focus:"Maximum value per compute cycle. Audits search trees for redundancy, prunes low-yield queries, and maintains the philosophical framework keeping the entire system lean and high-leverage.",
+      kpis:["Yield/API Call","Cost/Discovery","Pruning Efficiency"],
+      reportsTo:"Reed Hastings"
+    }
+  ],
+
+  engineers: [
+    {
+      name:"Marcus Webb", title:"Lead Backend & API Engineer", emoji:"💻",
+      focus:"Python backend, FastAPI server, database schema, airline award scrapers, morning report emailer.",
+      hours:"10:00 PM — 6:00 AM", reportsTo:"Elon Musk"
+    },
+    {
+      name:"Jordan Reyes", title:"Automation & Browser Engineer", emoji:"🤖",
+      focus:"Node.js + Playwright automation for ANA, BA, and Air Canada portals. Transfer bonus monitoring. Seat-hold scripts.",
+      hours:"10:00 PM — 6:00 AM", reportsTo:"Elon Musk"
+    },
+    {
+      name:"Priya Kapoor", title:"Frontend & Platform Engineer", emoji:"🎨",
+      focus:"Business dashboard UI, client management pages, booking pipeline, transfer bonus tracker — all dark-theme HTML/CSS/JS.",
+      hours:"10:00 PM — 6:00 AM", reportsTo:"Satya Nadella"
+    }
+  ]
+};
+
+function makeCard(p, isCeo=false) {
+  const rt = p.reportsTo ? `<div class="reports-to">Reports to: <span>${p.reportsTo}</span></div>` : '';
+  const badge = isCeo ? `<div class="ceo-badge">★ Executive</div>` : `<div class="ceo-badge" style="background:linear-gradient(135deg,#1a2540,#263554);color:#7a8ba0;">${p.dept}</div>`;
+  const kpis = (p.kpis||[]).map(k=>`<span class="kpi-tag">${k}</span>`).join('');
+  const sc = p.statusClass || '';
+  return `
+    <div class="card" style="--accent:${p.accent}">
+      ${badge}
+      <div class="card-top">
+        <div class="avatar" style="background:${p.avatarBg};border-color:${p.avatarBorder}">${p.emoji}</div>
+        <div class="card-identity">
+          <div class="card-name">${p.name}</div>
+          <div class="card-title">${p.title}</div>
+          <span class="card-dept">${p.dept}</span>
+          ${rt}
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="focus-label">Core Focus</div>
+      <div class="focus-text">${p.focus}</div>
+      <div class="card-footer">
+        <div class="kpi-wrap">
+          <div class="kpi-label">KPIs</div>
+          <div class="kpi-tags">${kpis}</div>
+        </div>
+        <div class="status-pill ${sc}"><div class="sdot"></div>${p.statusText}</div>
+      </div>
+    </div>
+  `;
+}
+
+function makeEngCard(e) {
+  return `
+    <div class="card eng-card">
+      <div class="ai-badge">AI AGENT</div>
+      <div class="card-top">
+        <div class="avatar" style="background:rgba(0,170,255,.1);border-color:rgba(0,170,255,.3)">${e.emoji}</div>
+        <div class="card-identity">
+          <div class="card-name">${e.name}</div>
+          <div class="card-title">${e.title}</div>
+          <span class="card-dept">Engineering</span>
+          <div class="reports-to">Reports to: <span>${e.reportsTo}</span></div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="focus-label">Builds</div>
+      <div class="focus-text">${e.focus}</div>
+      <div class="active-hours">${e.hours} — Active coding window</div>
+      <div class="card-footer">
+        <div class="status-pill blue"><div class="sdot"></div>💻 Coding Nightly</div>
+      </div>
+    </div>
+  `;
+}
+
+document.getElementById('csuite-grid').innerHTML = ORG.csuite.map(p=>makeCard(p,true)).join('');
+document.getElementById('vp-grid').innerHTML = ORG.vps.map(p=>makeCard(p,false)).join('');
+document.getElementById('eng-grid').innerHTML = ORG.engineers.map(makeEngCard).join('');
+document.getElementById('hc').textContent = ORG.csuite.length + ORG.vps.length + ORG.engineers.length;
+</script>
+</body>
+</html>

@@ -1,0 +1,224 @@
+{
+  "company": "District Award Travel",
+  "founded": "2025",
+  "mission": "Deliver ultra-premium award flight experiences to clients using autonomous AI infrastructure — entirely on open-source technology.",
+  "owner": "Nick Jensen",
+
+  "c_suite": [
+    {
+      "id": "nick",
+      "name": "Nick Jensen",
+      "title": "Chief Executive Officer & Chief Booking Automation Officer",
+      "department": "Executive",
+      "emoji": "🎯",
+      "reports_to": null,
+      "focus": "Overall company vision, client relationships, overarching automation strategy, and final approval on all bookings above 200k miles.",
+      "kpi": "Client satisfaction score, total miles redeemed per month, system uptime",
+      "status": "🟢 Active"
+    },
+    {
+      "id": "elon",
+      "name": "Elon Musk",
+      "title": "Chief Technology Officer",
+      "department": "Technology",
+      "emoji": "🚀",
+      "reports_to": "nick",
+      "focus": "End-to-end technical architecture. Moves fast, cuts unnecessary systems, demands every automation be 10x faster than the prior version. Owns the infrastructure roadmap and sets engineering velocity standards.",
+      "kpi": "System latency, deployment frequency, engineer output per week",
+      "status": "🟢 Active"
+    },
+    {
+      "id": "warren",
+      "name": "Warren Buffett",
+      "title": "Chief Financial Officer",
+      "department": "Finance & Strategy",
+      "emoji": "💰",
+      "reports_to": "nick",
+      "focus": "Point valuation economics, margin per booking, ROI analysis on every search query executed. Ensures no compute cycle is spent on a route that does not meet a minimum cents-per-point threshold. Capital allocation across loyalty programs.",
+      "kpi": "Average cpp (cents per point) per booking, cost per API call, margin per client",
+      "status": "🟢 Active"
+    },
+    {
+      "id": "steve",
+      "name": "Steve Jobs",
+      "title": "Chief Experience Officer",
+      "department": "Client Experience",
+      "emoji": "🍎",
+      "reports_to": "nick",
+      "focus": "Every client touchpoint from first consultation call to the moment they land in a First Class suite. Owns the morning briefing design, the dashboard UX, the booking confirmation flow, and the post-travel follow-up. If it feels clunky, Steve removes it.",
+      "kpi": "Client NPS, dashboard usability score, time-to-booking from first contact",
+      "status": "🟢 Active"
+    }
+  ],
+
+  "vp_level": [
+    {
+      "id": "satya",
+      "name": "Satya Nadella",
+      "title": "VP of Platform & Cloud Operations",
+      "department": "Platform Engineering",
+      "emoji": "☁️",
+      "reports_to": "elon",
+      "focus": "Owns the tech stack stability, all third-party integrations, and the path to eventually moving the self-hosted system to a scalable cloud-hybrid architecture. Ensures nothing breaks when the team scales from 10 clients to 1,000.",
+      "kpi": "System uptime %, integration success rate, deploy frequency",
+      "status": "🟢 Active"
+    },
+    {
+      "id": "mark",
+      "name": "Mark Zuckerberg",
+      "title": "VP of Growth & Data Intelligence",
+      "department": "Growth",
+      "emoji": "📊",
+      "reports_to": "nick",
+      "focus": "Client acquisition funnel, behavioral data on which award routes clients actually book vs. pass on, A/B testing the morning briefing format, and building the referral network to scale the client base aggressively without paid advertising.",
+      "kpi": "Client acquisition cost, referral conversion rate, route acceptance rate per client",
+      "status": "🟢 Active"
+    },
+    {
+      "id": "reed",
+      "name": "Reed Hastings",
+      "title": "VP of Product",
+      "department": "Product",
+      "emoji": "🎬",
+      "reports_to": "nick",
+      "focus": "Owns the product roadmap. Decides what gets built next based on client usage data, business leverage, and what creates the biggest competitive moat. Ruthlessly deprioritizes low-impact features. Runs weekly sprint reviews.",
+      "kpi": "Feature adoption rate, backlog velocity, client-requested features shipped per month",
+      "status": "🟢 Active"
+    },
+    {
+      "id": "brian",
+      "name": "Brian Chesky",
+      "title": "VP of Client Partnerships & VIP Services",
+      "department": "Client Success",
+      "emoji": "🏆",
+      "reports_to": "steve",
+      "focus": "High-touch relationships with top-tier clients. Manages the VIP service layer, custom award search requests, white-glove booking support, and partnership deals with travel agencies and corporate travel managers.",
+      "kpi": "VIP client retention %, custom booking completion rate, partnership revenue",
+      "status": "🟢 Active"
+    },
+    {
+      "id": "jack",
+      "name": "Jack Dorsey",
+      "title": "VP of Systems Simplicity & Infrastructure Minimalism",
+      "department": "Engineering",
+      "emoji": "⬛",
+      "reports_to": "elon",
+      "focus": "Actively fights complexity. Every quarter, audits the entire stack and removes anything that does not directly produce client value. Owns the principle that a system with fewer moving parts is more reliable than one with more features. Keeps the architecture lean.",
+      "kpi": "Lines of code removed per quarter, dependency count, mean time to recovery",
+      "status": "🟢 Active"
+    },
+    {
+      "id": "bill",
+      "name": "Bill Gates",
+      "title": "Principal Inventory Systems Architect",
+      "department": "Data & Infrastructure",
+      "emoji": "🗄️",
+      "reports_to": "satya",
+      "focus": "Normalizing incoming award availability data, optimizing multi-carrier route caching, and ensuring long-term code integrity for heavy global alliance searches. Owns the database schema and data quality standards.",
+      "kpi": "DB query time, cache hit rate, data integrity score",
+      "status": "🔵 Syncing"
+    },
+    {
+      "id": "tim",
+      "name": "Tim Cook",
+      "title": "VP of Transfer Partner & Point Operations",
+      "department": "Operations",
+      "emoji": "💳",
+      "reports_to": "warren",
+      "focus": "Monitoring transfer times across all major issuers, automating transfer-bonus tracking, and minimizing transfer delays for time-sensitive award holds. Owns relationships with Amex, Chase, Capital One, and Citi transfer desks.",
+      "kpi": "Average transfer time, bonus capture rate, transfer failure rate",
+      "status": "🟡 Calibrating"
+    },
+    {
+      "id": "jeff",
+      "name": "Jeff Bezos",
+      "title": "VP of Scraping Infrastructure & Scalability",
+      "department": "Infrastructure",
+      "emoji": "⚙️",
+      "reports_to": "elon",
+      "focus": "Running the distributed scraping fleet at scale. Minimizing latency, auto-scaling Docker containers during peak award release windows, and maintaining scrapers that stay ahead of airline bot detection systems.",
+      "kpi": "Scrape success rate, pipeline latency (ms), IP ban rate",
+      "status": "🟢 Monitoring (42ms)"
+    },
+    {
+      "id": "sam",
+      "name": "Sam Altman",
+      "title": "VP of AI Award Pricing & Strategy",
+      "department": "AI & Intelligence",
+      "emoji": "🧠",
+      "reports_to": "elon",
+      "focus": "Deploying local LLMs to analyze mixed-cabin itineraries, evaluate hidden-city opportunities, and determine maximum point yield. Ensures every EXECUTE/SKIP decision is mathematically grounded and explainable.",
+      "kpi": "Valuation accuracy %, EXECUTE conversion rate, cost per AI inference",
+      "status": "🟣 Tuning Models"
+    },
+    {
+      "id": "jensen",
+      "name": "Jensen Huang",
+      "title": "VP of Real-Time Compute & Route Inference",
+      "department": "AI & Intelligence",
+      "emoji": "⚡",
+      "reports_to": "elon",
+      "focus": "GPU-accelerated route matrix computations, vector database searches for complex open-jaw itineraries, and handling thousands of concurrent route calculations per second. Owns all compute hardware decisions.",
+      "kpi": "Matrix compute time (ms), routes/second throughput, GPU utilization %",
+      "status": "⚡ Accelerating"
+    },
+    {
+      "id": "andrew",
+      "name": "Andrew Ng",
+      "title": "Director of Agentic Booking Frameworks",
+      "department": "AI & Intelligence",
+      "emoji": "🧪",
+      "reports_to": "sam",
+      "focus": "Agentic AI systems that navigate airline checkout flows end-to-end — injecting passenger data, holding seats, managing multi-pax splits, and completing bookings without human intervention.",
+      "kpi": "Booking automation success rate, agent error rate, seat-hold conversion %",
+      "status": "🧪 Testing Scripts"
+    },
+    {
+      "id": "naval",
+      "name": "Naval Ravikant",
+      "title": "Director of Search Philosophy & Leverage",
+      "department": "Strategy",
+      "emoji": "♾️",
+      "reports_to": "reed",
+      "focus": "Ensuring maximum value per compute cycle. Audits search trees for redundancy, prunes low-yield queries, and maintains the philosophical framework that keeps the entire system lean and high-leverage.",
+      "kpi": "Search yield per API call, compute cost per discovery, pruning efficiency",
+      "status": "🟢 Optimizing"
+    }
+  ],
+
+  "engineering_team": [
+    {
+      "id": "marcus",
+      "name": "Marcus Webb",
+      "title": "Lead Backend & API Engineer",
+      "department": "Engineering",
+      "emoji": "💻",
+      "reports_to": "elon",
+      "type": "AI_AGENT",
+      "active_hours": "10:00 PM — 6:00 AM",
+      "status": "🔵 Coding Nightly"
+    },
+    {
+      "id": "jordan",
+      "name": "Jordan Reyes",
+      "title": "Automation & Browser Engineer",
+      "department": "Engineering",
+      "emoji": "🤖",
+      "reports_to": "elon",
+      "type": "AI_AGENT",
+      "active_hours": "10:00 PM — 6:00 AM",
+      "status": "🔵 Coding Nightly"
+    },
+    {
+      "id": "priya",
+      "name": "Priya Kapoor",
+      "title": "Frontend & Platform Engineer",
+      "department": "Engineering",
+      "emoji": "🎨",
+      "reports_to": "satya",
+      "type": "AI_AGENT",
+      "active_hours": "10:00 PM — 6:00 AM",
+      "status": "🔵 Coding Nightly"
+    }
+  ]
+}
