@@ -1,19 +1,36 @@
 {
-  "id": "TASK-001",
-  "title": "Build core platform database schema",
-  "assigned_to": "marcus",
-  "priority": "critical",
-  "status": "completed",
-  "description": "Create SQLite database using SQLAlchemy. Save models to platform/src/models/models.py with these tables: clients (id, name, email, phone), points_balances (id, client_id, program_name, balance), award_searches (id, client_id, origin, destination, cabin, status), booking_pipeline (id, client_id, airline, route, cabin, miles_required, status). Also create a seed script at platform/src/migrations/seed.py that inserts 3 sample clients with points balances across Amex, Chase, and United.",
-  "acceptance_criteria": [
-    "Models in platform/src/models/models.py",
-    "Seed script in platform/src/migrations/seed.py"
+  "project": "District Award Travel",
+  "backlog": [
+    {
+      "id": "TASK-002",
+      "title": "Build FastAPI backend server",
+      "assigned_to": "marcus",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Create FastAPI server at platform/src/api/server.py with routes: GET /clients, POST /clients, GET /pipeline, POST /pipeline/add, GET /transfer-bonuses. All return JSON. Enable CORS. Run on port 8000.",
+      "acceptance_criteria": ["Server at platform/src/api/server.py", "All routes return JSON", "CORS enabled"],
+      "tech": ["Python", "FastAPI"]
+    },
+    {
+      "id": "TASK-003",
+      "title": "Build main business dashboard",
+      "assigned_to": "priya",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Build platform/public/index.html. Include: header with company name and live clock, stats row showing total clients and active searches, booking pipeline table, award alerts feed. Dark theme: background #080c10, accent #00ff88, text #e8edf5. Fetch from localhost:8000 with mock data fallback.",
+      "acceptance_criteria": ["Full dashboard at platform/public/index.html", "Dark theme", "Mock data fallback"],
+      "tech": ["HTML", "CSS", "JavaScript"]
+    },
+    {
+      "id": "TASK-004",
+      "title": "Build transfer bonus monitor",
+      "assigned_to": "jordan",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/src/automation/transfer_monitor.js that checks credit card transfer bonuses and saves results to tasks/transfer_bonuses.json. Check Amex, Chase, Capital One, Citi using axios and cheerio. Write new bonuses to tasks/alerts.json.",
+      "acceptance_criteria": ["Script at platform/src/automation/transfer_monitor.js", "Saves to tasks/transfer_bonuses.json"],
+      "tech": ["Node.js", "axios", "cheerio"]
+    }
   ],
-  "tech": [
-    "Python",
-    "SQLAlchemy",
-    "SQLite"
-  ],
-  "completed_at": "2026-05-19",
-  "completion_summary": "I built the core platform database schema using SQLAlchemy and created a seed script to insert sample data. The database schema includes tables for clients, points balances, award searches, and booking pipeline. The seed script inserts 3 sample clients with points balances across Amex, Chase, and United."
+  "completed": []
 }
