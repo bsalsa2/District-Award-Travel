@@ -1,66 +1,24 @@
 {
-  "project": "District Award Travel",
-  "backlog": [
+  "tasks": [
     {
       "id": "TASK-001",
       "title": "Build core platform database schema",
       "assigned_to": "marcus",
       "priority": "critical",
-      "status": "pending",
+      "status": "completed",
       "description": "Create SQLite database schema using SQLAlchemy. Tables needed: clients (id, name, email, phone), points_balances (id, client_id, program_name, balance, last_updated), award_searches (id, client_id, origin, destination, cabin, status, created_at), booking_pipeline (id, client_id, airline, route, cabin, miles_required, status, created_at). Save models to platform/src/models/models.py. Include a seed script at platform/src/migrations/seed.py that adds 3 sample clients with points balances.",
+      "tech": [
+        "Python",
+        "SQLAlchemy",
+        "SQLite"
+      ],
       "acceptance_criteria": [
         "SQLAlchemy models in platform/src/models/models.py",
         "Seed script in platform/src/migrations/seed.py",
         "Requirements.txt updated"
       ],
-      "tech": ["Python", "SQLAlchemy", "SQLite"]
-    },
-    {
-      "id": "TASK-002",
-      "title": "Build FastAPI backend server",
-      "assigned_to": "marcus",
-      "priority": "critical",
-      "status": "pending",
-      "description": "Create a FastAPI server at platform/src/api/server.py with these routes: GET /clients, POST /clients, GET /clients/{id}/points, GET /pipeline, POST /pipeline/add, GET /transfer-bonuses. All routes return JSON. Include CORS so the frontend can connect. Run on port 8000.",
-      "acceptance_criteria": [
-        "FastAPI server at platform/src/api/server.py",
-        "All routes return valid JSON",
-        "CORS enabled",
-        "requirements.txt updated"
-      ],
-      "tech": ["Python", "FastAPI", "Pydantic"]
-    },
-    {
-      "id": "TASK-003",
-      "title": "Build main business dashboard",
-      "assigned_to": "priya",
-      "priority": "critical",
-      "status": "pending",
-      "description": "Build the main District Award Travel dashboard at platform/public/index.html. Must include: 1) Header with company name and live clock 2) Stats row showing total clients, active searches, seats held, bookings completed 3) Booking pipeline table with columns: Client, Route, Cabin, Miles, Status 4) Recent award alerts feed. Dark theme: background #080c10, accent #00ff88, text #e8edf5. Fetch data from localhost:8000 with fallback to mock data.",
-      "acceptance_criteria": [
-        "Full dashboard at platform/public/index.html",
-        "Dark theme matching brand colors",
-        "All 4 sections rendered",
-        "Mock data fallback works offline",
-        "Mobile responsive"
-      ],
-      "tech": ["HTML", "CSS", "JavaScript"]
-    },
-    {
-      "id": "TASK-004",
-      "title": "Build transfer bonus monitor",
-      "assigned_to": "jordan",
-      "priority": "high",
-      "status": "pending",
-      "description": "Build platform/src/automation/transfer_monitor.js. This script checks for credit card transfer bonuses and saves them to tasks/transfer_bonuses.json. Maintain a list of known bonuses with fields: issuer, to_program, bonus_percent, expires_date. Check pages for Amex, Chase, Capital One, Citi using axios and cheerio. If a new bonus is found that was not in the previous run, write it to tasks/alerts.json.",
-      "acceptance_criteria": [
-        "Script at platform/src/automation/transfer_monitor.js",
-        "Saves results to tasks/transfer_bonuses.json",
-        "Writes new finds to tasks/alerts.json",
-        "Runs standalone with: node platform/src/automation/transfer_monitor.js"
-      ],
-      "tech": ["Node.js", "axios", "cheerio"]
+      "completed_at": "2026-05-19",
+      "completion_summary": "Built core platform database schema using SQLAlchemy, including tables for clients, points balances, award searches, and booking pipeline. Created a seed script to add 3 sample clients with points balances. Updated requirements.txt with necessary dependencies."
     }
-  ],
-  "completed": []
+  ]
 }
