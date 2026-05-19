@@ -25,11 +25,12 @@ def save_backlog(data):
 
 def get_pending_tasks(backlog, engineer_id):
     order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    task_list = backlog.get("backlog") or backlog.get("tasks") or []
     tasks = [
-        t for t in backlog["backlog"]
-        if t["assigned_to"] == engineer_id and t["status"] == "pending"
+        t for t in task_list
+        if t.get("assigned_to") == engineer_id and t.get("status") == "pending"
     ]
-    return sorted(tasks, key=lambda t: order.get(t["priority"], 9))
+    return sorted(tasks, key=lambda t: order.get(t.get("priority", "low"), 9))
 
 
 def build_prompt(engineer_id, task, persona_text, backlog):
