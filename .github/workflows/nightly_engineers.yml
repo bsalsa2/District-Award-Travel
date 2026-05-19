@@ -13,37 +13,27 @@ on:
 jobs:
 
   marcus-backend:
-    name: Marcus Webb — Backend Engineer
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install groq python-dotenv requests beautifulsoup4 fastapi sqlalchemy pydantic jinja2
-      - name: Run Marcus
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: python agents/run_engineer.py marcus
-      - name: Commit work
+          - name: Commit work
         run: |
           git config user.name "Marcus Webb [AI]"
           git config user.email "marcus@district-award-travel.ai"
+          git fetch origin
+          git checkout main
           git add -A
-                    git diff --staged --quiet || git commit -m "Marcus: $(date '+%Y-%m-%d') backend work"
-          git pull --rebase origin main
-          git push
-
+          git diff --staged --quiet || git commit -m "Marcus: $(date '+%Y-%m-%d') backend work"
+          git push origin main --force
   jordan-automation:
-          - name: Commit work
+               - name: Commit work
         run: |
           git config user.name "Jordan Reyes [AI]"
           git config user.email "jordan@district-award-travel.ai"
+          git fetch origin
+          git checkout main
           git add -A
           git diff --staged --quiet || git commit -m "Jordan: $(date '+%Y-%m-%d') automation work"
-          git fetch origin main
-          git push origin HEAD:main --force-with-lease || git push origin HEAD:main --force
-  priya-frontend:
+          git push origin main --force
+          
+          priya-frontend:
           - name: Commit work
         run: |
           git config user.name "Priya Kapoor [AI]"
