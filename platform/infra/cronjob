@@ -1,0 +1,1 @@
+*/5 * * * * /bin/bash /home/runner/work/District-Award-Travel/District-Award-Travel/platform/infra/run_healthcheck.sh

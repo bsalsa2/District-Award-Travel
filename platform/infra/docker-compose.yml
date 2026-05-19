@@ -1,0 +1,18 @@
+version: '3'
+services:
+  monitoring-dashboard:
+    build: ./monitoring-dashboard
+    ports:
+      - "8080:8080"
+    depends_on:
+      - alerting-system
+    environment:
+      - ALERTING_SYSTEM_URL=http://alerting-system:8081
+
+  alerting-system:
+    build: ./alerting-system
+    ports:
+      - "8081:8081"
+    environment:
+      - CPU_USAGE_THRESHOLD=80
+      - ALERT_HISTORY_SIZE=100

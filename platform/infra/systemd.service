@@ -1,0 +1,11 @@
+[Unit]
+Description=Alerting System Service
+After=network.target
+
+[Service]
+User=runner
+ExecStart=/usr/bin/python /home/runner/work/District-Award-Travel/District-Award-Travel/platform/infra/alerting_system.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

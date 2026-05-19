@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Monitoring Dashboard</title>
+</head>
+<body>
+    <h1>Monitoring Dashboard</h1>
+    <p>CPU Usage: {{ cpu_usage }}%</p>
+    <h2>Alert History</h2>
+    <ul>
+    {% for alert in alert_history %}
+        <li>{{ alert["timestamp"] }}: {{ alert["message"] }}</li>
+    {% endfor %}
+    </ul>
+</body>
+</html>
