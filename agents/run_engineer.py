@@ -105,23 +105,41 @@ def call_deepseek(prompt, engineer_id):
     return result
 
 
-def call_gemini(prompt, engineer_id):
-    api_key = os.environ.get("GEMINI_API_KEY")
+def call_ai(prompt, engineer_id):
+    api_key = os.environ.get("DEEPSEEK_API_KEY")
     if not api_key:
-        raise ValueError("GEMINI_API_KEY not set")
+        raise ValueError("DEEPSEEK_API_KEY not set")
 
-    print("[" + engineer_id + "] Calling Gemini (fallback)...")
+    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+    print("[" + engineer_id + "] Calling DeepSeek...")
 
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        system_instruction=(
-            "You are " + engineer_id + ", an autonomous software engineer at District Award Travel. "
-            "Write complete working code. "
-            "Always prefix each file with FILE: path/to/file followed by a code block. "
-            "Never write partial code or TODOs."
-        )
+    response = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are " + engineer_id + ", an elite autonomous software engineer "
+                    "at District Award Travel. Write complete, production-quality code. "
+                    "Always prefix each file with FILE: path/to/file followed by a code block. "
+                    "Never write partial implementations or TODOs. "
+                    "Be creative — build tools that genuinely help an award travel business."
+                )
+            },
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3,
+        max_tokens=8000,
+        stream=True,
     )
+
+    result = ""
+    for chunk in response:
+        delta = chunk.choices[0].delta.content or ""
+        print(delta, end="", flush=True)
+        result += delta
+    print()
+    return result
     response = model.generate_content(prompt)
     print(response.text)
     return response.text
