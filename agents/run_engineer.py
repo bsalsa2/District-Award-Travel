@@ -223,7 +223,7 @@ def run(engineer_id):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2 or sys.argv[1] not in ("marcus", "jordan", "priya"):
-        print("Usage: python agents/run_engineer.py <marcus|jordan|priya>")
+    if len(sys.argv) < 2 or sys.argv[1] not in ("mitchell", "martin", "jeff"):
+        print("Usage: python agents/run_engineer.py <mitchell|martin|jeff>")
         sys.exit(1)
     run(sys.argv[1])
