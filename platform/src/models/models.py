@@ -1,8 +1,14 @@
-from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from sqlalchemy.orm import sessionmaker, relationship
 
+# Create a SQLite database engine
+engine = create_engine('sqlite:///platform/db.sqlite3')
+
+# Create a configured "Session" class
+Session = sessionmaker(bind=engine)
+
+# Create a base class for declarative class definitions
 Base = declarative_base()
 
 class Client(Base):
@@ -20,8 +26,7 @@ class PointsBalance(Base):
     id = Column(Integer, primary_key=True)
     client_id = Column(Integer, ForeignKey('clients.id'))
     program_name = Column(String)
-    balance = Column(Float)
-    last_updated = Column(DateTime, default=datetime.utcnow)
+    balance = Column(Integer)
 
 class AwardSearch(Base):
     __tablename__ = 'award_searches'
@@ -31,7 +36,6 @@ class AwardSearch(Base):
     destination = Column(String)
     cabin = Column(String)
     status = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
 
 class BookingPipeline(Base):
     __tablename__ = 'booking_pipeline'
@@ -40,6 +44,8 @@ class BookingPipeline(Base):
     airline = Column(String)
     route = Column(String)
     cabin = Column(String)
-    miles_required = Column(Float)
+    miles_required = Column(Integer)
     status = Column(String)
-    created_at = Column(DateTime, default=datetime.utcnow)
+
+# Create all tables in the engine
+Base.metadata.create_all(engine)
