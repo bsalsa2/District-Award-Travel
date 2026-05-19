@@ -6,63 +6,43 @@ on:
   workflow_dispatch:
 
 jobs:
-  marcus:
-    name: Marcus Webb - Backend Engineer
+  run-all-engineers:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - run: pip install openai google-generativeai python-dotenv requests beautifulsoup4 fastapi sqlalchemy pydantic jinja2
+
+      - name: Install packages
+        run: pip install openai google-generativeai python-dotenv requests beautifulsoup4 fastapi sqlalchemy pydantic jinja2
+
       - name: Run Marcus
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python agents/run_engineer.py marcus
-      - name: Commit
-        run: |
-          git config user.name "Marcus Webb"
-          git config user.email "marcus@dat.ai"
-          git add -A
-          git diff --staged --quiet || git commit -m "Marcus $(date '+%Y-%m-%d')"
-          git push origin main --force
 
-  jordan:
-    name: Jordan Reyes - Automation Engineer
-    runs-on: ubuntu-latest
-    needs: marcus
-    if: always()
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: pip install openai google-generativeai python-dotenv requests
-      - run: npm install axios cheerio dotenv || true
       - name: Run Jordan
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          BOOKING_ENABLED: "false"
         run: python agents/run_engineer.py jordan
-      - name: Commit
-        run: |
-          git config user.name "Jordan Reyes"
-          git config user.email "jordan@dat.ai"
-          git add -A -- ':!node_modules'
-          git diff --staged --quiet || git commit -m "Jordan $(date '+%Y-%m-%d')"
-          git push origin main --force
 
-  priya:
-    name: Priya Kapoor - Frontend Engineer
-    runs-on: ubuntu-latest
-    needs: jordan
-    if: always()
-    steps:
-      - uses: actions/ch
+      - name: Run Priya
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python agents/run_engineer.py priya
+
+      - name: Commit all work
+        run: |
+          git config user.name "DAT Engineers"
+          git config user.email "engineers@dat.ai"
+          git add -A -- ':!node_modules'
+          git diff --staged --quiet || git commit -m "Engineers: $(date '+%Y-%m-%d')"
+          git push origin main --force
