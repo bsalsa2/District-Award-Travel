@@ -1,7 +1,7 @@
 """
 District Award Travel - Nightly Engineer Runner
 Runs for up to 1 hour per engineer, completing as many tasks as possible.
-Primary AI: DeepSeek. Fallback: Gemini.
+Primary AI: DeepSeek. Fallback 1: Groq. Fallback 2: Gemini.
 """
 
 import os
@@ -116,6 +116,43 @@ def call_deepseek(prompt, engineer_id):
     return result
 
 
+def call_groq(prompt, engineer_id):
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY not set")
+
+    client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+    print("[" + engineer_id + "] Falling back to Groq...")
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are " + engineer_id + ", an elite autonomous software engineer "
+                    "at District Award Travel. Write complete, production-quality code. "
+                    "Always prefix each file with FILE: path/to/file followed by a code block. "
+                    "Never write partial implementations or TODOs. "
+                    "Be creative — build tools that genuinely help an award travel business."
+                )
+            },
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3,
+        max_tokens=8000,
+        stream=True,
+    )
+
+    result = ""
+    for chunk in response:
+        delta = chunk.choices[0].delta.content or ""
+        print(delta, end="", flush=True)
+        result += delta
+    print()
+    return result
+
+
 def call_gemini(prompt, engineer_id):
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
@@ -141,8 +178,12 @@ def call_ai(prompt, engineer_id):
     try:
         return call_deepseek(prompt, engineer_id)
     except Exception as e:
-        print("[" + engineer_id + "] DeepSeek failed (" + str(e) + ") — switching to Gemini")
-        return call_gemini(prompt, engineer_id)
+        print("[" + engineer_id + "] DeepSeek failed (" + str(e) + ") — trying Groq")
+        try:
+            return call_groq(prompt, engineer_id)
+        except Exception as e2:
+            print("[" + engineer_id + "] Groq failed (" + str(e2) + ") — trying Gemini")
+            return call_gemini(prompt, engineer_id)
 
 
 def write_file(filepath, content):
