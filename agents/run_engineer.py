@@ -170,7 +170,7 @@ def call_gemini(prompt, engineer_id):
     print("[" + engineer_id + "] Falling back to Gemini...")
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
+        model_name="gemini-2.0-flash",
         system_instruction=(
             "You are " + engineer_id + ", an elite autonomous software engineer "
             "at District Award Travel. Write complete working code. "
