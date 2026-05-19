@@ -5,7 +5,6 @@ import datetime
 import re
 from pathlib import Path
 from openai import OpenAI
-import google.generativeai as genai
 
 BASE_DIR = Path(__file__).parent.parent
 TASKS_FILE = BASE_DIR / "tasks" / "backlog.json"
