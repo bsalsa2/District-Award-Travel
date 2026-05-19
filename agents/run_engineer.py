@@ -4,7 +4,8 @@ import json
 import datetime
 import re
 from pathlib import Path
-from groq import Groq
+from openai import OpenAI
+import google.generativeai as genai
 
 BASE_DIR = Path(__file__).parent.parent
 TASKS_FILE = BASE_DIR / "tasks" / "backlog.json"
@@ -33,7 +34,7 @@ def get_pending_tasks(backlog, engineer_id):
     return sorted(tasks, key=lambda t: order.get(t.get("priority", "low"), 9))
 
 
-def build_prompt(engineer_id, task, persona_text, backlog):
+def build_prompt(engineer_id, task, persona_text):
     today = datetime.date.today().isoformat()
     lines = [
         persona_text,
@@ -52,10 +53,10 @@ def build_prompt(engineer_id, task, persona_text, backlog):
         "## INSTRUCTIONS",
         "",
         "1. Write every file needed to complete this task.",
-        "2. Before each file write this line exactly: FILE: path/to/file.py",
-        "   Then open a code block, write the full file, close the code block.",
+        "2. Before each file write exactly: FILE: path/to/file.py",
+        "   Then open a code block, write the complete file, close it.",
         "3. Every file must be 100% working code. No TODOs. No placeholders.",
-        "4. After writing files, update tasks/backlog.json:",
+        "4. After writing all files, update tasks/backlog.json:",
         '   Set this task status to "completed"',
         '   Add completed_at: ' + today,
         '   Add completion_summary: 2-3 sentences describing what you built.',
@@ -63,6 +64,80 @@ def build_prompt(engineer_id, task, persona_text, backlog):
         "Start writing files now.",
     ]
     return "\n".join(lines)
+
+
+def call_deepseek(prompt, engineer_id):
+    api_key = os.environ.get("DEEPSEEK_API_KEY")
+    if not api_key:
+        raise ValueError("DEEPSEEK_API_KEY not set")
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.deepseek.com"
+    )
+
+    print("[" + engineer_id + "] Calling DeepSeek (primary)...")
+
+    system_msg = (
+        "You are " + engineer_id + ", an autonomous software engineer at District Award Travel. "
+        "Write complete, production-quality code. "
+        "Always prefix each file with FILE: path/to/file followed by a code block. "
+        "Never write partial implementations or TODOs."
+    )
+
+    response = client.chat.completions.create(
+        model="deepseek-chat",
+        messages=[
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.2,
+        max_tokens=8000,
+        stream=True,
+    )
+
+    result = ""
+    for chunk in response:
+        delta = chunk.choices[0].delta.content or ""
+        print(delta, end="", flush=True)
+        result += delta
+    print()
+    return result
+
+
+def call_gemini(prompt, engineer_id):
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY not set")
+
+    print("[" + engineer_id + "] Calling Gemini (fallback)...")
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=(
+            "You are " + engineer_id + ", an autonomous software engineer at District Award Travel. "
+            "Write complete working code. "
+            "Always prefix each file with FILE: path/to/file followed by a code block. "
+            "Never write partial code or TODOs."
+        )
+    )
+    response = model.generate_content(prompt)
+    print(response.text)
+    return response.text
+
+
+def call_ai(prompt, engineer_id):
+    try:
+        return call_deepseek(prompt, engineer_id)
+    except Exception as e:
+        print("[" + engineer_id + "] DeepSeek failed: " + str(e))
+        print("[" + engineer_id + "] Switching to Gemini fallback...")
+        try:
+            return call_gemini(prompt, engineer_id)
+        except Exception as e2:
+            print("[" + engineer_id + "] Gemini also failed: " + str(e2))
+            raise
 
 
 def write_file(filepath, content):
@@ -90,13 +165,14 @@ def parse_and_write_files(response_text, engineer_id):
     if files_written:
         print("[" + engineer_id + "] Wrote " + str(len(files_written)) + " file(s).")
     else:
-        print("[" + engineer_id + "] Warning: no FILE: blocks found in response.")
+        print("[" + engineer_id + "] Warning: no FILE: blocks detected in response.")
 
     try:
         backlog = load_backlog()
         today = datetime.date.today().isoformat()
-        for t in backlog["backlog"]:
-            if t["assigned_to"] == engineer_id and t["status"] == "pending":
+        task_list = backlog.get("backlog") or []
+        for t in task_list:
+            if t.get("assigned_to") == engineer_id and t.get("status") == "pending":
                 t["status"] = "completed"
                 t["completed_at"] = today
                 t["completion_summary"] = "Completed by " + engineer_id + " on " + today + "."
@@ -107,11 +183,6 @@ def parse_and_write_files(response_text, engineer_id):
 
 
 def run(engineer_id):
-    api_key = os.environ.get("GROQ_API_KEY")
-    if not api_key:
-        print("ERROR: GROQ_API_KEY not set.")
-        sys.exit(1)
-
     persona_file = AGENTS_DIR / ("engineer_" + engineer_id + ".md")
     if not persona_file.exists():
         print("ERROR: Missing persona file: " + str(persona_file))
@@ -128,37 +199,9 @@ def run(engineer_id):
     print("[" + engineer_id + "] Task: " + task["id"] + " — " + task["title"])
 
     persona_text = persona_file.read_text()
-    prompt = build_prompt(engineer_id, task, persona_text, backlog)
+    prompt = build_prompt(engineer_id, task, persona_text)
 
-    client = Groq(api_key=api_key)
-    print("[" + engineer_id + "] Calling Groq...")
-
-    completion = client.chat.completions.create(
-               model="llama-3.1-8b-instant",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are " + engineer_id + ", an autonomous software engineer. "
-                    "Write complete working code. "
-                    "Always prefix each file with: FILE: path/to/file "
-                    "followed by a code block. Never write partial code."
-                )
-            },
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.2,
-        max_tokens=8000,
-        stream=True,
-    )
-
-    response_text = ""
-    for chunk in completion:
-        delta = chunk.choices[0].delta.content or ""
-        print(delta, end="", flush=True)
-        response_text += delta
-
-    print("\n[" + engineer_id + "] Done.")
+    response_text = call_ai(prompt, engineer_id)
     parse_and_write_files(response_text, engineer_id)
 
 
