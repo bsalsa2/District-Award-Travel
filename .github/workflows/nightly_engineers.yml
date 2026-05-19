@@ -9,7 +9,7 @@ on:
         description: 'marcus / jordan / priya / all'
         required: false
         default: 'all'
-
+        
 jobs:
 
   marcus-backend:
@@ -30,7 +30,8 @@ jobs:
           git config user.name "Marcus Webb [AI]"
           git config user.email "marcus@district-award-travel.ai"
           git add -A
-          git diff --staged --quiet || git commit -m "Marcus: $(date '+%Y-%m-%d') backend work"
+                    git diff --staged --quiet || git commit -m "Marcus: $(date '+%Y-%m-%d') backend work"
+          git pull --rebase origin main
           git push
 
   jordan-automation:
@@ -58,7 +59,8 @@ jobs:
           git config user.name "Jordan Reyes [AI]"
           git config user.email "jordan@district-award-travel.ai"
           git add -A
-          git diff --staged --quiet || git commit -m "Jordan: $(date '+%Y-%m-%d') automation work"
+                    git diff --staged --quiet || git commit -m "Jordan: $(date '+%Y-%m-%d') automation work"
+          git pull --rebase origin main
           git push
 
   priya-frontend:
@@ -81,7 +83,8 @@ jobs:
           git config user.name "Priya Kapoor [AI]"
           git config user.email "priya@district-award-travel.ai"
           git add -A
-          git diff --staged --quiet || git commit -m "Priya: $(date '+%Y-%m-%d') frontend work"
+                    git diff --staged --quiet || git commit -m "Priya: $(date '+%Y-%m-%d') frontend work"
+          git pull --rebase origin main
           git push
 
   morning-brief:
