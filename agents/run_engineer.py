@@ -1,6 +1,5 @@
 """
 District Award Travel - Nightly Engineer Runner
-Runs for up to 1 hour per engineer, completing as many tasks as possible.
 Primary AI: DeepSeek. Fallback 1: Groq. Fallback 2: Gemini.
 """
 
@@ -25,7 +24,12 @@ MAX_RUNTIME_SECONDS = 3600
 
 def load_backlog():
     with open(TASKS_FILE) as f:
-        return json.load(f)
+        data = json.load(f)
+    if isinstance(data, list):
+        return {"backlog": data, "completed": []}
+    if "backlog" not in data:
+        data["backlog"] = []
+    return data
 
 
 def save_backlog(data):
@@ -38,7 +42,9 @@ def get_pending_tasks(backlog, engineer_id):
     task_list = backlog.get("backlog") or []
     tasks = [
         t for t in task_list
-        if t.get("assigned_to") == engineer_id and t.get("status") == "pending"
+        if isinstance(t, dict)
+        and t.get("assigned_to") == engineer_id
+        and t.get("status") == "pending"
     ]
     return sorted(tasks, key=lambda t: order.get(t.get("priority", "low"), 9))
 
@@ -66,13 +72,16 @@ def build_prompt(engineer_id, task, persona_text):
         "Every file must be 100% working code. No TODOs. No placeholders.",
         "Be creative and build something genuinely useful for an award travel business.",
         "",
-        "After all files, update tasks/backlog.json:",
-        "  - Set this task status to completed",
-        "  - Add completed_at: " + today,
-        "  - Add completion_summary: exactly what you built in 2-3 sentences",
+        "IMPORTANT: Do NOT rewrite tasks/backlog.json.",
+        "The backlog is managed automatically. Just write the code files.",
         "",
-        "Also add 2 NEW tasks to the backlog for tomorrow night based on what you just built.",
-        "Assign them to yourself (" + engineer_id + "), set status to pending.",
+        "Also add 2 NEW tasks as a separate JSON block at the end like this:",
+        "NEW_TASKS:",
+        "```json",
+        "[",
+        '  {"id": "TASK-XXX", "title": "...", "assigned_to": "' + engineer_id + '", "priority": "medium", "status": "pending", "description": "..."}',
+        "]",
+        "```",
         "",
         "Start writing now.",
     ]
@@ -205,6 +214,9 @@ def parse_and_write_files(response_text, engineer_id):
     files_written = []
     for match in pattern:
         filepath = match.group(1).strip()
+        if "backlog.json" in filepath:
+            print("  Skipped: " + filepath + " (backlog protected)")
+            continue
         content = match.group(2)
         written = write_file(filepath, content)
         files_written.append(written)
@@ -217,22 +229,58 @@ def parse_and_write_files(response_text, engineer_id):
     return files_written
 
 
+def parse_new_tasks(response_text, engineer_id):
+    match = re.search(r'NEW_TASKS:\s*```json\s*(\[.*?\])\s*```', response_text, re.DOTALL)
+    if not match:
+        return []
+    try:
+        tasks = json.loads(match.group(1))
+        if isinstance(tasks, list):
+            return [t for t in tasks if isinstance(t, dict)]
+    except Exception:
+        pass
+    return []
+
+
 def mark_task_complete(engineer_id, task_id, files_written):
     try:
         backlog = load_backlog()
         today = datetime.date.today().isoformat()
         task_list = backlog.get("backlog") or []
         for t in task_list:
-            if t.get("id") == task_id:
+            if isinstance(t, dict) and t.get("id") == task_id:
                 t["status"] = "completed"
                 t["completed_at"] = today
                 t["files_created"] = files_written
-                t["completion_summary"] = "Completed by " + engineer_id + " on " + today + ". Files: " + ", ".join(files_written[:3])
+                t["completion_summary"] = (
+                    "Completed by " + engineer_id + " on " + today +
+                    ". Files: " + ", ".join([f.split("/")[-1] for f in files_written[:3]])
+                )
                 break
         save_backlog(backlog)
         print("[" + engineer_id + "] Marked " + task_id + " complete.")
     except Exception as e:
         print("[" + engineer_id + "] Could not update backlog: " + str(e))
+
+
+def add_new_tasks(new_tasks, engineer_id):
+    if not new_tasks:
+        return
+    try:
+        backlog = load_backlog()
+        task_list = backlog.get("backlog") or []
+        existing_ids = {t.get("id") for t in task_list if isinstance(t, dict)}
+        added = 0
+        for t in new_tasks:
+            if t.get("id") not in existing_ids:
+                task_list.append(t)
+                existing_ids.add(t.get("id"))
+                added += 1
+        backlog["backlog"] = task_list
+        save_backlog(backlog)
+        print("[" + engineer_id + "] Added " + str(added) + " new task(s) to backlog.")
+    except Exception as e:
+        print("[" + engineer_id + "] Could not add new tasks: " + str(e))
 
 
 def write_engineer_log(engineer_id, completed_tasks, total_files):
@@ -292,9 +340,11 @@ def run(engineer_id):
         try:
             response_text = call_ai(prompt, engineer_id)
             files_written = parse_and_write_files(response_text, engineer_id)
+            new_tasks = parse_new_tasks(response_text, engineer_id)
             task["files_created"] = files_written
             total_files += len(files_written)
             mark_task_complete(engineer_id, task["id"], files_written)
+            add_new_tasks(new_tasks, engineer_id)
             completed_tasks.append(task)
             print("[" + engineer_id + "] Completed: " + task["id"])
         except Exception as e:
