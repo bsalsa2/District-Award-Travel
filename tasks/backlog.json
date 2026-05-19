@@ -1,19 +1,60 @@
 {
-  "id": "TASK-002",
-  "title": "Build FastAPI backend server",
-  "assigned_to": "marcus",
-  "priority": "critical",
-  "status": "completed",
-  "description": "Create FastAPI server at platform/src/api/server.py with routes: GET /clients, POST /clients, GET /pipeline, POST /pipeline/add, GET /transfer-bonuses. All return JSON. Enable CORS. Run on port 8000.",
-  "acceptance_criteria": [
-    "Server at platform/src/api/server.py",
-    "All routes return JSON",
-    "CORS enabled"
+  "project": "District Award Travel",
+  "backlog": [
+    {
+      "id": "TASK-101",
+      "title": "Build Docker Compose stack for the full platform",
+      "assigned_to": "mitchell",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Create platform/infra/docker-compose.yml that runs the entire District Award Travel stack in one command. Services needed: api (FastAPI on port 8000), db (SQLite via volume mount), redis (for task queues), scraper (Python scraping worker). Also create platform/infra/Dockerfile for the API service and platform/infra/start.sh as a single-command launcher. The goal: anyone can run ./start.sh and have the full platform running locally.",
+      "tech": ["Docker", "Docker Compose", "shell"]
+    },
+    {
+      "id": "TASK-102",
+      "title": "Build high-throughput FastAPI backend with async award search",
+      "assigned_to": "martin",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Build platform/src/api/server.py as a high-performance async FastAPI application. Routes: GET /clients, POST /clients, GET /awards/search?origin=JFK&destination=NRT&cabin=F, GET /transfer-bonuses. Use SQLAlchemy async engine with SQLite. Add caching for award search results. Return results in under 100ms for cached queries.",
+      "tech": ["Python", "FastAPI", "asyncio", "SQLAlchemy"]
+    },
+    {
+      "id": "TASK-103",
+      "title": "Build main business dashboard with live data",
+      "assigned_to": "jeff",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Build platform/public/index.html — the main District Award Travel operations dashboard. Sections: 1) Header with company name and live UTC clock 2) Stats row: total clients, active searches, bookings completed 3) Booking pipeline table: Client, Route, Cabin, Miles, Status 4) Award search results with value ratings. Dark theme: #080c10 bg, #00ff88 accent, #e8edf5 text. Full mock data if API offline.",
+      "tech": ["HTML", "CSS", "JavaScript"]
+    },
+    {
+      "id": "TASK-104",
+      "title": "Build award valuation engine",
+      "assigned_to": "jeff",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/src/intelligence/valuation.py — a Python module that calculates the real-world value of any award flight. Input: {program, miles_required, cabin, route, taxes_usd}. Output: {cpp (cents per point), cash_equivalent_usd, verdict (EXCELLENT/GOOD/FAIR/SKIP), explanation}. Include cabin multipliers, fuel surcharge penalty, and a lookup table of known good redemptions. Include 10 sample valuations as tests at the bottom.",
+      "tech": ["Python", "numpy"]
+    },
+    {
+      "id": "TASK-105",
+      "title": "Build automated health check and monitoring script",
+      "assigned_to": "mitchell",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/infra/healthcheck.py — a monitoring script that checks all system components and logs results. Check: FastAPI server on port 8000, database file exists and is writable, scraper workers running. Log all events to logs/healthcheck.log with timestamps.",
+      "tech": ["Python", "subprocess"]
+    },
+    {
+      "id": "TASK-106",
+      "title": "Build distributed award search pipeline",
+      "assigned_to": "martin",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/src/pipeline/search_pipeline.py — a high-throughput award search orchestrator using a producer-consumer pattern. Producer pushes search jobs to a queue. Consumer workers pull jobs and execute searches. Design for 10 concurrent workers. Each worker searches one route and date combination and stores structured results to a SQLite database.",
+      "tech": ["Python", "asyncio", "threading"]
+    }
   ],
-  "tech": [
-    "Python",
-    "FastAPI"
-  ],
-  "completed_at": "2026-05-19",
-  "completion_summary": "I built a FastAPI server with the required routes, enabled CORS, and ran it on port 8000. The server returns JSON data for all routes and allows cross-origin requests. The server is fully functional and meets all the acceptance criteria."
+  "completed": []
 }
