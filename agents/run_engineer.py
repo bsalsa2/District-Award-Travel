@@ -169,4 +169,110 @@ def parse_and_write_files(response_text, engineer_id):
         files_written.append(written)
 
     if files_written:
-        print("[" + engineer_id + "] Wrote " + str(l
+        print("[" + engineer_id + "] Wrote " + str(len(files_written)) + " file(s).")
+    else:
+        print("[" + engineer_id + "] Warning: no FILE: blocks found.")
+
+    return files_written
+
+
+def mark_task_complete(engineer_id, task_id, files_written):
+    try:
+        backlog = load_backlog()
+        today = datetime.date.today().isoformat()
+        task_list = backlog.get("backlog") or []
+        for t in task_list:
+            if t.get("id") == task_id:
+                t["status"] = "completed"
+                t["completed_at"] = today
+                t["files_created"] = files_written
+                t["completion_summary"] = "Completed by " + engineer_id + " on " + today + ". Files: " + ", ".join(files_written[:3])
+                break
+        save_backlog(backlog)
+        print("[" + engineer_id + "] Marked " + task_id + " complete.")
+    except Exception as e:
+        print("[" + engineer_id + "] Could not update backlog: " + str(e))
+
+
+def write_engineer_log(engineer_id, completed_tasks, total_files):
+    today = datetime.date.today().isoformat()
+    log_path = LOGS_DIR / (engineer_id + "_" + today + ".log")
+    lines = [
+        "Engineer: " + engineer_id,
+        "Date: " + today,
+        "Tasks completed: " + str(len(completed_tasks)),
+        "Files written: " + str(total_files),
+        "",
+        "Task Summary:",
+    ]
+    for t in completed_tasks:
+        lines.append("  [DONE] " + t.get("id", "?") + ": " + t.get("title", ""))
+        lines.append("         Files: " + ", ".join(t.get("files_created", [])))
+    log_path.write_text("\n".join(lines))
+    print("[" + engineer_id + "] Log saved: " + str(log_path))
+
+
+def run(engineer_id):
+    persona_file = AGENTS_DIR / ("engineer_" + engineer_id + ".md")
+    if not persona_file.exists():
+        print("ERROR: Missing persona file: " + str(persona_file))
+        sys.exit(1)
+
+    persona_text = persona_file.read_text()
+    start_time = time.time()
+    completed_tasks = []
+    total_files = 0
+
+    print("\n" + "="*60)
+    print("ENGINEER: " + engineer_id.upper())
+    print("START: " + datetime.datetime.now().strftime("%H:%M:%S UTC"))
+    print("MAX RUNTIME: " + str(MAX_RUNTIME_SECONDS // 60) + " minutes")
+    print("="*60 + "\n")
+
+    while True:
+        elapsed = time.time() - start_time
+        if elapsed >= MAX_RUNTIME_SECONDS:
+            print("[" + engineer_id + "] Time limit reached after " + str(int(elapsed // 60)) + " min.")
+            break
+
+        backlog = load_backlog()
+        tasks = get_pending_tasks(backlog, engineer_id)
+
+        if not tasks:
+            print("[" + engineer_id + "] No more pending tasks.")
+            break
+
+        task = tasks[0]
+        print("\n[" + engineer_id + "] Starting: " + task["id"] + " — " + task["title"])
+        print("[" + engineer_id + "] Time elapsed: " + str(int(elapsed // 60)) + "m")
+
+        prompt = build_prompt(engineer_id, task, persona_text)
+
+        try:
+            response_text = call_ai(prompt, engineer_id)
+            files_written = parse_and_write_files(response_text, engineer_id)
+            task["files_created"] = files_written
+            total_files += len(files_written)
+            mark_task_complete(engineer_id, task["id"], files_written)
+            completed_tasks.append(task)
+            print("[" + engineer_id + "] Completed: " + task["id"])
+        except Exception as e:
+            print("[" + engineer_id + "] ERROR on " + task["id"] + ": " + str(e))
+            break
+
+        time.sleep(5)
+
+    write_engineer_log(engineer_id, completed_tasks, total_files)
+
+    print("\n" + "="*60)
+    print("[" + engineer_id.upper() + "] SESSION COMPLETE")
+    print("Tasks completed: " + str(len(completed_tasks)))
+    print("Files written: " + str(total_files))
+    print("="*60 + "\n")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2 or sys.argv[1] not in ("mitchell", "martin", "jeff"):
+        print("Usage: python agents/run_engineer.py <mitchell|martin|jeff>")
+        sys.exit(1)
+    run(sys.argv[1])
