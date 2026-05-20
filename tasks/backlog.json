@@ -1,8 +1,16 @@
 {
   "project": "District Award Travel",
   "backlog": [
-    {
+      {
   "id": "TASK-500",
+  "title": "Rebuild the entire platform/public/index.html as the real District Award Travel website",
+  "assigned_to": "jeff",
+  "priority": "critical",
+  "status": "pending",
+  "description": "DELETE everything in platform/public/index.html and rebuild it from scratch. This is a real award travel consulting business website. Build these exact sections: 1) Dark navy header with District Award Travel logo and navigation (Home, Search, About, Contact). 2) Hero section: big headline 'We Find You The Best Award Flights' with a search bar for origin airport, destination airport, cabin class. 3) How It Works section: 3 steps - Submit Your Miles, We Search Everything, You Fly First Class. 4) Award Search Results section showing sample results: route, airline, miles required, cash value, our rating (EXCELLENT/GOOD/FAIR). 5) Why Choose Us: stats like 500+ clients, $2M saved, 50+ airline programs. 6) Footer with contact info. Design: dark theme #0a0e1a background, #00ff88 accent green, white text, professional and modern. NO weird visualizers. NO black boxes. NO sliders. A REAL BUSINESS WEBSITE."
+}
+  {
+    "id": "TASK-500",
   "title": "Rebuild platform/public/index.html as the complete District Award Travel website",
   "assigned_to": "jeff",
   "priority": "critical",
