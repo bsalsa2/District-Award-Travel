@@ -9,13 +9,13 @@
   "status": "pending",
   "description": "DELETE everything in platform/public/index.html and rebuild it from scratch. This is a real award travel consulting business website. Build these exact sections: 1) Dark navy header with District Award Travel logo and navigation (Home, Search, About, Contact). 2) Hero section: big headline 'We Find You The Best Award Flights' with a search bar for origin airport, destination airport, cabin class. 3) How It Works section: 3 steps - Submit Your Miles, We Search Everything, You Fly First Class. 4) Award Search Results section showing sample results: route, airline, miles required, cash value, our rating (EXCELLENT/GOOD/FAIR). 5) Why Choose Us: stats like 500+ clients, $2M saved, 50+ airline programs. 6) Footer with contact info. Design: dark theme #0a0e1a background, #00ff88 accent green, white text, professional and modern. NO weird visualizers. NO black boxes. NO sliders. A REAL BUSINESS WEBSITE."
 }
-  {
-    "id": "TASK-500",
-  "title": "Rebuild platform/public/index.html as the complete District Award Travel website",
+ {
+  "id": "TASK-500",
+  "title": "Build the complete District Award Travel public website with animations, auth, and full business pages",
   "assigned_to": "jeff",
   "priority": "critical",
   "status": "pending",
-  "description": "Build one complete, beautiful, fully working website at platform/public/index.html. Include: homepage with company branding, award search tool that lets users input origin/destination/cabin and see results, valuation tool showing cents-per-point, client booking pipeline table, transfer bonus alerts. Dark theme #080c10 background, #00ff88 accent. Must work with zero backend — all data hardcoded or mock. This is the public face of District Award Travel."
+  "description": "Build platform/public/index.html as a stunning, modern business website for District Award Travel — an award flight consulting company. Requirements: DESIGN: Dark theme, #0a0e1a background, #00ff88 accent, smooth scroll animations using Intersection Observer API (elements fade/slide in as you scroll), parallax hero section, glassmorphism cards. PAGES (all in one HTML file with JS routing): 1) Landing page — animated hero with tagline 'We Find The Best Award Flights So You Dont Have To', scroll animations revealing features, stats counter (500+ clients, $2M+ saved, 50+ airlines), testimonials section, pricing plans, call to action. 2) Sign Up page — full form: name, email, password, confirm password, miles programs they use (checkboxes: United, Delta, AA, etc), submit button. 3) Login page — email, password, forgot password link, login button. 4) Dashboard page (after login) — shows their saved searches, upcoming trips, miles balance tracker. 5) About page — company story, team section with Mitchell/Martin/Jeff as the tech team. 6) Contact page — contact form. ANIMATIONS: Hero text types itself out. Stats count up when scrolled to. Cards animate in from sides. Smooth page transitions. Floating particles in hero background. Everything must work with zero backend — use localStorage for auth. Make it look like a $10,000 agency built it."
 }
     {
       "id": "TASK-101",
