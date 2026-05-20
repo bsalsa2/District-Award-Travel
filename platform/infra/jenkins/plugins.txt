@@ -1,0 +1,14 @@
+git
+docker-plugin
+workflow-aggregator
+blueocean
+kubernetes
+prometheus
+sonar-quality-gates
+nexus-artifact-uploader
+pipeline-graph-view
+timestamper
+build-timeout
+credentials-binding
+ssh-agent
+ws-cleanup

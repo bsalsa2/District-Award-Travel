@@ -1,0 +1,244 @@
+pipeline {
+    agent none
+
+    environment {
+        DOCKER_REGISTRY = "district-award"
+        NVIDIA_VISIBLE_DEVICES = "all"
+        NVIDIA_DRIVER_CAPABILITIES = "compute,utility"
+    }
+
+    stages {
+        stage('Checkout') {
+            agent {
+                docker {
+                    image 'alpine/git'
+                    args '-e NVIDIA_VISIBLE_DEVICES=all'
+                }
+            }
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('GPU Environment Setup') {
+            agent {
+                docker {
+                    image 'nvcr.io/nvidia/pytorch:23.10-py3'
+                    args '-e NVIDIA_VISIBLE_DEVICES=all --gpus all'
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                    echo "Setting up GPU environment..."
+                    nvidia-smi
+                    python3 -m pip install --upgrade pip
+                    pip install -r requirements.txt
+                    pip install nvidia-nemo-toolkit[all]==1.15.0
+                    pip install morpheus-ai
+                    '''
+                }
+            }
+        }
+
+        stage('Unit Tests') {
+            agent {
+                docker {
+                    image 'nvcr.io/nvidia/pytorch:23.10-py3'
+                    args '-e NVIDIA_VISIBLE_DEVICES=all --gpus all'
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                    echo "Running GPU-accelerated unit tests..."
+                    python3 -m pytest tests/unit --junitxml=test-results/unit.xml
+                    '''
+                }
+            }
+        }
+
+        stage('Integration Tests') {
+            agent {
+                docker {
+                    image 'nvcr.io/nvidia/pytorch:23.10-py3'
+                    args '-e NVIDIA_VISIBLE_DEVICES=all --gpus all'
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                    echo "Running integration tests..."
+                    python3 -m pytest tests/integration --junitxml=test-results/integration.xml
+                    '''
+                }
+            }
+        }
+
+        stage('Model Training') {
+            agent {
+                docker {
+                    image 'nvcr.io/nvidia/pytorch:23.10-py3'
+                    args '-e NVIDIA_VISIBLE_DEVICES=all --gpus all'
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                    echo "Training models with NeMo..."
+                    python3 scripts/train_models.py \
+                        --config configs/training.yaml \
+                        --output-dir models/trained \
+                        --gpu-count 1
+                    '''
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            parallel {
+                stage('Build Frontend') {
+                    agent {
+                        docker {
+                            image 'docker:dind'
+                        }
+                    }
+                    steps {
+                        script {
+                            sh '''
+                            docker build -t ${DOCKER_REGISTRY}/frontend:latest -f docker/frontend/Dockerfile .
+                            docker push ${DOCKER_REGISTRY}/frontend:latest
+                            '''
+                        }
+                    }
+                }
+
+                stage('Build Backend') {
+                    agent {
+                        docker {
+                            image 'docker:dind'
+                        }
+                    }
+                    steps {
+                        script {
+                            sh '''
+                            docker build -t ${DOCKER_REGISTRY}/backend:latest -f docker/backend/Dockerfile .
+                            docker push ${DOCKER_REGISTRY}/backend:latest
+                            '''
+                        }
+                    }
+                }
+
+                stage('Build GPU Services') {
+                    agent {
+                        docker {
+                            image 'docker:dind'
+                        }
+                    }
+                    steps {
+                        script {
+                            sh '''
+                            docker build -t ${DOCKER_REGISTRY}/canary-service:latest -f docker/canary/Dockerfile .
+                            docker push ${DOCKER_REGISTRY}/canary-service:latest
+
+                            docker build -t ${DOCKER_REGISTRY}/rollback-service:latest -f docker/rollback/Dockerfile .
+                            docker push ${DOCKER_REGISTRY}/rollback-service:latest
+
+                            docker build -t ${DOCKER_REGISTRY}/region-sync:latest -f docker/sync/Dockerfile .
+                            docker push ${DOCKER_REGISTRY}/region-sync:latest
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Canary Deployment') {
+            agent {
+                docker {
+                    image 'curlimages/curl'
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                    echo "Triggering canary deployment..."
+                    curl -X POST http://canary-service:8082/deploy \
+                         -H "Content-Type: application/json" \
+                         -d '{"image": "district-award/backend:latest", "region": "us-east-1"}'
+                    '''
+                }
+            }
+        }
+
+        stage('Run Morpheus Anomaly Detection') {
+            agent {
+                docker {
+                    image 'nvcr.io/nvidia/morpheus/morpheus:23.10'
+                    args '-e NVIDIA_VISIBLE_DEVICES=all --gpus all'
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                    echo "Running real-time anomaly detection..."
+                    python3 /opt/morpheus/run_morpheus.py \
+                        --config /config/morpheus.yaml \
+                        --input-logs /logs/deployment.logs \
+                        --output-alerts /logs/anomalies.json
+                    '''
+                }
+            }
+        }
+
+        stage('Promote to Production') {
+            agent {
+                docker {
+                    image 'curlimages/curl'
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                    echo "Promoting to production..."
+                    curl -X POST http://canary-service:8082/promote \
+                         -H "Content-Type: application/json" \
+                         -d '{"deployment_id": "latest", "region": "us-east-1"}'
+                    '''
+                }
+            }
+        }
+
+        stage('Multi-Region Sync') {
+            agent {
+                docker {
+                    image 'curlimages/curl'
+                }
+            }
+            steps {
+                script {
+                    sh '''
+                    echo "Syncing to multi-region..."
+                    curl -X POST http://region-sync:8084/sync \
+                         -H "Content-Type: application/json" \
+                         -d '{"source": "us-east-1", "regions": ["eu-west-1", "ap-southeast-1"]}'
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            junit '**/test-results/**/*.xml'
+            archiveArtifacts artifacts: '**/test-results/**/*.xml', fingerprint: true
+        }
+        success {
+            slackSend channel: '#ci-cd', message: "GPU Pipeline Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+        }
+        failure {
+            slackSend channel: '#ci-cd-alerts', message: "GPU Pipeline Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+            error "Pipeline failed - check logs for details"
+        }
+    }
+}

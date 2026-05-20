@@ -1,0 +1,44 @@
+# Prediction Engine Dockerfile
+FROM nvcr.io/nvidia/cuda:12.2.0-base-ubuntu22.04
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3-pip \
+    python3-venv \
+    build-essential \
+    libssl-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set up Python environment
+WORKDIR /app
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install NVIDIA AI Enterprise dependencies
+COPY requirements.txt .
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt
+
+# Install NVIDIA CUDA Python libraries
+RUN pip install nvidia-cuda-runtime-cu12 nvidia-cuda-nvrtc-cu12 nvidia-cudnn-cu12
+
+# Copy application code
+COPY src/prediction_engine /app/src/prediction_engine
+COPY src/common /app/src/common
+COPY src/config.py /app/src/config.py
+COPY src/main.py /app/src/main.py
+COPY src/rl_agent.py /app/src/rl_agent.py
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV CUDA_VISIBLE_DEVICES=0
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+EXPOSE 8000
+
+CMD ["python", "src/main.py"]

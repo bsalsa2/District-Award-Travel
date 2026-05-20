@@ -1,99 +1,26 @@
 version: '3.8'
 
 services:
-  # Time-series database for metrics storage
-  influxdb:
-    image: influxdb:2.7
-    container_name: influxdb
-    ports:
-      - "8086:8086"
-    volumes:
-      - influxdb_data:/var/lib/influxdb2
-      - ./config/influxdb:/etc/influxdb2
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_ADMIN_PASSWORD:-admin123}
-      - DOCKER_INFLUXDB_INIT_ORG=district-award-travel
-      - DOCKER_INFLUXDB_INIT_BUCKET=metrics
-      - DOCKER_INFLUXDB_INIT_RETENTION=30d
-    networks:
-      - metrics_network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Metrics collector service
-  metrics-collector:
-    build:
-      context: .
-      dockerfile: Dockerfile.metrics-collector
-    container_name: metrics-collector
-    environment:
-      - INFLUXDB_URL=http://influxdb:8086
-      - INFLUXDB_TOKEN=${INFLUXDB_ADMIN_TOKEN:-mytoken}
-      - INFLUXDB_ORG=district-award-travel
-      - INFLUXDB_BUCKET=metrics
-      - COLLECTOR_INTERVAL=30
-    depends_on:
-      influxdb:
-        condition: service_healthy
-    networks:
-      - metrics_network
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # Grafana for visualization
-  grafana:
-    image: grafana/grafana:10.2.0
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./config/grafana/provisioning:/etc/grafana/provisioning
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-grafana123}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_AUTH_ANONYMOUS_ENABLED=false
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-worldmap-panel
-    depends_on:
-      influxdb:
-        condition: service_healthy
-    networks:
-      - metrics_network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Nginx as reverse proxy with metrics endpoint
-  nginx:
-    image: nginx:1.25
-    container_name: nginx-metrics
+  # Nginx Load Balancer with GPU metrics support
+  nginx-lb:
+    image: nginx:latest
+    container_name: nginx-lb
     ports:
       - "80:80"
       - "443:443"
+      - "9090:9090"  # Prometheus metrics
     volumes:
-      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./config/nginx/conf.d:/etc/nginx/conf.d
-      - ./config/nginx/ssl:/etc/nginx/ssl
-    depends_on:
-      - grafana
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./certs:/etc/nginx/certs
+      - ./logs/nginx:/var/log/nginx
     networks:
-      - metrics_network
+      - gpu-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80/health"]
@@ -101,49 +28,272 @@ services:
       timeout: 10s
       retries: 3
 
-  # Metrics exporter for external services
-  prometheus-exporter:
-    image: prom/node-exporter:latest
-    container_name: node-exporter
+  # Jenkins Controller with GPU support
+  jenkins:
+    image: jenkins/jenkins:lts-jdk17
+    container_name: jenkins
     ports:
-      - "9100:9100"
+      - "8080:8080"
+      - "50000:50000"
     volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./jenkins:/usr/share/jenkins/ref
+      - ./scripts:/scripts
+    environment:
+      - JENKINS_OPTS=--httpPort=8080 --prefix=/jenkins
+      - DOCKER_HOST=unix:///var/run/docker.sock
     networks:
-      - metrics_network
+      - gpu-network
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/metrics"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/jenkins/login"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # Alert manager
-  alert-manager:
-    image: prom/alertmanager:latest
-    container_name: alert-manager
-    ports:
-      - "9093:9093"
+  # GPU Worker Pool
+  gpu-worker-1:
+    image: nvcr.io/nvidia/pytorch:23.10-py3
+    container_name: gpu-worker-1
     volumes:
-      - ./config/alertmanager:/etc/alertmanager
-    command:
-      - '--config.file=/etc/alertmanager/config.yml'
-      - '--storage.path=/alertmanager'
+      - ./scripts:/scripts
+      - ./models:/models
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - JENKINS_URL=http://jenkins:8080/jenkins
     networks:
-      - metrics_network
+      - gpu-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          cpus: '8'
+          memory: 32G
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nvidia-smi"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  gpu-worker-2:
+    image: nvcr.io/nvidia/pytorch:23.10-py3
+    container_name: gpu-worker-2
+    volumes:
+      - ./scripts:/scripts
+      - ./models:/models
+      - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - JENKINS_URL=http://jenkins:8080/jenkins
+    networks:
+      - gpu-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          cpus: '8'
+          memory: 32G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nvidia-smi"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+
+  # Morpheus Anomaly Detection Service
+  morpheus:
+    image: nvcr.io/nvidia/morpheus/morpheus:23.10
+    container_name: morpheus
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./morpheus/config:/config
+      - ./logs/morpheus:/logs
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    networks:
+      - gpu-network
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 16G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alert.rules:/etc/prometheus/alert.rules
+      - ./prometheus/data:/prometheus
+    networks:
+      - gpu-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - gpu-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and session management
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - gpu-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # PostgreSQL for CI/CD metadata
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: jenkins
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jenkins}
+      POSTGRES_DB: jenkins
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - gpu-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jenkins"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Canary Deployment Service
+  canary-service:
+    image: district-award/canary-service:latest
+    container_name: canary-service
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./canary/config:/config
+      - ./logs/canary:/logs
+    networks:
+      - gpu-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Rollback Service
+  rollback-service:
+    image: district-award/rollback-service:latest
+    container_name: rollback-service
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./rollback/config:/config
+      - ./logs/rollback:/logs
+    networks:
+      - gpu-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Multi-region Sync Service
+  region-sync:
+    image: district-award/region-sync:latest
+    container_name: region-sync
+    volumes:
+      - ./sync/config:/config
+      - ./logs/sync:/logs
+    networks:
+      - gpu-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
-  influxdb_data:
-  grafana_data:
+  jenkins-data:
+  grafana-storage:
+  redis-data:
+  postgres-data:
 
 networks:
-  metrics_network:
+  gpu-network:
     driver: bridge

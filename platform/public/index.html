@@ -3,76 +3,125 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>District Award Travel</title>
+    <title>District Award Travel - 3D Flight Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/geometries/TextGeometry.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/math/ColorConverter.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/renderers/CSS2DRenderer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/renderers/CSS3DRenderer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/libs/dat.gui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/libs/stats.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/postprocessing/UnrealBloomPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/shaders/LuminosityHighPassShader.js"></script>
 </head>
 <body>
-    <header>
-        <h1>District Award Travel</h1>
-        <p id="utc-clock"></p>
-    </header>
-    <section class="stats-row">
-        <p>Total Clients: <span id="total-clients">100</span></p>
-        <p>Active Searches: <span id="active-searches">50</span></p>
-        <p>Bookings Completed: <span id="bookings-completed">200</span></p>
-    </section>
-    <section class="booking-pipeline">
-        <h2>Booking Pipeline</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Client</th>
-                    <th>Route</th>
-                    <th>Cabin</th>
-                    <th>Miles</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="booking-pipeline-table">
-                <tr>
-                    <td>John Doe</td>
-                    <td>New York - Los Angeles</td>
-                    <td>Business</td>
-                    <td>2500</td>
-                    <td>Pending</td>
-                </tr>
-                <tr>
-                    <td>Jane Doe</td>
-                    <td>Chicago - New York</td>
-                    <td>Economy</td>
-                    <td>800</td>
-                    <td>Confirmed</td>
-                </tr>
-            </tbody>
-        </table>
-    </section>
-    <section class="award-search-results">
-        <h2>Award Search Results</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Route</th>
-                    <th>Cabin</th>
-                    <th>Miles</th>
-                    <th>Value Rating</th>
-                </tr>
-            </thead>
-            <tbody id="award-search-results-table">
-                <tr>
-                    <td>New York - Los Angeles</td>
-                    <td>Business</td>
-                    <td>2500</td>
-                    <td>8/10</td>
-                </tr>
-                <tr>
-                    <td>Chicago - New York</td>
-                    <td>Economy</td>
-                    <td>800</td>
-                    <td>6/10</td>
-                </tr>
-            </tbody>
-        </table>
-    </section>
-    <script src="script.js"></script>
+    <div class="dashboard-container">
+        <div class="header">
+            <div class="logo">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 0L25.8779 14.1221L40 20L25.8779 25.8779L20 40L14.1221 25.8779L0 20L14.1221 14.1221L20 0Z" fill="#4F46E5"/>
+                    <path d="M20 8L23.3205 16.6795L32 20L23.3205 23.3205L20 32L16.6795 23.3205L8 20L16.6795 16.6795L20 8Z" fill="white"/>
+                </svg>
+                <span class="title">District Award Travel</span>
+            </div>
+            <div class="search-controls">
+                <input type="text" id="search-input" placeholder="Search airports or routes...">
+                <button id="search-btn">Search</button>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar">JD</div>
+                <span class="user-name">Jeff Dean</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Flight Routes</h3>
+                    <div class="route-list" id="route-list">
+                        <!-- Routes will be populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Award Programs</h3>
+                    <div class="program-filters">
+                        <label><input type="checkbox" checked> AA Advantage</label>
+                        <label><input type="checkbox" checked> Delta SkyMiles</label>
+                        <label><input type="checkbox" checked> United MileagePlus</label>
+                        <label><input type="checkbox"> Avianca LifeMiles</label>
+                        <label><input type="checkbox"> ANA Mileage Club</label>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>AI Recommendations</h3>
+                    <div class="recommendations" id="recommendations">
+                        <!-- AI recommendations will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="visualization-container">
+                <div class="canvas-container" id="canvas-container">
+                    <canvas id="webgl-canvas"></canvas>
+                </div>
+                <div class="controls">
+                    <div class="control-group">
+                        <label>Time of Day</label>
+                        <input type="range" id="time-slider" min="0" max="24" value="12">
+                        <span id="time-value">12:00</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Route Density</label>
+                        <input type="range" id="density-slider" min="1" max="10" value="5">
+                    </div>
+                    <div class="control-group">
+                        <label>AI Mode</label>
+                        <select id="ai-mode">
+                            <option value="eco">Economy Focus</option>
+                            <option value="business">Business Focus</option>
+                            <option value="first">First Class Focus</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="route-details-panel" id="route-details">
+                <div class="panel-header">
+                    <h3>Route Details</h3>
+                    <button id="close-details">×</button>
+                </div>
+                <div class="panel-content" id="details-content">
+                    <!-- Route details will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="metrics">
+                <span id="fps-counter">60 FPS</span>
+                <span id="gpu-info">WebGPU Ready</span>
+                <span id="data-updated">Updated: <span id="last-update">Just now</span></span>
+            </div>
+            <div class="ai-status">
+                <span class="ai-indicator">🤖 AI Active</span>
+                <span class="model-version">v3.2.1</span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+    <script type="module" src="webgpu-engine.js"></script>
+    <script type="module" src="ai-engine.js"></script>
+    <script type="module" src="data-service.js"></script>
 </body>
 </html>
