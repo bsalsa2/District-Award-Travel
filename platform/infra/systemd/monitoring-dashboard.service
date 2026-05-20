@@ -1,0 +1,11 @@
+[Unit]
+Description=Monitoring Dashboard
+After=docker.service
+
+[Service]
+Restart=always
+ExecStart=/usr/bin/docker-compose -f /home/runner/work/District-Award-Travel/District-Award-Travel/platform/infra/docker-compose.yml up
+ExecStop=/usr/bin/docker-compose -f /home/runner/work/District-Award-Travel/District-Award-Travel/platform/infra/docker-compose.yml down
+
+[Install]
+WantedBy=multi-user.target

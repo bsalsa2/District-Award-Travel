@@ -5,14 +5,22 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - alerting-system
+      - award-travel-logic
     environment:
-      - ALERTING_SYSTEM_URL=http://alerting-system:8081
-
-  alerting-system:
-    build: ./alerting-system
+      - AWARD_TRAVEL_LOGIC_URL=http://award-travel-logic:8081
+  award-travel-logic:
+    build: ./award-travel-logic
     ports:
       - "8081:8081"
     environment:
-      - CPU_USAGE_THRESHOLD=80
-      - ALERT_HISTORY_SIZE=100
+      - DATABASE_URL=postgres://user:password@db:5432/award_travel
+    depends_on:
+      - db
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=award_travel
+    volumes:
+      - ./db-data:/var/lib/postgresql/data
