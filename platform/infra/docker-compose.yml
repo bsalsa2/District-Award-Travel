@@ -1,299 +1,347 @@
 version: '3.8'
 
 services:
-  # Nginx Load Balancer with GPU metrics support
-  nginx-lb:
-    image: nginx:latest
-    container_name: nginx-lb
+  # Edge Load Balancer with Nginx
+  edge-lb:
+    image: nginx:alpine
+    container_name: edge-lb
     ports:
       - "80:80"
       - "443:443"
-      - "9090:9090"  # Prometheus metrics
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/conf.d:/etc/nginx/conf.d
-      - ./certs:/etc/nginx/certs
-      - ./logs/nginx:/var/log/nginx
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
     networks:
-      - gpu-network
+      - global-net
     deploy:
       resources:
         limits:
           cpus: '2'
           memory: 4G
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # Jenkins Controller with GPU support
-  jenkins:
-    image: jenkins/jenkins:lts-jdk17
-    container_name: jenkins
-    ports:
-      - "8080:8080"
-      - "50000:50000"
-    volumes:
-      - jenkins-data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./jenkins:/usr/share/jenkins/ref
-      - ./scripts:/scripts
+  # API Gateway Service
+  api-gateway:
+    image: district-award/api-gateway:latest
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
     environment:
-      - JENKINS_OPTS=--httpPort=8080 --prefix=/jenkins
-      - DOCKER_HOST=unix:///var/run/docker.sock
+      - ENV=production
+      - LOG_LEVEL=info
+      - EDGE_NODE=true
+    volumes:
+      - ./services/api-gateway/config:/config
     networks:
-      - gpu-network
+      - global-net
+    depends_on:
+      - edge-lb
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+      replicas: 3
+    restart: unless-stopped
+
+  # Flight Data Ingestion Service
+  flight-ingestion:
+    image: district-award/flight-ingestion:latest
+    build:
+      context: ./services/flight-ingestion
+      dockerfile: Dockerfile
+    container_name: flight-ingestion
+    environment:
+      - ENV=production
+      - KAFKA_BROKERS=kafka:9092
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=postgres
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./services/flight-ingestion:/app
+    networks:
+      - global-net
+    depends_on:
+      - kafka
+      - redis
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '8'
+          memory: 16G
+      replicas: 5
+    restart: unless-stopped
+
+  # Real-time Processing Service (RAPIDS)
+  flight-processor:
+    image: district-award/flight-processor:latest
+    build:
+      context: ./services/flight-processor
+      dockerfile: Dockerfile
+    container_name: flight-processor
+    environment:
+      - ENV=production
+      - KAFKA_BROKERS=kafka:9092
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=postgres
+      - CUDA_VISIBLE_DEVICES=0,1
+    volumes:
+      - ./services/flight-processor:/app
+      - /dev/nvidia:/dev/nvidia
+    networks:
+      - global-net
+    depends_on:
+      - kafka
+      - redis
+      - postgres
+    deploy:
+      resources:
+        limits:
+          cpus: '16'
+          memory: 32G
+          devices:
+            - driver: nvidia
+              count: 2
+              capabilities: [gpu]
+      replicas: 3
+    restart: unless-stopped
+
+  # Kafka Cluster
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - global-net
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-log:/var/lib/zookeeper/log
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - global-net
     deploy:
       resources:
         limits:
           cpus: '4'
           memory: 8G
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/jenkins/login"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # GPU Worker Pool
-  gpu-worker-1:
-    image: nvcr.io/nvidia/pytorch:23.10-py3
-    container_name: gpu-worker-1
-    volumes:
-      - ./scripts:/scripts
-      - ./models:/models
-      - ./data:/data
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - JENKINS_URL=http://jenkins:8080/jenkins
+  kafka-init:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka-init
+    depends_on:
+      - kafka
+    command: >
+      bash -c "
+      echo Waiting for Kafka to be ready...
+      cub kafka-ready -b kafka:9092 1 30 &&
+      kafka-topics --create --if-not-exists --topic flight-inventory --partitions 12 --replication-factor 3 --bootstrap-server kafka:9092 &&
+      kafka-topics --create --if-not-exists --topic award-availability --partitions 12 --replication-factor 3 --bootstrap-server kafka:9092 &&
+      kafka-topics --create --if-not-exists --topic pricing-updates --partitions 12 --replication-factor 3 --bootstrap-server kafka:9092 &&
+      kafka-topics --create --if-not-exists --topic anomaly-alerts --partitions 6 --replication-factor 3 --bootstrap-server kafka:9092 &&
+      echo Topics created successfully
+      "
     networks:
-      - gpu-network
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-        limits:
-          cpus: '8'
-          memory: 32G
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nvidia-smi"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
+      - global-net
+    restart: on-failure
 
-  gpu-worker-2:
-    image: nvcr.io/nvidia/pytorch:23.10-py3
-    container_name: gpu-worker-2
-    volumes:
-      - ./scripts:/scripts
-      - ./models:/models
-      - ./data:/data
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-      - JENKINS_URL=http://jenkins:8080/jenkins
-    networks:
-      - gpu-network
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-        limits:
-          cpus: '8'
-          memory: 32G
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "nvidia-smi"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-
-  # Morpheus Anomaly Detection Service
-  morpheus:
-    image: nvcr.io/nvidia/morpheus/morpheus:23.10
-    container_name: morpheus
+  # Redis Cluster for caching
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --appendonly yes --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --maxmemory 8gb --maxmemory-policy allkeys-lru
     ports:
-      - "8081:8081"
+      - "6379:6379"
     volumes:
-      - ./morpheus/config:/config
-      - ./logs/morpheus:/logs
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      - redis-data:/data
     networks:
-      - gpu-network
+      - global-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+    restart: unless-stopped
+
+  redis-cluster-init:
+    image: redis:7-alpine
+    container_name: redis-cluster-init
+    depends_on:
+      - redis
+    command: >
+      sh -c "
+      echo 'Waiting for Redis to be ready...'
+      until redis-cli -h redis ping; do
+        sleep 1
+      done
+      echo 'Creating Redis cluster...'
+      redis-cli --cluster create redis:6379 --cluster-replicas 1 --cluster-yes
+      "
+    networks:
+      - global-net
+    restart: on-failure
+
+  # PostgreSQL for persistent storage
+  postgres:
+    image: timescale/timescaledb:latest-pg14
+    container_name: postgres
+    environment:
+      POSTGRES_USER: awardtravel
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: flight_intelligence
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./services/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - global-net
     deploy:
       resources:
         limits:
           cpus: '4'
-          memory: 16G
+          memory: 8G
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # Prometheus Monitoring
+  # Monitoring Stack
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     ports:
-      - "9091:9090"
+      - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus/alert.rules:/etc/prometheus/alert.rules
-      - ./prometheus/data:/prometheus
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
     networks:
-      - gpu-network
+      - global-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # Grafana Visualization
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
     volumes:
-      - grafana-storage:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    networks:
-      - gpu-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Redis for caching and session management
-  redis:
-    image: redis:latest
-    container_name: redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis-data:/data
-    networks:
-      - gpu-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # PostgreSQL for CI/CD metadata
-  postgres:
-    image: postgres:15
-    container_name: postgres
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
     environment:
-      POSTGRES_USER: jenkins
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jenkins}
-      POSTGRES_DB: jenkins
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
     networks:
-      - gpu-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jenkins"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Canary Deployment Service
-  canary-service:
-    image: district-award/canary-service:latest
-    container_name: canary-service
-    ports:
-      - "8082:8082"
-    volumes:
-      - ./canary/config:/config
-      - ./logs/canary:/logs
-    networks:
-      - gpu-network
+      - global-net
+    depends_on:
+      - prometheus
     deploy:
       resources:
         limits:
           cpus: '2'
           memory: 4G
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # Rollback Service
-  rollback-service:
-    image: district-award/rollback-service:latest
-    container_name: rollback-service
-    ports:
-      - "8083:8083"
+  # AI Anomaly Detection Service
+  anomaly-detection:
+    image: district-award/anomaly-detection:latest
+    build:
+      context: ./services/anomaly-detection
+      dockerfile: Dockerfile
+    container_name: anomaly-detection
+    environment:
+      - ENV=production
+      - KAFKA_BROKERS=kafka:9092
+      - POSTGRES_HOST=postgres
+      - MODEL_PATH=/app/models
     volumes:
-      - ./rollback/config:/config
-      - ./logs/rollback:/logs
+      - ./services/anomaly-detection:/app
+      - ./services/anomaly-detection/models:/app/models
     networks:
-      - gpu-network
+      - global-net
+    depends_on:
+      - kafka
+      - postgres
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 4G
+          cpus: '8'
+          memory: 16G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8083/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # Multi-region Sync Service
-  region-sync:
-    image: district-award/region-sync:latest
-    container_name: region-sync
+  # Data Sync Service for multi-region
+  data-sync:
+    image: district-award/data-sync:latest
+    build:
+      context: ./services/data-sync
+      dockerfile: Dockerfile
+    container_name: data-sync
+    environment:
+      - ENV=production
+      - KAFKA_BROKERS=kafka:9092
+      - REDIS_HOST=redis
+      - PRIMARY_REGION=true
     volumes:
-      - ./sync/config:/config
-      - ./logs/sync:/logs
+      - ./services/data-sync:/app
     networks:
-      - gpu-network
+      - global-net
+    depends_on:
+      - kafka
+      - redis
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 4G
+          cpus: '4'
+          memory: 8G
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8084/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-volumes:
-  jenkins-data:
-  grafana-storage:
-  redis-data:
-  postgres-data:
 
 networks:
-  gpu-network:
+  global-net:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  zookeeper-data:
+  zookeeper-log:
+  kafka-data:
+  redis-data:
+  postgres-data:
+  prometheus-data:
+  grafana-data:

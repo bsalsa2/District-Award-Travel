@@ -1,59 +1,192 @@
 import asyncio
+import logging
+from datetime import datetime, timedelta
+from typing import List, Dict, Any
 import sqlite3
-from concurrent.futures import ThreadPoolExecutor
-from queue import Queue
-from typing import Dict, List
+from pathlib import Path
 
-class SearchJob:
-    def __init__(self, route: str, date: str):
-        self.route = route
-        self.date = date
+from .scrapers.united import UnitedScraper
+from .scrapers.delta import DeltaScraper
+from .scrapers.american import AmericanScraper
+from .aggregator import AwardAggregator
+from .scheduler import SearchScheduler
 
-class SearchPipeline:
-    def __init__(self, db_path: str, num_workers: int):
+# Configure logging for high-throughput systems
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('award_search_pipeline.log')
+    ]
+)
+logger = logging.getLogger(__name__)
+
+class AwardSearchPipeline:
+    """
+    High-performance award search pipeline with mechanical sympathy principles.
+    Designed for maximum throughput with minimal latency.
+    """
+
+    def __init__(self, db_path: str = "award_search.db"):
         self.db_path = db_path
-        self.num_workers = num_workers
-        self.queue = Queue()
-        self.executor = ThreadPoolExecutor(max_workers=num_workers)
+        self._initialize_database()
 
-    async def produce_search_jobs(self, jobs: List[SearchJob]):
-        for job in jobs:
-            self.queue.put(job)
+        # Initialize scrapers with connection pooling
+        self.scrapers = [
+            UnitedScraper(),
+            DeltaScraper(),
+            AmericanScraper()
+        ]
 
-    def consume_search_jobs(self):
-        while True:
-            job = self.queue.get()
-            if job is None:
-                break
-            self.execute_search(job)
-            self.queue.task_done()
+        # Initialize aggregator with SQLite cache
+        self.aggregator = AwardAggregator(db_path)
 
-    def execute_search(self, job: SearchJob):
-        # Simulate search execution
-        print(f"Executing search for {job.route} on {job.date}")
-        results = self.search_awards(job.route, job.date)
-        self.store_results(job, results)
+        # Initialize scheduler
+        self.scheduler = SearchScheduler(self)
 
-    def search_awards(self, route: str, date: str) -> Dict:
-        # Simulate award search
-        return {"route": route, "date": date, "awards": ["award1", "award2"]}
-
-    def store_results(self, job: SearchJob, results: Dict):
+    def _initialize_database(self) -> None:
+        """Initialize SQLite database with optimal schema for award data."""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO search_results (route, date, awards) VALUES (?, ?, ?)",
-                       (job.route, job.date, str(results["awards"])))
+
+        # Create tables with optimal indexing for fast queries
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS award_searches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            origin TEXT NOT NULL,
+            destination TEXT NOT NULL,
+            date TEXT NOT NULL,
+            airline TEXT NOT NULL,
+            flight_number TEXT NOT NULL,
+            cabin TEXT NOT NULL,
+            miles_required INTEGER NOT NULL,
+            taxes_usd REAL NOT NULL,
+            available_seats INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(origin, destination, date, airline, flight_number)
+        )
+        """)
+
+        # Create indexes for fast lookups
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_origin_destination_date ON award_searches(origin, destination, date)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_miles_required ON award_searches(miles_required)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_date ON award_searches(date)")
+
         conn.commit()
         conn.close()
 
-    def start(self, jobs: List[SearchJob]):
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.produce_search_jobs(jobs))
-        for _ in range(self.num_workers):
-            self.executor.submit(self.consume_search_jobs)
-        loop.close()
+    async def search_route(
+        self,
+        origin: str,
+        destination: str,
+        date: str,
+        max_workers: int = 10
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for award availability across multiple airlines concurrently.
+
+        Args:
+            origin: Origin airport code (e.g., 'JFK')
+            destination: Destination airport code (e.g., 'LAX')
+            date: Date in YYYY-MM-DD format
+            max_workers: Number of concurrent workers
+
+        Returns:
+            List of award availability results sorted by value
+        """
+        # Validate date format
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("Date must be in YYYY-MM-DD format")
+
+        # Create semaphore for controlled concurrency
+        semaphore = asyncio.Semaphore(max_workers)
+
+        async def worker(scraper):
+            async with semaphore:
+                try:
+                    results = await scraper.search(origin, destination, date)
+                    return results
+                except Exception as e:
+                    logger.error(f"Error in {scraper.__class__.__name__}: {str(e)}")
+                    return []
+
+        # Run all scrapers concurrently
+        tasks = [worker(scraper) for scraper in self.scrapers]
+        results = await asyncio.gather(*tasks)
+
+        # Flatten results and deduplicate
+        all_results = []
+        for result_list in results:
+            all_results.extend(result_list)
+
+        # Aggregate and cache results
+        aggregated = self.aggregator.aggregate_and_cache(all_results, origin, destination, date)
+
+        logger.info(f"Found {len(aggregated)} award options for {origin}->{destination} on {date}")
+        return aggregated
+
+    async def run_hourly_searches(self) -> None:
+        """Run scheduled searches for all active client routes."""
+        await self.scheduler.run_hourly_searches()
+
+    def get_cached_results(
+        self,
+        origin: str,
+        destination: str,
+        date: str
+    ) -> List[Dict[str, Any]]:
+        """Retrieve cached results from SQLite."""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        SELECT
+            airline,
+            flight_number,
+            origin,
+            destination,
+            date,
+            cabin,
+            miles_required,
+            taxes_usd,
+            available_seats
+        FROM award_searches
+        WHERE origin = ? AND destination = ? AND date = ?
+        ORDER BY miles_required ASC
+        """, (origin, destination, date))
+
+        columns = [col[0] for col in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+        conn.close()
+        return results
+
+    def close(self) -> None:
+        """Clean up resources."""
+        for scraper in self.scrapers:
+            if hasattr(scraper, 'close'):
+                scraper.close()
+        self.scheduler.close()
+
+async def main():
+    """Example usage of the award search pipeline."""
+    pipeline = AwardSearchPipeline()
+
+    # Example search
+    results = await pipeline.search_route("JFK", "LAX", "2026-06-15")
+    print(f"Found {len(results)} award options")
+
+    # Example cached retrieval
+    cached = pipeline.get_cached_results("JFK", "LAX", "2026-06-15")
+    print(f"Cached results: {len(cached)}")
+
+    # Start scheduler (in a real app, this would run in background)
+    # await pipeline.run_hourly_searches()
+
+    pipeline.close()
 
 if __name__ == "__main__":
-    pipeline = SearchPipeline("search_results.db", 10)
-    jobs = [SearchJob("NYC-LAX", "2026-05-20"), SearchJob("LAX-NYC", "2026-05-21")]
-    pipeline.start(jobs)
+    asyncio.run(main())

@@ -1,20 +1,40 @@
-FROM python:3.9-slim
+# Build stage
+FROM python:3.11-slim as builder
 
-# Set the working directory
 WORKDIR /app
 
-# Copy the requirements file
+# Install build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
 COPY requirements.txt .
+RUN pip install --user -r requirements.txt
 
-# Install the dependencies
-RUN pip install -r requirements.txt
+# Runtime stage
+FROM python:3.11-slim
 
-# Copy the application code
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy installed dependencies from builder
+COPY --from=builder /root/.local /root/.local
 COPY . .
 
-# Expose the ports
-EXPOSE 8080
-EXPOSE 8081
+# Ensure scripts in .local are usable
+ENV PATH=/root/.local/bin:$PATH
 
-# Run the command to start the monitoring dashboard server
-CMD ["python", "monitoring_dashboard.py"]
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Expose the port the app runs on
+EXPOSE 8000
+
+# Command to run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
