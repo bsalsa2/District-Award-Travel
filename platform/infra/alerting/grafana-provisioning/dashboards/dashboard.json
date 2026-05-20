@@ -1,0 +1,105 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "District Award Travel Alerting System",
+    "tags": ["alerting", "monitoring", "district"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Health Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "system_health_status",
+            "legendFormat": "Health Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "Unhealthy",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "Healthy",
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Alerts Triggered (Last 24h)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum by (alert_type) (increase(alerts_triggered_total[24h]))",
+            "legendFormat": "{{alert_type}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Alert Response Time (95th Percentile)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum by (le, alert_type) (rate(alert_response_time_seconds_bucket[5m])))",
+            "legendFormat": "{{alert_type}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Alerts by Severity",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum by (severity) (alerts_triggered_total)",
+            "legendFormat": "{{severity}}"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Last Heartbeat",
+        "type": "time series",
+        "targets": [
+          {
+            "expr": "last_heartbeat_timestamp",
+            "legendFormat": "Last Heartbeat"
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Annotations & Alerts",
+          "enable": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "type": "dashboard"
+        }
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 30,
+    "version": 1
+  },
+  "folderId": 0,
+  "overwrite": true
+}

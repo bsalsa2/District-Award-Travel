@@ -1,0 +1,51 @@
+groups:
+- name: district-award-travel.rules
+  interval: 30s
+  rules:
+  - alert: HighErrorRate
+    expr: rate(http_requests_total{status=~"5.."}[1m]) > 0.1
+    for: 5m
+    labels:
+      severity: critical
+      service: web
+    annotations:
+      summary: "High error rate on {{ $labels.instance }}"
+      description: "Error rate is {{ $value }} (threshold: 0.1)"
+
+  - alert: AwardAvailabilityDegraded
+    expr: award_service_up == 0
+    for: 2m
+    labels:
+      severity: high
+      service: awards
+    annotations:
+      summary: "Award service is down"
+      description: "Award service on {{ $labels.instance }} is not responding"
+
+  - alert: BookingFailureSpike
+    expr: increase(booking_failures_total[5m]) > 10
+    labels:
+      severity: critical
+      service: bookings
+    annotations:
+      summary: "Booking failures spike detected"
+      description: "There were {{ $value }} booking failures in the last 5 minutes"
+
+  - alert: HighMemoryUsage
+    expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 90
+    for: 10m
+    labels:
+      severity: warning
+      service: infrastructure
+    annotations:
+      summary: "High memory usage on {{ $labels.instance }}"
+      description: "Memory usage is {{ $value }}% (threshold: 90%)"
+
+  - alert: TravelerNotificationFailure
+    expr: increase(notification_failures_total[1h]) > 5
+    labels:
+      severity: warning
+      service: notifications
+    annotations:
+      summary: "Multiple notification failures"
+      description: "There were {{ $value }} notification failures in the last hour"

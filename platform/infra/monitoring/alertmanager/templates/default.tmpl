@@ -1,0 +1,15 @@
+{{ define "slack.title" }}
+[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}
+{{ end }}
+
+{{ define "slack.text" }}
+{{ range .Alerts }}
+*Alert:* {{ .Annotations.summary }}
+*Severity:* {{ .Labels.severity }}
+*Description:* {{ .Annotations.description }}
+*Dashboard:* {{ .Annotations.dashboard_url }}
+*Starts at:* {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+{{ if gt (len .Annotations.runbook_url) 0 }}
+*Runbook:* <{{ .Annotations.runbook_url }}|:spiral_note_pad:>
+{{ end }}
+{{ end }}

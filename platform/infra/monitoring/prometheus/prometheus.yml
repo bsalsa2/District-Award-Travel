@@ -1,0 +1,67 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+  external_labels:
+    monitor: 'district-award-travel'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - '/etc/prometheus/rules/*.yml'
+
+# A scrape configuration containing exactly one endpoint to scrape: Prometheus itself.
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  - job_name: 'blackbox-exporter'
+    static_configs:
+      - targets: ['blackbox-exporter:9115']
+
+  - job_name: 'pushgateway'
+    honor_labels: true
+    static_configs:
+      - targets: ['pushgateway:9091']
+
+  # Alerting system metrics
+  - job_name: 'alerting-system'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['host.docker.internal:8080']  # Will be replaced with actual alerting service
+        labels:
+          env: 'production'
+
+  # Grafana metrics
+  - job_name: 'grafana'
+    static_configs:
+      - targets: ['grafana:3000']
+
+  # Alertmanager metrics
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+
+  # Mailhog for email notification testing
+  - job_name: 'mailhog'
+    static_configs:
+      - targets: ['mailhog:8025']
+
+# Remote write configuration (if needed for long-term storage)
+# remote_write:
+#   - url: 'https://prometheus-prod-01-eu-west-0.grafana.net/api/prom/push'
+#     basic_auth:
+#       username: 'your-username'
+#       password: 'your-password'

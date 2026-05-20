@@ -1,0 +1,16 @@
+[Unit]
+Description=AlertManager Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/home/runner/work/District-Award-Travel/District-Award-Travel/platform/infra/alerting
+ExecStart=/usr/bin/docker-compose up alert-manager
+ExecStop=/usr/bin/docker-compose down
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

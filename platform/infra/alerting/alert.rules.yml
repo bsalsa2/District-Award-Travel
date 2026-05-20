@@ -1,0 +1,42 @@
+groups:
+- name: alerting-system-alerts
+  rules:
+  - alert: AlertingServiceDown
+    expr: up{job="alerting-service"} == 0
+    for: 5m
+    labels:
+      severity: critical
+      service: alerting
+    annotations:
+      summary: "Alerting service is down"
+      description: "The District Award Travel alerting service has been down for more than 5 minutes"
+
+  - alert: HighAlertVolume
+    expr: rate(alerts_triggered_total[5m]) > 100
+    for: 1m
+    labels:
+      severity: warning
+      service: alerting
+    annotations:
+      summary: "High volume of alerts triggered"
+      description: "More than 100 alerts were triggered in the last 5 minutes"
+
+  - alert: SlowAlertProcessing
+    expr: histogram_quantile(0.95, alert_response_time_seconds_bucket[5m]) > 2
+    for: 2m
+    labels:
+      severity: warning
+      service: alerting
+    annotations:
+      summary: "Slow alert processing detected"
+      description: "95% of alerts are taking more than 2 seconds to process"
+
+  - alert: SystemHealthDegraded
+    expr: system_health_status == 0
+    for: 1m
+    labels:
+      severity: critical
+      service: alerting
+    annotations:
+      summary: "Alerting system health degraded"
+      description: "The overall health status of the alerting system is unhealthy"

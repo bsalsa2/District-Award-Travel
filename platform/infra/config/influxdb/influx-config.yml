@@ -1,0 +1,24 @@
+# InfluxDB configuration
+# This file is mounted into the InfluxDB container
+
+bolt-path: /var/lib/influxdb2/influxd.bolt
+engine-path: /var/lib/influxdb2/engine
+log-level: info
+query-concurrency: 10
+query-queue-size: 100
+storage-cache-max-memory-size: 1073741824
+storage-cache-snapshot-memory-size: 268435456
+storage-cache-snapshot-write-cold-duration: 10m0s
+storage-compact-throughput-burst: 5368709120
+storage-compact-throughput: 1073741824
+storage-compact-throughput-byte: 5368709120
+storage-compact-throughput-byte-write: 1073741824
+storage-retention-check-interval: 30m0s
+storage-wal-fsync-delay: 0s
+storage-wal-memory-size: 20971520
+storage-wal-partition-size: 134217728
+storage-wal-max-concurrent-writes: 100
+storage-wal-max-write-delay: 10s
+storage-wal-ready-series-size: 1048576
+storage-wal-ready-series-max-concurrency: 100
+storage-wal-ready-series-max-size: 10485760

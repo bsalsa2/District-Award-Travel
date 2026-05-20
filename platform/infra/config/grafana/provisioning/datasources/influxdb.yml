@@ -1,0 +1,14 @@
+apiVersion: 1
+
+datasources:
+  - name: InfluxDB
+    type: influxdb
+    access: proxy
+    url: http://influxdb:8086
+    jsonData:
+      version: Flux
+      organization: district-award-travel
+      defaultBucket: metrics
+    secureJsonData:
+      token: ${INFLUXDB_ADMIN_TOKEN:-mytoken}
+    isDefault: true

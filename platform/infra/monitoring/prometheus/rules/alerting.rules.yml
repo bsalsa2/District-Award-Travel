@@ -1,0 +1,79 @@
+groups:
+- name: alerting-system-health
+  rules:
+  - alert: AlertingSystemDown
+    expr: up{job="alerting-system"} == 0
+    for: 5m
+    labels:
+      severity: critical
+      service: alerting
+    annotations:
+      summary: "Alerting system is down"
+      description: "The alerting system service has been down for more than 5 minutes"
+      dashboard_url: "http://grafana:3000/d/alerting-system/alerting-system-health"
+
+  - alert: HighNotificationFailureRate
+    expr: rate(notification_delivery_failures_total[5m]) / rate(notification_deliveries_total[5m]) > 0.1
+    for: 10m
+    labels:
+      severity: warning
+      service: alerting
+    annotations:
+      summary: "High notification failure rate detected"
+      description: "More than 10% of notifications are failing to deliver (current rate: {{ $value | printf \"%.2f\" }}%)"
+      dashboard_url: "http://grafana:3000/d/alerting-system/notification-delivery"
+
+  - alert: NotificationQueueBacklog
+    expr: notification_queue_size > 1000
+    for: 15m
+    labels:
+      severity: warning
+      service: alerting
+    annotations:
+      summary: "Notification queue backlog detected"
+      description: "Notification queue has {{ $value }} messages waiting to be processed"
+      dashboard_url: "http://grafana:3000/d/alerting-system/notification-queue"
+
+  - alert: AlertProcessingLatencyHigh
+    expr: histogram_quantile(0.95, rate(alert_processing_duration_seconds_bucket[5m])) > 5
+    for: 10m
+    labels:
+      severity: warning
+      service: alerting
+    annotations:
+      summary: "High alert processing latency"
+      description: "95th percentile alert processing time is {{ $value | printf \"%.2f\" }} seconds"
+      dashboard_url: "http://grafana:3000/d/alerting-system/alert-processing"
+
+  - alert: AlertDeliveryLatencyHigh
+    expr: histogram_quantile(0.95, rate(alert_delivery_duration_seconds_bucket[5m])) > 10
+    for: 10m
+    labels:
+      severity: warning
+      service: alerting
+    annotations:
+      summary: "High alert delivery latency"
+      description: "95th percentile alert delivery time is {{ $value | printf \"%.2f\" }} seconds"
+      dashboard_url: "http://grafana:3000/d/alerting-system/alert-delivery"
+
+  - alert: AlertingSystemMemoryHigh
+    expr: process_resident_memory_bytes{job="alerting-system"} > 1e9
+    for: 10m
+    labels:
+      severity: warning
+      service: alerting
+    annotations:
+      summary: "Alerting system memory usage high"
+      description: "Alerting system is using {{ $value | printf \"%.2f\" }} bytes of memory"
+      dashboard_url: "http://grafana:3000/d/alerting-system/system-resources"
+
+  - alert: AlertingSystemCPUHigh
+    expr: rate(process_cpu_seconds_total{job="alerting-system"}[5m]) > 4
+    for: 10m
+    labels:
+      severity: warning
+      service: alerting
+    annotations:
+      summary: "Alerting system CPU usage high"
+      description: "Alerting system is using more than 4 CPU seconds per 5 minutes"
+      dashboard_url: "http://grafana:3000/d/alerting-system/system-resources"

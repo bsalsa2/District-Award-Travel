@@ -1,0 +1,12 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'alert-escalation'
+    static_configs:
+      - targets: ['alert-escalation:9090']
+
+  - job_name: 'alert-worker'
+    static_configs:
+      - targets: ['escalation-worker:9090']
