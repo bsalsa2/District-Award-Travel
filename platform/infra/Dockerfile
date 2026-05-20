@@ -1,13 +1,20 @@
 FROM python:3.9-slim
 
-# Set the working directory to /app
+# Set the working directory
 WORKDIR /app
 
-# Copy the alerting system script
-COPY alerting_system.py /app/alerting_system.py
+# Copy the requirements file
+COPY requirements.txt .
 
-# Install the required dependencies
-RUN pip install psutil
+# Install the dependencies
+RUN pip install -r requirements.txt
 
-# Run the alerting system script
-CMD ["python", "alerting_system.py"]
+# Copy the application code
+COPY . .
+
+# Expose the ports
+EXPOSE 8080
+EXPOSE 8081
+
+# Run the command to start the monitoring dashboard server
+CMD ["python", "monitoring_dashboard.py"]

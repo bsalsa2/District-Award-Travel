@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>District Award Travel</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <h1>District Award Travel</h1>
+        <p id="utc-clock"></p>
+    </header>
+    <section class="stats-row">
+        <p>Total Clients: <span id="total-clients">100</span></p>
+        <p>Active Searches: <span id="active-searches">50</span></p>
+        <p>Bookings Completed: <span id="bookings-completed">200</span></p>
+    </section>
+    <section class="booking-pipeline">
+        <h2>Booking Pipeline</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Route</th>
+                    <th>Cabin</th>
+                    <th>Miles</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="booking-pipeline-table">
+                <tr>
+                    <td>John Doe</td>
+                    <td>New York - Los Angeles</td>
+                    <td>Business</td>
+                    <td>2500</td>
+                    <td>Pending</td>
+                </tr>
+                <tr>
+                    <td>Jane Doe</td>
+                    <td>Chicago - New York</td>
+                    <td>Economy</td>
+                    <td>800</td>
+                    <td>Confirmed</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+    <section class="award-search-results">
+        <h2>Award Search Results</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Route</th>
+                    <th>Cabin</th>
+                    <th>Miles</th>
+                    <th>Value Rating</th>
+                </tr>
+            </thead>
+            <tbody id="award-search-results-table">
+                <tr>
+                    <td>New York - Los Angeles</td>
+                    <td>Business</td>
+                    <td>2500</td>
+                    <td>8/10</td>
+                </tr>
+                <tr>
+                    <td>Chicago - New York</td>
+                    <td>Economy</td>
+                    <td>800</td>
+                    <td>6/10</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+    <script src="script.js"></script>
+</body>
+</html>

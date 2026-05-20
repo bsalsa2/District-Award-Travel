@@ -1,0 +1,74 @@
+body {
+    background-color: #080c10;
+    color: #e8edf5;
+    font-family: Arial, sans-serif;
+}
+
+header {
+    background-color: #080c10;
+    padding: 20px;
+    text-align: center;
+}
+
+header h1 {
+    font-size: 36px;
+    margin-bottom: 10px;
+}
+
+header p {
+    font-size: 24px;
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+}
+
+.stats-row p {
+    font-size: 24px;
+    margin-right: 20px;
+}
+
+.booking-pipeline {
+    padding: 20px;
+}
+
+.booking-pipeline table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.booking-pipeline th, .booking-pipeline td {
+    border: 1px solid #e8edf5;
+    padding: 10px;
+    text-align: left;
+}
+
+.booking-pipeline th {
+    background-color: #080c10;
+}
+
+.award-search-results {
+    padding: 20px;
+}
+
+.award-search-results table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.award-search-results th, .award-search-results td {
+    border: 1px solid #e8edf5;
+    padding: 10px;
+    text-align: left;
+}
+
+.award-search-results th {
+    background-color: #080c10;
+}
+
+#utc-clock {
+    color: #00ff88;
+    font-size: 24px;
+}

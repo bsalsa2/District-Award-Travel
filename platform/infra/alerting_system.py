@@ -1,41 +1,54 @@
-import psutil
+import os
+import sys
 import smtplib
 from email.mime.text import MIMEText
 
-# Define the threshold for CPU usage
-CPU_THRESHOLD = 80
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Define the email configuration
-SMTP_SERVER = 'smtp.gmail.com'
-SMTP_PORT = 587
-FROM_EMAIL = 'district.award.travel@example.com'
-TO_EMAIL = 'mitchell@example.com'
-PASSWORD = 'password123'
-
-def get_cpu_usage():
-    """Get the current CPU usage"""
-    return psutil.cpu_percent(interval=1)
+# Define the alerting system configuration
+ALERTING_SYSTEM_CONFIG = {
+    'smtp_server': 'smtp.gmail.com',
+    'smtp_port': 587,
+    'from_email': 'district.award.travel@example.com',
+    'to_email': 'mitchell@example.com',
+    'password': 'password'
+}
 
 def send_email(subject, body):
-    """Send an email notification"""
-    msg = MIMEText(body)
-    msg['Subject'] = subject
-    msg['From'] = FROM_EMAIL
-    msg['To'] = TO_EMAIL
+    """
+    Send an email using the alerting system configuration.
+    """
+    try:
+        msg = MIMEText(body)
+        msg['Subject'] = subject
+        msg['From'] = ALERTING_SYSTEM_CONFIG['from_email']
+        msg['To'] = ALERTING_SYSTEM_CONFIG['to_email']
+        server = smtplib.SMTP(ALERTING_SYSTEM_CONFIG['smtp_server'], ALERTING_SYSTEM_CONFIG['smtp_port'])
+        server.starttls()
+        server.login(ALERTING_SYSTEM_CONFIG['from_email'], ALERTING_SYSTEM_CONFIG['password'])
+        server.sendmail(ALERTING_SYSTEM_CONFIG['from_email'], ALERTING_SYSTEM_CONFIG['to_email'], msg.as_string())
+        server.quit()
+        logging.info(f'Email sent successfully: {subject}')
+    except smtplib.SMTPException as e:
+        logging.error(f'Failed to send email: {e}')
 
-    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-    server.starttls()
-    server.login(FROM_EMAIL, PASSWORD)
-    server.sendmail(FROM_EMAIL, TO_EMAIL, msg.as_string())
-    server.quit()
-
-def check_cpu_usage():
-    """Check the CPU usage and send an alert if it exceeds the threshold"""
-    cpu_usage = get_cpu_usage()
-    if cpu_usage > CPU_THRESHOLD:
-        subject = 'High CPU Usage Alert'
-        body = f'CPU usage is currently at {cpu_usage}%'
-        send_email(subject, body)
+def main():
+    # Set up the alerting system server
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    class AlertingSystemHandler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            content_length = int(self.headers['Content-Length'])
+            body = self.rfile.read(content_length)
+            alert_data = eval(body.decode('utf-8'))
+            subject = f'Alert: {alert_data["metric"]}'
+            body = f'The {alert_data["metric"]} metric has exceeded the threshold of {alert_data["threshold"]}. The current value is {alert_data["value"]}.'
+            send_email(subject, body)
+            self.send_response(200)
+            self.end_headers()
+    server = HTTPServer(('localhost', 8081), AlertingSystemHandler)
+    logging.info('Alerting system server started')
+    server.serve_forever()
 
 if __name__ == '__main__':
-    check_cpu_usage()
+    main()

@@ -1,26 +1,12 @@
 version: '3'
 services:
   monitoring-dashboard:
-    build: ./monitoring-dashboard
+    build: .
     ports:
       - "8080:8080"
     depends_on:
-      - award-travel-logic
-    environment:
-      - AWARD_TRAVEL_LOGIC_URL=http://award-travel-logic:8081
-  award-travel-logic:
-    build: ./award-travel-logic
+      - alerting-system
+  alerting-system:
+    build: .
     ports:
       - "8081:8081"
-    environment:
-      - DATABASE_URL=postgres://user:password@db:5432/award_travel
-    depends_on:
-      - db
-  db:
-    image: postgres
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=award_travel
-    volumes:
-      - ./db-data:/var/lib/postgresql/data
