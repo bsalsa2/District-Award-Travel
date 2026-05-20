@@ -6,6 +6,35 @@ name: Nightly Engineering Run
     - cron: '0 8 * * *'
   workflow_dispatch:
 
+    jensen-ideas:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install packages
+        run: pip install openai
+
+      - name: Jensen Huang generates tasks
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+        run: python agents/jensen.py
+
+      - name: Commit new tasks
+        run: |
+          git config user.name "Jensen Huang"
+          git config user.email "jensen@dat.ai"
+          git add tasks/backlog.json
+          git diff --staged --quiet || git commit -m "Jensen's ideas $(date '+%Y-%m-%d')"
+          git push origin main --force
+
 jobs:
   run-all-engineers:
     runs-on: ubuntu-latest
