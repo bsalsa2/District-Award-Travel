@@ -2,6 +2,14 @@
   "project": "District Award Travel",
   "backlog": [
     {
+  "id": "TASK-500",
+  "title": "Rebuild platform/public/index.html as the complete District Award Travel website",
+  "assigned_to": "jeff",
+  "priority": "critical",
+  "status": "pending",
+  "description": "Build one complete, beautiful, fully working website at platform/public/index.html. Include: homepage with company branding, award search tool that lets users input origin/destination/cabin and see results, valuation tool showing cents-per-point, client booking pipeline table, transfer bonus alerts. Dark theme #080c10 background, #00ff88 accent. Must work with zero backend — all data hardcoded or mock. This is the public face of District Award Travel."
+}
+    {
       "id": "TASK-101",
       "title": "Build Docker Compose stack for the full platform",
       "assigned_to": "mitchell",
