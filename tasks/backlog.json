@@ -7,7 +7,7 @@
       "assigned_to": "jeff",
       "priority": "critical",
       "status": "pending",
-      "description": "Build platform/public/index.html — the complete public-facing website for District Award Travel. This is a real award flight consulting business. Include: animated hero section with typewriter effect and floating particles, scroll animations using Intersection Observer, stats counter (500+ clients, $2M saved, 50+ airlines), features section, testimonials, pricing plans, sign up and login forms using localStorage, about page, contact form. Dark theme: #0a0e1a background, #00ff88 accent, glassmorphism cards, smooth transitions. Make it look like a $10,000 agency built it. All in one HTML file with CSS and JS inline. NO visualizers. NO black boxes. A real stunning business website."
+      "description": "Build platform/public/index.html \u2014 the complete public-facing website for District Award Travel. This is a real award flight consulting business. Include: animated hero section with typewriter effect and floating particles, scroll animations using Intersection Observer, stats counter (500+ clients, $2M saved, 50+ airlines), features section, testimonials, pricing plans, sign up and login forms using localStorage, about page, contact form. Dark theme: #0a0e1a background, #00ff88 accent, glassmorphism cards, smooth transitions. Make it look like a $10,000 agency built it. All in one HTML file with CSS and JS inline. NO visualizers. NO black boxes. A real stunning business website."
     },
     {
       "id": "TASK-501",
@@ -15,7 +15,7 @@
       "assigned_to": "martin",
       "priority": "critical",
       "status": "pending",
-      "description": "Build platform/src/api/server.py — a complete FastAPI backend for District Award Travel. Routes: POST /auth/signup (save user to SQLite), POST /auth/login (return JWT token), GET /awards/search?origin=JFK&destination=NRT&cabin=F (return award results with miles, cash value, rating), GET /awards/programs (list all airline programs), POST /clients (save client profile), GET /clients (list all clients), GET /pipeline (booking pipeline). Use SQLAlchemy with SQLite. Add CORS so the frontend can call it. Return real-looking award data with proper structure: airline, route, miles_required, cash_value_usd, cpp, verdict (EXCELLENT/GOOD/FAIR/SKIP). Also build platform/src/api/database.py with all models and platform/src/api/auth.py with JWT authentication."
+      "description": "Build platform/src/api/server.py \u2014 a complete FastAPI backend for District Award Travel. Routes: POST /auth/signup (save user to SQLite), POST /auth/login (return JWT token), GET /awards/search?origin=JFK&destination=NRT&cabin=F (return award results with miles, cash value, rating), GET /awards/programs (list all airline programs), POST /clients (save client profile), GET /clients (list all clients), GET /pipeline (booking pipeline). Use SQLAlchemy with SQLite. Add CORS so the frontend can call it. Return real-looking award data with proper structure: airline, route, miles_required, cash_value_usd, cpp, verdict (EXCELLENT/GOOD/FAIR/SKIP). Also build platform/src/api/database.py with all models and platform/src/api/auth.py with JWT authentication."
     },
     {
       "id": "TASK-502",
@@ -23,7 +23,7 @@
       "assigned_to": "mitchell",
       "priority": "critical",
       "status": "pending",
-      "description": "Build the complete production infrastructure for District Award Travel. Files needed: platform/infra/docker-compose.yml (runs api + db + redis in one command), platform/infra/Dockerfile (for the FastAPI server), platform/infra/nginx.conf (reverse proxy serving the frontend from platform/public/ and API from /api/), platform/infra/start.sh (single command to launch everything), platform/infra/deploy.sh (automated deployment script), platform/infra/backup.sh (daily database backup script). Also build platform/public/admin/index.html — a private admin dashboard showing all clients, all bookings, revenue metrics, engineer activity logs. Password protected with hardcoded admin credentials."
+      "description": "Build the complete production infrastructure for District Award Travel. Files needed: platform/infra/docker-compose.yml (runs api + db + redis in one command), platform/infra/Dockerfile (for the FastAPI server), platform/infra/nginx.conf (reverse proxy serving the frontend from platform/public/ and API from /api/), platform/infra/start.sh (single command to launch everything), platform/infra/deploy.sh (automated deployment script), platform/infra/backup.sh (daily database backup script). Also build platform/public/admin/index.html \u2014 a private admin dashboard showing all clients, all bookings, revenue metrics, engineer activity logs. Password protected with hardcoded admin credentials."
     },
     {
       "id": "TASK-503",
@@ -31,7 +31,7 @@
       "assigned_to": "jeff",
       "priority": "high",
       "status": "pending",
-      "description": "Build platform/src/intelligence/valuation.py — the core AI engine that powers District Award Travel. Functions: calculate_cpp(program, miles, cabin, route, taxes) returns cents-per-point. rate_award(cpp, program, cabin) returns EXCELLENT/GOOD/FAIR/SKIP with explanation. find_best_redemptions(origin, destination, cabin) returns top 5 award options ranked by value. compare_programs(miles_balances) returns which program gives best value for each route. Include a complete lookup table of real award rates for: United MileagePlus, Delta SkyMiles, American AAdvantage, Air Canada Aeroplan, Virgin Atlantic, ANA, British Airways. Also build platform/src/intelligence/recommendations.py that suggests the best next steps for each client based on their miles balance and travel goals."
+      "description": "Build platform/src/intelligence/valuation.py \u2014 the core AI engine that powers District Award Travel. Functions: calculate_cpp(program, miles, cabin, route, taxes) returns cents-per-point. rate_award(cpp, program, cabin) returns EXCELLENT/GOOD/FAIR/SKIP with explanation. find_best_redemptions(origin, destination, cabin) returns top 5 award options ranked by value. compare_programs(miles_balances) returns which program gives best value for each route. Include a complete lookup table of real award rates for: United MileagePlus, Delta SkyMiles, American AAdvantage, Air Canada Aeroplan, Virgin Atlantic, ANA, British Airways. Also build platform/src/intelligence/recommendations.py that suggests the best next steps for each client based on their miles balance and travel goals."
     },
     {
       "id": "TASK-504",
@@ -39,7 +39,7 @@
       "assigned_to": "martin",
       "priority": "high",
       "status": "pending",
-      "description": "Build platform/src/pipeline/search_pipeline.py — a high-throughput award search system. Use asyncio with 10 concurrent workers. Each worker searches one origin/destination/date combination. Build platform/src/pipeline/scrapers/united.py, delta.py, american.py — each returns mock award availability data structured as: {airline, flight_number, origin, destination, date, cabin, miles_required, taxes_usd, available_seats}. Build platform/src/pipeline/aggregator.py that combines results from all scrapers, deduplicates, sorts by value, and caches in SQLite. Build platform/src/pipeline/scheduler.py that runs searches automatically every hour for all active client routes."
+      "description": "Build platform/src/pipeline/search_pipeline.py \u2014 a high-throughput award search system. Use asyncio with 10 concurrent workers. Each worker searches one origin/destination/date combination. Build platform/src/pipeline/scrapers/united.py, delta.py, american.py \u2014 each returns mock award availability data structured as: {airline, flight_number, origin, destination, date, cabin, miles_required, taxes_usd, available_seats}. Build platform/src/pipeline/aggregator.py that combines results from all scrapers, deduplicates, sorts by value, and caches in SQLite. Build platform/src/pipeline/scheduler.py that runs searches automatically every hour for all active client routes."
     },
     {
       "id": "TASK-505",
@@ -47,7 +47,55 @@
       "assigned_to": "mitchell",
       "priority": "high",
       "status": "pending",
-      "description": "Build platform/infra/monitor.py — a complete monitoring and analytics system. Track: API response times, search pipeline throughput, error rates, client activity. Build platform/public/admin/analytics.html — a beautiful analytics dashboard showing: revenue by month (bar chart using Chart.js from CDN), client growth over time (line chart), top searched routes (table), best performing award programs (pie chart), engineer productivity (tasks completed per night). Dark theme matching the main site. Also build platform/infra/alerts.py that sends email alerts when the system has errors or when exceptional award deals are found."
+      "description": "Build platform/infra/monitor.py \u2014 a complete monitoring and analytics system. Track: API response times, search pipeline throughput, error rates, client activity. Build platform/public/admin/analytics.html \u2014 a beautiful analytics dashboard showing: revenue by month (bar chart using Chart.js from CDN), client growth over time (line chart), top searched routes (table), best performing award programs (pie chart), engineer productivity (tasks completed per night). Dark theme matching the main site. Also build platform/infra/alerts.py that sends email alerts when the system has errors or when exceptional award deals are found."
+    },
+    {
+      "id": "TASK-279",
+      "title": "Build a Real-Time Global Award Flight Intelligence Grid",
+      "assigned_to": "mitchell",
+      "priority": "high",
+      "status": "pending",
+      "description": "Design and deploy a globally distributed, edge-accelerated real-time data ingestion and processing system. Integrate live flight inventory, award availability, and dynamic pricing feeds from all major airlines (including hidden GDS segments) into a unified, low-latency streaming platform. Use NVIDIA GPUs and RAPIDS for in-memory acceleration of flight path analytics, and deploy on-prem Kubernetes clusters across 3 continents with sub-100ms global synchronization. Implement self-healing infrastructure with AI-driven anomaly detection."
+    },
+    {
+      "id": "TASK-280",
+      "title": "Autonomous Award Booking Agent with Continuous Self-Optimization",
+      "assigned_to": "mitchell",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Develop an AI-driven, autonomous booking agent that continuously learns from user behavior, market trends, and success/failure outcomes. Deploy on NVIDIA AI infrastructure with GPU-accelerated decision-making and reinforcement learning. The system should automatically initiate bookings when optimal award redemptions are detected across multiple GDS and airline APIs, handle failures with rollback strategies, and adapt to new airline policies in real time. Ensure full auditability and user override capability."
+    },
+    {
+      "id": "TASK-281",
+      "title": "Predictive Award Availability Engine with Generative AI Forecasting",
+      "assigned_to": "martin",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build a next-generation predictive engine that forecasts award availability months in advance by analyzing historical booking patterns, airline load factors, route dynamics, and external events (holidays, weather, geopolitics). Use NVIDIA AI platforms (like NeMo and TensorRT) to train transformer-based models on petabytes of flight data. Deploy a real-time inference pipeline that updates predictions every 15 minutes and surfaces 'predictive holds' for users to reserve future award seats with conditional booking options."
+    },
+    {
+      "id": "TASK-282",
+      "title": "Unified Multi-API Flight Search at Hyperscale with GPU-Accelerated Semantic Matching",
+      "assigned_to": "martin",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Replace traditional keyword search with a GPU-accelerated semantic search engine that understands user intent (e.g., 'I want to fly to Japan in business class around cherry blossom season'). Index flight data (including award availability) using vector embeddings powered by NVIDIA GPUs. Enable real-time, multi-dimensional filtering (price, duration, layovers, airline alliance, seat comfort) with sub-500ms response times at 10M+ QPS. Integrate with all major airline APIs, GDSs, and aggregators into a single unified index."
+    },
+    {
+      "id": "TASK-283",
+      "title": "Immersive AI Travel Assistant with Voice, Vision, and Context-Aware Planning",
+      "assigned_to": "jeff",
+      "priority": "high",
+      "status": "pending",
+      "description": "Develop an AI-powered travel assistant that runs on NVIDIA AI platforms (Jetson for edge, RTX for cloud). Enable users to speak naturally ('Find me a first-class award flight from NYC to Sydney for my 40th birthday in December') and receive context-aware, multi-stop itineraries optimized for award redemptions. Integrate real-time document parsing (passports, visas) via OCR and image recognition. Deploy a personalized memory system (using NVIDIA AI Enterprise) that learns user preferences and travel history across devices."
+    },
+    {
+      "id": "TASK-284",
+      "title": "Interactive 3D Award Route Explorer with Dynamic Reward Optimization",
+      "assigned_to": "jeff",
+      "priority": "medium",
+      "status": "pending",
+      "description": "Build a web-based 3D globe (using WebGL and NVIDIA Omniverse APIs) that visualizes award flight opportunities globally. Users can drag routes, adjust dates, and see real-time award availability, pricing, and transfer options. Integrate an AI optimizer that suggests alternative routes (e.g., 'Fly into Tokyo via Seoul to save 20k points') and predicts future redemptions. Enable collaborative planning where multiple users can co-edit itineraries in real time."
     }
   ],
   "completed": []
