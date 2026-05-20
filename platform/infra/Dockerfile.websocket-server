@@ -1,0 +1,28 @@
+# WebSocket server for real-time updates
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY platform/infra/requirements-websocket.txt .
+RUN pip install --no-cache-dir -r requirements-websocket.txt
+
+# Copy application code
+COPY platform/infra/websocket_server /app/websocket_server
+
+# Copy health check script
+COPY platform/infra/healthcheck.sh /app/healthcheck.sh
+RUN chmod +x /app/healthcheck.sh
+
+# Copy entrypoint script
+COPY platform/infra/entrypoint-websocket.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app/entrypoint.sh"]

@@ -1,40 +1,19 @@
-# Build stage
-FROM python:3.11-slim as builder
+FROM python:3.9-slim
 
+# Set working directory to /app
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc python3-dev && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Python dependencies
+# Copy requirements file
 COPY requirements.txt .
-RUN pip install --user -r requirements.txt
 
-# Runtime stage
-FROM python:3.11-slim
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-WORKDIR /app
-
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
-    rm -rf /var/lib/apt/lists/*
-
-# Copy installed dependencies from builder
-COPY --from=builder /root/.local /root/.local
+# Copy application code
 COPY . .
 
-# Ensure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+# Expose port 80
+EXPOSE 80
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Expose the port the app runs on
-EXPOSE 8000
-
-# Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run command when container starts
+CMD ["python", "app.py"]

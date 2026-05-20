@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Visualization</title>
+    <script src="https://cdn.plotly.com/plotly-2.12.1.min.js"></script>
+</head>
+<body>
+    <h1>Data Visualization</h1>
+    <div id="chart"></div>
+    <script>
+        var data = [
+            {
+                x: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                y: [10, 20, 30, 40, 50],
+                type: 'bar'
+            }
+        ];
+        var layout = {
+            title: 'Award Travel Data',
+            xaxis: { title: 'Month' },
+            yaxis: { title: 'Number of Awards' }
+        };
+        Plotly.newPlot('chart', data, layout);
+    </script>
+</body>
+</html>

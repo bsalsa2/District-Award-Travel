@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
+    <form action="/login" method="post">
+        <input type="password" name="password" placeholder="Password">
+        <button type="submit">Login</button>
+    </form>
+    <div id="submissions"></div>
+    <div id="revenue"></div>
+    <div id="pipeline"></div>
+    <div id="logs"></div>
+    <div id="bonus"></div>
+
+    <script>
+        fetch('/submissions')
+            .then(response => response.json())
+            .then(data => {
+                const submissionsElement = document.getElementById('submissions');
+                submissionsElement.innerHTML = '';
+                data.forEach(submission => {
+                    const submissionElement = document.createElement('div');
+                    submissionElement.textContent = `Client: ${submission.client}, Amount: ${submission.amount}`;
+                    submissionsElement.appendChild(submissionElement);
+                });
+            });
+
+        fetch('/revenue')
+            .then(response => response.json())
+            .then(data => {
+                const revenueElement = document.getElementById('revenue');
+                revenueElement.textContent = `Total Revenue: ${data.revenue}`;
+            });
+
+        fetch('/pipeline')
+            .then(response => response.json())
+            .then(data => {
+                const pipelineElement = document.getElementById('pipeline');
+                pipelineElement.textContent = `Pipeline Status: ${data.pipeline_status}`;
+            });
+
+        fetch('/logs')
+            .then(response => response.json())
+            .then(data => {
+                const logsElement = document.getElementById('logs');
+                logsElement.innerHTML = '';
+                data.forEach(log => {
+                    const logElement = document.createElement('div');
+                    logElement.textContent = log;
+                    logsElement.appendChild(logElement);
+                });
+            });
+
+        fetch('/bonus')
+            .then(response => response.json())
+            .then(data => {
+                const bonusElement = document.getElementById('bonus');
+                bonusElement.textContent = `Bonus: ${data.bonus}`;
+            });
+    </script>
+</body>
+</html>

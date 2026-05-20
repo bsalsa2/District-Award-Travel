@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>District Award Travel - Logout</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        .logout-container {
+            max-width: 500px;
+            margin: 100px auto;
+            padding: 30px;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .logout-title {
+            margin-bottom: 20px;
+            color: var(--text);
+            font-size: 24px;
+        }
+
+        .logout-message {
+            margin-bottom: 30px;
+            color: var(--text-secondary);
+        }
+
+        .logout-btn {
+            background-color: var(--error);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="logout-container">
+        <h1 class="logout-title">Ready to go?</h1>
+        <p class="logout-message">You'll be logged out of your account.</p>
+        <button class="logout-btn" id="logoutBtn">Logout</button>
+    </div>
+
+    <script>
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            // Clear localStorage
+            localStorage.removeItem('userName');
+
+            // Redirect to login
+            window.location.href = '/index.html';
+        });
+    </script>
+</body>
+</html>

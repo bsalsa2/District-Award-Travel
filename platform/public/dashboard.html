@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>District Award Travel - Dashboard</title>
+    <link rel="stylesheet" href="/styles.css">
+    <style>
+        :root {
+            --primary: #1a237e;
+            --primary-dark: #0d1149;
+            --secondary: #ff5722;
+            --accent: #e91e63;
+            --text: #e0e0e0;
+            --text-secondary: #b0bec5;
+            --bg: #0a0a1a;
+            --card-bg: #121226;
+            --border: #2d2d44;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --error: #f44336;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--secondary), var(--accent));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--secondary);
+        }
+
+        .welcome-section {
+            margin-bottom: 30px;
+        }
+
+        .welcome-card {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .welcome-title {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: var(--text);
+        }
+
+        .welcome-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .balance-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .balance-card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .balance-title {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .balance-amount {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .balance-currency {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .saved-searches-section {
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .searches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .search-card {
+            background-color: var(--card-bg);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .search-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .search-card h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: var(--text);
+        }
+
+        .search-card p {
+            margin: 5px 0;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .trip-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .trip-table th {
+            background-color: var(--primary-dark);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .trip-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .trip-table tr:hover {
+            background-color: rgba(26, 35, 126, 0.3);
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .status-confirmed {
+            background-color: rgba(76, 175, 80, 0.2);
+            color: var(--success);
+        }
+
+        .status-pending {
+            background-color: rgba(255, 152, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .status-cancelled {
+            background-color: rgba(244, 67, 54, 0.2);
+            color: var(--error);
+        }
+
+        .calculator-section {
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .calculator-title {
+            font-size: 20px;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .calculator-input {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .calculator-input label {
+            font-size: 14px;
+            margin-bottom: 5px;
+            color: var(--text-secondary);
+        }
+
+        .calculator-input input {
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background-color: var(--bg);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .calculator-input input:focus {
+            outline: none;
+            border-color: var(--secondary);
+        }
+
+        .calculate-btn {
+            grid-column: span 3;
+            padding: 12px;
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .calculate-btn:hover {
+            background-color: #e64a19;
+        }
+
+        .result-display {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(76, 175, 80, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid var(--success);
+            display: none;
+        }
+
+        .result-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--success);
+            margin-bottom: 5px;
+        }
+
+        .result-label {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-container {
+                padding: 10px;
+            }
+
+            .balance-section {
+                grid-template-columns: 1fr;
+            }
+
+            .calculator-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                gap: 10px;
+            }
+
+            .nav-links a {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">DAT</div>
+                <span>District Award Travel</span>
+            </div>
+            <nav class="nav-links">
+                <a href="/dashboard.html">Dashboard</a>
+                <a href="/search.html">Search Awards</a>
+                <a href="/trips.html">My Trips</a>
+                <a href="/profile.html">Profile</a>
+                <a href="/logout.html">Logout</a>
+            </nav>
+        </header>
+
+        <section class="welcome-section">
+            <div class="welcome-card">
+                <h1 class="welcome-title">Welcome back, <span id="user-name">User</span>!</h1>
+                <p class="welcome-subtitle">Here's your travel dashboard overview</p>
+                <div class="user-info">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <div>
+                        <p>Member since: <span id="member-since">2024</span></p>
+                        <p>Tier: <span class="status-badge status-confirmed">Gold</span></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="balance-section">
+            <div class="balance-card">
+                <div class="balance-title">Total Miles Balance</div>
+                <div class="balance-amount" id="total-miles">0</div>
+                <div class="balance-currency">miles</div>
+            </div>
+            <div class="balance-card">
+                <div class="balance-title">Available for Redemption</div>
+                <div class="balance-amount" id="available-miles">0</div>
+                <div class="balance-currency">miles</div>
+            </div>
+            <div class="balance-card">
+                <div class="balance-title">Pending Transfers</div>
+                <div class="balance-amount" id="pending-miles">0</div>
+                <div class="balance-currency">miles</div>
+            </div>
+        </section>
+
+        <section class="saved-searches-section">
+            <div class="section-header">
+                <h2 class="section-title">Saved Searches</h2>
+                <a href="/search.html" style="color: var(--secondary); text-decoration: none;">New Search →</a>
+            </div>
+            <div class="searches-grid" id="saved-searches">
+                <!-- Searches will be populated by JavaScript -->
+                <div class="search-card">
+                    <h3>No saved searches yet</h3>
+                    <p>Start a new search to save your favorite routes</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="trips-section">
+            <div class="section-header">
+                <h2 class="section-title">Upcoming Trips</h2>
+                <a href="/trips.html" style="color: var(--secondary); text-decoration: none;">View All →</a>
+            </div>
+            <table class="trip-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Route</th>
+                        <th>Status</th>
+                        <th>Miles Used</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="upcoming-trips">
+                    <!-- Trips will be populated by JavaScript -->
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-secondary);">
+                            No upcoming trips scheduled
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="calculator-section">
+            <h2 class="calculator-title">Miles Value Calculator</h2>
+            <div class="calculator-grid">
+                <div class="calculator-input">
+                    <label for="trip-distance">Trip Distance (miles)</label>
+                    <input type="number" id="trip-distance" placeholder="0" min="0">
+                </div>
+                <div class="calculator-input">
+                    <label for="cabin-class">Cabin Class</label>
+                    <select id="cabin-class">
+                        <option value="economy">Economy</option>
+                        <option value="premium">Premium Economy</option>
+                        <option value="business">Business</option>
+                        <option value="first">First Class</option>
+                    </select>
+                </div>
+                <div class="calculator-input">
+                    <label for="partner-airline">Partner Airline</label>
+                    <select id="partner-airline">
+                        <option value="all">All Partners</option>
+                        <option value="aa">American Airlines</option>
+                        <option value="dl">Delta</option>
+                        <option value="ua">United</option>
+                        <option value="ba">British Airways</option>
+                    </select>
+                </div>
+            </div>
+            <button class="calculate-btn" id="calculate-miles">Calculate Miles Value</button>
+            <div class="result-display" id="miles-result">
+                <div class="result-value" id="result-value">0 miles</div>
+                <div class="result-label" id="result-label">Estimated miles required for this trip</div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Load user data from localStorage
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load user name
+            const userName = localStorage.getItem('userName') || 'User';
+            document.getElementById('user-name').textContent = userName;
+
+            // Set user avatar based on name initial
+            const avatar = document.getElementById('user-avatar');
+            avatar.textContent = userName.charAt(0).toUpperCase();
+
+            // Load miles data (simulated)
+            const milesData = {
+                total: 125000,
+                available: 85000,
+                pending: 15000
+            };
+
+            document.getElementById('total-miles').textContent = milesData.total.toLocaleString();
+            document.getElementById('available-miles').textContent = milesData.available.toLocaleString();
+            document.getElementById('pending-miles').textContent = milesData.pending.toLocaleString();
+
+            // Load saved searches (simulated)
+            const savedSearches = [
+                {
+                    id: 1,
+                    route: 'New York (JFK) → London (LHR)',
+                    date: '2024-05-20',
+                    cabin: 'Business'
+                },
+                {
+                    id: 2,
+                    route: 'Los Angeles (LAX) → Tokyo (NRT)',
+                    date: '2024-06-15',
+                    cabin: 'First Class'
+                },
+                {
+                    id: 3,
+                    route: 'Chicago (ORD) → Paris (CDG)',
+                    date: '2024-07-30',
+                    cabin: 'Premium Economy'
+                }
+            ];
+
+            const savedSearchesContainer = document.getElementById('saved-searches');
+            if (savedSearches.length > 0) {
+                savedSearchesContainer.innerHTML = '';
+                savedSearches.forEach(search => {
+                    const searchCard = document.createElement('div');
+                    searchCard.className = 'search-card';
+                    searchCard.innerHTML = `
+                        <h3>${search.route}</h3>
+                        <p><strong>Date saved:</strong> ${search.date}</p>
+                        <p><strong>Cabin:</strong> ${search.cabin}</p>
+                        <button class="calculate-btn" style="padding: 8px 12px; margin-top: 10px;">View Details</button>
+                    `;
+                    savedSearchesContainer.appendChild(searchCard);
+                });
+            }
+
+            // Load upcoming trips (simulated)
+            const upcomingTrips = [
+                {
+                    id: 1,
+                    date: '2024-06-15',
+                    route: 'LAX → NRT',
+                    status: 'confirmed',
+                    miles: 65000
+                },
+                {
+                    id: 2,
+                    date: '2024-07-20',
+                    route: 'ORD → CDG',
+                    status: 'pending',
+                    miles: 45000
+                },
+                {
+                    id: 3,
+                    date: '2024-08-10',
+                    route: 'JFK → LHR',
+                    status: 'confirmed',
+                    miles: 75000
+                }
+            ];
+
+            const tripsContainer = document.getElementById('upcoming-trips');
+            if (upcomingTrips.length > 0) {
+                tripsContainer.innerHTML = '';
+                upcomingTrips.forEach(trip => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${trip.date}</td>
+                        <td>${trip.route}</td>
+                        <td><span class="status-badge status-${trip.status}">${trip.status}</span></td>
+                        <td>${trip.miles.toLocaleString()} miles</td>
+                        <td><a href="/trip-details.html?id=${trip.id}" style="color: var(--secondary);">Details</a></td>
+                    `;
+                    tripsContainer.appendChild(row);
+                });
+            }
+
+            // Miles calculator functionality
+            document.getElementById('calculate-miles').addEventListener('click', function() {
+                const distance = parseInt(document.getElementById('trip-distance').value) || 0;
+                const cabinClass = document.getElementById('cabin-class').value;
+                const partnerAirline = document.getElementById('partner-airline').value;
+
+                // Calculate miles based on distance and cabin class
+                let milesMultiplier = 1.0;
+
+                switch(cabinClass) {
+                    case 'premium':
+                        milesMultiplier = 1.5;
+                        break;
+                    case 'business':
+                        milesMultiplier = 2.5;
+                        break;
+                    case 'first':
+                        milesMultiplier = 4.0;
+                        break;
+                    default:
+                        milesMultiplier = 1.0;
+                }
+
+                // Apply airline-specific multiplier
+                let airlineMultiplier = 1.0;
+                switch(partnerAirline) {
+                    case 'aa':
+                        airlineMultiplier = 1.1;
+                        break;
+                    case 'dl':
+                        airlineMultiplier = 1.05;
+                        break;
+                    case 'ua':
+                        airlineMultiplier = 1.0;
+                        break;
+                    case 'ba':
+                        airlineMultiplier = 1.2;
+                        break;
+                    default:
+                        airlineMultiplier = 1.0;
+                }
+
+                const totalMiles = Math.round(distance * milesMultiplier * airlineMultiplier);
+
+                // Display result
+                document.getElementById('result-value').textContent = `${totalMiles.toLocaleString()} miles`;
+                document.getElementById('miles-result').style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Frontend visualization dashboard
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install dependencies
+COPY platform/infra/visualization-dashboard/package.json platform/infra/visualization-dashboard/package-lock.json ./
+RUN npm install
+
+# Copy application code
+COPY platform/infra/visualization-dashboard .
+
+# Copy health check script
+COPY platform/infra/healthcheck.sh /app/healthcheck.sh
+RUN chmod +x /app/healthcheck.sh
+
+# Copy entrypoint script
+COPY platform/infra/entrypoint-dashboard.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 3000
+
+ENTRYPOINT ["/app/entrypoint.sh"]
