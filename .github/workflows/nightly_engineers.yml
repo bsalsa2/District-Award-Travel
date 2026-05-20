@@ -7,7 +7,8 @@ name: Nightly Engineering Run
     - cron: '0 8 * * *'
   workflow_dispatch:
 
-    jensen-ideas:
+jobs:
+  jensen-ideas:
     runs-on: ubuntu-latest
     steps:
 
@@ -33,12 +34,12 @@ name: Nightly Engineering Run
           git config user.name "Jensen Huang"
           git config user.email "jensen@dat.ai"
           git add tasks/backlog.json
-          git diff --staged --quiet || git commit -m "Jensen's ideas $(date '+%Y-%m-%d')"
+          git diff --staged --quiet || git commit -m "Jensen ideas $(date '+%Y-%m-%d')"
           git push origin main --force
 
-jobs:
   run-all-engineers:
     runs-on: ubuntu-latest
+    needs: jensen-ideas
     timeout-minutes: 120
     steps:
 
