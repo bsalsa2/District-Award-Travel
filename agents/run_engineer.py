@@ -1,6 +1,6 @@
 """
 District Award Travel - Nightly Engineer Runner
-Primary AI: DeepSeek. Fallback 1: Groq. Fallback 2: Gemini.
+AI Chain: Groq → Gemini → Mistral → Cohere (all free)
 """
 
 import os
@@ -88,41 +88,14 @@ def build_prompt(engineer_id, task, persona_text):
     return "\n".join(lines)
 
 
-def call_deepseek(prompt, engineer_id):
-    api_key = os.environ.get("DEEPSEEK_API_KEY")
-    if not api_key:
-        raise ValueError("DEEPSEEK_API_KEY not set")
-
-    client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
-    print("[" + engineer_id + "] Calling DeepSeek...")
-
-    response = client.chat.completions.create(
-        model="deepseek-chat",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are " + engineer_id + ", an elite autonomous software engineer "
-                    "at District Award Travel. Write complete, production-quality code. "
-                    "Always prefix each file with FILE: path/to/file followed by a code block. "
-                    "Never write partial implementations or TODOs. "
-                    "Be creative — build tools that genuinely help an award travel business."
-                )
-            },
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.3,
-        max_tokens=8000,
-        stream=True,
+def get_system_prompt(engineer_id):
+    return (
+        "You are " + engineer_id + ", an elite autonomous software engineer "
+        "at District Award Travel. Write complete, production-quality code. "
+        "Always prefix each file with FILE: path/to/file followed by a code block. "
+        "Never write partial implementations or TODOs. "
+        "Be creative — build tools that genuinely help an award travel business."
     )
-
-    result = ""
-    for chunk in response:
-        delta = chunk.choices[0].delta.content or ""
-        print(delta, end="", flush=True)
-        result += delta
-    print()
-    return result
 
 
 def call_groq(prompt, engineer_id):
@@ -131,21 +104,12 @@ def call_groq(prompt, engineer_id):
         raise ValueError("GROQ_API_KEY not set")
 
     client = OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
-    print("[" + engineer_id + "] Falling back to Groq...")
+    print("[" + engineer_id + "] Calling Groq...")
 
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are " + engineer_id + ", an elite autonomous software engineer "
-                    "at District Award Travel. Write complete, production-quality code. "
-                    "Always prefix each file with FILE: path/to/file followed by a code block. "
-                    "Never write partial implementations or TODOs. "
-                    "Be creative — build tools that genuinely help an award travel business."
-                )
-            },
+            {"role": "system", "content": get_system_prompt(engineer_id)},
             {"role": "user", "content": prompt}
         ],
         temperature=0.3,
@@ -171,28 +135,102 @@ def call_gemini(prompt, engineer_id):
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel(
         model_name="gemini-2.0-flash",
-        system_instruction=(
-            "You are " + engineer_id + ", an elite autonomous software engineer "
-            "at District Award Travel. Write complete working code. "
-            "Always prefix each file with FILE: path/to/file followed by a code block. "
-            "Never write partial code or TODOs."
-        )
+        system_instruction=get_system_prompt(engineer_id)
     )
     response = model.generate_content(prompt)
     print(response.text)
     return response.text
 
 
+def call_mistral(prompt, engineer_id):
+    api_key = os.environ.get("MISTRAL_API_KEY")
+    if not api_key:
+        raise ValueError("MISTRAL_API_KEY not set")
+
+    client = OpenAI(api_key=api_key, base_url="https://api.mistral.ai/v1")
+    print("[" + engineer_id + "] Falling back to Mistral...")
+
+    response = client.chat.completions.create(
+        model="mistral-small-latest",
+        messages=[
+            {"role": "system", "content": get_system_prompt(engineer_id)},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3,
+        max_tokens=8000,
+        stream=True,
+    )
+
+    result = ""
+    for chunk in response:
+        delta = chunk.choices[0].delta.content or ""
+        print(delta, end="", flush=True)
+        result += delta
+    print()
+    return result
+
+
+def call_cohere(prompt, engineer_id):
+    api_key = os.environ.get("COHERE_API_KEY")
+    if not api_key:
+        raise ValueError("COHERE_API_KEY not set")
+
+    print("[" + engineer_id + "] Falling back to Cohere...")
+
+    import urllib.request
+    import urllib.error
+
+    body = json.dumps({
+        "model": "command-r-plus",
+        "message": prompt,
+        "preamble": get_system_prompt(engineer_id),
+        "temperature": 0.3,
+        "max_tokens": 4000,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.cohere.com/v1/chat",
+        data=body,
+        headers={
+            "Authorization": "Bearer " + api_key,
+            "Content-Type": "application/json",
+        }
+    )
+
+    with urllib.request.urlopen(req) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+        text = result["text"]
+        print(text)
+        return text
+
+
 def call_ai(prompt, engineer_id):
+    errors = []
+
     try:
-        return call_deepseek(prompt, engineer_id)
+        return call_groq(prompt, engineer_id)
     except Exception as e:
-        print("[" + engineer_id + "] DeepSeek failed (" + str(e) + ") — trying Groq")
-        try:
-            return call_groq(prompt, engineer_id)
-        except Exception as e2:
-            print("[" + engineer_id + "] Groq failed (" + str(e2) + ") — trying Gemini")
-            return call_gemini(prompt, engineer_id)
+        errors.append("Groq: " + str(e))
+        print("[" + engineer_id + "] Groq failed — trying Gemini")
+
+    try:
+        return call_gemini(prompt, engineer_id)
+    except Exception as e:
+        errors.append("Gemini: " + str(e))
+        print("[" + engineer_id + "] Gemini failed — trying Mistral")
+
+    try:
+        return call_mistral(prompt, engineer_id)
+    except Exception as e:
+        errors.append("Mistral: " + str(e))
+        print("[" + engineer_id + "] Mistral failed — trying Cohere")
+
+    try:
+        return call_cohere(prompt, engineer_id)
+    except Exception as e:
+        errors.append("Cohere: " + str(e))
+
+    raise Exception("All AI APIs failed:\n" + "\n".join(errors))
 
 
 def write_file(filepath, content):
