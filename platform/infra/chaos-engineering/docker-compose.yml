@@ -1,0 +1,189 @@
+version: '3.8'
+
+services:
+  chaos-monkey:
+    image: chaos-monkey:latest
+    build:
+      context: ./chaos-monkey
+      dockerfile: Dockerfile
+    container_name: chaos-monkey
+    environment:
+      - CHAOS_ENVIRONMENT=production
+      - MONGO_URI=mongodb://mongo:27017/chaos
+      - REDIS_URI=redis://redis:6379/0
+      - API_BASE_URL=http://api:8000
+      - METRICS_PORT=9090
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./chaos-monkey/config:/app/config
+      - ./chaos-monkey/logs:/app/logs
+    networks:
+      - chaos-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  chaos-dashboard:
+    image: chaos-dashboard:latest
+    build:
+      context: ./chaos-dashboard
+      dockerfile: Dockerfile
+    container_name: chaos-dashboard
+    ports:
+      - "8080:8080"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/chaos
+      - REDIS_URI=redis://redis:6379/0
+      - CHAOS_MONKEY_URL=http://chaos-monkey:9090
+    volumes:
+      - ./chaos-dashboard/logs:/app/logs
+    networks:
+      - chaos-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  chaos-exporter:
+    image: chaos-exporter:latest
+    build:
+      context: ./chaos-exporter
+      dockerfile: Dockerfile
+    container_name: chaos-exporter
+    ports:
+      - "9091:9091"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/chaos
+      - REDIS_URI=redis://redis:6379/0
+      - PROMETHEUS_URL=http://prometheus:9090
+    volumes:
+      - ./chaos-exporter/logs:/app/logs
+    networks:
+      - chaos-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mongo:
+    image: mongo:6.0
+    container_name: chaos-mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=chaos
+      - MONGO_INITDB_ROOT_PASSWORD=${CHAOS_MONGO_PASSWORD:-chaos123}
+      - MONGO_INITDB_DATABASE=chaos
+    volumes:
+      - ./mongo/data:/data/db
+      - ./mongo/init:/docker-entrypoint-initdb.d
+    networks:
+      - chaos-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7.0
+    container_name: chaos-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass ${CHAOS_REDIS_PASSWORD:-chaos123}
+    volumes:
+      - ./redis/data:/data
+    networks:
+      - chaos-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: chaos-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/config:/etc/prometheus
+      - ./prometheus/data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - chaos-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: chaos-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - chaos-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+  chaos-nginx:
+    image: nginx:latest
+    container_name: chaos-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/logs:/var/log/nginx
+      - ./nginx/ssl:/etc/nginx/ssl
+    networks:
+      - chaos-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  chaos-net:
+    driver: bridge
+    name: chaos-net

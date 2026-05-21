@@ -1,0 +1,152 @@
+# Chaos Monkey Configuration
+# District Award Travel - Resilience Engineering
+
+# Targets - services to attack
+targets:
+  - name: "api-service"
+    type: "service"
+    description: "Main API service"
+    priority: "high"
+    tags: ["core", "api"]
+
+  - name: "booking-service"
+    type: "service"
+    description: "Booking service"
+    priority: "high"
+    tags: ["core", "booking"]
+
+  - name: "payment-service"
+    type: "service"
+    description: "Payment processing service"
+    priority: "critical"
+    tags: ["core", "payment"]
+
+  - name: "cache-service"
+    type: "service"
+    description: "Redis cache service"
+    priority: "medium"
+    tags: ["cache"]
+
+  - name: "database-service"
+    type: "service"
+    description: "Primary database"
+    priority: "critical"
+    tags: ["database"]
+
+# Chaos Scenarios - types of failures to inject
+scenarios:
+  - id: "cm-001"
+    name: "Container Kill"
+    type: "kill_container"
+    target: "api-service"
+    severity: "high"
+    description: "Kill the API service container"
+    duration: 10
+    schedule: "0 3 * * *"  # Daily at 3 AM
+    tags: ["container", "kill"]
+    impact: "Service unavailability"
+    recovery_time: 300
+
+  - id: "cm-002"
+    name: "Network Latency"
+    type: "network_latency"
+    target: "booking-service"
+    severity: "medium"
+    description: "Inject 500ms network latency"
+    duration: 300
+    schedule: "*/30 * * * *"  # Every 30 minutes
+    tags: ["network", "latency"]
+    impact: "Increased response time"
+    recovery_time: 0
+
+  - id: "cm-003"
+    name: "CPU Stress"
+    type: "cpu_stress"
+    target: "payment-service"
+    severity: "high"
+    description: "Stress CPU to 90% for 2 minutes"
+    duration: 120
+    schedule: "0 */2 * * *"  # Every 2 hours
+    tags: ["cpu", "stress"]
+    impact: "High CPU usage"
+    recovery_time: 120
+
+  - id: "cm-004"
+    name: "Memory Leak"
+    type: "memory_leak"
+    target: "cache-service"
+    severity: "medium"
+    description: "Inject memory leak of 512MB"
+    duration: 180
+    schedule: "0 */6 * * *"  # Every 6 hours
+    tags: ["memory", "leak"]
+    impact: "Increased memory usage"
+    recovery_time: 300
+
+  - id: "cm-005"
+    name: "Disk Fill"
+    type: "disk_fill"
+    target: "database-service"
+    severity: "critical"
+    description: "Fill disk to 95% capacity"
+    duration: 60
+    schedule: "0 2 * * 0"  # Every Sunday at 2 AM
+    tags: ["disk", "fill"]
+    impact: "Database write failures"
+    recovery_time: 600
+
+  - id: "cm-006"
+    name: "API Failure Simulation"
+    type: "api_failure"
+    target: "api-service"
+    severity: "high"
+    description: "Simulate 5% API failure rate"
+    duration: 300
+    schedule: "*/15 * * * *"  # Every 15 minutes
+    tags: ["api", "failure"]
+    impact: "Failed requests"
+    recovery_time: 0
+
+# Schedules - when to run scenarios
+schedules:
+  - name: "daily_maintenance"
+    cron: "0 3 * * *"  # Daily at 3 AM
+    description: "Daily maintenance window"
+
+  - name: "hourly_checks"
+    cron: "0 * * * *"  # Every hour
+    description: "Hourly system checks"
+
+  - name: "weekly_deep"
+    cron: "0 2 * * 0"  # Every Sunday at 2 AM
+    description: "Weekly deep testing"
+
+# Monitoring Configuration
+monitoring:
+  prometheus:
+    enabled: true
+    scrape_interval: 15s
+  grafana:
+    enabled: true
+    dashboard_url: "http://grafana:3000"
+  alerts:
+    - name: "high_failure_rate"
+      condition: "failure_rate > 10"
+      severity: "critical"
+      notification: "slack"
+
+# Recovery Strategies
+recovery:
+  auto_recover: true
+  max_retries: 3
+  retry_delay: 30
+  escalation:
+    - level: 1
+      condition: "failure_rate > 5"
+      action: "alert"
+    - level: 2
+      condition: "failure_rate > 15"
+      action: "page"
+    - level: 3
+      condition: "failure_rate > 30"
+      action: "incident"
