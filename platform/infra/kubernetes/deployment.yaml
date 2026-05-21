@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: district-award-travel
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: district-award-travel
+  template:
+    metadata:
+      labels:
+        app: district-award-travel
+    spec:
+      containers:
+      - name: district-award-travel
+        image: district-award-travel:latest
+        ports:
+        - containerPort: 80

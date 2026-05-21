@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: district-award-travel
+spec:
+  selector:
+    app: district-award-travel
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  type: LoadBalancer

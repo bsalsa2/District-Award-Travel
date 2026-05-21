@@ -1,123 +1,145 @@
-from pydantic import BaseModel, Field, validator
-from typing import Optional, List, Dict, Any
+"""
+Pydantic schemas for award availability data.
+Designed for zero-copy validation and serialization.
+"""
+
 from datetime import datetime
-import uuid
-import re
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field, validator
+from enum import Enum
 
-class AirlineData(BaseModel):
-    """Raw airline data from various sources"""
-    airline_code: str = Field(..., min_length=2, max_length=3)
-    flight_number: str = Field(..., min_length=1, max_length=6)
-    departure_airport: str = Field(..., min_length=3, max_length=3)
-    arrival_airport: str = Field(..., min_length=3, max_length=3)
+class AwardType(str, Enum):
+    """Types of award availability."""
+    FLIGHT = "flight"
+    HOTEL = "hotel"
+    CAR = "car"
+    CRUISE = "cruise"
+    OTHER = "other"
+
+class CabinClass(str, Enum):
+    """Cabin classes for flights."""
+    ECONOMY = "economy"
+    PREMIUM_ECONOMY = "premium_economy"
+    BUSINESS = "business"
+    FIRST = "first"
+
+class AwardStatus(str, Enum):
+    """Status of award availability."""
+    AVAILABLE = "available"
+    LIMITED = "limited"
+    UNAVAILABLE = "unavailable"
+    PENDING = "pending"
+
+class Airline(BaseModel):
+    """Airline information."""
+    iata_code: str = Field(..., min_length=2, max_length=2, description="IATA airline code")
+    icao_code: Optional[str] = Field(None, min_length=3, max_length=3, description="ICAO airline code")
+    name: str = Field(..., min_length=2, description="Airline name")
+    alliance: Optional[str] = Field(None, description="Airline alliance")
+
+class Airport(BaseModel):
+    """Airport information."""
+    iata_code: str = Field(..., min_length=3, max_length=3, description="IATA airport code")
+    icao_code: Optional[str] = Field(None, min_length=4, max_length=4, description="ICAO airport code")
+    name: str = Field(..., min_length=2, description="Airport name")
+    city: str = Field(..., min_length=2, description="City name")
+    country: str = Field(..., min_length=2, description="Country name")
+    timezone: str = Field(..., description="Timezone")
+
+class FlightSegment(BaseModel):
+    """Individual flight segment."""
+    departure_airport: Airport
+    arrival_airport: Airport
     departure_time: datetime
     arrival_time: datetime
-    base_price: float = Field(gt=0)
-    currency: str = Field(default="USD", min_length=3, max_length=3)
-    cabin_class: str = Field(default="Economy", min_length=3, max_length=10)
-    seats_available: int = Field(default=0, ge=0)
-    flight_date: datetime
-    data_source: str = Field(default="airline_api")
-    raw_data: Dict[str, Any] = Field(default_factory=dict)
+    flight_number: str = Field(..., min_length=2, max_length=6)
+    operating_airline: Airline
+    marketing_airline: Airline
+    cabin_class: CabinClass
+    aircraft_type: Optional[str] = None
+    flight_duration_minutes: int
 
-    @validator('airline_code')
-    def validate_airline_code(cls, v):
-        if not re.match(r'^[A-Z]{2,3}$', v):
-            raise ValueError('Invalid airline code format')
-        return v
+class AwardAvailability(BaseModel):
+    """Core award availability record."""
+    id: str = Field(..., description="Unique identifier for the award")
+    award_type: AwardType
+    status: AwardStatus
+    source: str = Field(..., description="Source of the data (e.g., 'AA_API', 'DL_API')")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    @validator('flight_number')
-    def validate_flight_number(cls, v):
-        if not re.match(r'^[A-Z0-9]{1,6}$', v):
-            raise ValueError('Invalid flight number format')
-        return v
-
-class FareChange(BaseModel):
-    """Real-time fare change events"""
-    fare_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    airline_code: str = Field(..., min_length=2, max_length=3)
-    flight_number: str = Field(..., min_length=1, max_length=6)
-    departure_airport: str = Field(..., min_length=3, max_length=3)
-    arrival_airport: str = Field(..., min_length=3, max_length=3)
-    old_price: float = Field(gt=0)
-    new_price: float = Field(gt=0)
-    change_percentage: float = Field(default=0.0)
-    change_reason: str = Field(default="dynamic_pricing")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-    data_source: str = Field(default="fare_aggregator")
-    is_award_fare: bool = Field(default=False)
-
-    @validator('change_percentage')
-    def calculate_change(cls, v, values):
-        if 'old_price' in values and 'new_price' in values:
-            return ((values['new_price'] - values['old_price']) / values['old_price']) * 100
-        return v
-
-class UserSearch(BaseModel):
-    """User search patterns for ML recommendations"""
-    search_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: Optional[str] = None
-    departure_airport: str = Field(..., min_length=3, max_length=3)
-    arrival_airport: str = Field(..., min_length=3, max_length=3)
-    departure_date: datetime
+    # Flight-specific fields
+    flight_segments: Optional[List[FlightSegment]] = None
+    departure_date: Optional[datetime] = None
     return_date: Optional[datetime] = None
-    cabin_class: str = Field(default="Economy")
-    num_adults: int = Field(default=1, ge=0)
-    num_children: int = Field(default=0, ge=0)
-    num_infants: int = Field(default=0, ge=0)
-    preferred_airlines: Optional[List[str]] = None
-    max_price: Optional[float] = None
-    search_timestamp: datetime = Field(default_factory=datetime.utcnow)
-    session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    device_type: str = Field(default="desktop")
+    origin: Optional[Airport] = None
+    destination: Optional[Airport] = None
+    passengers: Optional[Dict[str, int]] = None  # {"adult": 1, "child": 0, ...}
 
-class PricingUpdate(BaseModel):
-    """Real-time pricing updates for award tickets"""
-    update_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    flight_combination_id: str
-    departure_airport: str
-    arrival_airport: str
-    departure_time: datetime
-    arrival_time: datetime
-    base_price: float
-    award_price: float
-    currency: str
-    cabin_class: str
-    seats_available: int
-    confidence_score: float = Field(default=0.0, ge=0.0, le=1.0)
-    model_version: str = Field(default="v1.0")
-    update_timestamp: datetime = Field(default_factory=datetime.utcnow)
-    change_reason: str = Field(default="ml_prediction")
-    is_dynamic: bool = Field(default=True)
+    # Hotel-specific fields
+    property_id: Optional[str] = None
+    check_in_date: Optional[datetime] = None
+    check_out_date: Optional[datetime] = None
+    nights: Optional[int] = None
+    room_type: Optional[str] = None
 
-    @validator('confidence_score')
-    def validate_confidence(cls, v):
-        if not 0 <= v <= 1:
-            raise ValueError('Confidence score must be between 0 and 1')
-        return v
+    # Car-specific fields
+    vehicle_id: Optional[str] = None
+    pickup_location: Optional[Airport] = None
+    dropoff_location: Optional[Airport] = None
+    pickup_time: Optional[datetime] = None
+    dropoff_time: Optional[datetime] = None
 
-class ModelInput(BaseModel):
-    """Input schema for ML model inference"""
-    features: List[float] = Field(..., min_items=128, max_items=128)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    # Pricing
+    currency: str = Field(default="USD", min_length=3, max_length=3)
+    points_required: Optional[int] = None
+    cash_required: Optional[float] = None
+    total_price: Optional[float] = None
+    taxes_fees: Optional[float] = None
 
-class ModelOutput(BaseModel):
-    """Output schema for ML model inference"""
-    predicted_price: float
-    confidence: float
-    feature_importance: Dict[str, float]
-    model_version: str
-    inference_latency_ms: float
-    prediction_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    # Metadata
+    metadata: Optional[Dict[str, Any]] = None
 
-class PipelineMetrics(BaseModel):
-    """Metrics for pipeline monitoring"""
-    events_processed: int = 0
-    processing_latency_ms: float = 0.0
-    throughput_events_per_sec: float = 0.0
-    error_count: int = 0
-    last_processed_timestamp: Optional[datetime] = None
-    system_load: float = 0.0
-    memory_usage_mb: float = 0.0
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    @validator('updated_at')
+    def update_timestamp(cls, v, values):
+        """Ensure updated_at is always current."""
+        return datetime.utcnow()
+
+    class Config:
+        """Pydantic config for performance and compatibility."""
+        json_encoders = {
+            datetime: lambda v: v.isoformat(),
+        }
+        from_attributes = True
+        arbitrary_types_allowed = True
+
+class AwardSearchRequest(BaseModel):
+    """Request schema for award availability searches."""
+    origin: Optional[str] = None
+    destination: Optional[str] = None
+    departure_date: Optional[datetime] = None
+    return_date: Optional[datetime] = None
+    cabin_class: Optional[CabinClass] = None
+    award_type: Optional[AwardType] = None
+    max_points: Optional[int] = None
+    min_points: Optional[int] = None
+    limit: int = Field(default=50, ge=1, le=500)
+    offset: int = Field(default=0, ge=0)
+
+class AwardSearchResponse(BaseModel):
+    """Response schema for award availability searches."""
+    results: List[AwardAvailability]
+    total_count: int
+    limit: int
+    offset: int
+    cached: bool = False
+    query_time_ms: float
+
+class HealthCheckResponse(BaseModel):
+    """Health check response schema."""
+    status: str
+    timestamp: datetime
+    kafka_status: str
+    cassandra_status: str
+    cache_status: str
+    version: str = "1.0.0"
