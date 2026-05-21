@@ -1,149 +1,29 @@
-version: '3.8'
-
+version: '3'
 services:
-  # Global Load Balancer (Edge Router)
-  edge-router:
-    image: nginx:alpine
-    container_name: edge-router
+  aiops-platform:
+    build: .
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./config/nginx/conf.d:/etc/nginx/conf.d
-      - ./certs:/etc/nginx/certs
-    networks:
-      - edge-network
+      - "8080:8080"
     depends_on:
-      - availability-service
-    restart: unless-stopped
-
-  # NVIDIA Edge AI Inference Service
-  edge-ai-service:
-    image: nvcr.io/nvidia/tritonserver:23.10-py3
-    container_name: edge-ai-service
+      - ml-model
+      - anomaly-detector
+      - incident-responder
     environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
-    volumes:
-      - ./models:/models
-      - ./config/triton:/config
-    networks:
-      - edge-network
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    restart: unless-stopped
+      - ML_MODEL_URL=http://ml-model:8000
+      - ANOMALY_DETECTOR_URL=http://anomaly-detector:8001
+      - INCIDENT_RESPONDER_URL=http://incident-responder:8002
 
-  # Availability Service (FastAPI)
-  availability-service:
-    build:
-      context: .
-      dockerfile: Dockerfile.availability
-    container_name: availability-service
-    environment:
-      - REDIS_HOST=redis-cache
-      - POSTGRES_HOST=postgres-db
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - EDGE_AI_ENDPOINT=http://edge-ai-service:8001
-    volumes:
-      - ./logs:/var/log/availability
-    networks:
-      - edge-network
-    depends_on:
-      - redis-cache
-      - postgres-db
-    restart: unless-stopped
-
-  # Redis Cache (Global Distribution)
-  redis-cache:
-    image: redis:7-alpine
-    container_name: redis-cache
-    command: redis-server --appendonly yes --replica-read-only no
-    volumes:
-      - ./data/redis:/data
-    networks:
-      - edge-network
-    restart: unless-stopped
-
-  # PostgreSQL Database (Global Primary)
-  postgres-db:
-    image: timescale/timescaledb:latest-pg15
-    container_name: postgres-db
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-      - ./config/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - edge-network
-    restart: unless-stopped
-
-  # Prometheus Monitoring
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
+  ml-model:
+    build: ./ml-model
     ports:
-      - "9090:9090"
-    volumes:
-      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./data/prometheus:/prometheus
-    networks:
-      - edge-network
-    restart: unless-stopped
+      - "8000:8000"
 
-  # Grafana Visualization
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
+  anomaly-detector:
+    build: ./anomaly-detector
     ports:
-      - "3000:3000"
-    volumes:
-      - ./data/grafana:/var/lib/grafana
-      - ./config/grafana/provisioning:/etc/grafana/provisioning
-    networks:
-      - edge-network
-    restart: unless-stopped
+      - "8001:8001"
 
-  # Fluentd Logging
-  fluentd:
-    image: fluentd:v1.16-debian-1
-    container_name: fluentd
+  incident-responder:
+    build: ./incident-responder
     ports:
-      - "24224:24224"
-    volumes:
-      - ./config/fluent/fluent.conf:/fluentd/etc/fluent.conf
-      - ./logs:/var/log
-    networks:
-      - edge-network
-    restart: unless-stopped
-
-  # Health Monitor
-  health-monitor:
-    build:
-      context: .
-      dockerfile: Dockerfile.health
-    container_name: health-monitor
-    environment:
-      - PROMETHEUS_URL=http://prometheus:9090
-      - GRAFANA_URL=http://grafana:3000
-    volumes:
-      - ./logs:/var/log/health
-    networks:
-      - edge-network
-    restart: unless-stopped
-
-networks:
-  edge-network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.28.0.0/16
+      - "8002:8002"

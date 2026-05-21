@@ -3,16 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>District Award Travel - Interactive Planner</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css">
-    <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <title>District Award Travel</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="root"></div>
-    <script type="text/babel" src="/app.jsx"></script>
+    <h1>District Award Travel</h1>
+    <form id="book-award-form">
+        <label for="user-id">User ID:</label>
+        <input type="number" id="user-id" name="user-id"><br><br>
+        <label for="award-id">Award ID:</label>
+        <input type="number" id="award-id" name="award-id"><br><br>
+        <label for="points">Points:</label>
+        <input type="number" id="points" name="points"><br><br>
+        <button type="submit">Book Award</button>
+    </form>
+    <div id="result"></div>
+
+    <script src="script.js"></script>
 </body>
 </html>

@@ -1,11 +1,13 @@
-from platform.src.pipeline.search_pipeline import SearchPipeline
-from platform.src.pipeline.db import create_database
+from fastapi import FastAPI
+from platform.src.pipeline.award_booking import AwardBooking
+from platform.src.intelligence.award_points import AwardPoints
+from platform.src.intelligence.availability import Availability
 
-def main():
-    create_database("search_results.db")
-    pipeline = SearchPipeline("search_results.db", 10)
-    jobs = [SearchJob("NYC-LAX", "2026-05-20"), SearchJob("LAX-NYC", "2026-05-21")]
-    pipeline.start(jobs)
+app = FastAPI()
 
-if __name__ == "__main__":
-    main()
+@app.post("/book_award")
+async def book_award(user_id: int, award_id: int, points: int):
+    award_points = AwardPoints()
+    availability = Availability()
+    award_booking = AwardBooking(award_points, availability)
+    return award_booking.book_award(user_id, award_id, points)

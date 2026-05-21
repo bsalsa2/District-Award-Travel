@@ -12,8 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Expose port 8080
-EXPOSE 8080
+# Expose port 8002
+EXPOSE 8002
 
 # Run command when container starts
-CMD ["python", "app.py"]
+CMD ["python", "incident_responder.py"]

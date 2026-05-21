@@ -1,43 +1,35 @@
-from neo4j import GraphDatabase
-from platform.src.models import AirlineRoute, AwardAvailability, TransferBonus
+import asyncio
+from sqlalchemy import create_engine, Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
-class GraphDatabaseClient:
-    def __init__(self, uri, auth):
-        self.driver = GraphDatabase.driver(uri, auth=auth)
+# Define database connection URL
+DATABASE_URL = "sqlite:///district-award-travel.db"
 
-    def close(self):
-        self.driver.close()
+# Create a database engine
+engine = create_engine(DATABASE_URL)
 
-    def create_airline_route(self, airline_route: AirlineRoute):
-        with self.driver.session() as session:
-            session.write_transaction(self._create_airline_route, airline_route)
+# Create a configured "Session" class
+Session = sessionmaker(bind=engine)
 
-    def _create_airline_route(self, tx, airline_route: AirlineRoute):
-        tx.run("CREATE (r:AirlineRoute {id: $id, airline: $airline, origin: $origin, destination: $destination, distance: $distance})",
-               id=airline_route.id, airline=airline_route.airline, origin=airline_route.origin, destination=airline_route.destination, distance=airline_route.distance)
+# Create a base class for declarative models
+Base = declarative_base()
 
-    def create_award_availability(self, award_availability: AwardAvailability):
-        with self.driver.session() as session:
-            session.write_transaction(self._create_award_availability, award_availability)
+# Define a data model
+class Data(Base):
+    __tablename__ = "data"
+    id = Column(Integer, primary_key=True)
+    column1 = Column(String)
+    column2 = Column(String)
 
-    def _create_award_availability(self, tx, award_availability: AwardAvailability):
-        tx.run("CREATE (a:AwardAvailability {id: $id, airline: $airline, route_id: $route_id, availability: $availability})",
-               id=award_availability.id, airline=award_availability.airline, route_id=award_availability.route_id, availability=award_availability.availability)
+# Create all tables in the engine
+Base.metadata.create_all(engine)
 
-    def create_transfer_bonus(self, transfer_bonus: TransferBonus):
-        with self.driver.session() as session:
-            session.write_transaction(self._create_transfer_bonus, transfer_bonus)
+class Database:
+    def __init__(self):
+        self.session = Session()
 
-    def _create_transfer_bonus(self, tx, transfer_bonus: TransferBonus):
-        tx.run("CREATE (t:TransferBonus {id: $id, airline: $airline, route_id: $route_id, bonus: $bonus})",
-               id=transfer_bonus.id, airline=transfer_bonus.airline, route_id=transfer_bonus.route_id, bonus=transfer_bonus.bonus)
-
-    def query_award_search(self, origin: str, destination: str):
-        with self.driver.session() as session:
-            result = session.read_transaction(self._query_award_search, origin, destination)
-            return result
-
-    def _query_award_search(self, tx, origin: str, destination: str):
-        result = tx.run("MATCH (r:AirlineRoute {origin: $origin, destination: $destination})-[:HAS_AWARD_AVAILABILITY]->(a:AwardAvailability) RETURN a",
-                        origin=origin, destination=destination)
-        return [record["a"] for record in result]
+    async def fetch_data(self):
+        # Fetch data from the database
+        data = self.session.query(Data).all()
+        return [{"id": d.id, "column1": d.column1, "column2": d.column2} for d in data]
