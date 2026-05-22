@@ -1,0 +1,66 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Resources:
+  AwardSearchEngineFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'district-award-travel-award-search-engine'
+      Runtime: python3.9
+      Handler: app.lambda_handler
+      Role: !GetAtt 'LambdaExecutionRole.Arn'
+      Code:
+        S3Bucket: !Sub 'district-award-travel-${AWS::Region}'
+        S3ObjectKey: award-search-engine.zip
+
+  BookingSystemFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub 'district-award-travel-booking-system'
+      Runtime: python3.9
+      Handler: app.lambda_handler
+      Role: !GetAtt 'LambdaExecutionRole.Arn'
+      Code:
+        S3Bucket: !Sub 'district-award-travel-${AWS::Region}'
+        S3ObjectKey: booking-system.zip
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: execution-role-policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt 'AwardSearchEngineFunction.Arn'
+            Id: award-search-engine
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: match-viewer
+        DefaultCacheBehavior:
+          ForwardedValues:
+            QueryString: false
+          TargetOriginId: award-search-engine
+        Enabled: true
+        Comment: District Award Travel CloudFront Distribution

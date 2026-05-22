@@ -1,16 +1,13 @@
-from pydantic import BaseModel
-from typing import List
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
 
-class AwardSearchRequest(BaseModel):
-    origin: str
-    destination: str
-    travel_dates: List[str]
-    loyalty_program: str
-    airline_partnerships: List[str]
+Base = declarative_base()
 
-class AwardSearchResult(BaseModel):
-    airline: str
-    route: str
-    travel_dates: List[str]
-    loyalty_program: str
-    award_price: int
+class Award(Base):
+    __tablename__ = "awards"
+    id = Column(Integer, primary_key=True)
+    origin = Column(String)
+    destination = Column(String)
+    travel_date = Column(String)
+    award_type = Column(String)
+    award_level = Column(String)

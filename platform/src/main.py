@@ -1,18 +1,27 @@
-from fastapi import FastAPI, Request
-from platform.src.intelligence.award_redemption_simulator import AwardRedemptionSimulator
-from platform.src.pipeline.award_redemption_pipeline import AwardRedemptionPipeline
-import json
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from platform.src.intelligence.multimodal_ai_model import MultimodalModel
+from platform.src.pipeline.data_pipeline import create_dataset
 
 app = FastAPI()
 
-@app.post("/simulate-redemption")
-async def simulate_redemption(request: Request):
-    data = await request.json()
-    client_id = data['client_id']
-    travel_dates = data['travel_dates']
-    destination = data['destination']
-
-    simulator = AwardRedemptionSimulator(client_id, travel_dates, destination)
-    simulation_results = simulator.simulate_redemption()
-
-    return simulation_results
+@app.post('/api/search')
+async def search(query: str):
+    # Load the multimodal AI model
+    model = MultimodalModel()
+    # Load the dataset
+    train_dataset, test_dataset = create_dataset()
+    # Use the model to generate search results
+    search_results = []
+    for result in test_dataset:
+        text = result['text']
+        image = result['image']
+        graph = result['graph']
+        label = result['label']
+        output = model(text, image, graph)
+        if output > 0.5:
+            search_results.append({
+                'destination': text,
+                'description': label
+            })
+    return JSONResponse(content=search_results, media_type='application/json')

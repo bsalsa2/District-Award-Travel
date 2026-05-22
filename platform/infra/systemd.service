@@ -1,10 +1,10 @@
 [Unit]
-Description=Monitoring Service
+Description=Monitoring System Service
 After=network.target
 
 [Service]
 User=runner
-ExecStart=/usr/bin/docker-compose -f /home/runner/work/District-Award-Travel/District-Award-Travel/platform/infra/docker-compose.yml up
+ExecStart=/usr/bin/python /app/monitoring_system.py
 Restart=always
 
 [Install]

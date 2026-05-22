@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# Build and deploy the application
-docker-compose build
-docker-compose up -d
-
-# Verify the deployment
-docker-compose ps
+# Deploy to cloud providers' edge computing offerings
+# For example, using AWS CloudFront and AWS Lambda
+aws cloudformation deploy --template-file cloudformation.yaml --stack-name district-award-travel --capabilities CAPABILITY_IAM
