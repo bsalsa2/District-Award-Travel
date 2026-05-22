@@ -7,18 +7,24 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>District Award Travel</h1>
-    <form id="book-award-form">
-        <label for="user-id">User ID:</label>
-        <input type="number" id="user-id" name="user-id"><br><br>
-        <label for="award-id">Award ID:</label>
-        <input type="number" id="award-id" name="award-id"><br><br>
-        <label for="points">Points:</label>
-        <input type="number" id="points" name="points"><br><br>
-        <button type="submit">Book Award</button>
-    </form>
-    <div id="result"></div>
-
+    <header>
+        <h1>District Award Travel</h1>
+    </header>
+    <main>
+        <section id="award-redemption-simulator">
+            <h2>Award Redemption Simulator</h2>
+            <form id="award-redemption-form">
+                <label for="client-id">Client ID:</label>
+                <input type="number" id="client-id" name="client-id">
+                <label for="travel-dates">Travel Dates:</label>
+                <input type="date" id="travel-dates" name="travel-dates">
+                <label for="destination">Destination:</label>
+                <input type="text" id="destination" name="destination">
+                <button id="simulate-redemption">Simulate Redemption</button>
+            </form>
+            <div id="simulation-results"></div>
+        </section>
+    </main>
     <script src="script.js"></script>
 </body>
 </html>

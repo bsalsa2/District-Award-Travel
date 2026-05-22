@@ -1,13 +1,16 @@
 from pydantic import BaseModel
+from typing import List
 
-class Award(BaseModel):
-    id: int
-    name: str
-    description: str
-    points_required: int
+class AwardSearchRequest(BaseModel):
+    origin: str
+    destination: str
+    travel_dates: List[str]
+    loyalty_program: str
+    airline_partnerships: List[str]
 
-class User(BaseModel):
-    id: int
-    name: str
-    email: str
-    points_balance: int
+class AwardSearchResult(BaseModel):
+    airline: str
+    route: str
+    travel_dates: List[str]
+    loyalty_program: str
+    award_price: int

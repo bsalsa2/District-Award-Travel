@@ -1,29 +1,38 @@
 version: '3'
 services:
-  aiops-platform:
-    build: .
+  nginx:
+    image: nginx:latest
     ports:
-      - "8080:8080"
+      - "80:80"
     depends_on:
-      - ml-model
-      - anomaly-detector
-      - incident-responder
+      - app
+    restart: always
+
+  app:
+    build: .
     environment:
-      - ML_MODEL_URL=http://ml-model:8000
-      - ANOMALY_DETECTOR_URL=http://anomaly-detector:8001
-      - INCIDENT_RESPONDER_URL=http://incident-responder:8002
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - db
+    restart: always
 
-  ml-model:
-    build: ./ml-model
-    ports:
-      - "8000:8000"
+  db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=dat
+      - POSTGRES_PASSWORD=dat
+      - POSTGRES_DB=dat
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: always
 
-  anomaly-detector:
-    build: ./anomaly-detector
-    ports:
-      - "8001:8001"
+  ml:
+    build: ./ml
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - app
+    restart: always
 
-  incident-responder:
-    build: ./incident-responder
-    ports:
-      - "8002:8002"
+volumes:
+  db-data:

@@ -12,58 +12,53 @@ header {
 }
 
 main {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1em;
-    padding: 1em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2em;
 }
 
 section {
     background-color: #f7f7f7;
     padding: 1em;
     border: 1px solid #ddd;
-    border-radius: 0.5em;
+    border-radius: 10px;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-h2 {
-    margin-top: 0;
-}
-
-#award-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-#award-list li {
-    padding: 0.5em;
-    border-bottom: 1px solid #ccc;
-}
-
-#award-list li:last-child {
-    border-bottom: none;
-}
-
-#booking-form, #payment-form {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5em;
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 label {
-    font-weight: bold;
+    margin-bottom: 0.5em;
+}
+
+input {
+    padding: 0.5em;
+    margin-bottom: 1em;
+    border: 1px solid #ccc;
+    border-radius: 5px;
 }
 
 button {
+    padding: 0.5em 1em;
     background-color: #333;
     color: #fff;
     border: none;
-    padding: 0.5em 1em;
-    border-radius: 0.5em;
+    border-radius: 5px;
     cursor: pointer;
 }
 
 button:hover {
     background-color: #444;
+}
+
+#simulation-results {
+    padding: 1em;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f7f7f7;
 }

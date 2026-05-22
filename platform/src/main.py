@@ -1,13 +1,18 @@
-from fastapi import FastAPI
-from platform.src.intelligence.award_prediction_model import AwardPredictionModel
-from platform.src.pipeline.pipeline import Pipeline
+from fastapi import FastAPI, Request
+from platform.src.intelligence.award_redemption_simulator import AwardRedemptionSimulator
+from platform.src.pipeline.award_redemption_pipeline import AwardRedemptionPipeline
+import json
 
 app = FastAPI()
 
-@app.post("/predict")
-async def predict(user: int, award: int, behavior: int):
-    model = AwardPredictionModel(100, 100, 100)
-    pipeline = Pipeline('data.csv')
-    pipeline.run()
-    prediction = model.predict([[user]], [[award]], [[behavior]])
-    return {"prediction": prediction}
+@app.post("/simulate-redemption")
+async def simulate_redemption(request: Request):
+    data = await request.json()
+    client_id = data['client_id']
+    travel_dates = data['travel_dates']
+    destination = data['destination']
+
+    simulator = AwardRedemptionSimulator(client_id, travel_dates, destination)
+    simulation_results = simulator.simulate_redemption()
+
+    return simulation_results

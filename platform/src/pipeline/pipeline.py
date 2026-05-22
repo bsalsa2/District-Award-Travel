@@ -1,14 +1,23 @@
-from platform.src.intelligence.award_prediction_model import AwardPredictionModel
-from platform.src.pipeline.data_pipeline import DataPipeline
+import sqlite3
+import numpy as np
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
 
-class Pipeline:
-    def __init__(self, data_file):
-        self.data_file = data_file
-        self.data_pipeline = DataPipeline(data_file)
-        self.model = AwardPredictionModel(100, 100, 100)
+# Create a database connection
+conn = sqlite3.connect('users.db')
+cursor = conn.cursor()
 
-    def run(self):
-        X_train, X_test, y_train, y_test = self.data_pipeline.get_data()
-        self.model.train(X_train[:, 0], X_train[:, 1], X_train[:, 2], y_train)
-        predictions = self.model.predict(X_test[:, 0], X_test[:, 1], X_test[:, 2])
-        print('Accuracy:', accuracy_score(y_test, predictions))
+# Define the pipeline endpoint
+@app.get("/pipeline")
+async def pipeline():
+    # Query the database for the users
+    cursor.execute('SELECT * FROM users')
+    users = cursor.fetchall()
+
+    # Process the users' data
+    processed_users = []
+    for user in users:
+        processed_users.append({"id": user[0], "username": user[1]})
+
+    # Return the processed users' data
+    return JSONResponse(content=processed_users, media_type="application/json")
