@@ -1,30 +1,29 @@
 version: '3'
 services:
-  web:
-    build: .
+  monitoring:
+    build: ./monitoring
+    restart: always
     ports:
-      - "80:80"
+      - "8080:8080"
+    depends_on:
+      - aiops
     environment:
-      - INSTANCE_COUNT=1
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-      restart_policy:
-        condition: on-failure
-  predictive-analytics:
-    build: .
-    command: python predictive_analytics.py
+      - AIOPS_URL=http://aiops:8081
+
+  aiops:
+    build: ./aiops
+    restart: always
+    ports:
+      - "8081:8081"
+    depends_on:
+      - database
     environment:
-      - MODEL_FILE=model.pkl
-    volumes:
-      - ./platform/infra:/app
-  autoscaling:
-    build: .
-    command: python autoscaling.py
+      - DATABASE_URL=postgres://user:password@database:5432/database
+
+  database:
+    image: postgres
+    restart: always
     environment:
-      - INSTANCE_COUNT=1
-    volumes:
-      - ./platform/infra:/app
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=database

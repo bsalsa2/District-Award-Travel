@@ -1,71 +1,46 @@
 body {
     font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
 }
 
-header {
-    background-color: #333;
-    color: #fff;
-    padding: 1em;
-    text-align: center;
-}
-
-main {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1em;
-    padding: 1em;
-}
-
-section {
-    background-color: #f7f7f7;
-    padding: 1em;
-    border: 1px solid #ddd;
-    border-radius: 0.5em;
-}
-
-h2 {
-    margin-top: 0;
-}
-
-#recommendations-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-#recommendations-list li {
-    padding: 0.5em;
-    border-bottom: 1px solid #ccc;
-}
-
-#recommendations-list li:last-child {
-    border-bottom: none;
-}
-
-#search-form {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-#search-input {
-    padding: 0.5em;
+form {
+    width: 50%;
+    margin: 40px auto;
+    padding: 20px;
     border: 1px solid #ccc;
-    border-radius: 0.5em;
-    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-#search-button {
-    background-color: #333;
+label {
+    display: block;
+    margin-bottom: 10px;
+}
+
+input[type="text"], input[type="email"] {
+    width: 100%;
+    height: 40px;
+    margin-bottom: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+}
+
+button[type="submit"] {
+    width: 100%;
+    height: 40px;
+    background-color: #4CAF50;
     color: #fff;
-    padding: 0.5em 1em;
+    padding: 10px;
     border: none;
-    border-radius: 0.5em;
+    border-radius: 5px;
     cursor: pointer;
 }
 
-#search-button:hover {
-    background-color: #444;
+button[type="submit"]:hover {
+    background-color: #3e8e41;
+}
+
+#prediction {
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 20px;
 }

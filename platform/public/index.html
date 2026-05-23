@@ -3,26 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Award Travel Dashboard</title>
+    <title>District Award Travel</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <h1>Award Travel Dashboard</h1>
-    </header>
-    <main>
-        <section id="recommendations">
-            <h2>Recommendations</h2>
-            <ul id="recommendations-list"></ul>
-        </section>
-        <section id="search">
-            <h2>Search</h2>
-            <form id="search-form">
-                <input type="text" id="search-input" placeholder="Destination or airline">
-                <button id="search-button">Search</button>
-            </form>
-        </section>
-    </main>
+    <h1>District Award Travel</h1>
+    <form id="user-form">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name"><br><br>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email"><br><br>
+        <label for="preferences">Preferences:</label>
+        <input type="text" id="preferences" name="preferences"><br><br>
+        <button id="submit-btn">Submit</button>
+    </form>
+    <div id="prediction"></div>
+
     <script src="script.js"></script>
 </body>
 </html>

@@ -1,31 +1,21 @@
-const recommendationsList = document.getElementById('recommendations-list');
-const searchForm = document.getElementById('search-form');
-const searchInput = document.getElementById('search-input');
-const searchButton = document.getElementById('search-button');
+const form = document.getElementById('user-form');
+const submitBtn = document.getElementById('submit-btn');
+const predictionDiv = document.getElementById('prediction');
 
-searchForm.addEventListener('submit', async (e) => {
+form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const query = searchInput.value.trim();
-    if (query) {
-        try {
-            const response = await fetch(`http://localhost:8000/recommendations?query=${query}`);
-            const data = await response.json();
-            renderRecommendations(data);
-        } catch (error) {
-            console.error(error);
-        }
-    }
+    const name = document.getElementById('name').value;
+    const email = document.getElementById('email').value;
+    const preferences = document.getElementById('preferences').value;
+
+    const response = await fetch('/predict', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, preferences })
+    });
+
+    const prediction = await response.json();
+    predictionDiv.innerText = `Prediction: ${prediction}`;
 });
-
-async function renderRecommendations(data) {
-    const listItems = data.map((recommendation) => {
-        return `<li>${recommendation.destination} - ${recommendation.airline}</li>`;
-    }).join('');
-    recommendationsList.innerHTML = listItems;
-}
-
-// Initialize with some default recommendations
-fetch('http://localhost:8000/recommendations')
-    .then((response) => response.json())
-    .then((data) => renderRecommendations(data))
-    .catch((error) => console.error(error));

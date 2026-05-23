@@ -3,20 +3,16 @@ from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-class AwardAvailability(Base):
-    __tablename__ = "award_availability"
+class AwardTravelData(Base):
+    __tablename__ = "award_travel_data"
     id = Column(Integer, primary_key=True)
-    award_id = Column(String)
+    route = Column(String)
+    airline = Column(String)
+    award_type = Column(String)
     availability = Column(Integer)
 
-    def to_dict(self):
-        return {"award_id": self.award_id, "availability": self.availability}
-
-class AwardPricing(Base):
-    __tablename__ = "award_pricing"
-    id = Column(Integer, primary_key=True)
-    award_id = Column(String)
-    price = Column(Integer)
-
-    def to_dict(self):
-        return {"award_id": self.award_id, "price": self.price}
+    def __init__(self, route, airline, award_type, availability):
+        self.route = route
+        self.airline = airline
+        self.award_type = award_type
+        self.availability = availability

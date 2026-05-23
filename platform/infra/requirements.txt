@@ -1,4 +1,10 @@
+# Requirements for the AIOps-driven monitoring and automation system
+docker
+docker-compose
+python3
+nginx
+systemd
+cron
+scikit-learn
 pandas
 numpy
-scikit-learn
-requests
