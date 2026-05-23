@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: award-travel-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: award-travel
+  template:
+    metadata:
+      labels:
+        app: award-travel
+    spec:
+      containers:
+      - name: award-travel
+        image: award-travel:latest
+        ports:
+        - containerPort: 8080

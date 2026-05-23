@@ -1,33 +1,31 @@
+const recommendationsList = document.getElementById('recommendations-list');
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-input');
 const searchButton = document.getElementById('search-button');
-const searchResults = document.getElementById('search-results');
 
-searchButton.addEventListener('click', async (e) => {
+searchForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const searchQuery = searchInput.value.trim();
-    if (searchQuery) {
+    const query = searchInput.value.trim();
+    if (query) {
         try {
-            const response = await fetch('/api/search', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ query: searchQuery })
-            });
+            const response = await fetch(`http://localhost:8000/recommendations?query=${query}`);
             const data = await response.json();
-            searchResults.innerHTML = '';
-            data.forEach((result) => {
-                const resultHTML = `
-                    <div>
-                        <h2>${result.destination}</h2>
-                        <p>${result.description}</p>
-                    </div>
-                `;
-                searchResults.insertAdjacentHTML('beforeend', resultHTML);
-            });
+            renderRecommendations(data);
         } catch (error) {
             console.error(error);
         }
     }
 });
+
+async function renderRecommendations(data) {
+    const listItems = data.map((recommendation) => {
+        return `<li>${recommendation.destination} - ${recommendation.airline}</li>`;
+    }).join('');
+    recommendationsList.innerHTML = listItems;
+}
+
+// Initialize with some default recommendations
+fetch('http://localhost:8000/recommendations')
+    .then((response) => response.json())
+    .then((data) => renderRecommendations(data))
+    .catch((error) => console.error(error));

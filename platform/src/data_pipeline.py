@@ -1,28 +1,35 @@
 import asyncio
-from platform.src.redis_client import RedisClient
-from platform.src.airline_api import AirlineAPI
-from platform.src.data_processor import DataProcessor
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from platform.src.models import AwardAvailability, AwardPricing
 
 class DataPipeline:
-    def __init__(self, redis_client):
-        self.redis_client = redis_client
-        self.airline_api = AirlineAPI()
-        self.data_processor = DataProcessor()
-
-    async def start(self):
-        await self.airline_api.connect()
-        await self.data_processor.start()
-
-    async def get_award_prices(self):
-        award_prices = await self.redis_client.get("award_prices")
-        if award_prices is None:
-            award_prices = await self.airline_api.get_award_prices()
-            await self.redis_client.set("award_prices", award_prices)
-        return award_prices
+    def __init__(self):
+        self.engine = create_engine("sqlite:///award_travel.db")
+        self.Session = sessionmaker(bind=self.engine)
 
     async def get_award_availability(self):
-        award_availability = await self.redis_client.get("award_availability")
-        if award_availability is None:
-            award_availability = await self.airline_api.get_award_availability()
-            await self.redis_client.set("award_availability", award_availability)
-        return award_availability
+        async with self.Session() as session:
+            query = session.query(AwardAvailability)
+            results = await query.all()
+            return [result.to_dict() for result in results]
+
+    async def get_award_pricing(self):
+        async with self.Session() as session:
+            query = session.query(AwardPricing)
+            results = await query.all()
+            return [result.to_dict() for result in results]
+
+    async def ingest_award_availability(self, data):
+        async with self.Session() as session:
+            for item in data:
+                award_availability = AwardAvailability(**item)
+                session.add(award_availability)
+            await session.commit()
+
+    async def ingest_award_pricing(self, data):
+        async with self.Session() as session:
+            for item in data:
+                award_pricing = AwardPricing(**item)
+                session.add(award_pricing)
+            await session.commit()

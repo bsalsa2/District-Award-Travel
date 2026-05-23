@@ -1,5 +1,13 @@
 #!/bin/bash
 
-# Deploy to cloud providers' edge computing offerings
-# For example, using AWS CloudFront and AWS Lambda
-aws cloudformation deploy --template-file cloudformation.yaml --stack-name district-award-travel --capabilities CAPABILITY_IAM
+# Create namespace
+kubectl create namespace award-travel-ns
+
+# Apply deployment configuration
+kubectl apply -f deployment.yaml -n award-travel-ns
+
+# Apply service configuration
+kubectl apply -f service.yaml -n award-travel-ns
+
+# Apply ingress configuration
+kubectl apply -f ingress.yaml -n award-travel-ns

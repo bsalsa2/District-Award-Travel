@@ -1,27 +1,30 @@
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from platform.src.intelligence.multimodal_ai_model import MultimodalModel
-from platform.src.pipeline.data_pipeline import create_dataset
+from pydantic import BaseModel
+from award_travel_model import AwardTravelModel
+from data_pipeline import DataPipeline
 
 app = FastAPI()
 
-@app.post('/api/search')
-async def search(query: str):
-    # Load the multimodal AI model
-    model = MultimodalModel()
-    # Load the dataset
-    train_dataset, test_dataset = create_dataset()
-    # Use the model to generate search results
-    search_results = []
-    for result in test_dataset:
-        text = result['text']
-        image = result['image']
-        graph = result['graph']
-        label = result['label']
-        output = model(text, image, graph)
-        if output > 0.5:
-            search_results.append({
-                'destination': text,
-                'description': label
-            })
-    return JSONResponse(content=search_results, media_type='application/json')
+class SearchQuery(BaseModel):
+    search_query: str
+
+@app.post("/search")
+async def search(search_query: SearchQuery):
+    # Load data pipeline
+    pipeline = DataPipeline('data.csv')
+    scaled_train_data, scaled_test_data = pipeline.run_pipeline()
+
+    # Load award travel model
+    model = AwardTravelModel()
+
+    # Make predictions
+    predictions = model.predict(scaled_test_data)
+
+    # Return results
+    results = []
+    for prediction in predictions:
+        results.append({
+            'title': prediction[0],
+            'description': prediction[1]
+        })
+    return results

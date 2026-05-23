@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 
-# Set working directory
+# Set working directory to /app
 WORKDIR /app
 
 # Copy requirements file
@@ -12,8 +12,8 @@ RUN pip install -r requirements.txt
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 8080
+# Expose port 80
+EXPOSE 80
 
 # Run command
-CMD ["python", "monitoring_system.py"]
+CMD ["python", "predictive_analytics.py"]
