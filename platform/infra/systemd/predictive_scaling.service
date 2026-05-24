@@ -1,0 +1,11 @@
+[Unit]
+Description=Predictive Scaling Service
+After=docker.service
+
+[Service]
+User=runner
+ExecStart=/usr/bin/python /home/runner/work/District-Award-Travel/District-Award-Travel/platform/infra/predictive_scaling.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

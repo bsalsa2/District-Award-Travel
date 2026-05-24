@@ -7,18 +7,27 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>District Award Travel</h1>
-    <form id="user-form">
-        <label for="name">Name:</label>
-        <input type="text" id="name" name="name"><br><br>
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email"><br><br>
-        <label for="preferences">Preferences:</label>
-        <input type="text" id="preferences" name="preferences"><br><br>
-        <button id="submit-btn">Submit</button>
-    </form>
-    <div id="prediction"></div>
-
+    <header>
+        <nav>
+            <ul>
+                <li><a href="#">Login</a></li>
+                <li><a href="#">Register</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <h1>Welcome to District Award Travel</h1>
+        <p>Redeem your award points for travel rewards</p>
+        <form id="redemption-form">
+            <label for="user-id">User ID:</label>
+            <input type="text" id="user-id" name="user-id"><br><br>
+            <label for="award-points">Award Points:</label>
+            <input type="number" id="award-points" name="award-points"><br><br>
+            <label for="redemption-date">Redemption Date:</label>
+            <input type="date" id="redemption-date" name="redemption-date"><br><br>
+            <button type="submit">Redeem</button>
+        </form>
+    </main>
     <script src="script.js"></script>
 </body>
 </html>

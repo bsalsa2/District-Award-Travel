@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 80
 
 # Run command
-CMD ["python", "predictive_analytics.py"]
+CMD ["python", "predictive_scaling.py"]

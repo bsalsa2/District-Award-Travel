@@ -1,28 +1,30 @@
 import numpy as np
 from fastapi import FastAPI
-from pydantic import BaseModel
+from platform.src.intelligence.award_points_redeemer import AwardPointsRedeemer
+from platform.src.intelligence.models import AwardPointsModel
 
 app = FastAPI()
 
-class Recommendation(BaseModel):
-    destination: str
-    airline: str
+@app.post("/redeem_points")
+async def redeem_points(user_id: int, points_to_redeem: int):
+    award_points_model = AwardPointsModel("award_points.db")
+    award_points_redeemer = AwardPointsRedeemer(award_points_model)
+    try:
+        result = award_points_redeemer.redeem_points(user_id, points_to_redeem)
+        return result
+    except HTTPException as e:
+        return {"error": str(e)}
+    finally:
+        award_points_model.close()
 
-# Sample data for demonstration purposes
-recommendations_data = [
-    Recommendation(destination="New York", airline="American Airlines"),
-    Recommendation(destination="Los Angeles", airline="Delta Air Lines"),
-    Recommendation(destination="Chicago", airline="United Airlines"),
-    Recommendation(destination="Houston", airline="Southwest Airlines"),
-    Recommendation(destination="Phoenix", airline="American Airlines"),
-]
-
-@app.get("/recommendations")
-async def get_recommendations(query: str = None):
-    if query:
-        # Filter recommendations based on query
-        filtered_recommendations = [rec for rec in recommendations_data if query.lower() in rec.destination.lower() or query.lower() in rec.airline.lower()]
-        return filtered_recommendations
-    else:
-        # Return all recommendations
-        return recommendations_data
+@app.get("/get_user_points")
+async def get_user_points(user_id: int):
+    award_points_model = AwardPointsModel("award_points.db")
+    award_points_redeemer = AwardPointsRedeemer(award_points_model)
+    try:
+        points = award_points_redeemer.get_user_points(user_id)
+        return {"points": points}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        award_points_model.close()

@@ -1,21 +1,23 @@
-const form = document.getElementById('user-form');
-const submitBtn = document.getElementById('submit-btn');
-const predictionDiv = document.getElementById('prediction');
+const redemptionForm = document.getElementById("redemption-form");
 
-form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const name = document.getElementById('name').value;
-    const email = document.getElementById('email').value;
-    const preferences = document.getElementById('preferences').value;
+redemptionForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const userId = document.getElementById("user-id").value;
+    const awardPoints = document.getElementById("award-points").value;
+    const redemptionDate = document.getElementById("redemption-date").value;
 
-    const response = await fetch('/predict', {
-        method: 'POST',
+    const response = await fetch("/award_points_redemption", {
+        method: "POST",
         headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json"
         },
-        body: JSON.stringify({ name, email, preferences })
+        body: JSON.stringify({
+            user_id: userId,
+            award_points: awardPoints,
+            redemption_date: redemptionDate
+        })
     });
 
-    const prediction = await response.json();
-    predictionDiv.innerText = `Prediction: ${prediction}`;
+    const data = await response.json();
+    console.log(data);
 });

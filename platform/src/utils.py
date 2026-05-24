@@ -1,17 +1,15 @@
-import asyncio
-import requests
-from bs4 import BeautifulSoup
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 
-async def fetch_airline_partnerships(airline):
-    url = f'https://www.{airline}.com/partnerships'
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    partnerships = [a.text.strip() for a in soup.find_all('a', href=True) if a.text.strip()]
-    return partnerships
+class KnowledgeGraph:
+    def __init__(self):
+        self.stop_words = set(stopwords.words("english"))
+        self.lemmatizer = WordNetLemmatizer()
 
-async def fetch_route_network(airline):
-    url = f'https://www.{airline}.com/route-network'
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    routes = [a.text.strip() for a in soup.find_all('a', href=True) if a.text.strip()]
-    return routes
+    def disambiguate_entities(self, query):
+        tokens = word_tokenize(query)
+        tokens = [token for token in tokens if token not in self.stop_words]
+        tokens = [self.lemmatizer.lemmatize(token) for token in tokens]
+        return tokens

@@ -1,29 +1,22 @@
-import numpy as np
-from fastapi import FastAPI
-from pydantic import BaseModel
-
-app = FastAPI()
-
-class BookingRequest(BaseModel):
-    itinerary: list
-    award_type: str
+import sqlite3
 
 class BookingPipeline:
     def __init__(self):
-        self.booking_data = {}
-
-    def book_travel(self, booking_request: BookingRequest):
-        # Implement booking logic here
-        # For demonstration purposes, return a sample response
-        return {
-            "booking_id": "BK123",
-            "itinerary": booking_request.itinerary,
-            "award_type": booking_request.award_type,
-            "booking_status": "confirmed"
-        }
-
-booking_pipeline = BookingPipeline()
-
-@app.post("/book_travel")
-async def book_travel(booking_request: BookingRequest):
-    return booking_pipeline.book_travel(booking_request)
+        self.conn = sqlite3.connect("bookings.db")
+        self.cursor = self.conn.cursor()
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS bookings (
+                id INTEGER PRIMARY KEY,
+                flight_number TEXT,
+                passenger_name TEXT
+            )
+        """)
+        self.conn.commit()
+    
+    def book_flight(self, flight_number, passenger_name):
+        self.cursor.execute("""
+            INSERT INTO bookings (flight_number, passenger_name)
+            VALUES (?, ?)
+        """, (flight_number, passenger_name))
+        self.conn.commit()
+        return True

@@ -1,18 +1,31 @@
+from dataclasses import dataclass
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 
-class AwardTravelData(Base):
-    __tablename__ = "award_travel_data"
-    id = Column(Integer, primary_key=True)
-    route = Column(String)
-    airline = Column(String)
-    award_type = Column(String)
-    availability = Column(Integer)
+@dataclass
+class AwardTravelRoute:
+    id: int
+    origin: str
+    destination: str
+    airline: str
+    award_price: int
 
-    def __init__(self, route, airline, award_type, availability):
-        self.route = route
-        self.airline = airline
-        self.award_type = award_type
-        self.availability = availability
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "origin": self.origin,
+            "destination": self.destination,
+            "airline": self.airline,
+            "award_price": self.award_price
+        }
+
+class AwardTravelRouteModel(Base):
+    __tablename__ = "award_travel_routes"
+
+    id = Column(Integer, primary_key=True)
+    origin = Column(String)
+    destination = Column(String)
+    airline = Column(String)
+    award_price = Column(Integer)
