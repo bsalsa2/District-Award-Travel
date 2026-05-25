@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: logging
+spec:
+  selector:
+    app: logging
+  ports:
+  - name: http
+    port: 5044
+    targetPort: 5044
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: logging
+  template:
+    metadata:
+      labels:
+        app: logging
+    spec:
+      containers:
+      - name: logging
+        image: docker.elastic.co/logstash/logstash:7.12.0
+        ports:
+        - containerPort: 5044

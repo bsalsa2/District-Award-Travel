@@ -1,39 +1,23 @@
-import sqlite3
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+import numpy as np
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from typing import Dict
 
 app = FastAPI()
 
-class PaymentRequest(BaseModel):
-    user_id: int
-    award_id: int
-    payment_method: str
-    amount: float
+class PaymentGateway:
+    def __init__(self):
+        self.payment_methods = [
+            {"id": 1, "method": "credit_card"},
+            {"id": 2, "method": "paypal"},
+        ]
 
-class PaymentResponse(BaseModel):
-    payment_id: int
-    status: str
+    def process_payment(self, payment_method_id: int, amount: int) -> bool:
+        # Simulate payment processing
+        return True
 
-@app.post("/payment")
-async def process_payment(payment_request: PaymentRequest):
-    try:
-        # Connect to database
-        conn = sqlite3.connect('database.db')
-        cursor = conn.cursor()
-
-        # Insert payment into database
-        cursor.execute("INSERT INTO payments (user_id, award_id, payment_method, amount) VALUES (?, ?, ?, ?)",
-                        (payment_request.user_id, payment_request.award_id, payment_request.payment_method, payment_request.amount))
-        payment_id = cursor.lastrowid
-        conn.commit()
-
-        # Update award status
-        cursor.execute("UPDATE awards SET status = 'booked' WHERE id = ?", (payment_request.award_id,))
-        conn.commit()
-
-        # Close database connection
-        conn.close()
-
-        return PaymentResponse(payment_id=payment_id, status="success")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/process_payment")
+async def process_payment(payment_method_id: int, amount: int):
+    payment_gateway = PaymentGateway()
+    payment_processed = payment_gateway.process_payment(payment_method_id, amount)
+    return JSONResponse(content={"payment_processed": payment_processed}, media_type="application/json")

@@ -1,25 +1,19 @@
-from flask import Flask, request, jsonify
-import psycopg2
+from flask import Flask, jsonify
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
+app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://postgres:postgres@db:5432/award_travel"
+db = SQLAlchemy(app)
 
-# Database connection settings
-DATABASE_URL = 'postgres://user:password@db:5432/award-travel'
+class AwardTravel(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(200), nullable=False)
 
-# Create a connection to the database
-def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL)
-    return conn
+@app.route("/awards", methods=["GET"])
+def get_awards():
+    awards = AwardTravel.query.all()
+    return jsonify([{"id": award.id, "name": award.name, "description": award.description} for award in awards])
 
-# Define a route for the award travel service
-@app.route('/award-travel', methods=['GET'])
-def award_travel():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT * FROM award_travels')
-    award_travels = cur.fetchall()
-    conn.close()
-    return jsonify(award_travels)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)

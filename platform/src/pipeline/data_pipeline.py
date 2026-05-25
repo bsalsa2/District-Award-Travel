@@ -1,38 +1,25 @@
 import sqlite3
 import pandas as pd
-from platform.src.intelligence.multimodal_ai_model import MultimodalAIModel
 
 class DataPipeline:
-    def __init__(self, db_name):
-        self.conn = sqlite3.connect(db_name)
-        self.cursor = self.conn.cursor()
+    def __init__(self, db_path):
+        self.db_path = db_path
+        self.conn = sqlite3.connect(db_path)
 
-    def fetch_user_data(self):
-        query = "SELECT * FROM user_data"
-        self.cursor.execute(query)
-        rows = self.cursor.fetchall()
-        return rows
+    def load_data(self):
+        # Load data from the database
+        data = pd.read_sql_query("SELECT * FROM user_data", self.conn)
 
-    def fetch_travel_history(self):
-        query = "SELECT * FROM travel_history"
-        self.cursor.execute(query)
-        rows = self.cursor.fetchall()
-        return rows
+        return data
 
-    def train_model(self):
-        user_data = self.fetch_user_data()
-        travel_history = self.fetch_travel_history()
-        X = pd.DataFrame(user_data)
-        y = pd.DataFrame(travel_history)
-        model = MultimodalAIModel()
-        accuracy = model.train(X, y)
-        return accuracy
+    def process_data(self, data):
+        # Process the data by handling missing values and encoding categorical variables
+        data.fillna(0, inplace=True)
+        categorical_cols = data.select_dtypes(include=['object']).columns
+        data[categorical_cols] = data[categorical_cols].apply(lambda x: pd.factorize(x)[0])
 
-    def predict(self, user_id):
-        query = "SELECT * FROM user_data WHERE user_id = ?"
-        self.cursor.execute(query, (user_id,))
-        row = self.cursor.fetchone()
-        X = pd.DataFrame([row])
-        model = MultimodalAIModel()
-        prediction = model.predict(X)
-        return prediction
+        return data
+
+    def save_data(self, data):
+        # Save the processed data to the database
+        data.to_sql("processed_data", self.conn, if_exists="replace", index=False)

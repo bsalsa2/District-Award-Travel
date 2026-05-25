@@ -1,35 +1,24 @@
 import asyncio
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from platform.src.models import AwardAvailability, AwardPricing
+from platform.src.data_lake import DataLake
+from platform.src.data_warehouse import DataWarehouse
 
 class DataPipeline:
     def __init__(self):
-        self.engine = create_engine("sqlite:///award_travel.db")
-        self.Session = sessionmaker(bind=self.engine)
+        self.data_lake = DataLake()
+        self.data_warehouse = DataWarehouse()
 
-    async def get_award_availability(self):
-        async with self.Session() as session:
-            query = session.query(AwardAvailability)
-            results = await query.all()
-            return [result.to_dict() for result in results]
+    async def ingest_data(self, data: dict):
+        self.data_lake.insert_data(data)
+        insights = self.process_data(data)
+        self.data_warehouse.insert_insights(insights)
 
-    async def get_award_pricing(self):
-        async with self.Session() as session:
-            query = session.query(AwardPricing)
-            results = await query.all()
-            return [result.to_dict() for result in results]
-
-    async def ingest_award_availability(self, data):
-        async with self.Session() as session:
-            for item in data:
-                award_availability = AwardAvailability(**item)
-                session.add(award_availability)
-            await session.commit()
-
-    async def ingest_award_pricing(self, data):
-        async with self.Session() as session:
-            for item in data:
-                award_pricing = AwardPricing(**item)
-                session.add(award_pricing)
-            await session.commit()
+    def process_data(self, data: dict) -> dict:
+        # Process data using Apache Spark or similar technologies
+        # For demonstration purposes, we'll just return some sample insights
+        return {
+            "user_id": data["user_id"],
+            "flight_id": data["flight_id"],
+            "award_type": data["award_type"],
+            "travel_date": data["travel_date"],
+            "insights": "Sample insights"
+        }

@@ -1,30 +1,11 @@
-import numpy as np
-from fastapi import FastAPI
-from platform.src.intelligence.award_points_redeemer import AwardPointsRedeemer
-from platform.src.intelligence.models import AwardPointsModel
+from platform.src.pipeline.flight_data_api import FlightDataAPI
+from platform.src.intelligence.award_flight_recommender import AwardFlightRecommender
 
-app = FastAPI()
+class Pipeline:
+    def __init__(self, api_url: str, api_key: str):
+        self.flight_data_api = FlightDataAPI(api_url, api_key)
+        self.award_flight_recommender = AwardFlightRecommender(self.flight_data_api)
 
-@app.post("/redeem_points")
-async def redeem_points(user_id: int, points_to_redeem: int):
-    award_points_model = AwardPointsModel("award_points.db")
-    award_points_redeemer = AwardPointsRedeemer(award_points_model)
-    try:
-        result = award_points_redeemer.redeem_points(user_id, points_to_redeem)
-        return result
-    except HTTPException as e:
-        return {"error": str(e)}
-    finally:
-        award_points_model.close()
-
-@app.get("/get_user_points")
-async def get_user_points(user_id: int):
-    award_points_model = AwardPointsModel("award_points.db")
-    award_points_redeemer = AwardPointsRedeemer(award_points_model)
-    try:
-        points = award_points_redeemer.get_user_points(user_id)
-        return {"points": points}
-    except Exception as e:
-        return {"error": str(e)}
-    finally:
-        award_points_model.close()
+    def run(self, origin: str, destination: str, departure_date: str) -> List[Dict]:
+        recommended_flights = self.award_flight_recommender.recommend_flights(origin, destination, departure_date)
+        return recommended_flights

@@ -1,5 +1,5 @@
-flask
-psycopg2
+tensorflow
+keras
 numpy
 pandas
 scikit-learn

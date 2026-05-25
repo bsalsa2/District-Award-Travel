@@ -1,18 +1,18 @@
-from fastapi import FastAPI
-from platform.src.pipeline.user_pipeline import UserPipeline
-from platform.src.models.user import User
+from fastapi import FastAPI, Request
+from platform.src.pipeline.airline_api import AirlineAPI
+from platform.src.intelligence.flight_recommender import FlightRecommender
 
 app = FastAPI()
 
-@app.post("/users")
-async def create_user(user: User):
-    pipeline = UserPipeline('district_award_travel.db')
-    pipeline.create_user(user)
-    return {"message": "User created successfully"}
+airline_api = AirlineAPI("YOUR_API_KEY")
+flight_recommender = FlightRecommender(airline_api)
 
-@app.get("/users")
-async def get_users():
-    pipeline = UserPipeline('district_award_travel.db')
-    users = []
-    # Add logic to retrieve users from database
-    return users
+@app.post("/api/recommended-flights")
+async def get_recommended_flights(request: Request):
+    data = await request.json()
+    origin = data["origin"]
+    destination = data["destination"]
+    departure_date = data["departure_date"]
+
+    recommended_flights = flight_recommender.recommend_flights(origin, destination, departure_date)
+    return recommended_flights

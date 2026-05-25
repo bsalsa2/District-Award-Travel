@@ -3,31 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>District Award Travel</title>
+    <title>Award Flight Recommendation System</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <nav>
-            <ul>
-                <li><a href="#">Login</a></li>
-                <li><a href="#">Register</a></li>
-            </ul>
-        </nav>
-    </header>
-    <main>
-        <h1>Welcome to District Award Travel</h1>
-        <p>Redeem your award points for travel rewards</p>
-        <form id="redemption-form">
-            <label for="user-id">User ID:</label>
-            <input type="text" id="user-id" name="user-id"><br><br>
-            <label for="award-points">Award Points:</label>
-            <input type="number" id="award-points" name="award-points"><br><br>
-            <label for="redemption-date">Redemption Date:</label>
-            <input type="date" id="redemption-date" name="redemption-date"><br><br>
-            <button type="submit">Redeem</button>
-        </form>
-    </main>
+    <h1>Award Flight Recommendation System</h1>
+    <form id="flight-form">
+        <label for="origin">Origin:</label>
+        <input type="text" id="origin" name="origin"><br><br>
+        <label for="destination">Destination:</label>
+        <input type="text" id="destination" name="destination"><br><br>
+        <label for="departure-date">Departure Date:</label>
+        <input type="date" id="departure-date" name="departure-date"><br><br>
+        <button id="submit-button">Get Recommended Flights</button>
+    </form>
+    <div id="recommended-flights"></div>
+
     <script src="script.js"></script>
 </body>
 </html>

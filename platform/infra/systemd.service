@@ -1,10 +1,10 @@
 [Unit]
-Description=Monitoring System Service
+Description=Award Travel Service
 After=network.target
 
 [Service]
 User=runner
-ExecStart=/usr/bin/python /app/monitoring_system.py
+ExecStart=/usr/local/bin/docker-compose up
 Restart=always
 
 [Install]

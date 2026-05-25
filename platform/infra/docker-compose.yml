@@ -1,16 +1,43 @@
 version: '3'
 services:
-  award-travel:
+  app:
     build: .
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    restart: always
+
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=award_travel
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    restart: always
+
+  ai-tester:
+    build: ./ai-tester
+    environment:
+      - MODEL_NAME=award_travel_model
+    depends_on:
+      - app
+    restart: always
+
+  nginx:
+    image: nginx:latest
     ports:
       - "80:80"
-    deploy:
-      replicas: 1
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 512M
-      restart_policy:
-        condition: on-failure
-    environment:
-      - DEMAND_DATA_FILE=data.csv
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
+    restart: always
+
+volumes:
+  db-data:

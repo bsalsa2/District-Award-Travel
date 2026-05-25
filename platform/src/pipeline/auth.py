@@ -16,48 +16,67 @@ def create_connection():
 
 # Define the user model
 class User(BaseModel):
+    id: int
     username: str
-    email: str
     password: str
 
 # Define the authentication scheme
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# Create the FastAPI app
+# Create a FastAPI app
 app = FastAPI()
 
-# Define the authentication endpoint
-@app.post("/token")
+# Create a connection to the database
+conn = create_connection()
+
+# Create a cursor object
+cur = conn.cursor()
+
+# Create the users table if it doesn't exist
+cur.execute('''
+    CREATE TABLE IF NOT EXISTS users
+    (id INTEGER PRIMARY KEY, username TEXT, password TEXT)
+''')
+
+# Define the login endpoint
+@app.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    # Connect to the database
-    conn = create_connection()
-    cursor = conn.cursor()
+    # Query the database for the user
+    cur.execute("SELECT * FROM users WHERE username = ?", (form_data.username,))
+    user = cur.fetchone()
 
-    # Query the user
-    cursor.execute("SELECT * FROM users WHERE username = ?", (form_data.username,))
-    user = cursor.fetchone()
-
-    # Check the password
+    # Check if the user exists and the password is correct
     if user and user[2] == form_data.password:
-        # Generate a token
-        token = np.random.randint(0, 1000000)
-        return {"access_token": token, "token_type": "bearer"}
+        # Return a token
+        return {"access_token": user[1], "token_type": "bearer"}
     else:
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
+# Define the register endpoint
+@app.post("/register")
+async def register(username: str, password: str):
+    # Check if the user already exists
+    cur.execute("SELECT * FROM users WHERE username = ?", (username,))
+    if cur.fetchone():
+        raise HTTPException(status_code=400, detail="Username already taken")
+
+    # Insert the new user into the database
+    cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", (username, password))
+    conn.commit()
+
+    # Return a success message
+    return {"message": "User created successfully"}
+
 # Define the protected endpoint
-@app.get("/users/me")
-async def read_users_me(token: str = Depends(oauth2_scheme)):
-    # Connect to the database
-    conn = create_connection()
-    cursor = conn.cursor()
+@app.get("/protected")
+async def protected(token: str = Depends(oauth2_scheme)):
+    # Query the database for the user
+    cur.execute("SELECT * FROM users WHERE username = ?", (token,))
+    user = cur.fetchone()
 
-    # Query the user
-    cursor.execute("SELECT * FROM users WHERE token = ?", (token,))
-    user = cursor.fetchone()
-
-    # Return the user
+    # Check if the user exists
     if user:
-        return {"username": user[1], "email": user[2]}
+        # Return a success message
+        return {"message": "Hello, " + user[1]}
     else:
         raise HTTPException(status_code=401, detail="Invalid token")

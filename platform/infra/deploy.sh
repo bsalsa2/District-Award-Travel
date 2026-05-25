@@ -1,13 +1,11 @@
 #!/bin/bash
 
-# Create namespace
-kubectl create namespace award-travel-ns
+# Start the Kubernetes cluster
+docker-compose up -d
 
-# Apply deployment configuration
-kubectl apply -f deployment.yaml -n award-travel-ns
+# Deploy the award travel platform
+kubectl apply -f award-travel-platform.yaml
 
-# Apply service configuration
-kubectl apply -f service.yaml -n award-travel-ns
-
-# Apply ingress configuration
-kubectl apply -f ingress.yaml -n award-travel-ns
+# Configure monitoring and logging
+kubectl apply -f monitoring.yaml
+kubectl apply -f logging.yaml
