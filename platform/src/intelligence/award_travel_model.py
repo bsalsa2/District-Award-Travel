@@ -1,14 +1,19 @@
 import numpy as np
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
 
 class AwardTravelModel:
     def __init__(self):
-        self.model = RandomForestRegressor()
+        self.model = LinearRegression()
 
     def train(self, X, y):
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        self.model.fit(X_train, y_train)
+        self.model.fit(X, y)
 
     def predict(self, X):
         return self.model.predict(X)
+
+# Example usage:
+# award_travel_model = AwardTravelModel()
+# X = np.array([[1, 2], [3, 4]])
+# y = np.array([5, 6])
+# award_travel_model.train(X, y)
+# print(award_travel_model.predict(np.array([[7, 8]])))

@@ -1,25 +1,42 @@
 import sqlite3
-import pandas as pd
+import json
+from platform.src.intelligence.recommendation_system import RecommendationSystem
 
 class DataPipeline:
     def __init__(self, db_path):
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path)
+        self.cursor = self.conn.cursor()
+        self.recommendation_system = RecommendationSystem(db_path)
 
     def load_data(self):
-        # Load data from the database
-        data = pd.read_sql_query("SELECT * FROM user_data", self.conn)
-
+        self.cursor.execute('SELECT * FROM user_travel_history')
+        data = self.cursor.fetchall()
         return data
 
-    def process_data(self, data):
-        # Process the data by handling missing values and encoding categorical variables
-        data.fillna(0, inplace=True)
-        categorical_cols = data.select_dtypes(include=['object']).columns
-        data[categorical_cols] = data[categorical_cols].apply(lambda x: pd.factorize(x)[0])
+    def preprocess_data(self, data):
+        travel_history = []
+        for row in data:
+            user_id, destination, travel_date = row
+            travel_history.append([user_id, destination, travel_date])
+        return travel_history
 
-        return data
+    def fit_model(self, data):
+        self.recommendation_system.fit_model(data)
 
-    def save_data(self, data):
-        # Save the processed data to the database
-        data.to_sql("processed_data", self.conn, if_exists="replace", index=False)
+    def predict(self, user_id):
+        return self.recommendation_system.predict(user_id)
+
+    def get_recommendations(self, user_id):
+        return self.recommendation_system.get_recommendations(user_id)
+
+# Example usage:
+if __name__ == '__main__':
+    db_path = 'platform/db/award_travel.db'
+    data_pipeline = DataPipeline(db_path)
+    data = data_pipeline.load_data()
+    preprocessed_data = data_pipeline.preprocess_data(data)
+    data_pipeline.fit_model(preprocessed_data)
+    user_id = 1
+    recommendations = data_pipeline.get_recommendations(user_id)
+    print(recommendations)

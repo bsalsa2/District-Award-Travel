@@ -1,0 +1,12 @@
+CREATE TABLE flights (
+    id INTEGER PRIMARY KEY,
+    origin TEXT,
+    destination TEXT,
+    price REAL
+);
+
+INSERT INTO flights (origin, destination, price) VALUES
+    ('New York', 'Los Angeles', 400),
+    ('Los Angeles', 'New York', 450),
+    ('Chicago', 'Houston', 300),
+    ('Houston', 'Chicago', 350);

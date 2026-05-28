@@ -1,39 +1,31 @@
 """
-Payment Gateway Integration Module
-Handles secure payment processing for award bookings with:
-- Tokenization for PCI compliance
-- Retry logic with exponential backoff
-- Circuit breaker pattern for fault tolerance
-- Comprehensive observability
+Payment Gateway Integration for District Award Travel
+Handles PCI-compliant payment processing, tokenization, and fraud detection
 """
 
 import os
 import json
-import time
 import logging
-import hashlib
 import hmac
-import uuid
+import hashlib
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from enum import Enum
+import sqlite3
 import requests
+from fastapi import HTTPException, status
+from pydantic import BaseModel, Field, validator
 import numpy as np
-from dataclasses import dataclass
-from functools import wraps
+from platform.src.intelligence.fraud import FraudDetectionEngine
 
-# Configure logging with structured format
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('payment_gateway.log'),
-        logging.StreamHandler()
-    ]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger('PaymentGateway')
+logger = logging.getLogger(__name__)
 
-class PaymentStatus(Enum):
+class PaymentStatus(str, Enum):
     """Payment status enumeration"""
     PENDING = "pending"
     PROCESSING = "processing"
@@ -42,510 +34,604 @@ class PaymentStatus(Enum):
     REFUNDED = "refunded"
     DECLINED = "declined"
 
-class PaymentMethod(Enum):
+class PaymentMethod(str, Enum):
     """Supported payment methods"""
     CREDIT_CARD = "credit_card"
     DEBIT_CARD = "debit_card"
     PAYPAL = "paypal"
-    WIRE_TRANSFER = "wire_transfer"
+    BANK_TRANSFER = "bank_transfer"
 
-@dataclass
-class PaymentRequest:
-    """Data class for payment requests"""
-    amount: float
-    currency: str
-    booking_id: str
-    payment_method: PaymentMethod
-    customer_id: str
-    metadata: Dict[str, Any]
-    token: Optional[str] = None
-    email: Optional[str] = None
+class PaymentRequest(BaseModel):
+    """Payment request model"""
+    user_id: str = Field(..., description="User ID")
+    booking_id: str = Field(..., description="Booking ID")
+    amount: float = Field(..., gt=0, description="Payment amount in USD")
+    currency: str = Field(default="USD", description="Currency code")
+    payment_method: PaymentMethod = Field(..., description="Payment method")
+    card_token: Optional[str] = Field(None, description="Tokenized card data")
+    paypal_token: Optional[str] = Field(None, description="PayPal token")
+    bank_account: Optional[Dict] = Field(None, description="Bank account details")
+    metadata: Optional[Dict] = Field(None, description="Additional metadata")
 
-@dataclass
-class PaymentResponse:
-    """Data class for payment responses"""
+    @validator('card_token')
+    def validate_card_token(cls, v, values):
+        if values.get('payment_method') in [PaymentMethod.CREDIT_CARD, PaymentMethod.DEBIT_CARD] and not v:
+            raise ValueError('Card token is required for credit/debit card payments')
+        return v
+
+class PaymentResponse(BaseModel):
+    """Payment response model"""
     payment_id: str
     status: PaymentStatus
     amount: float
     currency: str
-    transaction_id: Optional[str] = None
-    timestamp: str = datetime.utcnow().isoformat()
-    error_code: Optional[str] = None
-    error_message: Optional[str] = None
-
-class PaymentGatewayError(Exception):
-    """Custom exception for payment gateway errors"""
-    def __init__(self, message: str, error_code: str = "GATEWAY_ERROR"):
-        self.error_code = error_code
-        super().__init__(message)
+    payment_method: PaymentMethod
+    transaction_reference: Optional[str] = None
+    timestamp: datetime
+    fraud_score: Optional[float] = None
+    metadata: Dict = {}
 
 class PaymentGateway:
     """
-    Main payment gateway class that integrates with Stripe API
-    Implements circuit breaker pattern for fault tolerance
+    Main payment gateway class handling all payment operations
     """
 
     def __init__(self):
-        # Configuration from environment variables
-        self.stripe_api_key = os.getenv('STRIPE_SECRET_KEY')
-        self.stripe_webhook_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
-        self.timeout = int(os.getenv('PAYMENT_TIMEOUT', '30'))
-        self.max_retries = int(os.getenv('PAYMENT_MAX_RETRIES', '3'))
+        self.fraud_engine = FraudDetectionEngine()
+        self.db_path = os.path.join(os.getcwd(), 'platform', 'data', 'payments.db')
+        self._init_db()
+        self._load_config()
 
-        # Circuit breaker state
-        self._circuit_breaker_state = {
-            'state': 'CLOSED',
-            'failure_count': 0,
-            'last_failure_time': None,
-            'reset_timeout': 60  # seconds
+    def _init_db(self) -> None:
+        """Initialize payment database"""
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+
+            # Create payments table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS payments (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    booking_id TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    currency TEXT NOT NULL,
+                    payment_method TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    transaction_reference TEXT,
+                    card_token TEXT,
+                    paypal_token TEXT,
+                    bank_account_hash TEXT,
+                    metadata TEXT,
+                    fraud_score REAL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Create payment events table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS payment_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    payment_id TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    message TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (payment_id) REFERENCES payments(id)
+                )
+            """)
+
+            # Create indexes for performance
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_payments_booking ON payments(booking_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status)")
+
+            conn.commit()
+
+    def _load_config(self) -> None:
+        """Load gateway configuration"""
+        self.config = {
+            "stripe": {
+                "api_key": os.getenv("STRIPE_SECRET_KEY", "sk_test_default_key"),
+                "webhook_secret": os.getenv("STRIPE_WEBHOOK_SECRET", "whsec_default_secret"),
+                "endpoint": "https://api.stripe.com/v1"
+            },
+            "paypal": {
+                "client_id": os.getenv("PAYPAL_CLIENT_ID", "sb_default_client_id"),
+                "secret": os.getenv("PAYPAL_SECRET", "sb_default_secret"),
+                "endpoint": "https://api.sandbox.paypal.com"
+            },
+            "processing_fee": 0.029,  # 2.9% + $0.30
+            "fraud_threshold": 0.7
         }
 
-        # Validate configuration
-        if not self.stripe_api_key:
-            raise PaymentGatewayError("Stripe API key not configured")
+    def _generate_payment_id(self) -> str:
+        """Generate unique payment ID"""
+        return f"pay_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
 
-        # Initialize headers
-        self.headers = {
-            'Authorization': f'Bearer {self.stripe_api_key}',
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Stripe-Version': '2023-10-16'
-        }
+    def _calculate_fee(self, amount: float) -> float:
+        """Calculate processing fee"""
+        return amount * self.config["processing_fee"]
 
-        logger.info("PaymentGateway initialized successfully")
+    def _hash_bank_account(self, account_details: Dict) -> str:
+        """Hash bank account details for security"""
+        account_str = f"{account_details.get('routing_number')}_{account_details.get('account_number')}"
+        return hashlib.sha256(account_str.encode()).hexdigest()
 
-    def _generate_idempotency_key(self, booking_id: str) -> str:
-        """Generate idempotency key for request deduplication"""
-        return hashlib.sha256(f"{booking_id}-{int(time.time())}".encode()).hexdigest()
+    def _log_event(self, payment_id: str, status: PaymentStatus, message: str = "") -> None:
+        """Log payment event"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO payment_events (payment_id, status, message)
+                VALUES (?, ?, ?)
+            """, (payment_id, status.value, message))
+            conn.commit()
 
-    def _check_circuit_breaker(self) -> bool:
-        """Check if circuit breaker allows requests"""
-        state = self._circuit_breaker_state['state']
-
-        if state == 'OPEN':
-            # Check if reset timeout has passed
-            if self._circuit_breaker_state['last_failure_time']:
-                elapsed = time.time() - self._circuit_breaker_state['last_failure_time']
-                if elapsed > self._circuit_breaker_state['reset_timeout']:
-                    self._circuit_breaker_state['state'] = 'HALF-OPEN'
-                    self._circuit_breaker_state['failure_count'] = 0
-                    logger.info("Circuit breaker transitioned to HALF-OPEN")
-                    return True
-
-            logger.warning("Circuit breaker is OPEN - requests blocked")
-            return False
-
-        return True
-
-    def _record_failure(self):
-        """Record a failure and update circuit breaker state"""
-        self._circuit_breaker_state['failure_count'] += 1
-        self._circuit_breaker_state['last_failure_time'] = time.time()
-
-        if self._circuit_breaker_state['failure_count'] >= 5:
-            self._circuit_breaker_state['state'] = 'OPEN'
-            logger.error("Circuit breaker transitioned to OPEN due to failures")
-
-    def _record_success(self):
-        """Record a successful operation"""
-        if self._circuit_breaker_state['state'] == 'HALF-OPEN':
-            self._circuit_breaker_state['state'] = 'CLOSED'
-            self._circuit_breaker_state['failure_count'] = 0
-            logger.info("Circuit breaker transitioned to CLOSED")
-
-    def _make_request_with_retry(self, method: str, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_payment(self, request: PaymentRequest) -> PaymentResponse:
         """
-        Make HTTP request with retry logic and exponential backoff
+        Create a new payment request
         """
-        if not self._check_circuit_breaker():
-            raise PaymentGatewayError("Payment service unavailable due to circuit breaker")
+        payment_id = self._generate_payment_id()
 
-        last_exception = None
+        # Run fraud detection
+        fraud_score = self.fraud_engine.assess_payment(request)
 
-        for attempt in range(self.max_retries):
-            try:
-                url = f"https://api.stripe.com/v1/{endpoint}"
+        if fraud_score > self.config["fraud_threshold"]:
+            logger.warning(f"High fraud score detected for payment {payment_id}: {fraud_score}")
+            self._log_event(payment_id, PaymentStatus.DECLINED, "High fraud score")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Payment declined due to fraud detection (score: {fraud_score:.2f})"
+            )
 
-                # Add idempotency key for POST requests
-                if method.upper() == 'POST':
-                    idempotency_key = self._generate_idempotency_key(data.get('booking_id', str(uuid.uuid4())))
-                    headers = {**self.headers, 'Idempotency-Key': idempotency_key}
-                else:
-                    headers = self.headers
+        # Store payment in database
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
 
-                start_time = time.time()
+            payment_data = {
+                "id": payment_id,
+                "user_id": request.user_id,
+                "booking_id": request.booking_id,
+                "amount": request.amount,
+                "currency": request.currency,
+                "payment_method": request.payment_method.value,
+                "status": PaymentStatus.PENDING.value,
+                "card_token": request.card_token,
+                "paypal_token": request.paypal_token,
+                "bank_account_hash": self._hash_bank_account(request.bank_account) if request.bank_account else None,
+                "metadata": json.dumps(request.metadata or {}),
+                "fraud_score": fraud_score
+            }
 
-                response = requests.request(
-                    method=method,
-                    url=url,
-                    headers=headers,
-                    data=data,
-                    timeout=self.timeout
+            columns = ", ".join(payment_data.keys())
+            placeholders = ", ".join(["?"] * len(payment_data))
+            cursor.execute(f"""
+                INSERT INTO payments ({columns})
+                VALUES ({placeholders})
+            """, tuple(payment_data.values()))
+
+            conn.commit()
+
+        self._log_event(payment_id, PaymentStatus.PENDING, "Payment created")
+
+        return PaymentResponse(
+            payment_id=payment_id,
+            status=PaymentStatus.PENDING,
+            amount=request.amount,
+            currency=request.currency,
+            payment_method=request.payment_method,
+            timestamp=datetime.utcnow(),
+            fraud_score=fraud_score,
+            metadata=request.metadata or {}
+        )
+
+    def process_payment(self, payment_id: str) -> PaymentResponse:
+        """
+        Process a payment through the appropriate gateway
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM payments WHERE id = ?", (payment_id,))
+            payment_data = cursor.fetchone()
+
+            if not payment_data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Payment not found"
                 )
 
-                latency = time.time() - start_time
+        # Convert to dict for easier handling
+        payment_dict = dict(zip(
+            ["id", "user_id", "booking_id", "amount", "currency", "payment_method",
+             "status", "transaction_reference", "card_token", "paypal_token",
+             "bank_account_hash", "metadata", "fraud_score", "created_at", "updated_at"],
+            payment_data
+        ))
 
-                # Log metrics
-                self._log_metrics(
-                    endpoint=endpoint,
-                    status_code=response.status_code,
-                    latency=latency,
-                    attempt=attempt + 1
-                )
+        payment_method = PaymentMethod(payment_dict["payment_method"])
+        status_enum = PaymentStatus(payment_dict["status"])
 
-                if response.status_code == 200:
-                    self._record_success()
-                    return response.json()
+        if status_enum != PaymentStatus.PENDING:
+            return self.get_payment_status(payment_id)
 
-                if response.status_code >= 500:
-                    last_exception = PaymentGatewayError(
-                        f"Stripe API error: {response.text}",
-                        f"STRIPE_{response.status_code}"
-                    )
-                    logger.warning(f"Attempt {attempt + 1} failed with status {response.status_code}")
-                    time.sleep(min(2 ** attempt, 10))  # Exponential backoff
-                    continue
+        # Process based on payment method
+        try:
+            if payment_method in [PaymentMethod.CREDIT_CARD, PaymentMethod.DEBIT_CARD]:
+                response = self._process_card_payment(payment_dict)
+            elif payment_method == PaymentMethod.PAYPAL:
+                response = self._process_paypal_payment(payment_dict)
+            elif payment_method == PaymentMethod.BANK_TRANSFER:
+                response = self._process_bank_transfer(payment_dict)
+            else:
+                raise ValueError(f"Unsupported payment method: {payment_method}")
 
-                # Handle 4xx errors
-                error_data = response.json()
-                raise PaymentGatewayError(
-                    error_data.get('error', {}).get('message', 'Payment processing failed'),
-                    error_data.get('error', {}).get('type', 'payment_error')
-                )
+            return response
 
-            except requests.exceptions.RequestException as e:
-                last_exception = PaymentGatewayError(
-                    f"Network error: {str(e)}",
-                    "NETWORK_ERROR"
-                )
-                logger.warning(f"Attempt {attempt + 1} failed with network error: {str(e)}")
-                time.sleep(min(2 ** attempt, 10))
-                continue
+        except Exception as e:
+            logger.error(f"Payment processing failed for {payment_id}: {str(e)}")
+            self._log_event(payment_id, PaymentStatus.FAILED, str(e))
+            self._update_payment_status(payment_id, PaymentStatus.FAILED)
 
-        self._record_failure()
-        raise last_exception or PaymentGatewayError("Max retries exceeded")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Payment processing failed: {str(e)}"
+            )
 
-    def _log_metrics(self, endpoint: str, status_code: int, latency: float, attempt: int):
-        """Log payment metrics for observability"""
-        metrics = {
-            'timestamp': datetime.utcnow().isoformat(),
-            'endpoint': endpoint,
-            'status_code': status_code,
-            'latency_seconds': round(latency, 4),
-            'attempt': attempt,
-            'circuit_state': self._circuit_breaker_state['state']
-        }
-
-        # In production, this would be sent to a metrics system
-        logger.info(f"PAYMENT_METRIC: {json.dumps(metrics)}")
-
-    def create_payment_intent(self, request: PaymentRequest) -> PaymentResponse:
-        """
-        Create a payment intent for award booking
-        """
-        logger.info(f"Creating payment intent for booking {request.booking_id}")
-
-        # Prepare Stripe parameters
-        params = {
-            'amount': int(request.amount * 100),  # Convert to cents
-            'currency': request.currency.lower(),
-            'automatic_payment_methods[enabled]': 'true',
-            'metadata[booking_id]': request.booking_id,
-            'metadata[customer_id]': request.customer_id,
-            'metadata[payment_method]': request.payment_method.value,
-        }
-
-        if request.token:
-            params['payment_method'] = request.token
-        elif request.email:
-            params['receipt_email'] = request.email
+    def _process_card_payment(self, payment_dict: Dict) -> PaymentResponse:
+        """Process credit/debit card payment via Stripe"""
+        import stripe
+        stripe.api_key = self.config["stripe"]["api_key"]
 
         try:
-            response = self._make_request_with_retry('POST', 'payment_intents', params)
-            payment_id = response['id']
-
-            # Create internal payment record
-            self._create_internal_payment_record(
-                payment_id=payment_id,
-                booking_id=request.booking_id,
-                amount=request.amount,
-                currency=request.currency,
-                status=PaymentStatus.PROCESSING.value
+            # Create charge
+            charge = stripe.Charge.create(
+                amount=int(payment_dict["amount"] * 100),  # Convert to cents
+                currency=payment_dict["currency"].lower(),
+                source=payment_dict["card_token"],
+                description=f"District Award Travel - Booking {payment_dict['booking_id']}",
+                metadata={
+                    "user_id": payment_dict["user_id"],
+                    "booking_id": payment_dict["booking_id"],
+                    "payment_id": payment_dict["id"]
+                }
             )
+
+            # Update payment status
+            self._update_payment_status(
+                payment_dict["id"],
+                PaymentStatus.COMPLETED,
+                charge.id
+            )
+
+            self._log_event(payment_dict["id"], PaymentStatus.COMPLETED, "Card payment successful")
 
             return PaymentResponse(
-                payment_id=payment_id,
-                status=PaymentStatus.PROCESSING,
-                amount=request.amount,
-                currency=request.currency,
-                transaction_id=None
+                payment_id=payment_dict["id"],
+                status=PaymentStatus.COMPLETED,
+                amount=payment_dict["amount"],
+                currency=payment_dict["currency"],
+                payment_method=PaymentMethod.CREDIT_CARD,
+                transaction_reference=charge.id,
+                timestamp=datetime.utcnow(),
+                fraud_score=payment_dict["fraud_score"],
+                metadata=json.loads(payment_dict["metadata"])
             )
 
-        except PaymentGatewayError as e:
-            logger.error(f"Failed to create payment intent: {str(e)}")
-            return PaymentResponse(
-                payment_id=str(uuid.uuid4()),
-                status=PaymentStatus.FAILED,
-                amount=request.amount,
-                currency=request.currency,
-                error_code=e.error_code,
-                error_message=str(e)
-            )
+        except stripe.error.StripeError as e:
+            logger.error(f"Stripe error: {str(e)}")
+            self._log_event(payment_dict["id"], PaymentStatus.FAILED, str(e))
+            raise
 
-    def confirm_payment(self, payment_id: str) -> PaymentResponse:
-        """
-        Confirm a payment intent
-        """
-        logger.info(f"Confirming payment {payment_id}")
+    def _process_paypal_payment(self, payment_dict: Dict) -> PaymentResponse:
+        """Process PayPal payment"""
+        auth_url = f"{self.config['paypal']['endpoint']}/v2/oauth2/token"
+        payment_url = f"{self.config['paypal']['endpoint']}/v2/payments/sale"
 
-        try:
-            response = self._make_request_with_retry(
-                'POST',
-                f'payment_intents/{payment_id}/confirm',
-                {}
-            )
+        # Get access token
+        auth_response = requests.post(
+            auth_url,
+            data="grant_type=client_credentials",
+            headers={
+                "Accept": "application/json",
+                "Accept-Language": "en_US"
+            },
+            auth=(self.config["paypal"]["client_id"], self.config["paypal"]["secret"])
+        )
 
-            status = PaymentStatus.COMPLETED if response['status'] == 'succeeded' else PaymentStatus.PROCESSING
+        if auth_response.status_code != 200:
+            raise Exception(f"PayPal authentication failed: {auth_response.text}")
 
-            # Update internal payment record
-            self._update_internal_payment_record(
-                payment_id=payment_id,
-                status=status.value,
-                transaction_id=response.get('charges', {}).get('data', [{}])[0].get('id')
-            )
+        access_token = auth_response.json().get("access_token")
+        if not access_token:
+            raise Exception("No access token received from PayPal")
 
-            return PaymentResponse(
-                payment_id=payment_id,
-                status=status,
-                amount=float(response['amount']) / 100,
-                currency=response['currency'].upper(),
-                transaction_id=response.get('charges', {}).get('data', [{}])[0].get('id')
-            )
+        # Create payment
+        payment_data = {
+            "intent": "sale",
+            "payer": {
+                "payment_method": "paypal"
+            },
+            "transactions": [{
+                "amount": {
+                    "total": str(payment_dict["amount"]),
+                    "currency": payment_dict["currency"]
+                },
+                "description": f"District Award Travel - Booking {payment_dict['booking_id']}"
+            }],
+            "redirect_urls": {
+                "return_url": "https://district.travel/payment/success",
+                "cancel_url": "https://district.travel/payment/cancel"
+            }
+        }
 
-        except PaymentGatewayError as e:
-            logger.error(f"Failed to confirm payment {payment_id}: {str(e)}")
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
 
-            # Update internal payment record with failure
-            self._update_internal_payment_record(
-                payment_id=payment_id,
-                status=PaymentStatus.FAILED.value,
-                error_code=e.error_code
-            )
+        response = requests.post(payment_url, json=payment_data, headers=headers)
 
-            return PaymentResponse(
-                payment_id=payment_id,
-                status=PaymentStatus.FAILED,
-                amount=0,
-                currency='USD',
-                error_code=e.error_code,
-                error_message=str(e)
-            )
+        if response.status_code != 201:
+            raise Exception(f"PayPal payment creation failed: {response.text}")
+
+        payment_response = response.json()
+        sale_id = payment_response["id"]
+
+        # Update payment status
+        self._update_payment_status(
+            payment_dict["id"],
+            PaymentStatus.COMPLETED,
+            sale_id
+        )
+
+        self._log_event(payment_dict["id"], PaymentStatus.COMPLETED, "PayPal payment successful")
+
+        return PaymentResponse(
+            payment_id=payment_dict["id"],
+            status=PaymentStatus.COMPLETED,
+            amount=payment_dict["amount"],
+            currency=payment_dict["currency"],
+            payment_method=PaymentMethod.PAYPAL,
+            transaction_reference=sale_id,
+            timestamp=datetime.utcnow(),
+            fraud_score=payment_dict["fraud_score"],
+            metadata=json.loads(payment_dict["metadata"])
+        )
+
+    def _process_bank_transfer(self, payment_dict: Dict) -> PaymentResponse:
+        """Process bank transfer payment"""
+        # In a real implementation, this would create an ACH transfer
+        # For now, we'll simulate it with a pending status
+
+        self._update_payment_status(
+            payment_dict["id"],
+            PaymentStatus.PROCESSING,
+            "bank_transfer_pending"
+        )
+
+        self._log_event(payment_dict["id"], PaymentStatus.PROCESSING, "Bank transfer initiated")
+
+        return PaymentResponse(
+            payment_id=payment_dict["id"],
+            status=PaymentStatus.PROCESSING,
+            amount=payment_dict["amount"],
+            currency=payment_dict["currency"],
+            payment_method=PaymentMethod.BANK_TRANSFER,
+            timestamp=datetime.utcnow(),
+            fraud_score=payment_dict["fraud_score"],
+            metadata=json.loads(payment_dict["metadata"])
+        )
+
+    def _update_payment_status(self, payment_id: str, status: PaymentStatus,
+                             transaction_reference: Optional[str] = None) -> None:
+        """Update payment status in database"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            update_fields = {
+                "status": status.value,
+                "updated_at": datetime.utcnow().isoformat()
+            }
+
+            if transaction_reference:
+                update_fields["transaction_reference"] = transaction_reference
+
+            set_clause = ", ".join([f"{k} = ?" for k in update_fields.keys()])
+            values = list(update_fields.values()) + [payment_id]
+
+            cursor.execute(f"""
+                UPDATE payments
+                SET {set_clause}
+                WHERE id = ?
+            """, values)
+
+            conn.commit()
+
+    def get_payment_status(self, payment_id: str) -> PaymentResponse:
+        """Get payment status"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM payments WHERE id = ?", (payment_id,))
+            payment_data = cursor.fetchone()
+
+            if not payment_data:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Payment not found"
+                )
+
+        payment_dict = dict(zip(
+            ["id", "user_id", "booking_id", "amount", "currency", "payment_method",
+             "status", "transaction_reference", "card_token", "paypal_token",
+             "bank_account_hash", "metadata", "fraud_score", "created_at", "updated_at"],
+            payment_data
+        ))
+
+        return PaymentResponse(
+            payment_id=payment_dict["id"],
+            status=PaymentStatus(payment_dict["status"]),
+            amount=payment_dict["amount"],
+            currency=payment_dict["currency"],
+            payment_method=PaymentMethod(payment_dict["payment_method"]),
+            transaction_reference=payment_dict["transaction_reference"],
+            timestamp=datetime.fromisoformat(payment_dict["updated_at"]),
+            fraud_score=payment_dict["fraud_score"],
+            metadata=json.loads(payment_dict["metadata"])
+        )
 
     def refund_payment(self, payment_id: str, amount: Optional[float] = None) -> PaymentResponse:
-        """
-        Refund a payment
-        """
-        logger.info(f"Refunding payment {payment_id}")
+        """Refund a completed payment"""
+        payment = self.get_payment_status(payment_id)
 
-        params = {}
-        if amount:
-            params['amount'] = int(amount * 100)
+        if payment.status != PaymentStatus.COMPLETED:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only completed payments can be refunded"
+            )
 
+        # Calculate refund amount
+        refund_amount = amount if amount else payment.amount
+
+        if refund_amount > payment.amount:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Refund amount cannot exceed payment amount"
+            )
+
+        # Process refund based on payment method
         try:
-            response = self._make_request_with_retry(
-                'POST',
-                f'payment_intents/{payment_id}/refund',
-                params
-            )
+            if payment.payment_method in [PaymentMethod.CREDIT_CARD, PaymentMethod.DEBIT_CARD]:
+                self._process_card_refund(payment_id, refund_amount)
+            elif payment.payment_method == PaymentMethod.PAYPAL:
+                self._process_paypal_refund(payment_id, refund_amount)
+            else:
+                raise ValueError(f"Refund not supported for payment method: {payment.payment_method}")
 
-            # Update internal payment record
-            self._update_internal_payment_record(
-                payment_id=payment_id,
-                status=PaymentStatus.REFUNDED.value,
-                transaction_id=response.get('id')
-            )
+            # Update payment status
+            self._update_payment_status(payment_id, PaymentStatus.REFUNDED)
+
+            self._log_event(payment_id, PaymentStatus.REFUNDED, f"Refund of ${refund_amount} processed")
 
             return PaymentResponse(
                 payment_id=payment_id,
                 status=PaymentStatus.REFUNDED,
-                amount=float(response['amount']) / 100,
-                currency=response['currency'].upper(),
-                transaction_id=response.get('id')
+                amount=refund_amount,
+                currency=payment.currency,
+                payment_method=payment.payment_method,
+                timestamp=datetime.utcnow(),
+                metadata={"original_payment": payment_id}
             )
 
-        except PaymentGatewayError as e:
-            logger.error(f"Failed to refund payment {payment_id}: {str(e)}")
-            return PaymentResponse(
-                payment_id=payment_id,
-                status=PaymentStatus.FAILED,
-                amount=0,
-                currency='USD',
-                error_code=e.error_code,
-                error_message=str(e)
-            )
+        except Exception as e:
+            logger.error(f"Refund failed for {payment_id}: {str(e)}")
+            self._log_event(payment_id, PaymentStatus.FAILED, f"Refund failed: {str(e)}")
+            raise
 
-    def verify_webhook_signature(self, payload: bytes, signature: str) -> bool:
-        """
-        Verify Stripe webhook signature
-        """
-        if not self.stripe_webhook_secret:
-            logger.warning("Webhook secret not configured - skipping signature verification")
-            return True
+    def _process_card_refund(self, payment_id: str, amount: float) -> None:
+        """Process card refund via Stripe"""
+        import stripe
+        stripe.api_key = self.config["stripe"]["api_key"]
 
+        # Get original charge
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT transaction_reference FROM payments WHERE id = ?", (payment_id,))
+            transaction_ref = cursor.fetchone()[0]
+
+        if not transaction_ref:
+            raise Exception("No transaction reference found for refund")
+
+        # Create refund
+        refund = stripe.Refund.create(
+            charge=transaction_ref,
+            amount=int(amount * 100)  # Convert to cents
+        )
+
+        if refund.status != "succeeded":
+            raise Exception(f"Refund failed: {refund.failure_reason}")
+
+    def _process_paypal_refund(self, payment_id: str, amount: float) -> None:
+        """Process PayPal refund"""
+        auth_url = f"{self.config['paypal']['endpoint']}/v2/oauth2/token"
+        refund_url = f"{self.config['paypal']['endpoint']}/v2/payments/sale/{payment_id}/refund"
+
+        # Get access token
+        auth_response = requests.post(
+            auth_url,
+            data="grant_type=client_credentials",
+            headers={
+                "Accept": "application/json",
+                "Accept-Language": "en_US"
+            },
+            auth=(self.config["paypal"]["client_id"], self.config["paypal"]["secret"])
+        )
+
+        if auth_response.status_code != 200:
+            raise Exception(f"PayPal authentication failed: {auth_response.text}")
+
+        access_token = auth_response.json().get("access_token")
+        if not access_token:
+            raise Exception("No access token received from PayPal")
+
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+
+        refund_data = {
+            "amount": {
+                "total": str(amount),
+                "currency": "USD"
+            }
+        }
+
+        response = requests.post(refund_url, json=refund_data, headers=headers)
+
+        if response.status_code != 201:
+            raise Exception(f"PayPal refund failed: {response.text}")
+
+    def webhook_handler(self, payload: Dict, signature: str, endpoint_secret: str) -> str:
+        """
+        Handle webhook events from payment providers
+        """
         try:
-            # Compute HMAC signature
-            computed_signature = hmac.new(
-                self.stripe_webhook_secret.encode('utf-8'),
-                payload,
+            # Verify webhook signature
+            expected_signature = hmac.new(
+                endpoint_secret.encode(),
+                payload.encode(),
                 hashlib.sha256
             ).hexdigest()
 
-            # Compare signatures in constant time to prevent timing attacks
-            return hmac.compare_digest(computed_signature, signature)
-        except Exception as e:
-            logger.error(f"Webhook signature verification failed: {str(e)}")
-            return False
+            if not hmac.compare_digest(expected_signature, signature):
+                raise ValueError("Invalid webhook signature")
 
-    def process_webhook_event(self, event: Dict[str, Any]) -> PaymentResponse:
-        """
-        Process Stripe webhook events
-        """
-        event_type = event.get('type')
-        data = event.get('data', {}).get('object', {})
+            event_type = payload.get("type")
+            event_data = payload.get("data", {}).get("object", {})
 
-        logger.info(f"Processing webhook event: {event_type}")
+            logger.info(f"Received webhook event: {event_type}")
 
-        if event_type == 'payment_intent.succeeded':
-            payment_id = data.get('id')
-            amount = float(data.get('amount')) / 100
-            currency = data.get('currency', 'usd').upper()
+            # Handle different event types
+            if event_type == "payment_intent.succeeded":
+                payment_id = event_data.get("metadata", {}).get("payment_id")
+                if payment_id:
+                    self._update_payment_status(payment_id, PaymentStatus.COMPLETED, event_data.get("id"))
+                    self._log_event(payment_id, PaymentStatus.COMPLETED, "Webhook: Payment succeeded")
 
-            # Update internal payment record
-            self._update_internal_payment_record(
-                payment_id=payment_id,
-                status=PaymentStatus.COMPLETED.value,
-                transaction_id=data.get('charges', {}).get('data', [{}])[0].get('id')
-            )
+            elif event_type == "payment_intent.payment_failed":
+                payment_id = event_data.get("metadata", {}).get("payment_id")
+                if payment_id:
+                    self._update_payment_status(payment_id, PaymentStatus.FAILED, event_data.get("id"))
+                    self._log_event(payment_id, PaymentStatus.FAILED, "Webhook: Payment failed")
 
-            return PaymentResponse(
-                payment_id=payment_id,
-                status=PaymentStatus.COMPLETED,
-                amount=amount,
-                currency=currency,
-                transaction_id=data.get('charges', {}).get('data', [{}])[0].get('id')
-            )
+            elif event_type == "charge.refunded":
+                payment_id = event_data.get("metadata", {}).get("payment_id")
+                if payment_id:
+                    self._update_payment_status(payment_id, PaymentStatus.REFUNDED, event_data.get("id"))
+                    self._log_event(payment_id, PaymentStatus.REFUNDED, "Webhook: Payment refunded")
 
-        elif event_type == 'payment_intent.payment_failed':
-            payment_id = data.get('id')
-            error_code = data.get('last_payment_error', {}).get('code')
-            error_message = data.get('last_payment_error', {}).get('message')
+            return "OK"
 
-            # Update internal payment record
-            self._update_internal_payment_record(
-                payment_id=payment_id,
-                status=PaymentStatus.FAILED.value,
-                error_code=error_code
-            )
-
-            return PaymentResponse(
-                payment_id=payment_id,
-                status=PaymentStatus.FAILED,
-                amount=0,
-                currency='USD',
-                error_code=error_code,
-                error_message=error_message
-            )
-
-        elif event_type == 'charge.refunded':
-            payment_id = data.get('payment_intent')
-            amount = float(data.get('amount_refunded')) / 100
-            currency = data.get('currency', 'usd').upper()
-
-            # Update internal payment record
-            self._update_internal_payment_record(
-                payment_id=payment_id,
-                status=PaymentStatus.REFUNDED.value,
-                transaction_id=data.get('id')
-            )
-
-            return PaymentResponse(
-                payment_id=payment_id,
-                status=PaymentStatus.REFUNDED,
-                amount=amount,
-                currency=currency,
-                transaction_id=data.get('id')
-            )
-
-        return PaymentResponse(
-            payment_id=str(uuid.uuid4()),
-            status=PaymentStatus.PENDING,
-            amount=0,
-            currency='USD'
-        )
-
-    def _create_internal_payment_record(self, **kwargs):
-        """Create internal payment record in database"""
-        # In production, this would insert into a database
-        logger.info(f"Creating internal payment record: {kwargs}")
-
-    def _update_internal_payment_record(self, **kwargs):
-        """Update internal payment record in database"""
-        # In production, this would update a database record
-        logger.info(f"Updating internal payment record: {kwargs}")
-
-# Global gateway instance
-gateway = PaymentGateway()
-
-def payment_gateway_route():
-    """FastAPI route handler for payment operations"""
-    from fastapi import APIRouter, Request, HTTPException
-    from fastapi.responses import JSONResponse
-
-    router = APIRouter()
-
-    @router.post("/payments/create")
-    async def create_payment(request: PaymentRequest):
-        try:
-            response = gateway.create_payment_intent(request)
-            return JSONResponse(content=response.__dict__)
-        except Exception as e:
-            logger.error(f"Payment creation failed: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
-
-    @router.post("/payments/confirm/{payment_id}")
-    async def confirm_payment(payment_id: str):
-        try:
-            response = gateway.confirm_payment(payment_id)
-            return JSONResponse(content=response.__dict__)
-        except Exception as e:
-            logger.error(f"Payment confirmation failed: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
-
-    @router.post("/payments/refund/{payment_id}")
-    async def refund_payment(payment_id: str, request: Request):
-        try:
-            body = await request.json()
-            amount = body.get('amount')
-            response = gateway.refund_payment(payment_id, amount)
-            return JSONResponse(content=response.__dict__)
-        except Exception as e:
-            logger.error(f"Payment refund failed: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
-
-    @router.post("/webhooks/stripe")
-    async def stripe_webhook(request: Request):
-        try:
-            payload = await request.body()
-            signature = request.headers.get('stripe-signature')
-
-            if not gateway.verify_webhook_signature(payload, signature):
-                raise PaymentGatewayError("Invalid webhook signature", "INVALID_SIGNATURE")
-
-            event = json.loads(payload)
-            response = gateway.process_webhook_event(event)
-
-            return JSONResponse(content={"status": "received", "payment_id": response.payment_id})
         except Exception as e:
             logger.error(f"Webhook processing failed: {str(e)}")
-            raise HTTPException(status_code=400, detail=str(e))
-
-    return router
+            return "Error", 400

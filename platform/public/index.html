@@ -3,22 +3,158 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Award Flight Recommendation System</title>
+    <title>District Award Travel - Real-time Alerts</title>
     <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <h1>Award Flight Recommendation System</h1>
-    <form id="flight-form">
-        <label for="origin">Origin:</label>
-        <input type="text" id="origin" name="origin"><br><br>
-        <label for="destination">Destination:</label>
-        <input type="text" id="destination" name="destination"><br><br>
-        <label for="departure-date">Departure Date:</label>
-        <input type="date" id="departure-date" name="departure-date"><br><br>
-        <button id="submit-button">Get Recommended Flights</button>
-    </form>
-    <div id="recommended-flights"></div>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-plane-departure"></i>
+                    <span>District Award Travel</span>
+                </div>
+                <div class="user-info">
+                    <span id="user-name">Guest</span>
+                    <div class="user-avatar" id="user-avatar">G</div>
+                </div>
+            </div>
+        </header>
 
-    <script src="script.js"></script>
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-user"></i> Your Profile</h3>
+                    <div class="profile-info">
+                        <div class="profile-field">
+                            <label>Cabin Class</label>
+                            <select id="cabin-class">
+                                <option value="economy">Economy</option>
+                                <option value="premium_economy">Premium Economy</option>
+                                <option value="business">Business</option>
+                                <option value="first">First</option>
+                            </select>
+                        </div>
+                        <div class="profile-field">
+                            <label>Preferred Airlines</label>
+                            <div class="airline-selector">
+                                <div class="airline-option">
+                                    <input type="checkbox" id="airline-aa" value="AA" checked>
+                                    <label for="airline-aa">American (AA)</label>
+                                </div>
+                                <div class="airline-option">
+                                    <input type="checkbox" id="airline-dl" value="DL" checked>
+                                    <label for="airline-dl">Delta (DL)</label>
+                                </div>
+                                <div class="airline-option">
+                                    <input type="checkbox" id="airline-ua" value="UA" checked>
+                                    <label for="airline-ua">United (UA)</label>
+                                </div>
+                                <div class="airline-option">
+                                    <input type="checkbox" id="airline-ba" value="BA" checked>
+                                    <label for="airline-ba">British Airways (BA)</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="profile-field">
+                            <label>Price Range (Points)</label>
+                            <div class="range-slider">
+                                <input type="range" id="price-min" min="0" max="200000" value="0">
+                                <input type="range" id="price-max" min="0" max="200000" value="100000">
+                                <div class="range-values">
+                                    <span id="price-min-value">0</span> -
+                                    <span id="price-max-value">100,000</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3><i class="fas fa-bell"></i> Alert Settings</h3>
+                    <div class="notification-channels">
+                        <div class="channel-option">
+                            <input type="checkbox" id="channel-web" checked>
+                            <label for="channel-web"><i class="fas fa-desktop"></i> Web</label>
+                        </div>
+                        <div class="channel-option">
+                            <input type="checkbox" id="channel-email">
+                            <label for="channel-email"><i class="fas fa-envelope"></i> Email</label>
+                        </div>
+                        <div class="channel-option">
+                            <input type="checkbox" id="channel-sms">
+                            <label for="channel-sms"><i class="fas fa-comment-sms"></i> SMS</label>
+                        </div>
+                        <div class="channel-option">
+                            <input type="checkbox" id="channel-push">
+                            <label for="channel-push"><i class="fas fa-bell"></i> Push</label>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="save-profile" class="btn-primary">
+                    <i class="fas fa-save"></i> Save Preferences
+                </button>
+            </div>
+
+            <div class="content-area">
+                <div class="alerts-header">
+                    <h2><i class="fas fa-bell"></i> Real-time Award Alerts</h2>
+                    <div class="alert-controls">
+                        <button id="refresh-alerts" class="btn-secondary">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button id="mark-all-read" class="btn-secondary">
+                            <i class="fas fa-check-double"></i> Mark All Read
+                        </button>
+                    </div>
+                </div>
+
+                <div class="alerts-container" id="alerts-container">
+                    <!-- Alerts will be loaded here -->
+                    <div class="empty-state" id="empty-state">
+                        <i class="fas fa-bell-slash"></i>
+                        <h3>No alerts yet</h3>
+                        <p>Set up your preferences and we'll notify you of available award bookings</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Alert Modal -->
+        <div class="modal" id="alert-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-info-circle"></i> Award Booking Alert</h3>
+                    <button class="modal-close" id="modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body" id="modal-body">
+                    <!-- Alert details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" id="modal-cancel">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button class="btn-primary" id="modal-book">
+                        <i class="fas fa-plane"></i> Book Now
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading-indicator" id="loading-indicator">
+            <div class="spinner"></div>
+            <p>Loading alerts...</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>

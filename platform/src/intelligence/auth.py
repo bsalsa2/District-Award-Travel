@@ -2,38 +2,56 @@ import numpy as np
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
-
-app = FastAPI()
+from sqlite3 import Error
 
 # Define the user model
 class User(BaseModel):
+    id: int
     username: str
     email: str
-    award_points: int
+    password: str
 
 # Define the authentication scheme
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# Define the user database (in-memory for simplicity)
+# Initialize the FastAPI app
+app = FastAPI()
+
+# Define the user database
 users_db = {
-    "user1": {"username": "user1", "email": "user1@example.com", "award_points": 1000},
-    "user2": {"username": "user2", "email": "user2@example.com", "award_points": 500},
+    "user1": {
+        "username": "user1",
+        "email": "user1@example.com",
+        "password": "password1"
+    },
+    "user2": {
+        "username": "user2",
+        "email": "user2@example.com",
+        "password": "password2"
+    }
 }
 
-# Define the authentication endpoint
-@app.post("/token")
+# Define the authentication function
+def authenticate_user(username: str, password: str):
+    if username in users_db:
+        user = users_db[username]
+        if user["password"] == password:
+            return user
+    return None
+
+# Define the login endpoint
+@app.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = users_db.get(form_data.username)
+    user = authenticate_user(form_data.username, form_data.password)
     if not user:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    if user["username"] != form_data.username or user["email"] != form_data.username:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     return {"access_token": user["username"], "token_type": "bearer"}
 
 # Define the protected endpoint
-@app.get("/users/me")
-async def read_users_me(token: str = Depends(oauth2_scheme)):
-    user = users_db.get(token)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid token")
-    return user
+@app.get("/protected")
+async def protected(token: str = Depends(oauth2_scheme)):
+    return {"message": f"Hello, {token}!"}

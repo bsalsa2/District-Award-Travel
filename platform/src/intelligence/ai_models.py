@@ -1,403 +1,260 @@
-"""
-AI Models for District Award Travel Assistant
-Includes NLP models, award valuation, and recommendation engines
-"""
-
-import numpy as np
 import json
 import logging
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
-from sentence_transformers import SentenceTransformer
-import joblib
-import os
-from pathlib import Path
-from platform.src.database.models import AwardRecommendation
-from platform.src.database import get_db
-from platform.src.observability.metrics import track_metric
+from datetime import datetime
+from typing import Dict, List, Tuple
 
+import numpy as np
+from pydantic import BaseModel
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-class AwardValuationEngine:
-    """
-    AI-powered award valuation engine that calculates the monetary value of award redemptions
-    across multiple loyalty programs.
-    """
+class TravelPreference(BaseModel):
+    cabin_class: str
+    preferred_airlines: List[str]
+    preferred_routes: List[str]
+    price_range: Tuple[int, int]
+    travel_frequency: int  # trips per year
+    preferred_times: List[str]  # ['morning', 'afternoon', 'evening']
+    max_points_to_spend: int
 
+class UserBehavior(BaseModel):
+    search_history: List[Dict[str, any]]
+    booking_history: List[Dict[str, any]]
+    click_history: List[Dict[str, any]]
+    last_active: str
+    session_duration: int  # minutes
+
+class AwardBookingFeatures(BaseModel):
+    route: str
+    airline: str
+    cabin_class: str
+    price_in_points: int
+    duration_minutes: int
+    departure_time: str
+    arrival_time: str
+    available_seats: int
+    days_until_departure: int
+    is_weekend: bool
+    is_holiday: bool
+
+class MatchingModel:
     def __init__(self):
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.val_models = self._load_valuation_models()
-        self.tfidf_vectorizer = TfidfVectorizer(max_features=5000)
-
-    def _load_valuation_models(self) -> Dict[str, Any]:
-        """Load pre-trained valuation models for different programs"""
-        models = {}
-
-        # Load cached models if available
-        cache_path = Path("platform/data/valuation_models")
-        cache_path.mkdir(parents=True, exist_ok=True)
-
-        # Example: Load a simple valuation model (in production, these would be trained models)
-        models["generic"] = {
-            "base_value": 0.01,  # $0.01 per point as default
-            "multipliers": {
-                "first_class": 3.0,
-                "business_class": 2.0,
-                "economy": 1.0,
-                "partner_transfer": 0.8,
-                "sweet_spot": 0.02
-            },
-            "seasonal_adjustments": {
-                "peak": 1.2,
-                "off_peak": 0.8
-            }
+        # Initialize model weights (in production, these would be trained)
+        self.weights = {
+            'cabin_class': 0.25,
+            'airline': 0.20,
+            'route': 0.25,
+            'price': 0.15,
+            'duration': 0.10,
+            'time': 0.05
         }
 
-        # Load program-specific models
-        program_models = {
-            "aa": {"base_value": 0.011, "multiplier": 1.0},
-            "dl": {"base_value": 0.012, "multiplier": 1.1},
-            "ua": {"base_value": 0.0105, "multiplier": 0.95},
-            "ba": {"base_value": 0.0095, "multiplier": 0.9},
-            "sq": {"base_value": 0.013, "multiplier": 1.2},
-            "hyatt": {"base_value": 0.008, "multiplier": 0.8},
-            "ihg": {"base_value": 0.007, "multiplier": 0.7},
-            "marriott": {"base_value": 0.0075, "multiplier": 0.75}
+        # Pre-trained airline preferences (would be learned from data)
+        self.airline_preferences = {
+            'AA': 0.92, 'DL': 0.88, 'UA': 0.85, 'BA': 0.95,
+            'JL': 0.89, 'NH': 0.83, 'EK': 0.93, 'QR': 0.90,
+            'LH': 0.87, 'AF': 0.84, 'KL': 0.86, 'SQ': 0.94
         }
 
-        for program, config in program_models.items():
-            models[program] = config
+        # Pre-trained route preferences (would be learned from data)
+        self.route_preferences = {
+            'JFK-LAX': 0.91, 'LAX-JFK': 0.91,
+            'SFO-NRT': 0.88, 'NRT-SFO': 0.88,
+            'LHR-JFK': 0.93, 'JFK-LHR': 0.93,
+            'SIN-NRT': 0.87, 'NRT-SIN': 0.87,
+            'DXB-JFK': 0.89, 'JFK-DXB': 0.89
+        }
 
-        return models
+    def extract_features(self, booking: AwardBookingFeatures) -> Dict[str, float]:
+        """Extract normalized features for matching"""
+        features = {}
 
-    def calculate_award_value(self, award_data: Dict[str, Any]) -> float:
-        """
-        Calculate the monetary value of an award redemption
+        # Cabin class (one-hot encoding)
+        cabin_weights = {'economy': 0.7, 'premium_economy': 0.8, 'business': 0.9, 'first': 1.0}
+        features['cabin_class'] = cabin_weights.get(booking.cabin_class, 0.7)
 
-        Args:
-            award_data: Dictionary containing award information
+        # Airline preference
+        features['airline'] = self.airline_preferences.get(booking.airline, 0.5)
 
-        Returns:
-            float: Estimated monetary value in USD
-        """
-        try:
-            program = award_data.get("program", "generic").lower()
-            points = award_data.get("points", 0)
-            cabin = award_data.get("cabin", "economy").lower()
-            partner = award_data.get("partner", False)
-            season = award_data.get("season", "off_peak")
+        # Route preference
+        features['route'] = self.route_preferences.get(booking.route, 0.5)
 
-            # Get program-specific model
-            model = self.val_models.get(program, self.val_models["generic"])
+        # Price normalization (lower is better)
+        max_points = 200000  # Maximum possible points
+        normalized_price = 1.0 - (booking.price_in_points / max_points)
+        features['price'] = max(0.0, min(1.0, normalized_price))
 
-            # Calculate base value
-            base_value = model["base_value"]
-            if partner:
-                base_value *= model["multipliers"].get("partner_transfer", 0.8)
+        # Duration normalization (shorter is better)
+        max_duration = 1800  # 30 hours in minutes
+        normalized_duration = 1.0 - (booking.duration_minutes / max_duration)
+        features['duration'] = max(0.0, min(1.0, normalized_duration))
 
-            # Apply cabin multiplier
-            cabin_multiplier = model["multipliers"].get(cabin, 1.0)
-            value = points * base_value * cabin_multiplier
+        # Time of day preference (morning=0.9, afternoon=0.8, evening=0.7)
+        time_weights = {'morning': 0.9, 'afternoon': 0.8, 'evening': 0.7}
+        features['time'] = time_weights.get(booking.departure_time.split()[1].lower(), 0.7)
 
-            # Apply seasonal adjustment
-            seasonal_adj = model["seasonal_adjustments"].get(season, 1.0)
-            value *= seasonal_adj
+        return features
 
-            # Apply sweet spot multiplier if applicable
-            if "sweet_spot" in model["multipliers"]:
-                sweet_spot_value = points * model["multipliers"]["sweet_spot"]
-                value = max(value, sweet_spot_value)
+    def calculate_match_score(self, user_prefs: TravelPreference, booking: AwardBookingFeatures) -> float:
+        """Calculate overall match score between user and booking"""
+        features = self.extract_features(booking)
 
-            track_metric("award_valuation_calculated", {"program": program, "cabin": cabin})
-            return round(value, 2)
+        # Weighted sum of features
+        score = (
+            features['cabin_class'] * self.weights['cabin_class'] +
+            features['airline'] * self.weights['airline'] +
+            features['route'] * self.weights['route'] +
+            features['price'] * self.weights['price'] +
+            features['duration'] * self.weights['duration'] +
+            features['time'] * self.weights['time']
+        )
 
-        except Exception as e:
-            logger.error(f"Error calculating award value: {str(e)}")
-            track_metric("award_valuation_error", {"error": str(e)})
-            return 0.0
+        # Additional factors
+        if booking.available_seats < 2:
+            score *= 0.8  # Less attractive if few seats left
 
-    def get_award_comparison(self, awards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Compare multiple award options and rank them by value
+        if booking.days_until_departure < 7:
+            score *= 1.2  # More attractive if departing soon
 
-        Args:
-            awards: List of award dictionaries
+        if booking.is_weekend:
+            score *= 1.1  # Weekend travel is often preferred
 
-        Returns:
-            List of ranked awards with calculated values
-        """
-        for award in awards:
-            award["calculated_value"] = self.calculate_award_value(award)
+        if booking.is_holiday:
+            score *= 1.3  # Holiday travel is high priority
 
-        # Sort by value descending
-        ranked = sorted(awards, key=lambda x: x["calculated_value"], reverse=True)
+        return round(score, 3)
 
-        # Add ranking
-        for idx, award in enumerate(ranked, 1):
-            award["rank"] = idx
+    def generate_recommendation_reasons(self, score: float, user_prefs: TravelPreference, booking: AwardBookingFeatures) -> List[str]:
+        """Generate human-readable reasons for the match"""
+        reasons = []
+        threshold = 0.7
 
-        return ranked
+        if score >= threshold:
+            reasons.append("High match score")
 
-class NLPProcessor:
-    """
-    Natural Language Processing engine for understanding travel queries
-    """
+        if booking.cabin_class == user_prefs.cabin_class:
+            reasons.append(f"Same cabin class: {booking.cabin_class}")
 
+        if booking.airline in user_prefs.preferred_airlines:
+            reasons.append(f"Preferred airline: {booking.airline}")
+
+        if booking.route in user_prefs.preferred_routes:
+            reasons.append(f"Preferred route: {booking.route}")
+
+        if (user_prefs.price_range[0] <= booking.price_in_points <= user_prefs.price_range[1]):
+            reasons.append("Price within your range")
+
+        if booking.duration_minutes <= 600:  # 10 hours
+            reasons.append("Reasonable flight duration")
+
+        if booking.available_seats >= 5:
+            reasons.append("Good seat availability")
+
+        if score > 0.85:
+            reasons.append("Exceptional match!")
+
+        return reasons if reasons else ["Good match based on your preferences"]
+
+class DynamicPreferenceLearner:
+    """Learns and adapts to user preferences over time"""
     def __init__(self):
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        self.intent_model = self._load_intent_model()
-        self.entity_extractor = self._load_entity_extractor()
+        self.user_profiles = {}  # user_id -> TravelPreference
 
-    def _load_intent_model(self) -> Dict[str, Any]:
-        """Load intent classification model"""
-        return {
-            "intents": {
-                "search_awards": ["find", "search", "look for", "find me", "show me"],
-                "compare_awards": ["compare", "which is better", "vs", "versus"],
-                "book_award": ["book", "reserve", "hold", "save"],
-                "check_availability": ["available", "availability", "open"],
-                "get_help": ["help", "support", "assistance", "advice"],
-                "recommend": ["recommend", "suggest", "what should I use"],
-                "explain": ["explain", "what is", "how does"]
-            },
-            "default_intent": "search_awards"
-        }
+    def update_preferences(self, user_id: str, new_bookings: List[Dict[str, any]]):
+        """Update user preferences based on their booking history"""
+        if user_id not in self.user_profiles:
+            self.user_profiles[user_id] = TravelPreference(
+                cabin_class='economy',
+                preferred_airlines=[],
+                preferred_routes=[],
+                price_range=(0, 100000),
+                travel_frequency=2,
+                preferred_times=['morning', 'afternoon'],
+                max_points_to_spend=50000
+            )
 
-    def _load_entity_extractor(self) -> Dict[str, Any]:
-        """Load entity extraction patterns"""
-        return {
-            "destinations": ["to [destination]", "for [destination]", "in [destination]"],
-            "dates": ["on [date]", "for [date]", "between [date] and [date]"],
-            "cabin": ["[cabin] class", "in [cabin] class", "upgrade to [cabin]"],
-            "program": ["[program] points", "[program] miles", "[program] rewards"],
-            "points": ["[points] points", "[points] miles", "[points] k points"]
-        }
+        profile = self.user_profiles[user_id]
 
-    def extract_intent(self, query: str) -> Dict[str, Any]:
-        """
-        Extract intent and entities from a natural language query
+        # Update based on bookings
+        cabin_classes = {}
+        airlines = {}
+        routes = {}
+        prices = []
+        durations = []
 
-        Args:
-            query: User's natural language query
+        for booking in new_bookings:
+            # Cabin class
+            cabin_classes[booking.get('cabin_class', 'economy')] = cabin_classes.get(booking.get('cabin_class', 'economy'), 0) + 1
 
-        Returns:
-            Dictionary containing intent and extracted entities
-        """
-        query_lower = query.lower()
-        intent = self.intent_model["default_intent"]
-        entities = {}
+            # Airlines
+            airline = booking.get('airline', 'Unknown')
+            airlines[airline] = airlines.get(airline, 0) + 1
 
-        # Check for each intent
-        for intent_name, keywords in self.intent_model["intents"].items():
-            for keyword in keywords:
-                if keyword in query_lower:
-                    intent = intent_name
-                    break
-            if intent != self.intent_model["default_intent"]:
-                break
+            # Routes
+            route = booking.get('route', 'Unknown')
+            routes[route] = routes.get(route, 0) + 1
 
-        # Extract entities using simple pattern matching
-        if "destination" in query_lower or "to " in query_lower:
-            entities["destination"] = self._extract_destination(query)
+            # Price range
+            prices.append(booking.get('price_in_points', 0))
 
-        if any(word in query_lower for word in ["points", "miles"]):
-            entities["points"] = self._extract_points(query)
+            # Duration
+            durations.append(booking.get('duration_minutes', 0))
 
-        if any(word in query_lower for word in ["economy", "business", "first"]):
-            entities["cabin"] = self._extract_cabin(query)
+        # Update most frequent cabin class
+        if cabin_classes:
+            most_common_cabin = max(cabin_classes.items(), key=lambda x: x[1])[0]
+            profile.cabin_class = most_common_cabin
 
-        if any(word in query_lower for word in ["aa", "delta", "united", "american"]):
-            entities["program"] = self._extract_program(query)
+        # Update preferred airlines (top 3)
+        if airlines:
+            sorted_airlines = sorted(airlines.items(), key=lambda x: x[1], reverse=True)[:3]
+            profile.preferred_airlines = [a[0] for a in sorted_airlines]
 
-        # Extract dates
-        entities["dates"] = self._extract_dates(query)
+        # Update preferred routes (top 3)
+        if routes:
+            sorted_routes = sorted(routes.items(), key=lambda x: x[1], reverse=True)[:3]
+            profile.preferred_routes = [r[0] for r in sorted_routes]
 
-        track_metric("nlp_intent_extracted", {"intent": intent, "entities": list(entities.keys())})
-        return {
-            "intent": intent,
-            "entities": entities,
-            "query": query,
-            "processed_at": datetime.utcnow().isoformat()
-        }
+        # Update price range (25th to 75th percentile)
+        if prices:
+            sorted_prices = sorted(prices)
+            lower = sorted_prices[int(len(sorted_prices) * 0.25)]
+            upper = sorted_prices[int(len(sorted_prices) * 0.75)]
+            profile.price_range = (lower, upper)
 
-    def _extract_destination(self, query: str) -> str:
-        """Extract destination from query"""
-        # Simple extraction - in production use NER
-        words = query.split()
-        for i, word in enumerate(words):
-            if word.lower() in ["to", "for", "in"]:
-                if i + 1 < len(words):
-                    return words[i + 1]
-        return ""
+        # Update travel frequency (average trips per year)
+        if new_bookings:
+            profile.travel_frequency = len(new_bookings) / 2  # Assuming 2 years of history
 
-    def _extract_points(self, query: str) -> int:
-        """Extract points value from query"""
-        import re
-        match = re.search(r'(\d+(?:,\d+)*)\s*(?:points|miles|k)', query, re.IGNORECASE)
-        if match:
-            points_str = match.group(1).replace(",", "")
-            try:
-                return int(points_str)
-            except ValueError:
-                pass
-        return 0
+        profile.last_updated = datetime.utcnow().isoformat()
+        logger.info(f"Updated preferences for user {user_id}")
 
-    def _extract_cabin(self, query: str) -> str:
-        """Extract cabin class from query"""
-        query_lower = query.lower()
-        if "first" in query_lower:
-            return "first_class"
-        elif "business" in query_lower:
-            return "business_class"
-        elif "economy" in query_lower:
-            return "economy"
-        return "economy"
+    def get_adjusted_match_score(self, user_id: str, base_score: float, booking: AwardBookingFeatures) -> float:
+        """Adjust base match score based on dynamic user preferences"""
+        if user_id not in self.user_profiles:
+            return base_score
 
-    def _extract_program(self, query: str) -> str:
-        """Extract loyalty program from query"""
-        query_lower = query.lower()
-        programs = {
-            "aa": ["american", "aa", "aadvantage"],
-            "dl": ["delta", "dl", "skymiles"],
-            "ua": ["united", "ua", "miles"],
-            "ba": ["british airways", "ba", "avios"],
-            "sq": ["singapore", "sq", " KrisFlyer"],
-            "hyatt": ["hyatt", "world of hyatt"],
-            "ihg": ["ihg", "intercontinental", "holiday inn"],
-            "marriott": ["marriott", "bonvoy"]
-        }
+        profile = self.user_profiles[user_id]
 
-        for program, keywords in programs.items():
-            for keyword in keywords:
-                if keyword in query_lower:
-                    return program
-        return "generic"
+        # Boost score for preferred airlines
+        if booking.airline in profile.preferred_airlines:
+            base_score = min(1.0, base_score * 1.15)
 
-    def _extract_dates(self, query: str) -> List[str]:
-        """Extract date ranges from query"""
-        import re
-        from dateparser import parse
+        # Boost score for preferred routes
+        if booking.route in profile.preferred_routes:
+            base_score = min(1.0, base_score * 1.20)
 
-        dates = []
-        # Simple date pattern matching
-        date_patterns = [
-            r'\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]* \d{1,2},? \d{4}\b',
-            r'\b\d{1,2}/\d{1,2}/\d{4}\b',
-            r'\b\d{4}-\d{2}-\d{2}\b'
-        ]
+        # Penalize if price is outside range
+        if not (profile.price_range[0] <= booking.price_in_points <= profile.price_range[1]):
+            base_score = max(0.1, base_score * 0.7)
 
-        for pattern in date_patterns:
-            matches = re.findall(pattern, query, re.IGNORECASE)
-            for match in matches:
-                try:
-                    parsed = parse(match)
-                    if parsed:
-                        dates.append(parsed.isoformat())
-                except:
-                    pass
-
-        return dates if dates else []
-
-    def generate_response(self, intent_data: Dict[str, Any], context: Dict[str, Any]) -> str:
-        """
-        Generate a natural language response based on intent and context
-
-        Args:
-            intent_data: Intent and entities from extract_intent
-            context: Additional context from conversation
-
-        Returns:
-            Natural language response string
-        """
-        intent = intent_data["intent"]
-        entities = intent_data["entities"]
-
-        responses = {
-            "search_awards": self._generate_search_response(entities, context),
-            "compare_awards": self._generate_compare_response(entities, context),
-            "book_award": self._generate_book_response(entities, context),
-            "check_availability": self._generate_availability_response(entities, context),
-            "get_help": "I'd be happy to help! What do you need assistance with regarding award travel?",
-            "recommend": self._generate_recommend_response(entities, context),
-            "explain": self._generate_explain_response(entities, context)
-        }
-
-        return responses.get(intent, "I understand your request. Let me look into that for you.")
-
-    def _generate_search_response(self, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
-        """Generate response for search_awards intent"""
-        program = entities.get("program", "programs")
-        cabin = entities.get("cabin", "any cabin")
-        points = entities.get("points", "some points")
-
-        if points > 0:
-            return f"I'll search for award options using {points:,} {program} points in {cabin} class."
-        else:
-            return f"I'll help you find award travel options. Which {program} are you considering?"
-
-    def _generate_compare_response(self, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
-        """Generate response for compare_awards intent"""
-        return "I'll compare those award options and show you the best value based on your criteria."
-
-    def _generate_book_response(self, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
-        """Generate response for book_award intent"""
-        return "I can help you book that award. Let me check availability and process your request."
-
-    def _generate_availability_response(self, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
-        """Generate response for check_availability intent"""
-        return "Checking availability for your award options..."
-
-    def _generate_recommend_response(self, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
-        """Generate response for recommend intent"""
-        program = entities.get("program", "programs")
-        return f"I'll recommend the best award options from {program} based on your travel preferences."
-
-    def _generate_explain_response(self, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
-        """Generate response for explain intent"""
-        topic = entities.get("query", "").replace("explain ", "").replace("what is ", "")
-        return f"Let me explain {topic} for you."
-
-class ConversationManager:
-    """
-    Manages conversation state and context for multi-turn interactions
-    """
-
-    def __init__(self):
-        self.conversations = {}  # In production, use Redis or database
-
-    def start_conversation(self, client_id: str) -> str:
-        """Start a new conversation"""
-        conversation_id = f"conv_{client_id}_{int(datetime.utcnow().timestamp())}"
-        self.conversations[conversation_id] = {
-            "client_id": client_id,
-            "messages": [],
-            "context": {},
-            "start_time": datetime.utcnow().isoformat(),
-            "status": "active"
-        }
-        return conversation_id
-
-    def add_message(self, conversation_id: str, message: Dict[str, Any]) -> None:
-        """Add a message to the conversation"""
-        if conversation_id in self.conversations:
-            self.conversations[conversation_id]["messages"].append(message)
-            self.conversations[conversation_id]["context"].update(message.get("context", {}))
-
-    def get_context(self, conversation_id: str) -> Dict[str, Any]:
-        """Get conversation context"""
-        if conversation_id in self.conversations:
-            return self.conversations[conversation_id]["context"]
-        return {}
-
-    def end_conversation(self, conversation_id: str) -> None:
-        """End a conversation"""
-        if conversation_id in self.conversations:
-            self.conversations[conversation_id]["status"] = "completed"
-            self.conversations[conversation_id]["end_time"] = datetime.utcnow().isoformat()
+        return round(base_score, 3)
 
 # Singleton instances
-valuation_engine = AwardValuationEngine()
-nlp_processor = NLPProcessor()
-conversation_manager = ConversationManager()
+matching_model = MatchingModel()
+preference_learner = DynamicPreferenceLearner()

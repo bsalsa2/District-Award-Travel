@@ -1,26 +1,27 @@
 import requests
 import json
-from typing import Dict, List
+from typing import List, Dict
 
 class AirlineAPI:
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.base_url = "https://api.airline.com/v1"
+        self.base_url = "https://api.airline.com"
 
-    def get_flight_info(self, flight_number: str, departure_date: str) -> Dict:
-        url = f"{self.base_url}/flights/{flight_number}/{departure_date}"
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        response = requests.get(url, headers=headers)
+    def get_flights(self, origin: str, destination: str, departure_date: str) -> List[Dict]:
+        url = f"{self.base_url}/flights"
+        params = {
+            "origin": origin,
+            "destination": destination,
+            "departure_date": departure_date,
+            "api_key": self.api_key
+        }
+        response = requests.get(url, params=params)
         return response.json()
 
-    def get_flight_availability(self, flight_number: str, departure_date: str) -> List:
-        url = f"{self.base_url}/flights/{flight_number}/{departure_date}/availability"
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        response = requests.get(url, headers=headers)
-        return response.json()
-
-    def get_airport_info(self, airport_code: str) -> Dict:
-        url = f"{self.base_url}/airports/{airport_code}"
-        headers = {"Authorization": f"Bearer {self.api_key}"}
-        response = requests.get(url, headers=headers)
+    def get_availability(self, flight_id: str) -> Dict:
+        url = f"{self.base_url}/flights/{flight_id}/availability"
+        params = {
+            "api_key": self.api_key
+        }
+        response = requests.get(url, params=params)
         return response.json()

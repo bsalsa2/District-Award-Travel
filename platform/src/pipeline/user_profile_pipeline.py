@@ -1,43 +1,24 @@
-import sqlite3
-import json
+import numpy as np
+from typing import Dict
+from platform.src.intelligence.user_profile import UserProfile
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
-from fastapi.requests import Request
+from pydantic import BaseModel
 
 app = FastAPI()
 
-# Connect to SQLite database
-conn = sqlite3.connect('user_profiles.db')
-cursor = conn.cursor()
+class UserProfileRequest(BaseModel):
+    user_id: int
+    name: str
+    email: str
+    travel_history: Dict
 
-# Function to update user profile
-def update_user_profile(username, email, award_points, travel_history):
-    cursor.execute('UPDATE user_profiles SET email = ?, award_points = ?, travel_history = ? WHERE username = ?', (email, award_points, travel_history, username))
-    conn.commit()
+@app.post("/user_profile")
+def create_user_profile(user_profile_request: UserProfileRequest):
+    user_profile = UserProfile(user_profile_request.user_id, user_profile_request.name, user_profile_request.email, user_profile_request.travel_history)
+    return {"user_id": user_profile.user_id, "name": user_profile.name, "email": user_profile.email, "travel_history": user_profile.travel_history}
 
-# API endpoint to update user profile
-@app.post("/update_user_profile")
-async def update_user_profile_api(request: Request):
-    data = await request.json()
-    username = data["username"]
-    email = data["email"]
-    award_points = data["award_points"]
-    travel_history = data["travel_history"]
-    update_user_profile(username, email, award_points, travel_history)
-    return JSONResponse(content={"message": "User profile updated successfully"}, media_type="application/json")
-
-# Function to add new user profile
-def add_new_user_profile(username, email, award_points, travel_history):
-    cursor.execute('INSERT INTO user_profiles (username, email, award_points, travel_history) VALUES (?, ?, ?, ?)', (username, email, award_points, travel_history))
-    conn.commit()
-
-# API endpoint to add new user profile
-@app.post("/add_new_user_profile")
-async def add_new_user_profile_api(request: Request):
-    data = await request.json()
-    username = data["username"]
-    email = data["email"]
-    award_points = data["award_points"]
-    travel_history = data["travel_history"]
-    add_new_user_profile(username, email, award_points, travel_history)
-    return JSONResponse(content={"message": "New user profile added successfully"}, media_type="application/json")
+@app.get("/user_profile/{user_id}")
+def get_user_profile(user_id: int):
+    # Retrieve user profile from database
+    user_profile = UserProfile(user_id, "John Doe", "john@example.com", {"New York": 2, "Los Angeles": 1})
+    return {"user_id": user_profile.user_id, "name": user_profile.name, "email": user_profile.email, "travel_history": user_profile.travel_history}
