@@ -1,37 +1,48 @@
 import asyncio
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import sessionmaker
+from aiokafka import AIOKafkaConsumer
+from platform.src.config import settings
+from platform.src.data_processor import DataProcessor
 from platform.src.redis_client import RedisClient
-
-Base = declarative_base()
-
-class Data(Base):
-    __tablename__ = "data"
-    id = Column(Integer, primary_key=True)
-    value = Column(String)
 
 class DataPipeline:
     def __init__(self):
-        self.engine = create_engine("sqlite:///data.db")
-        Base.metadata.create_all(self.engine)
-        self.Session = sessionmaker(bind=self.engine)
-        self.session = self.Session()
+        self.kafka_consumer = AIOKafkaConsumer(
+            settings.KAFKA_TOPIC,
+            bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
+            group_id="award_travel_group",
+            auto_offset_reset="earliest",
+        )
+        self.data_processor = DataProcessor()
         self.redis_client = RedisClient()
 
-    def get_data(self):
-        data = self.session.query(Data).all()
-        return [{"id": d.id, "value": d.value} for d in data]
+    async def ingest_data(self):
+        await self.kafka_consumer.start()
+        try:
+            async for message in self.kafka_consumer:
+                data = message.value.decode("utf-8")
+                processed_data = self.data_processor.process(data)
+                await self.redis_client.set(processed_data)
+        finally:
+            await self.kafka_consumer.stop()
 
-    async def process_data(self, data):
-        self.redis_client.set_data(data)
-        self.session.add(Data(value=data))
-        self.session.commit()
+class DataProcessor:
+    def process(self, data):
+        # Process the data here
+        # For example, let's assume we're processing award travel data
+        # and we want to extract the destination and price
+        destination = data.split(",")[0]
+        price = data.split(",")[1]
+        return {"destination": destination, "price": price}
 
-    async def start_pipeline(self):
-        while True:
-            data = await self.redis_client.get_data()
-            if data:
-                await self.process_data(data)
-            await asyncio.sleep(1)
+class RedisClient:
+    def __init__(self):
+        self.redis = None
+
+    async def connect(self):
+        import aioredis
+        self.redis = aioredis.from_url(f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}")
+
+    async def set(self, data):
+        if not self.redis:
+            await self.connect()
+        await self.redis.set("award_travel_data", str(data))

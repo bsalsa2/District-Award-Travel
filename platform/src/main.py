@@ -1,14 +1,21 @@
-from fastapi import FastAPI, Request
-from platform.src.pipeline.pipeline import Pipeline
+import asyncio
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from platform.src.config import settings
+from platform.src.data_pipeline import DataPipeline
 
 app = FastAPI()
 
-@app.post("/recommendations")
-async def get_recommendations(request: Request):
-    data = await request.json()
-    user_id = data['userId']
-    pipeline = Pipeline('database.db')
-    pipeline.run()
-    recommendations = pipeline.get_recommendations(user_id)
-    pipeline.close()
-    return {'recommendations': recommendations}
+@app.get("/healthcheck")
+async def healthcheck():
+    return JSONResponse(content={"status": "ok"}, status_code=200)
+
+@app.get("/ingest_data")
+async def ingest_data():
+    data_pipeline = DataPipeline()
+    await data_pipeline.ingest_data()
+    return JSONResponse(content={"status": "data ingested"}, status_code=200)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

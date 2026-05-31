@@ -1,18 +1,14 @@
-import redis
-import asyncio
+import aioredis
 
 class RedisClient:
     def __init__(self):
-        self.redis_client = redis.Redis(host="localhost", port=6379, db=0)
+        self.redis = None
 
-    async def set_data(self, data):
-        self.redis_client.set("data", data)
+    async def connect(self):
+        from platform.src.config import settings
+        self.redis = aioredis.from_url(f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}")
 
-    async def get_data(self):
-        return self.redis_client.get("data")
-
-    async def set_analytics(self, data):
-        self.redis_client.set("analytics", data)
-
-    async def get_analytics(self):
-        return self.redis_client.get("analytics")
+    async def set(self, data):
+        if not self.redis:
+            await self.connect()
+        await self.redis.set("award_travel_data", str(data))
