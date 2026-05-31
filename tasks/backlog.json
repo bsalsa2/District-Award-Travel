@@ -2302,6 +2302,14 @@
         "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/pipeline/external_api/api_monitor.py"
       ],
       "completion_summary": "Completed by jeff on 2026-05-28. Files: api_client.py, redis_cache.py, exceptions.py"
+    },
+    {
+      "id": "TASK-231",
+      "title": "Develop a Data Pipeline for Real-time Award Travel Data Ingestion and Processing",
+      "assigned_to": "martin",
+      "priority": "high",
+      "status": "pending",
+      "description": "Develop a data pipeline using Apache Kafka, Apache Beam, and Apache Spark to ingest and process real-time award travel data from various sources, ensuring data freshness, accuracy, and consistency across the platform."
     }
   ],
   "completed": []
