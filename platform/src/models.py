@@ -1,31 +1,15 @@
-from dataclasses import dataclass
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from pydantic import BaseModel
 
-Base = declarative_base()
-
-@dataclass
-class AwardTravelRoute:
+class AwardTravel(BaseModel):
     id: int
-    origin: str
-    destination: str
-    airline: str
-    award_price: int
+    description: str
+    availability: str
+    pricing: str
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "origin": self.origin,
-            "destination": self.destination,
-            "airline": self.airline,
-            "award_price": self.award_price
-        }
+class Availability(BaseModel):
+    query: str
+    availability: str
 
-class AwardTravelRouteModel(Base):
-    __tablename__ = "award_travel_routes"
-
-    id = Column(Integer, primary_key=True)
-    origin = Column(String)
-    destination = Column(String)
-    airline = Column(String)
-    award_price = Column(Integer)
+class Pricing(BaseModel):
+    query: str
+    pricing: str

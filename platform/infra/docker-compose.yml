@@ -1,43 +1,27 @@
 version: '3'
 services:
-  app:
-    build: .
-    environment:
-      - FLASK_APP=app.py
-      - FLASK_ENV=development
-    ports:
-      - "5000:5000"
-    depends_on:
-      - db
-    restart: always
-
-  db:
-    image: postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=award_travel
+  prometheus:
+    image: prometheus/prometheus:latest
     volumes:
-      - db-data:/var/lib/postgresql/data
-    restart: always
-
-  ai-tester:
-    build: ./ai-tester
-    environment:
-      - MODEL_NAME=award_travel_model
-    depends_on:
-      - app
-    restart: always
-
-  nginx:
-    image: nginx:latest
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - app
-    restart: always
+      - "9090:9090"
 
-volumes:
-  db-data:
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=secret
+    ports:
+      - "3000:3000"
+
+  node-exporter:
+    image: prometheus/node-exporter:latest
+    ports:
+      - "9100:9100"
+
+  alertmanager:
+    image: prometheus/alertmanager:latest
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    ports:
+      - "9093:9093"

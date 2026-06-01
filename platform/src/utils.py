@@ -1,15 +1,10 @@
-import nltk
-from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
+import json
 
-class KnowledgeGraph:
-    def __init__(self):
-        self.stop_words = set(stopwords.words("english"))
-        self.lemmatizer = WordNetLemmatizer()
+def load_data(file_path):
+    with open(file_path, "r") as file:
+        data = json.load(file)
+    return data
 
-    def disambiguate_entities(self, query):
-        tokens = word_tokenize(query)
-        tokens = [token for token in tokens if token not in self.stop_words]
-        tokens = [self.lemmatizer.lemmatize(token) for token in tokens]
-        return tokens
+def save_data(file_path, data):
+    with open(file_path, "w") as file:
+        json.dump(data, file)

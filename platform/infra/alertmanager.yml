@@ -6,11 +6,11 @@ global:
   smtp_require_tls: true
 
 route:
-  receiver: 'team'
+  receiver: team-a
   group_by: ['alertname']
 
 receivers:
-- name: 'team'
+- name: team-a
   email_configs:
   - to: 'your_email@gmail.com'
     from: 'your_email@gmail.com'

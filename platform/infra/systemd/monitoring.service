@@ -1,0 +1,11 @@
+[Unit]
+Description=Monitoring Service
+After=network.target
+
+[Service]
+User=runner
+ExecStart=/bin/bash /home/runner/work/District-Award-Travel/District-Award-Travel/platform/infra/monitoring.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
