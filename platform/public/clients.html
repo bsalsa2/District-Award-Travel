@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clients Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th, .table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        .table th {
+            background-color: #f0f0f0;
+        }
+        .new-client-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+        .new-client-modal .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 500px;
+        }
+        .new-client-modal .modal-content .close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .detail-panel {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1;
+        }
+        .detail-panel .panel-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 500px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Clients Dashboard</h1>
+        <button id="new-client-btn">New Client</button>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Created At</th>
+                    <th>Total Miles Managed</th>
+                    <th>Programs</th>
+                    <th>Notes</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="clients-tbody">
+            </tbody>
+        </table>
+    </div>
+    <div class="new-client-modal" id="new-client-modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>New Client</h2>
+            <form id="new-client-form">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name"><br><br>
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email"><br><br>
+                <label for="phone">Phone:</label>
+                <input type="text" id="phone" name="phone"><br><br>
+                <label for="created_at">Created At:</label>
+                <input type="text" id="created_at" name="created_at"><br><br>
+                <label for="total_miles_managed">Total Miles Managed:</label>
+                <input type="number" id="total_miles_managed" name="total_miles_managed"><br><br>
+                <label for="programs">Programs:</label>
+                <input type="text" id="programs" name="programs"><br><br>
+                <label for="notes">Notes:</label>
+                <textarea id="notes" name="notes"></textarea><br><br>
+                <label for="status">Status:</label>
+                <input type="text" id="status" name="status"><br><br>
+                <button type="submit">Create Client</button>
+            </form>
+        </div>
+    </div>
+    <div class="detail-panel" id="detail-panel">
+        <div class="panel-content">
+            <h2>Client Details</h2>
+            <p id="client-id"></p>
+            <p id="client-name"></p>
+            <p id="client-email"></p>
+            <p id="client-phone"></p>
+            <p id="client-created-at"></p>
+            <p id="client-total-miles-managed"></p>
+            <p id="client-programs"></p>
+            <p id="client-notes"></p>
+            <p id="client-status"></p>
+        </div>
+    </div>
+
+    <script>
+        const newClientBtn = document.getElementById('new-client-btn');
+        const newClientModal = document.getElementById('new-client-modal');
+        const newClientForm = document.getElementById('new-client-form');
+        const clientsTbody = document.getElementById('clients-tbody');
+        const detailPanel = document.getElementById('detail-panel');
+
+        newClientBtn.addEventListener('click', () => {
+            newClientModal.style.display = 'block';
+        });
+
+        newClientForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(newClientForm);
+            fetch('/clients', {
+                method: 'POST',
+                body: JSON.stringify({
+                    name: formData.get('name'),
+                    email: formData.get('email'),
+                    phone: formData.get('phone'),
+                    created_at: formData.get('created_at'),
+                    total_miles_managed: formData.get('total_miles_managed'),
+                    programs: formData.get('programs'),
+                    notes: formData.get('notes'),
+                    status: formData.get('status')
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                console.log(data);
+                newClientModal.style.display = 'none';
+                getClients();
+            })
+            .catch((error) => console.error(error));
+        });
+
+        function getClients() {
+            fetch('/clients')
+            .then((response) => response.json())
+            .then((data) => {
+                clientsTbody.innerHTML = '';
+                data.forEach((client) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${client.id}</td>
+                        <td>${client.name}</td>
+                        <td>${client.email}</td>
+                        <td>${client.phone}</td>
+                        <td>${client.created_at}</td>
+                        <td>${client.total_miles_managed}</td>
+                        <td>${client.programs}</td>
+                        <td>${client.notes}</td>
+                        <td>${client.status}</td>
+                    `;
+                    clientsTbody.appendChild(row);
+                });
+            })
+            .catch((error) => console.error(error));
+        }
+
+        getClients();
+
+        clientsTbody.addEventListener('click', (e) => {
+            if (e.target.tagName === 'TD') {
+                const clientId = e.target.parentNode.cells[0].textContent;
+                fetch(`/clients/${clientId}`)
+                .then((response) => response.json())
+                .then((data) => {
+                    document.getElementById('client-id').textContent = `ID: ${data.id}`;
+                    document.getElementById('client-name').textContent = `Name: ${data.name}`;
+                    document.getElementById('client-email').textContent = `Email: ${data.email}`;
+                    document.getElementById('client-phone').textContent = `Phone: ${data.phone}`;
+                    document.getElementById('client-created-at').textContent = `Created At: ${data.created_at}`;
+                    document.getElementById('client-total-miles-managed').textContent = `Total Miles Managed: ${data.total_miles_managed}`;
+                    document.getElementById('client-programs').textContent = `Programs: ${data.programs}`;
+                    document.getElementById('client-notes').textContent = `Notes: ${data.notes}`;
+                    document.getElementById('client-status').textContent = `Status: ${data.status}`;
+                    detailPanel.style.display = 'block';
+                })
+                .catch((error) => console.error(error));
+            }
+        });
+
+        detailPanel.addEventListener('click', (e) => {
+            if (e.target === detailPanel) {
+                detailPanel.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
+
+NEW_TASKS:

@@ -14,9 +14,8 @@ class BookingModel:
         return self.model.predict(X)
 
 # Example usage
-X = np.array([[1, 2], [3, 4], [5, 6]])
-y = np.array([10, 20, 30])
-
+X = np.array([[1, 2, 3], [4, 5, 6]])
+y = np.array([10, 20])
 model = BookingModel()
 model.train(X, y)
-print(model.predict(np.array([[7, 8]])))
+print(model.predict(X))

@@ -1,57 +1,60 @@
-import numpy as np
-from fastapi import Depends, FastAPI, HTTPException
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel
+import sqlite3
 from sqlite3 import Error
+import hashlib
 
-# Define the user model
-class User(BaseModel):
-    id: int
-    username: str
-    email: str
-    password: str
+def create_connection():
+    conn = None
+    try:
+        conn = sqlite3.connect("platform/src/intelligence/database.db")
+        return conn
+    except Error as e:
+        print(e)
 
-# Define the authentication scheme
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+def create_table(conn):
+    sql_create_table = """CREATE TABLE IF NOT EXISTS users (
+                                username text PRIMARY KEY,
+                                email text NOT NULL,
+                                password text NOT NULL
+                            );"""
+    try:
+        c = conn.cursor()
+        c.execute(sql_create_table)
+    except Error as e:
+        print(e)
 
-# Initialize the FastAPI app
-app = FastAPI()
+def authenticate_user(username, password):
+    conn = create_connection()
+    with conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE username=?", (username,))
+        user = cur.fetchone()
+        if user and user[2] == hashlib.sha256(password.encode()).hexdigest():
+            return {"username": user[0], "email": user[1]}
+        else:
+            return None
 
-# Define the user database
-users_db = {
-    "user1": {
-        "username": "user1",
-        "email": "user1@example.com",
-        "password": "password1"
-    },
-    "user2": {
-        "username": "user2",
-        "email": "user2@example.com",
-        "password": "password2"
-    }
-}
+def get_user(token):
+    conn = create_connection()
+    with conn:
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM users WHERE username=?", (token,))
+        user = cur.fetchone()
+        if user:
+            return {"username": user[0], "email": user[1]}
+        else:
+            return None
 
-# Define the authentication function
-def authenticate_user(username: str, password: str):
-    if username in users_db:
-        user = users_db[username]
-        if user["password"] == password:
-            return user
-    return None
+def register_user(username, email, password):
+    conn = create_connection()
+    with conn:
+        cur = conn.cursor()
+        cur.execute("INSERT INTO users VALUES (?, ?, ?)", (username, email, hashlib.sha256(password.encode()).hexdigest()))
+        conn.commit()
 
-# Define the login endpoint
-@app.post("/login")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = authenticate_user(form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=401,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return {"access_token": user["username"], "token_type": "bearer"}
+# Initialize database
+conn = create_connection()
+create_table(conn)
+conn.close()
 
-# Define the protected endpoint
-@app.get("/protected")
-async def protected(token: str = Depends(oauth2_scheme)):
-    return {"message": f"Hello, {token}!"}
+# Example usage
+register_user("jeff", "jeff@example.com", "password123")

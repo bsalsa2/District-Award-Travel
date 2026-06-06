@@ -1,24 +1,18 @@
+import sqlite3
 import numpy as np
-from typing import Dict
-from platform.src.intelligence.user_profile import UserProfile
-from fastapi import FastAPI
-from pydantic import BaseModel
 
-app = FastAPI()
+def get_travel_history():
+    conn = sqlite3.connect('travel_history.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM travel_history")
+    travel_history = cursor.fetchall()
+    conn.close()
+    return travel_history
 
-class UserProfileRequest(BaseModel):
-    user_id: int
-    name: str
-    email: str
-    travel_history: Dict
-
-@app.post("/user_profile")
-def create_user_profile(user_profile_request: UserProfileRequest):
-    user_profile = UserProfile(user_profile_request.user_id, user_profile_request.name, user_profile_request.email, user_profile_request.travel_history)
-    return {"user_id": user_profile.user_id, "name": user_profile.name, "email": user_profile.email, "travel_history": user_profile.travel_history}
-
-@app.get("/user_profile/{user_id}")
-def get_user_profile(user_id: int):
-    # Retrieve user profile from database
-    user_profile = UserProfile(user_id, "John Doe", "john@example.com", {"New York": 2, "Los Angeles": 1})
-    return {"user_id": user_profile.user_id, "name": user_profile.name, "email": user_profile.email, "travel_history": user_profile.travel_history}
+def get_preferences():
+    conn = sqlite3.connect('preferences.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM preferences")
+    preferences = cursor.fetchall()
+    conn.close()
+    return preferences
