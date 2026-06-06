@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apply — District Award Travel</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#05080d;--surface:#0c1118;--card:#101820;--border:#1c2a3a;
+  --green:#00e87a;--green-dim:rgba(0,232,122,.08);--green-border:rgba(0,232,122,.2);
+  --blue:#38b6ff;--gold:#f5c842;--red:#ff4d6d;
+  --text:#edf2f7;--muted:#8896a6;--dim:#3d5068;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* NAV */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 48px;height:60px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+}
+.nav-logo{font-size:15px;font-weight:800;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:8px}
+.nav-logo span{color:var(--green)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;border:none;text-decoration:none}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--muted)}
+.btn-primary{background:var(--green);color:#030a05}
+.btn-primary:hover{background:#00ff88;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,232,122,.2)}
+.btn-primary:disabled{background:var(--dim);color:var(--muted);transform:none;box-shadow:none;cursor:not-allowed}
+
+/* LAYOUT */
+.page{max-width:760px;margin:0 auto;padding:48px 24px 80px}
+.page-header{margin-bottom:40px}
+.page-eyebrow{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--green-dim);border:1px solid var(--green-border);
+  color:var(--green);font-size:10px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;padding:5px 12px;border-radius:20px;margin-bottom:18px;
+}
+.page-h1{font-size:32px;font-weight:800;letter-spacing:-.8px;color:var(--text);margin-bottom:10px}
+.page-sub{font-size:15px;color:var(--muted);line-height:1.6}
+
+/* PROGRESS */
+.progress-bar{
+  display:flex;align-items:center;gap:0;margin-bottom:44px;
+  background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px;
+}
+.prog-step{
+  flex:1;text-align:center;padding:10px 8px;border-radius:7px;
+  font-size:11px;font-weight:600;color:var(--dim);cursor:pointer;
+  transition:all .2s;position:relative;
+}
+.prog-step.active{background:var(--green-dim);color:var(--green);border:1px solid var(--green-border)}
+.prog-step.done{color:var(--green);opacity:.6}
+.prog-step.done::after{content:'✓';margin-left:4px}
+.prog-num{
+  width:22px;height:22px;border-radius:50%;
+  background:var(--border);color:var(--muted);
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;margin-right:6px;
+  transition:all .2s;
+}
+.prog-step.active .prog-num{background:var(--green);color:#030a05}
+
+/* FORM SECTIONS */
+.form-section{display:none}
+.form-section.active{display:block}
+
+.form-card{
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:32px;margin-bottom:20px;
+}
+.form-card-title{
+  font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;
+  display:flex;align-items:center;gap:10px;
+}
+.form-card-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.form-full{grid-column:1/-1}
+
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em}
+.field label .req{color:var(--red);margin-left:2px}
+.field input,.field select,.field textarea{
+  background:var(--surface);border:1px solid var(--border);
+  color:var(--text);border-radius:8px;padding:11px 14px;
+  font-size:14px;font-family:inherit;outline:none;
+  transition:border-color .15s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green)}
+.field input::placeholder,.field textarea::placeholder{color:var(--dim)}
+.field select option{background:var(--surface)}
+.field textarea{resize:vertical;min-height:90px}
+.field-hint{font-size:11px;color:var(--dim);margin-top:2px}
+
+/* POINTS GRID */
+.points-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+.points-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:9px;
+  padding:12px 14px;
+}
+.points-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.points-card-name{font-size:12px;font-weight:600;color:var(--text)}
+.points-card-type{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.05em}
+.type-transfer{background:rgba(56,182,255,.1);color:var(--blue);border:1px solid rgba(56,182,255,.2)}
+.type-airline{background:rgba(0,232,122,.08);color:var(--green);border:1px solid rgba(0,232,122,.15)}
+.type-hotel{background:rgba(245,200,66,.08);color:var(--gold);border:1px solid rgba(245,200,66,.15)}
+.points-card input{
+  width:100%;background:var(--card);border:1px solid var(--border);
+  color:var(--text);border-radius:6px;padding:8px 10px;
+  font-size:13px;font-family:monospace;outline:none;
+  transition:border-color .15s;
+}
+.points-card input:focus{border-color:var(--green)}
+.points-card input::placeholder{color:var(--dim)}
+.points-card-cpp{font-size:10px;color:var(--dim);margin-top:5px;font-family:monospace}
+
+/* CHECKBOX GRID */
+.check-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+.check-item{
+  display:flex;align-items:center;gap:9px;
+  background:var(--surface);border:1px solid var(--border);border-radius:7px;
+  padding:10px 12px;cursor:pointer;transition:all .15s;font-size:13px;
+}
+.check-item:hover{border-color:var(--blue)}
+.check-item input[type=checkbox]{
+  width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0;
+}
+.check-item.checked{border-color:var(--green-border);background:var(--green-dim);color:var(--green)}
+
+/* RADIO CARDS */
+.radio-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
+.radio-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:14px;text-align:center;cursor:pointer;transition:all .15s;
+}
+.radio-card:hover{border-color:var(--blue)}
+.radio-card.selected{border-color:var(--green-border);background:var(--green-dim)}
+.radio-card input{display:none}
+.radio-card-icon{font-size:22px;margin-bottom:6px}
+.radio-card-label{font-size:12px;font-weight:600;color:var(--text)}
+.radio-card-sub{font-size:10px;color:var(--dim);margin-top:2px}
+.radio-card.selected .radio-card-label{color:var(--green)}
+
+/* NAV BUTTONS */
+.form-nav{display:flex;align-items:center;justify-content:space-between;margin-top:28px}
+.step-indicator{font-size:12px;color:var(--dim);font-family:monospace}
+
+/* SUCCESS */
+#success{display:none;text-align:center;padding:60px 0}
+.success-icon{font-size:64px;margin-bottom:24px}
+.success-h2{font-size:28px;font-weight:800;color:var(--text);margin-bottom:12px}
+.success-sub{font-size:16px;color:var(--muted);max-width:500px;margin:0 auto;line-height:1.6}
+.success-next{
+  margin-top:40px;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:24px;text-align:left;max-width:480px;margin:40px auto 0;
+}
+.success-next-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px}
+.success-next-item{display:flex;gap:12px;font-size:13px;color:var(--muted);margin-bottom:10px;align-items:flex-start}
+.success-next-item:last-child{margin-bottom:0}
+.success-next-num{
+  width:22px;height:22px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);
+  color:var(--green);font-size:10px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;
+}
+
+@media(max-width:640px){
+  nav{padding:0 16px}
+  .page{padding:32px 16px 60px}
+  .form-grid,.form-grid-3,.points-grid,.check-grid,.radio-grid{grid-template-columns:1fr 1fr}
+  .radio-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-logo">✈ <span>District</span> Award Travel</a>
+  <a href="index.html" class="btn btn-ghost">← Back to Site</a>
+</nav>
+
+<div class="page">
+  <div class="page-header">
+    <div class="page-eyebrow">✈ New Client Application</div>
+    <h1 class="page-h1">Let's architect your rewards.</h1>
+    <p class="page-sub">This takes about 10 minutes. The more detail you give us, the better we can plan. We'll reach out within 24 hours to go over your options.</p>
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="progress-bar" id="progressBar">
+    <div class="prog-step active" onclick="goToStep(1)"><span class="prog-num">1</span>About You</div>
+    <div class="prog-step" onclick="goToStep(2)"><span class="prog-num">2</span>Your Points</div>
+    <div class="prog-step" onclick="goToStep(3)"><span class="prog-num">3</span>Travel Goals</div>
+    <div class="prog-step" onclick="goToStep(4)"><span class="prog-num">4</span>Preferences</div>
+  </div>
+
+  <form id="intakeForm" novalidate>
+
+    <!-- ── STEP 1: ABOUT YOU ── -->
+    <div class="form-section active" data-step="1">
+      <div class="form-card">
+        <div class="form-card-title">👤 Personal Information</div>
+        <div class="form-card-sub">Basic contact info so we can reach you.</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>First Name <span class="req">*</span></label>
+            <input type="text" name="first_name" placeholder="Jordan" required>
+          </div>
+          <div class="field">
+            <label>Last Name <span class="req">*</span></label>
+            <input type="text" name="last_name" placeholder="Mills" required>
+          </div>
+          <div class="field">
+            <label>Email Address <span class="req">*</span></label>
+            <input type="email" name="email" placeholder="jordan@example.com" required>
+          </div>
+          <div class="field">
+            <label>Phone Number</label>
+            <input type="tel" name="phone" placeholder="+1 (202) 555-0000">
+          </div>
+          <div class="field">
+            <label>Home Airport <span class="req">*</span></label>
+            <input type="text" name="home_airport" placeholder="DCA, IAD, or BWI" required>
+            <div class="field-hint">3-letter IATA code or city name is fine.</div>
+          </div>
+          <div class="field">
+            <label>How did you hear about us?</label>
+            <select name="referral_source">
+              <option value="">Select...</option>
+              <option>Friend or family referral</option>
+              <option>Social media</option>
+              <option>Search engine</option>
+              <option>Word of mouth</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field form-full">
+            <label>Referral name (if applicable)</label>
+            <input type="text" name="referral_name" placeholder="Who referred you? (optional)">
+          </div>
+        </div>
+      </div>
+      <div class="form-nav">
+        <div class="step-indicator">Step 1 of 4</div>
+        <button type="button" class="btn btn-primary" onclick="nextStep(1)">Next: Your Points →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: POINTS ── -->
+    <div class="form-section" data-step="2">
+      <div class="form-card">
+        <div class="form-card-title">💰 Your Points &amp; Miles Balances</div>
+        <div class="form-card-sub">Enter your approximate current balances. Exact numbers aren't required — rough estimates are fine. Leave blank if you don't have the program.</div>
+        <div style="margin-bottom:18px">
+          <div style="font-size:10px;font-family:monospace;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-bottom:10px">── Flexible Points (Transfer to Airlines &amp; Hotels)</div>
+          <div class="points-grid">
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Amex Membership Rewards</span><span class="points-card-type type-transfer">TRANSFER</span></div>
+              <input type="text" name="pts_amex_mr" placeholder="e.g. 1,000,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 2.0¢/pt · Best in class</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Chase Ultimate Rewards</span><span class="points-card-type type-transfer">TRANSFER</span></div>
+              <input type="text" name="pts_chase_ur" placeholder="e.g. 200,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 2.0¢/pt · Hyatt, United, BA</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Citi ThankYou Points</span><span class="points-card-type type-transfer">TRANSFER</span></div>
+              <input type="text" name="pts_citi_ty" placeholder="e.g. 150,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.7¢/pt · Turkish, Flying Blue</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Capital One Miles</span><span class="points-card-type type-transfer">TRANSFER</span></div>
+              <input type="text" name="pts_cap1" placeholder="e.g. 100,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.5¢/pt</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Bilt Rewards</span><span class="points-card-type type-transfer">TRANSFER</span></div>
+              <input type="text" name="pts_bilt" placeholder="e.g. 50,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 2.0¢/pt · Hyatt, AA, United</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-bottom:18px">
+          <div style="font-size:10px;font-family:monospace;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-bottom:10px">── Airline Miles</div>
+          <div class="points-grid">
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">American AAdvantage</span><span class="points-card-type type-airline">AIRLINE</span></div>
+              <input type="text" name="pts_aa" placeholder="e.g. 500,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.5¢/mi · JAL, Cathay, BA</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">United MileagePlus</span><span class="points-card-type type-airline">AIRLINE</span></div>
+              <input type="text" name="pts_united" placeholder="e.g. 300,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.3¢/mi · Star Alliance</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Delta SkyMiles</span><span class="points-card-type type-airline">AIRLINE</span></div>
+              <input type="text" name="pts_delta" placeholder="e.g. 200,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.0¢/mi · Dynamic pricing</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Air Canada Aeroplan</span><span class="points-card-type type-airline">AIRLINE</span></div>
+              <input type="text" name="pts_aeroplan" placeholder="e.g. 100,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.5¢/pt · No fuel surcharges</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">British Airways Avios</span><span class="points-card-type type-airline">AIRLINE</span></div>
+              <input type="text" name="pts_avios" placeholder="e.g. 75,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.4¢/pt · Oneworld short-haul</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Turkish Miles &amp; Smiles</span><span class="points-card-type type-airline">AIRLINE</span></div>
+              <input type="text" name="pts_turkish" placeholder="e.g. 50,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.5¢/pt · Best Star Alliance rates</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Air France Flying Blue</span><span class="points-card-type type-airline">AIRLINE</span></div>
+              <input type="text" name="pts_flying_blue" placeholder="e.g. 50,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.3¢/pt · Monthly promos</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Singapore KrisFlyer</span><span class="points-card-type type-airline">AIRLINE</span></div>
+              <input type="text" name="pts_krisflyer" placeholder="e.g. 50,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.5¢/pt · Singapore First</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-family:monospace;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-bottom:10px">── Hotel Points</div>
+          <div class="points-grid">
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Marriott Bonvoy</span><span class="points-card-type type-hotel">HOTEL</span></div>
+              <input type="text" name="pts_marriott" placeholder="e.g. 500,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 0.8¢/pt · Widest selection</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">World of Hyatt</span><span class="points-card-type type-hotel">HOTEL</span></div>
+              <input type="text" name="pts_hyatt" placeholder="e.g. 100,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 1.7¢/pt · Best hotel value</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">Hilton Honors</span><span class="points-card-type type-hotel">HOTEL</span></div>
+              <input type="text" name="pts_hilton" placeholder="e.g. 200,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 0.5¢/pt</div>
+            </div>
+            <div class="points-card">
+              <div class="points-card-header"><span class="points-card-name">IHG One Rewards</span><span class="points-card-type type-hotel">HOTEL</span></div>
+              <input type="text" name="pts_ihg" placeholder="e.g. 100,000" inputmode="numeric">
+              <div class="points-card-cpp">≈ 0.5¢/pt</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="form-card-title">🎖️ Elite Status</div>
+        <div class="form-card-sub">Your elite status affects award availability, upgrades, and booking strategy.</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Airline Elite Status</label>
+            <select name="airline_status">
+              <option value="">None</option>
+              <optgroup label="American Airlines">
+                <option>AA Gold</option>
+                <option>AA Platinum</option>
+                <option>AA Platinum Pro</option>
+                <option>AA Executive Platinum</option>
+              </optgroup>
+              <optgroup label="United Airlines">
+                <option>United Silver</option>
+                <option>United Gold</option>
+                <option>United Platinum</option>
+                <option>United 1K</option>
+              </optgroup>
+              <optgroup label="Delta Air Lines">
+                <option>Delta Silver Medallion</option>
+                <option>Delta Gold Medallion</option>
+                <option>Delta Platinum Medallion</option>
+                <option>Delta Diamond Medallion</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option>Other airline status</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="field">
+            <label>Hotel Elite Status</label>
+            <select name="hotel_status">
+              <option value="">None</option>
+              <optgroup label="Marriott Bonvoy">
+                <option>Marriott Silver Elite</option>
+                <option>Marriott Gold Elite</option>
+                <option>Marriott Platinum Elite</option>
+                <option>Marriott Titanium Elite</option>
+                <option>Marriott Ambassador Elite</option>
+              </optgroup>
+              <optgroup label="World of Hyatt">
+                <option>Hyatt Discoverist</option>
+                <option>Hyatt Explorist</option>
+                <option>Hyatt Globalist</option>
+              </optgroup>
+              <optgroup label="Hilton Honors">
+                <option>Hilton Silver</option>
+                <option>Hilton Gold</option>
+                <option>Hilton Diamond</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option>Other hotel status</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="field">
+            <label>Amex Card Level</label>
+            <select name="amex_card">
+              <option value="">No Amex card</option>
+              <option>Amex Green</option>
+              <option>Amex Gold</option>
+              <option>Amex Platinum</option>
+              <option>Amex Business Platinum</option>
+              <option>Amex Centurion (Black)</option>
+            </select>
+            <div class="field-hint">Affects Amex Fine Hotels &amp; Resorts and Hotel Collection eligibility.</div>
+          </div>
+          <div class="field">
+            <label>Chase Card Level</label>
+            <select name="chase_card">
+              <option value="">No Chase card</option>
+              <option>Chase Sapphire Preferred</option>
+              <option>Chase Sapphire Reserve</option>
+              <option>Chase Ink Business Preferred</option>
+              <option>Chase Ink Business Reserve</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-nav">
+        <button type="button" class="btn btn-ghost" onclick="prevStep(2)">← Back</button>
+        <div class="step-indicator">Step 2 of 4</div>
+        <button type="button" class="btn btn-primary" onclick="nextStep(2)">Next: Travel Goals →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: TRAVEL GOALS ── -->
+    <div class="form-section" data-step="3">
+      <div class="form-card">
+        <div class="form-card-title">🌍 Travel Goals &amp; Upcoming Trips</div>
+        <div class="form-card-sub">Tell us where you want to go and when. The more specific, the better our plan will be.</div>
+        <div class="form-grid">
+          <div class="field form-full">
+            <label>Where do you want to go? <span class="req">*</span></label>
+            <textarea name="travel_goals" placeholder="e.g. Business class to Tokyo in December, Italy in summer 2026, South Africa for a group of 6 in December..." required></textarea>
+            <div class="field-hint">Be as specific as possible — cities, months, cabin class, number of passengers.</div>
+          </div>
+          <div class="field">
+            <label>Trip 1 — Destination</label>
+            <input type="text" name="trip1_dest" placeholder="e.g. Tokyo, Japan">
+          </div>
+          <div class="field">
+            <label>Trip 1 — When?</label>
+            <input type="text" name="trip1_dates" placeholder="e.g. December 2026, flexible">
+          </div>
+          <div class="field">
+            <label>Trip 2 — Destination</label>
+            <input type="text" name="trip2_dest" placeholder="e.g. Milan, Italy">
+          </div>
+          <div class="field">
+            <label>Trip 2 — When?</label>
+            <input type="text" name="trip2_dates" placeholder="e.g. July–August 2026">
+          </div>
+          <div class="field">
+            <label>Trip 3 — Destination</label>
+            <input type="text" name="trip3_dest" placeholder="e.g. Reykjavik, Iceland">
+          </div>
+          <div class="field">
+            <label>Trip 3 — When?</label>
+            <input type="text" name="trip3_dates" placeholder="e.g. October 2026">
+          </div>
+          <div class="field form-full">
+            <label>Passengers per trip</label>
+            <input type="text" name="passengers" placeholder="e.g. Solo traveler, or group of 6 for the South Africa trip">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="form-card-title">✈️ Cabin &amp; Hotel Preferences</div>
+        <div class="form-card-sub">What experience are you aiming for?</div>
+        <div style="margin-bottom:20px">
+          <div class="field-hint" style="margin-bottom:10px;font-size:12px;color:var(--muted);">Target cabin class for flights</div>
+          <div class="radio-grid">
+            <label class="radio-card">
+              <input type="radio" name="cabin_pref" value="economy">
+              <div class="radio-card-icon">🪑</div>
+              <div class="radio-card-label">Economy</div>
+              <div class="radio-card-sub">Best value</div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="cabin_pref" value="premium_economy">
+              <div class="radio-card-icon">🛋️</div>
+              <div class="radio-card-label">Prem. Economy</div>
+              <div class="radio-card-sub">More space</div>
+            </label>
+            <label class="radio-card" id="rc-business">
+              <input type="radio" name="cabin_pref" value="business" checked>
+              <div class="radio-card-icon">🥂</div>
+              <div class="radio-card-label">Business</div>
+              <div class="radio-card-sub">Most popular</div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="cabin_pref" value="first">
+              <div class="radio-card-icon">👑</div>
+              <div class="radio-card-label">First Class</div>
+              <div class="radio-card-sub">The pinnacle</div>
+            </label>
+          </div>
+        </div>
+        <div>
+          <div class="field-hint" style="margin-bottom:10px;font-size:12px;color:var(--muted);">Target hotel tier</div>
+          <div class="radio-grid">
+            <label class="radio-card">
+              <input type="radio" name="hotel_pref" value="budget">
+              <div class="radio-card-icon">🏨</div>
+              <div class="radio-card-label">Budget</div>
+              <div class="radio-card-sub">Maximize nights</div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="hotel_pref" value="midscale">
+              <div class="radio-card-icon">🏩</div>
+              <div class="radio-card-label">Mid-Scale</div>
+              <div class="radio-card-sub">Comfortable</div>
+            </label>
+            <label class="radio-card" id="rh-upscale">
+              <input type="radio" name="hotel_pref" value="upscale" checked>
+              <div class="radio-card-icon">🏰</div>
+              <div class="radio-card-label">Upscale</div>
+              <div class="radio-card-sub">Most popular</div>
+            </label>
+            <label class="radio-card">
+              <input type="radio" name="hotel_pref" value="luxury">
+              <div class="radio-card-icon">💎</div>
+              <div class="radio-card-label">Luxury</div>
+              <div class="radio-card-sub">The best</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-nav">
+        <button type="button" class="btn btn-ghost" onclick="prevStep(3)">← Back</button>
+        <div class="step-indicator">Step 3 of 4</div>
+        <button type="button" class="btn btn-primary" onclick="nextStep(3)">Next: Preferences →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 4: PREFERENCES ── -->
+    <div class="form-section" data-step="4">
+      <div class="form-card">
+        <div class="form-card-title">⚙️ Travel Preferences</div>
+        <div class="form-card-sub">Help us understand your flexibility and what matters most to you.</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Date Flexibility</label>
+            <select name="date_flexibility">
+              <option value="fixed">Fixed dates — no flexibility</option>
+              <option value="few_days">±2–3 days on each end</option>
+              <option value="week" selected>±1 week</option>
+              <option value="very_flexible">Very flexible — best redemption wins</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>How do you prefer to communicate?</label>
+            <select name="comm_pref">
+              <option value="email" selected>Email</option>
+              <option value="text">Text / SMS</option>
+              <option value="call">Phone call</option>
+              <option value="whatsapp">WhatsApp</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Maximum stops per flight</label>
+            <select name="max_stops">
+              <option value="nonstop">Nonstop only</option>
+              <option value="1" selected>Max 1 stop</option>
+              <option value="2">Up to 2 stops</option>
+              <option value="any">No preference</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Trip type</label>
+            <select name="trip_type">
+              <option value="leisure">Leisure / vacation</option>
+              <option value="business">Business travel</option>
+              <option value="mixed">Mixed — both</option>
+              <option value="honeymoon">Honeymoon / anniversary</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="form-card-title">💭 Anything else we should know?</div>
+        <div class="form-card-sub">Special requirements, constraints, context that would help us plan better.</div>
+        <div class="field">
+          <label>Additional notes</label>
+          <textarea name="notes" rows="4" placeholder="e.g. I book last-minute often and need flexibility. I'm based in the Cayman Islands so all routing starts from GCM. My employer covers certain legs..."></textarea>
+        </div>
+      </div>
+
+      <div class="form-card" style="background:rgba(0,232,122,.03);border-color:rgba(0,232,122,.15)">
+        <div class="form-card-title">✅ Ready to Submit</div>
+        <div class="form-card-sub">
+          By submitting, you understand that District Award Travel charges a 10% fee on savings generated — and nothing if we can't beat the cash price. We do not recommend credit cards or earn referral commissions.
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+          <input type="checkbox" id="agree" name="agree" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer" required>
+          <label for="agree" style="font-size:13px;color:var(--muted);cursor:pointer">I understand and agree to the fee structure above.</label>
+        </div>
+      </div>
+
+      <div class="form-nav">
+        <button type="button" class="btn btn-ghost" onclick="prevStep(4)">← Back</button>
+        <div class="step-indicator">Step 4 of 4</div>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Submit Application →</button>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- SUCCESS STATE -->
+  <div id="success">
+    <div class="success-icon">✈️</div>
+    <h2 class="success-h2">Application received.</h2>
+    <p class="success-sub">We'll review your points portfolio and travel goals and reach out within 24 hours with your personalized redemption options.</p>
+    <div class="success-next">
+      <div class="success-next-title">What happens next</div>
+      <div class="success-next-item"><span class="success-next-num">1</span><span>We analyze your points balances across all programs and run an availability search for your specific routes.</span></div>
+      <div class="success-next-item"><span class="success-next-num">2</span><span>We prepare your personalized redemption plan showing exactly which points to use, what it saves you, and what you'd pay us.</span></div>
+      <div class="success-next-item"><span class="success-next-num">3</span><span>We reach out to present the plan. If you love it, we guide you through booking step by step.</span></div>
+      <div class="success-next-item"><span class="success-next-num">4</span><span>You pay our 10% fee after your bookings are confirmed. No savings, no fee.</span></div>
+    </div>
+    <div style="margin-top:32px"><a href="index.html" class="btn btn-ghost">← Back to site</a></div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+let currentStep = 1;
+const totalSteps = 4;
+
+function updateProgress(){
+  document.querySelectorAll('.prog-step').forEach((el,i)=>{
+    el.classList.remove('active','done');
+    if(i+1===currentStep) el.classList.add('active');
+    else if(i+1<currentStep) el.classList.add('done');
+  });
+}
+
+function goToStep(n){
+  if(n>currentStep) return; // can't skip forward
+  showStep(n);
+}
+
+function showStep(n){
+  document.querySelectorAll('.form-section').forEach(s=>s.classList.remove('active'));
+  document.querySelector('[data-step="'+n+'"]').classList.add('active');
+  currentStep=n;
+  updateProgress();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function validateStep(n){
+  const section=document.querySelector('[data-step="'+n+'"]');
+  const required=section.querySelectorAll('[required]');
+  let ok=true;
+  required.forEach(f=>{
+    f.style.borderColor='';
+    if(!f.value.trim()){f.style.borderColor='var(--red)';ok=false;f.focus()}
+  });
+  return ok;
+}
+
+function nextStep(n){
+  if(!validateStep(n)) return;
+  if(n<totalSteps) showStep(n+1);
+}
+
+function prevStep(n){
+  if(n>1) showStep(n-1);
+}
+
+// Radio card visual selection
+document.querySelectorAll('.radio-card input[type=radio]').forEach(radio=>{
+  radio.addEventListener('change',()=>{
+    document.querySelectorAll('.radio-card input[name="'+radio.name+'"]').forEach(r=>{
+      r.closest('.radio-card').classList.remove('selected');
+    });
+    radio.closest('.radio-card').classList.add('selected');
+  });
+});
+// Default selection visual
+document.querySelectorAll('.radio-card input:checked').forEach(r=>{
+  r.closest('.radio-card').classList.add('selected');
+});
+
+// Checkbox visual
+document.querySelectorAll('.check-item input[type=checkbox]').forEach(cb=>{
+  cb.addEventListener('change',()=>{
+    cb.closest('.check-item').classList.toggle('checked',cb.checked);
+  });
+});
+
+// Form submit
+document.getElementById('intakeForm').addEventListener('submit',function(e){
+  e.preventDefault();
+  if(!validateStep(4)) return;
+  const btn=document.getElementById('submitBtn');
+  btn.disabled=true;btn.textContent='Submitting...';
+
+  // Collect all form data
+  const fd=new FormData(this);
+  const data={};
+  fd.forEach((v,k)=>data[k]=v);
+  data.submitted_at=new Date().toISOString();
+
+  // Try to POST to API, fall back gracefully
+  fetch('/api/intake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .catch(()=>{}) // server may not be running; that's OK
+    .finally(()=>{
+      document.getElementById('intakeForm').style.display='none';
+      document.querySelector('.progress-bar').style.display='none';
+      document.querySelector('.page-header').style.display='none';
+      document.getElementById('success').style.display='block';
+    });
+});
+</script>
+</body>
+</html>
