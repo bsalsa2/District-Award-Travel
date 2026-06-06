@@ -2370,6 +2370,54 @@
         "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/utils.py"
       ],
       "completion_summary": "Completed by martin on 2026-06-01. Files: main.py, search.py, graph.py"
+    },
+    {
+      "id": "TASK-1000",
+      "title": "Build platform health monitor with HTML dashboard",
+      "assigned_to": "mitchell",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/infra/health_monitor.py that checks if all key Python files import cleanly, counts tasks completed vs pending from tasks/backlog.json, and writes a status JSON to platform/infra/health_status.json. Also build platform/public/health.html a dark-themed HTML page that reads health_status.json via fetch() and displays a live status board showing system health, task counts, and last build time. Include a meta refresh every 60 seconds."
+    },
+    {
+      "id": "TASK-1001",
+      "title": "Docker Compose setup for the full platform",
+      "assigned_to": "mitchell",
+      "priority": "high",
+      "status": "pending",
+      "description": "Create platform/infra/docker-compose.yml that defines services: api (runs platform/main.py with uvicorn on port 8000), and a simple nginx reverse proxy on port 80. Create platform/infra/nginx.conf for the proxy config. Create platform/infra/Dockerfile for the api service using python:3.11-slim. Everything must work with a single docker compose up command. Write platform/infra/LAUNCH.md explaining how to launch and configure."
+    },
+    {
+      "id": "TASK-1002",
+      "title": "Award availability FastAPI backend with SQLite storage",
+      "assigned_to": "martin",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Build platform/src/api/award_availability.py a FastAPI router with endpoints: POST /search (accepts origin, destination, date_from, date_to, cabin) that returns mock award availability for 5 airlines (United, American, Delta, Air Canada, Turkish). GET /search/history returns the last 50 searches from SQLite. Build platform/src/database/availability_db.py with the SQLite schema. Data model: airline, origin, destination, date, cabin, miles_required, taxes_usd, available_seats, program_name. Wire it into platform/main.py."
+    },
+    {
+      "id": "TASK-1003",
+      "title": "Points valuation engine with CSV data and FastAPI endpoint",
+      "assigned_to": "martin",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/src/data/points_values.csv with real cents-per-point valuations for 15 major loyalty programs: Chase UR, Amex MR, Citi TY, United MileagePlus, American AAdvantage, Delta SkyMiles, Air Canada Aeroplan, British Avios, Turkish Miles and Smiles, Flying Blue, Singapore KrisFlyer, Hyatt, Marriott, Hilton, IHG. Build platform/src/services/valuation_service.py that reads the CSV and provides get_all_valuations(), get_valuation(program), calculate_value(program, points) returning dict with points, cpp, and total_usd. Build platform/src/api/points_valuation.py with GET /valuations and GET /valuations/{program} endpoints. Wire into platform/main.py."
+    },
+    {
+      "id": "TASK-1004",
+      "title": "AI-powered award redemption recommender backend and frontend",
+      "assigned_to": "jeff",
+      "priority": "critical",
+      "status": "pending",
+      "description": "Build platform/src/intelligence/recommender.py: given miles_balances (dict of program to points), travel_goals (list of strings), and flexible_dates (bool), return the top 3 award redemption recommendations each with program_used, partner_airline, route, estimated_miles, estimated_taxes_usd, value_score, and reasoning. Use rule-based logic. Build platform/src/api/recommend.py with POST /recommend. Build platform/public/recommender.html: dark-themed single-page HTML form where users enter miles balances and travel goals, click Find Best Redemptions, and see top 3 recommendations as cards. All API calls via fetch(). No external CSS frameworks."
+    },
+    {
+      "id": "TASK-1005",
+      "title": "Client management dashboard \u2014 HTML frontend and FastAPI backend",
+      "assigned_to": "jeff",
+      "priority": "high",
+      "status": "pending",
+      "description": "Build platform/src/api/clients.py with POST /clients (create), GET /clients (list all), GET /clients/{id} (get one), PATCH /clients/{id} (update). Build platform/src/database/clients_db.py with SQLite schema: id, name, email, phone, created_at, total_miles_managed, programs (JSON), notes, status. Build platform/public/clients.html: dark-themed dashboard with client table, search/filter, a New Client modal form, and a detail panel that shows when clicking a client. All data fetched from the FastAPI API. Write all styles in a style block, no external CSS frameworks."
     }
   ],
   "completed": []
