@@ -1,63 +1,45 @@
 import numpy as np
-from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import StandardScaler
-import sqlite3
-import json
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.feature_extraction.text import TfidfVectorizer
+from platform.src.pipeline.data_loader import load_user_data, load_award_travel_data
 
 class RecommendationSystem:
-    def __init__(self, db_path):
-        self.db_path = db_path
-        self.conn = sqlite3.connect(db_path)
-        self.cursor = self.conn.cursor()
-        self.scaler = StandardScaler()
-        self.nbrs = NearestNeighbors(n_neighbors=5, algorithm='brute', metric='euclidean')
+    def __init__(self):
+        self.user_data = load_user_data()
+        self.award_travel_data = load_award_travel_data()
+        self.vectorizer = TfidfVectorizer()
 
-    def load_data(self):
-        self.cursor.execute('SELECT * FROM user_travel_history')
-        data = self.cursor.fetchall()
-        return data
+    def train(self):
+        user_preferences = [user['preferences'] for user in self.user_data]
+        award_travel_descriptions = [award['description'] for award in self.award_travel_data]
 
-    def preprocess_data(self, data):
-        travel_history = []
-        for row in data:
-            user_id, destination, travel_date = row
-            travel_history.append([user_id, destination, travel_date])
-        return np.array(travel_history)
+        user_vectors = self.vectorizer.fit_transform(user_preferences)
+        award_travel_vectors = self.vectorizer.transform(award_travel_descriptions)
 
-    def fit_model(self, data):
-        scaled_data = self.scaler.fit_transform(data[:, 1:])
-        self.nbrs.fit(scaled_data)
+        self.user_vectors = user_vectors
+        self.award_travel_vectors = award_travel_vectors
 
-    def predict(self, user_id):
-        self.cursor.execute('SELECT * FROM user_travel_history WHERE user_id = ?', (user_id,))
-        user_data = self.cursor.fetchone()
-        if user_data:
-            user_destination = user_data[1]
-            self.cursor.execute('SELECT * FROM destinations WHERE name = ?', (user_destination,))
-            destination_data = self.cursor.fetchone()
-            if destination_data:
-                destination_id = destination_data[0]
-                self.cursor.execute('SELECT * FROM award_travel_options WHERE destination_id = ?', (destination_id,))
-                award_travel_options = self.cursor.fetchall()
-                return award_travel_options
-        return []
+    def recommend(self, user_id):
+        user_vector = self.user_vectors[user_id]
+        similarities = cosine_similarity(user_vector, self.award_travel_vectors)
+        top_award_travels = np.argsort(-similarities[0])[:5]
 
-    def get_recommendations(self, user_id):
-        award_travel_options = self.predict(user_id)
-        if award_travel_options:
-            return award_travel_options
-        else:
-            self.cursor.execute('SELECT * FROM award_travel_options')
-            all_award_travel_options = self.cursor.fetchall()
-            return all_award_travel_options
+        recommended_award_travels = []
+        for index in top_award_travels:
+            recommended_award_travels.append(self.award_travel_data[index])
+
+        return recommended_award_travels
+
+    def update_user_preferences(self, user_id, new_preferences):
+        self.user_data[user_id]['preferences'] = new_preferences
+        self.train()
+
+    def update_award_travel_data(self, new_award_travel_data):
+        self.award_travel_data = new_award_travel_data
+        self.train()
 
 # Example usage:
-if __name__ == '__main__':
-    db_path = 'platform/db/award_travel.db'
-    recommendation_system = RecommendationSystem(db_path)
-    data = recommendation_system.load_data()
-    preprocessed_data = recommendation_system.preprocess_data(data)
-    recommendation_system.fit_model(preprocessed_data)
-    user_id = 1
-    recommendations = recommendation_system.get_recommendations(user_id)
-    print(recommendations)
+recommendation_system = RecommendationSystem()
+recommendation_system.train()
+recommended_award_travels = recommendation_system.recommend(0)
+print(recommended_award_travels)

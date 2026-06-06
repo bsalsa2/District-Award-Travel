@@ -1,27 +1,19 @@
 version: '3'
 services:
-  prometheus:
-    image: prometheus/prometheus:latest
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - nginx
+    restart: always
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-
-  grafana:
-    image: grafana/grafana:latest
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=secret
-    ports:
-      - "3000:3000"
-
-  node-exporter:
-    image: prometheus/node-exporter:latest
-    ports:
-      - "9100:9100"
-
-  alertmanager:
-    image: prometheus/alertmanager:latest
-    volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
-    ports:
-      - "9093:9093"
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    restart: always

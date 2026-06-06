@@ -1,0 +1,25 @@
+version: '3'
+services:
+  award-flight-monitor:
+    build: .
+    ports:
+    - "8080:8080"
+    environment:
+    - PROMETHEUS_PUSHGATEWAY=http://prometheus-pushgateway:9091
+    - GRAFANA_URL=http://grafana:3000
+    depends_on:
+    - prometheus-pushgateway
+    - grafana
+    restart: always
+  prometheus-pushgateway:
+    image: prometheus/pushgateway:v1.4.0
+    ports:
+    - "9091:9091"
+    restart: always
+  grafana:
+    image: grafana/grafana:8.5.0
+    ports:
+    - "3000:3000"
+    environment:
+    - GF_SECURITY_ADMIN_PASSWORD=secret
+    restart: always

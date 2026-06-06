@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Award Travel Recommendations - District Award Travel</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-plane-departure"></i>
+                    <span>District Award Travel</span>
+                </div>
+                <nav class="nav">
+                    <a href="/" class="nav-link">Home</a>
+                    <a href="/recommendations" class="nav-link active">Recommendations</a>
+                    <a href="#" class="nav-link">My Account</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Your Personalized Award Travel Recommendations</h1>
+                <p>Based on your travel preferences and loyalty programs</p>
+            </div>
+
+            <!-- User Preferences Section -->
+            <section class="preferences-section">
+                <div class="preferences-header">
+                    <h2>Your Travel Preferences</h2>
+                    <button class="edit-preferences-btn" id="edit-preferences-btn">
+                        <i class="fas fa-edit"></i> Edit Preferences
+                    </button>
+                </div>
+
+                <div class="preferences-grid" id="preferences-display">
+                    <div class="preference-item">
+                        <div class="preference-label">Preferred Destinations</div>
+                        <div class="preference-value" id="destinations-value">Loading...</div>
+                    </div>
+                    <div class="preference-item">
+                        <div class="preference-label">Preferred Airlines</div>
+                        <div class="preference-value" id="airlines-value">Loading...</div>
+                    </div>
+                    <div class="preference-item">
+                        <div class="preference-label">Cabin Class</div>
+                        <div class="preference-value" id="cabin-value">Loading...</div>
+                    </div>
+                    <div class="preference-item">
+                        <div class="preference-label">Max Budget</div>
+                        <div class="preference-value" id="budget-value">Loading...</div>
+                    </div>
+                    <div class="preference-item">
+                        <div class="preference-label">Travel Dates</div>
+                        <div class="preference-value" id="dates-value">Loading...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recommendations Section -->
+            <section class="recommendations-section">
+                <h2>Recommended Award Opportunities</h2>
+                <p id="recommendations-status">Loading recommendations...</p>
+
+                <div class="recommendations-grid" id="recommendations-grid">
+                    <!-- Recommendations will be loaded here -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Preferences Modal -->
+        <div class="modal" id="preferences-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Edit Your Travel Preferences</h2>
+                    <button class="close-modal-btn" id="close-modal-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <form id="preferences-form">
+                    <div class="form-group">
+                        <label for="preferred-destinations">Preferred Destinations (comma separated)</label>
+                        <input type="text" id="preferred-destinations" placeholder="e.g., LAX, JFK, CDG">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="preferred-airlines">Preferred Airlines (comma separated)</label>
+                        <input type="text" id="preferred-airlines" placeholder="e.g., AA, DL, UA">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cabin-class">Cabin Class</label>
+                        <select id="cabin-class">
+                            <option value="Economy">Economy</option>
+                            <option value="Premium Economy">Premium Economy</option>
+                            <option value="Business">Business</option>
+                            <option value="First">First</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="max-budget">Max Budget (miles)</label>
+                        <input type="number" id="max-budget" placeholder="50000" min="1000" max="1000000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="travel-start-date">Preferred Travel Start Date</label>
+                        <input type="date" id="travel-start-date">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="travel-end-date">Preferred Travel End Date</label>
+                        <input type="date" id="travel-end-date">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="save-btn">Save Preferences</button>
+                        <button type="button" class="cancel-btn" id="cancel-preferences-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/recommendations.js"></script>
+</body>
+</html>

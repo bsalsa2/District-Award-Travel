@@ -1,39 +1,42 @@
-import sqlite3
 import pandas as pd
-from platform.src.intelligence.award_flight_recommender import AwardFlightRecommender
+from sklearn.preprocessing import StandardScaler
+from platform.src.models.award_flight_forecaster import AwardFlightForecaster
 
 class AwardFlightPipeline:
-    def __init__(self, db_path):
-        self.db_path = db_path
-        self.conn = sqlite3.connect(db_path)
-        self.cursor = self.conn.cursor()
-        self.recommender = AwardFlightRecommender(db_path)
+  def __init__(self):
+    self.scaler = StandardScaler()
+    self.forecaster = AwardFlightForecaster()
 
-    def load_data(self):
-        # Load data from database
-        self.cursor.execute("SELECT * FROM user_search_history")
-        search_history = self.cursor.fetchall()
-        self.cursor.execute("SELECT * FROM user_travel_preferences")
-        travel_preferences = self.cursor.fetchall()
-        self.cursor.execute("SELECT * FROM loyalty_program_affiliations")
-        loyalty_program_affiliations = self.cursor.fetchall()
+  def load_data(self):
+    # Load historical award flight data
+    data = pd.read_csv('award_flight_data.csv')
+    return data
 
-        # Merge data into a single dataframe
-        search_history_df = pd.DataFrame(search_history)
-        travel_preferences_df = pd.DataFrame(travel_preferences)
-        loyalty_program_affiliations_df = pd.DataFrame(loyalty_program_affiliations)
-        df = pd.merge(search_history_df, travel_preferences_df, on='user_id')
-        df = pd.merge(df, loyalty_program_affiliations_df, on='user_id')
+  def preprocess_data(self, data):
+    # Preprocess the data (e.g., scale, encode categorical variables)
+    X = data.drop('award_flight_availability', axis=1)
+    y = data['award_flight_availability']
+    X_scaled = self.scaler.fit_transform(X)
+    return X_scaled, y
 
-        return df
+  def train_model(self, X, y):
+    # Train the award flight forecaster model
+    self.forecaster.train(X, y)
 
-    def train_model(self):
-        # Train award flight recommender model
-        self.recommender.train_model()
+  def make_predictions(self, X):
+    # Make predictions using the trained model
+    predictions = self.forecaster.predict(X)
+    return predictions
 
-    def recommend_flights(self, user_id):
-        # Recommend flights using trained model
-        return self.recommender.recommend_flights(user_id)
+  def save_predictions(self, predictions):
+    # Save the predictions to a file or database
+    pd.DataFrame(predictions).to_csv('award_flight_predictions.csv', index=False)
 
-    def close_connection(self):
-        self.conn.close()
+# Example usage
+if __name__ == '__main__':
+  pipeline = AwardFlightPipeline()
+  data = pipeline.load_data()
+  X, y = pipeline.preprocess_data(data)
+  pipeline.train_model(X, y)
+  predictions = pipeline.make_predictions(X)
+  pipeline.save_predictions(predictions)

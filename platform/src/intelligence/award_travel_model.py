@@ -1,19 +1,34 @@
 import numpy as np
-from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+import sqlite3
 
-class AwardTravelModel:
-    def __init__(self):
-        self.model = LinearRegression()
+# Connect to SQLite database
+conn = sqlite3.connect('award_travel.db')
+cursor = conn.cursor()
 
-    def train(self, X, y):
-        self.model.fit(X, y)
+# Retrieve data from database
+cursor.execute('SELECT * FROM award_travel_data')
+data = cursor.fetchall()
 
-    def predict(self, X):
-        return self.model.predict(X)
+# Preprocess data
+X = []
+y = []
+for row in data:
+    X.append([row[1], row[2], row[3]])
+    y.append(row[4])
 
-# Example usage:
-# award_travel_model = AwardTravelModel()
-# X = np.array([[1, 2], [3, 4]])
-# y = np.array([5, 6])
-# award_travel_model.train(X, y)
-# print(award_travel_model.predict(np.array([[7, 8]])))
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Define function to generate award travel recommendations
+def generate_recommendations(user_id, travel_date, destination):
+    # Generate input data
+    input_data = [[user_id, travel_date, destination]]
+    # Make prediction
+    prediction = model.predict(input_data)
+    return prediction[0]

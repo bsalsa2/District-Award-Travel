@@ -1,375 +1,243 @@
+"""
+Valuation Engine - AI-powered award point valuation system
+Uses historical data, market trends, and ML models to calculate optimal award values
+"""
+
+import logging
 import json
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
-
 import numpy as np
-import pandas as pd
-from pydantic import BaseModel
+from typing import Dict, Any, Optional
+from datetime import datetime, timedelta
+from platform.src.db.database import (
+    cache_valuation, get_cached_valuation,
+    db
+)
+import sqlite3
 
-class AwardValuation(BaseModel):
-    """Valuation model for award travel redemptions"""
-    total_miles: int
-    total_points: int
-    cash_value: float
-    redemption_value: float
-    value_per_mile: float
-    value_per_point: float
-    opportunity_cost: float
-    confidence_score: float
-    notes: str
-
-class UserPreferences(BaseModel):
-    """User preferences for award travel"""
-    preferred_airlines: List[str] = []
-    preferred_hotel_chains: List[str] = []
-    cabin_preference: str = "economy"
-    max_connections: int = 2
-    max_layover_hours: int = 4
-    preferred_departure_times: List[str] = ["morning", "afternoon"]
-    preferred_travel_months: List[int] = [1, 2, 3, 4, 5, 9, 10, 11, 12]
-    max_price_difference: float = 0.3  # 30% more than cash price
-    loyalty_program: str = "all"
+logger = logging.getLogger(__name__)
 
 class ValuationEngine:
+    """AI-powered award point valuation engine"""
+
     def __init__(self):
-        # Load historical redemption data
-        self.historical_redemptions = self._load_historical_data()
+        self.model_version = "1.2.0"
+        self.cache_ttl = timedelta(hours=24)  # Cache valuations for 24 hours
+        self.base_multipliers = {
+            'economy': 1.0,
+            'premium_economy': 1.5,
+            'business': 3.0,
+            'first': 5.0
+        }
+        self.airline_factors = self._load_airline_factors()
+        self.seasonal_adjustments = self._load_seasonal_adjustments()
+        self.market_trends = self._load_market_trends()
 
-        # Valuation parameters
-        self.mile_valuation = {
-            "AA": 1.5,
-            "DL": 1.6,
-            "UA": 1.4,
-            "BA": 1.8,
-            "JL": 1.7,
-            "QF": 1.6,
-            "EK": 1.9,
-            "LH": 1.5
+    def _load_airline_factors(self) -> Dict[str, float]:
+        """Load airline-specific factors"""
+        # In production, this would come from a database or external API
+        return {
+            'AA': 1.0,    # American Airlines
+            'DL': 1.05,   # Delta
+            'UA': 0.95,   # United
+            'BA': 1.1,    # British Airways
+            'LH': 1.08,   # Lufthansa
+            'JL': 1.02,   # Japan Airlines
+            'QF': 1.03,   # Qantas
+            'EK': 1.15,   # Emirates
+            'SQ': 1.12,   # Singapore Airlines
+            'QR': 1.07    # Qatar Airways
         }
 
-        self.point_valuation = {
-            "HILTON": 0.6,
-            "HYATT": 0.8,
-            "MARRIOTT": 0.7,
-            "IHG": 0.5
+    def _load_seasonal_adjustments(self) -> Dict[str, Dict[str, float]]:
+        """Load seasonal adjustment factors"""
+        # Month-based adjustments (1-12)
+        return {
+            1: 1.15,  # January (post-holiday)
+            2: 1.10,  # February (Valentine's)
+            3: 1.05,  # March (spring break prep)
+            4: 1.00,  # April
+            5: 1.05,  # May (summer prep)
+            6: 1.20,  # June (peak summer)
+            7: 1.30,  # July (peak summer)
+            8: 1.25,  # August (end of summer)
+            9: 1.10,  # September (shoulder season)
+            10: 1.05, # October (fall travel)
+            11: 1.15, # November (Thanksgiving)
+            12: 1.40  # December (holiday season)
         }
 
-        self.cabin_multipliers = {
-            "economy": 1.0,
-            "premium_economy": 1.5,
-            "business": 2.5,
-            "first": 3.5
+    def _load_market_trends(self) -> Dict[str, float]:
+        """Load current market trends"""
+        # In production, this would be updated dynamically
+        return {
+            'fuel_cost_index': 1.12,
+            'demand_index': 1.08,
+            'competition_index': 0.95,
+            'award_availability': 1.10
         }
 
-        self.seasonal_adjustments = {
-            1: 1.1, 2: 1.1, 3: 1.0, 4: 0.9,
-            5: 0.9, 6: 0.8, 7: 0.8, 8: 0.8,
-            9: 0.9, 10: 1.0, 11: 1.1, 12: 1.2
+    def _get_base_value(self, flight_number: str) -> float:
+        """Get base value for a flight (simplified for demo)"""
+        # Extract airline code from flight number
+        airline = flight_number[:2] if len(flight_number) >= 2 else 'AA'
+
+        # Base value calculation
+        base_value = 500.0  # Default base
+
+        # Apply airline factor
+        airline_factor = self.airline_factors.get(airline, 1.0)
+        base_value *= airline_factor
+
+        return base_value
+
+    def _get_distance_factor(self, departure_date: str) -> float:
+        """Get distance-based factor"""
+        # Simplified - in production this would use actual distance
+        month = datetime.strptime(departure_date, "%Y-%m-%d").month
+        return self.seasonal_adjustments.get(month, 1.0)
+
+    def _get_cabin_multiplier(self, cabin_class: str) -> float:
+        """Get cabin class multiplier"""
+        return self.base_multipliers.get(cabin_class.lower(), 1.0)
+
+    def _get_market_adjustment(self) -> float:
+        """Get combined market adjustment factor"""
+        factors = list(self.market_trends.values())
+        return np.mean(factors) * 0.9 + 0.1  # Weighted average
+
+    def _calculate_award_points(self, base_value: float, cabin_multiplier: float) -> int:
+        """Calculate award points from base value"""
+        # Award points are typically 1 point per $X spent
+        # For award travel, we adjust based on cabin class
+        points_per_dollar = 100  # 1 point per $100
+        raw_points = base_value * cabin_multiplier / points_per_dollar
+
+        # Round to nearest 100 for cleaner award points
+        return int(round(raw_points / 100) * 100)
+
+    def calculate_valuation(self, flight_number: str, cabin_class: str,
+                          departure_date: str, return_date: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Calculate complete valuation for a flight
+        Returns: {
+            'flight_number': str,
+            'base_value': float,
+            'award_points': int,
+            'multiplier': float,
+            'valuation_date': str
+        }
+        """
+        try:
+            # Check cache first
+            cache_key = f"{flight_number}_{cabin_class}_{departure_date}"
+            cached = await self._get_cached_valuation(flight_number, cabin_class, departure_date)
+            if cached:
+                return cached
+
+            # Calculate base value
+            base_value = self._get_base_value(flight_number)
+
+            # Calculate cabin multiplier
+            cabin_multiplier = self._get_cabin_multiplier(cabin_class)
+
+            # Calculate distance factor
+            distance_factor = self._get_distance_factor(departure_date)
+
+            # Calculate market adjustment
+            market_adjustment = self._get_market_adjustment()
+
+            # Calculate total multiplier
+            total_multiplier = cabin_multiplier * distance_factor * market_adjustment
+
+            # Calculate award points
+            award_points = self._calculate_award_points(base_value, cabin_multiplier)
+
+            # Build result
+            result = {
+                'flight_number': flight_number,
+                'cabin_class': cabin_class,
+                'departure_date': departure_date,
+                'return_date': return_date,
+                'base_value': round(base_value, 2),
+                'award_points': award_points,
+                'multiplier': round(total_multiplier, 3),
+                'valuation_date': datetime.utcnow().isoformat(),
+                'model_version': self.model_version
+            }
+
+            # Cache the result
+            await self._cache_valuation(result)
+
+            logger.info("Calculated valuation for %s: %d points", flight_number, award_points)
+            return result
+
+        except Exception as e:
+            logger.error("Failed to calculate valuation: %s", str(e))
+            raise ValueError(f"Valuation calculation failed: {str(e)}")
+
+    async def _get_cached_valuation(self, flight_number: str, cabin_class: str, departure_date: str) -> Optional[Dict[str, Any]]:
+        """Get cached valuation"""
+        try:
+            async with db.get_connection() as conn:
+                cached = await get_cached_valuation(conn, flight_number, cabin_class, departure_date)
+                if cached:
+                    # Check if cache is still valid
+                    calculated_at = datetime.fromisoformat(cached['calculated_at'])
+                    if datetime.utcnow() - calculated_at < self.cache_ttl:
+                        return cached
+                return None
+        except Exception as e:
+            logger.error("Failed to get cached valuation: %s", str(e))
+            return None
+
+    async def _cache_valuation(self, valuation_data: Dict[str, Any]) -> None:
+        """Cache a valuation result"""
+        try:
+            async with db.get_connection() as conn:
+                await cache_valuation(conn, valuation_data)
+        except Exception as e:
+            logger.error("Failed to cache valuation: %s", str(e))
+            # Don't fail the whole operation if caching fails
+            pass
+
+    def get_current_metrics(self) -> Dict[str, Any]:
+        """Get current valuation metrics for dashboard"""
+        return {
+            'model_version': self.model_version,
+            'cache_ttl_hours': self.cache_ttl.total_seconds() / 3600,
+            'airline_count': len(self.airline_factors),
+            'base_multipliers': self.base_multipliers,
+            'market_trends': self.market_trends,
+            'last_updated': datetime.utcnow().isoformat()
         }
 
-    def _load_historical_data(self) -> pd.DataFrame:
-        """Load historical redemption data for valuation"""
-        # In production, this would load from a database
-        data = {
-            "airline": ["AA", "DL", "UA", "BA", "AA", "DL"],
-            "cabin": ["economy", "business", "first", "business", "economy", "premium_economy"],
-            "miles_used": [35000, 70000, 120000, 80000, 25000, 50000],
-            "cash_price": [450, 1200, 2500, 1500, 350, 800],
-            "redemption_date": [
-                "2023-01-15", "2023-02-20", "2023-03-10",
-                "2023-04-05", "2023-05-12", "2023-06-18"
-            ]
+    def get_historical_trends(self, flight_number: str, days: int = 30) -> Dict[str, Any]:
+        """
+        Get historical valuation trends for a flight
+        Returns: {
+            'flight_number': str,
+            'days': int,
+            'trend_data': List[Dict]
         }
-        return pd.DataFrame(data)
-
-    def calculate_flight_valuation(
-        self,
-        flight: Dict,
-        user_prefs: UserPreferences,
-        current_date: str = None
-    ) -> AwardValuation:
-        """Calculate valuation for a flight award"""
-        if current_date is None:
-            current_date = datetime.utcnow().strftime("%Y-%m-%d")
-
-        departure_date = datetime.strptime(flight["departure_time"], "%H:%M")
-        month = datetime.strptime(current_date, "%Y-%m-%d").month
-
-        # Base valuation
-        base_miles = flight["award_miles"]
-        cabin_multiplier = self.cabin_multipliers.get(flight["cabin"], 1.0)
-
-        # Airline-specific valuation
-        airline_multiplier = self.mile_valuation.get(flight["airline"], 1.0)
-
-        # Seasonal adjustment
-        seasonal_adjustment = self.seasonal_adjustments.get(month, 1.0)
-
-        # Calculate cash value
-        cash_value = flight["award_miles"] * 0.01 * airline_multiplier * cabin_multiplier * seasonal_adjustment
-
-        # Calculate redemption value (what it's worth to the user)
-        redemption_value = cash_value * 0.8  # Awards are typically worth 80% of cash value
-
-        # Calculate value per mile
-        value_per_mile = redemption_value / base_miles
-
-        # Opportunity cost calculation
-        opportunity_cost = self._calculate_opportunity_cost(flight, user_prefs)
-
-        # Confidence score based on multiple factors
-        confidence_score = self._calculate_confidence_score(flight, user_prefs)
-
-        # Generate notes
-        notes = self._generate_valuation_notes(flight, user_prefs, value_per_mile, opportunity_cost)
-
-        return AwardValuation(
-            total_miles=base_miles,
-            total_points=0,
-            cash_value=round(cash_value, 2),
-            redemption_value=round(redemption_value, 2),
-            value_per_mile=round(value_per_mile, 4),
-            value_per_point=0,
-            opportunity_cost=round(opportunity_cost, 2),
-            confidence_score=round(confidence_score, 2),
-            notes=notes
-        )
-
-    def calculate_hotel_valuation(
-        self,
-        hotel: Dict,
-        user_prefs: UserPreferences,
-        current_date: str = None
-    ) -> AwardValuation:
-        """Calculate valuation for a hotel award"""
-        if current_date is None:
-            current_date = datetime.utcnow().strftime("%Y-%m-%d")
-
-        month = datetime.strptime(current_date, "%Y-%m-%d").month
-
-        # Base valuation
-        base_points = hotel["award_points"]
-        chain_multiplier = self.point_valuation.get(hotel["property_id"].split("-")[0], 0.6)
-
-        # Seasonal adjustment
-        seasonal_adjustment = self.seasonal_adjustments.get(month, 1.0)
-
-        # Calculate cash value
-        cash_value = base_points * 0.01 * chain_multiplier * seasonal_adjustment
-
-        # Calculate redemption value
-        redemption_value = cash_value * 0.85  # Hotels typically retain more value
-
-        # Calculate value per point
-        value_per_point = redemption_value / base_points
-
-        # Opportunity cost calculation
-        opportunity_cost = self._calculate_hotel_opportunity_cost(hotel, user_prefs)
-
-        # Confidence score
-        confidence_score = self._calculate_hotel_confidence_score(hotel, user_prefs)
-
-        # Generate notes
-        notes = self._generate_hotel_notes(hotel, user_prefs, value_per_point, opportunity_cost)
-
-        return AwardValuation(
-            total_miles=0,
-            total_points=base_points,
-            cash_value=round(cash_value, 2),
-            redemption_value=round(redemption_value, 2),
-            value_per_mile=0,
-            value_per_point=round(value_per_point, 4),
-            opportunity_cost=round(opportunity_cost, 2),
-            confidence_score=round(confidence_score, 2),
-            notes=notes
-        )
-
-    def _calculate_opportunity_cost(self, flight: Dict, user_prefs: UserPreferences) -> float:
-        """Calculate the opportunity cost of using miles vs. paying cash"""
-        # Get typical cash price for this route
-        typical_cash_price = self._get_typical_cash_price(flight["departure"], flight["arrival"])
-
-        if typical_cash_price <= 0:
-            return 0
-
-        # Calculate what the miles could be worth if used elsewhere
-        miles_value = flight["award_miles"] * 0.01 * 1.5  # Conservative estimate
-
-        # Opportunity cost is the difference
-        return max(0, typical_cash_price - miles_value)
-
-    def _calculate_hotel_opportunity_cost(self, hotel: Dict, user_prefs: UserPreferences) -> float:
-        """Calculate opportunity cost for hotel awards"""
-        # Get typical cash price for this property
-        typical_cash_price = self._get_typical_hotel_price(hotel["property_id"])
-
-        if typical_cash_price <= 0:
-            return 0
-
-        # Calculate what points could be worth if used elsewhere
-        points_value = hotel["award_points"] * 0.01 * 0.8
-
-        return max(0, typical_cash_price - points_value)
-
-    def _calculate_confidence_score(self, flight: Dict, user_prefs: UserPreferences) -> float:
-        """Calculate confidence score for flight valuation"""
-        score = 0.7  # Base score
-
-        # Airline preference
-        if flight["airline"] in user_prefs.preferred_airlines:
-            score += 0.15
-
-        # Cabin preference
-        if flight["cabin"] == user_prefs.cabin_preference:
-            score += 0.1
-
-        # Seasonal preference
-        month = datetime.strptime(datetime.utcnow().strftime("%Y-%m-%d"), "%Y-%m-%d").month
-        if month in user_prefs.preferred_travel_months:
-            score += 0.05
-
-        # Availability factor
-        if flight["seats_available"] >= 3:
-            score += 0.1
-
-        return min(1.0, max(0.0, score))
-
-    def _calculate_hotel_confidence_score(self, hotel: Dict, user_prefs: UserPreferences) -> float:
-        """Calculate confidence score for hotel valuation"""
-        score = 0.65  # Base score
-
-        # Chain preference
-        chain = hotel["property_id"].split("-")[0]
-        if chain in user_prefs.preferred_hotel_chains:
-            score += 0.2
-
-        # Room type preference
-        if "Deluxe" in hotel["room_type"] and user_prefs.cabin_preference == "business":
-            score += 0.1
-
-        # Availability factor
-        if hotel["available_rooms"] >= 2:
-            score += 0.05
-
-        return min(1.0, max(0.0, score))
-
-    def _get_typical_cash_price(self, origin: str, destination: str) -> float:
-        """Get typical cash price for a route (simulated)"""
+        """
         # In production, this would query historical data
-        routes = {
-            ("JFK", "LAX"): 350,
-            ("JFK", "LHR"): 800,
-            ("LAX", "NRT"): 1200,
-            ("ORD", "CDG"): 950,
-            ("DFW", "HND"): 1400
-        }
-        return routes.get((origin, destination), 500)
-
-    def _get_typical_hotel_price(self, property_id: str) -> float:
-        """Get typical hotel price (simulated)"""
-        prices = {
-            "HILTON-123": 250,
-            "HYATT-456": 300,
-            "MARRIOTT-789": 280,
-            "IHG-101": 200
-        }
-        return prices.get(property_id, 250)
-
-    def _generate_valuation_notes(
-        self,
-        flight: Dict,
-        user_prefs: UserPreferences,
-        value_per_mile: float,
-        opportunity_cost: float
-    ) -> str:
-        """Generate detailed notes about the valuation"""
-        notes = []
-
-        # Basic info
-        notes.append(f"Flight {flight['flight_number']} from {flight['departure']} to {flight['arrival']}")
-
-        # Value assessment
-        if value_per_mile > 0.02:
-            notes.append("Excellent value per mile")
-        elif value_per_mile > 0.015:
-            notes.append("Good value per mile")
-        elif value_per_mile > 0.01:
-            notes.append("Fair value per mile")
-        else:
-            notes.append("Poor value per mile - consider cash booking")
-
-        # Opportunity cost
-        if opportunity_cost > 200:
-            notes.append(f"High opportunity cost: ${opportunity_cost:.2f} difference vs cash")
-        elif opportunity_cost > 100:
-            notes.append(f"Moderate opportunity cost: ${opportunity_cost:.2f} difference vs cash")
-
-        # Airline preference
-        if flight["airline"] in user_prefs.preferred_airlines:
-            notes.append(f"Preferred airline: {flight['airline']}")
-
-        # Cabin preference
-        if flight["cabin"] == user_prefs.cabin_preference:
-            notes.append(f"Preferred cabin: {flight['cabin']}")
-
-        return " | ".join(notes)
-
-    def _generate_hotel_notes(
-        self,
-        hotel: Dict,
-        user_prefs: UserPreferences,
-        value_per_point: float,
-        opportunity_cost: float
-    ) -> str:
-        """Generate notes for hotel valuation"""
-        notes = []
-
-        notes.append(f"{hotel['property_name']} for {hotel['nights']} nights")
-
-        if value_per_point > 0.01:
-            notes.append("Excellent value per point")
-        elif value_per_point > 0.008:
-            notes.append("Good value per point")
-        elif value_per_point > 0.005:
-            notes.append("Fair value per point")
-        else:
-            notes.append("Poor value per point - consider cash booking")
-
-        if opportunity_cost > 100:
-            notes.append(f"High opportunity cost: ${opportunity_cost:.2f} difference vs cash")
-
-        chain = hotel["property_id"].split("-")[0]
-        if chain in user_prefs.preferred_hotel_chains:
-            notes.append(f"Preferred chain: {chain}")
-
-        return " | ".join(notes)
-
-    def compare_options(
-        self,
-        options: List[Dict],
-        user_prefs: UserPreferences,
-        option_type: str = "flight"
-    ) -> List[Dict]:
-        """Compare multiple award options and rank them"""
-        valuations = []
-
-        for option in options:
-            if option_type == "flight":
-                valuation = self.calculate_flight_valuation(option, user_prefs)
-            else:
-                valuation = self.calculate_hotel_valuation(option, user_prefs)
-
-            valuations.append({
-                "option": option,
-                "valuation": valuation.dict(),
-                "rank": 0
+        # For demo, return mock data
+        trend_data = []
+        for i in range(days):
+            date = (datetime.utcnow() - timedelta(days=i)).strftime("%Y-%m-%d")
+            valuation = self.calculate_valuation(
+                flight_number,
+                'business',
+                date
+            )
+            trend_data.append({
+                'date': date,
+                'award_points': valuation['award_points'],
+                'multiplier': valuation['multiplier']
             })
 
-        # Sort by redemption value (descending)
-        valuations.sort(key=lambda x: x["valuation"]["redemption_value"], reverse=True)
-
-        # Assign ranks
-        for i, val in enumerate(valuations):
-            val["rank"] = i + 1
-
-        return valuations
+        return {
+            'flight_number': flight_number,
+            'days': days,
+            'trend_data': trend_data[::-1]  # Return in chronological order
+        }
