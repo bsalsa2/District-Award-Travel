@@ -2411,16 +2411,31 @@
       "title": "Award availability FastAPI backend with SQLite storage",
       "assigned_to": "martin",
       "priority": "critical",
-      "status": "pending",
-      "description": "Build platform/src/api/award_availability.py a FastAPI router with endpoints: POST /search (accepts origin, destination, date_from, date_to, cabin) that returns mock award availability for 5 airlines (United, American, Delta, Air Canada, Turkish). GET /search/history returns the last 50 searches from SQLite. Build platform/src/database/availability_db.py with the SQLite schema. Data model: airline, origin, destination, date, cabin, miles_required, taxes_usd, available_seats, program_name. Wire it into platform/main.py."
+      "status": "completed",
+      "description": "Build platform/src/api/award_availability.py a FastAPI router with endpoints: POST /search (accepts origin, destination, date_from, date_to, cabin) that returns mock award availability for 5 airlines (United, American, Delta, Air Canada, Turkish). GET /search/history returns the last 50 searches from SQLite. Build platform/src/database/availability_db.py with the SQLite schema. Data model: airline, origin, destination, date, cabin, miles_required, taxes_usd, available_seats, program_name. Wire it into platform/main.py.",
+      "completed_at": "2026-06-06",
+      "files_created": [
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/database/availability_db.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/api/award_availability.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/main.py"
+      ],
+      "completion_summary": "Completed by martin on 2026-06-06. Files: availability_db.py, award_availability.py, main.py"
     },
     {
       "id": "TASK-1003",
       "title": "Points valuation engine with CSV data and FastAPI endpoint",
       "assigned_to": "martin",
       "priority": "high",
-      "status": "pending",
-      "description": "Build platform/src/data/points_values.csv with real cents-per-point valuations for 15 major loyalty programs: Chase UR, Amex MR, Citi TY, United MileagePlus, American AAdvantage, Delta SkyMiles, Air Canada Aeroplan, British Avios, Turkish Miles and Smiles, Flying Blue, Singapore KrisFlyer, Hyatt, Marriott, Hilton, IHG. Build platform/src/services/valuation_service.py that reads the CSV and provides get_all_valuations(), get_valuation(program), calculate_value(program, points) returning dict with points, cpp, and total_usd. Build platform/src/api/points_valuation.py with GET /valuations and GET /valuations/{program} endpoints. Wire into platform/main.py."
+      "status": "completed",
+      "description": "Build platform/src/data/points_values.csv with real cents-per-point valuations for 15 major loyalty programs: Chase UR, Amex MR, Citi TY, United MileagePlus, American AAdvantage, Delta SkyMiles, Air Canada Aeroplan, British Avios, Turkish Miles and Smiles, Flying Blue, Singapore KrisFlyer, Hyatt, Marriott, Hilton, IHG. Build platform/src/services/valuation_service.py that reads the CSV and provides get_all_valuations(), get_valuation(program), calculate_value(program, points) returning dict with points, cpp, and total_usd. Build platform/src/api/points_valuation.py with GET /valuations and GET /valuations/{program} endpoints. Wire into platform/main.py.",
+      "completed_at": "2026-06-06",
+      "files_created": [
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/data/points_values.csv",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/services/valuation_service.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/api/points_valuation.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/main.py"
+      ],
+      "completion_summary": "Completed by martin on 2026-06-06. Files: points_values.csv, valuation_service.py, points_valuation.py"
     },
     {
       "id": "TASK-1004",
@@ -2475,16 +2490,30 @@
       "title": "Real-time Award Flight Data Warehouse",
       "assigned_to": "martin",
       "priority": "high",
-      "status": "pending",
-      "description": "Develop a real-time data warehouse to store and process award flight data using Apache Kafka, Apache Cassandra, and Apache Spark. Create a FastAPI endpoint (platform/src/endpoints/award_flights.py) to ingest data into the warehouse and a SQLite database schema (platform/src/db/award_flights.sql) to store the data."
+      "status": "completed",
+      "description": "Develop a real-time data warehouse to store and process award flight data using Apache Kafka, Apache Cassandra, and Apache Spark. Create a FastAPI endpoint (platform/src/endpoints/award_flights.py) to ingest data into the warehouse and a SQLite database schema (platform/src/db/award_flights.sql) to store the data.",
+      "completed_at": "2026-06-06",
+      "files_created": [
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/endpoints/award_flights.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/db/award_flights.sql",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/main.py"
+      ],
+      "completion_summary": "Completed by martin on 2026-06-06. Files: award_flights.py, award_flights.sql, main.py"
     },
     {
       "id": "TASK-1009",
       "title": "Client Redemption Tracking API",
       "assigned_to": "martin",
       "priority": "medium",
-      "status": "pending",
-      "description": "Design and implement a RESTful API using FastAPI to track client redemptions and award flight bookings. Create a Python module (platform/src/services/redemption_tracker.py) to handle API requests and a SQLite database schema (platform/src/db/redemptions.sql) to store the data."
+      "status": "completed",
+      "description": "Design and implement a RESTful API using FastAPI to track client redemptions and award flight bookings. Create a Python module (platform/src/services/redemption_tracker.py) to handle API requests and a SQLite database schema (platform/src/db/redemptions.sql) to store the data.",
+      "completed_at": "2026-06-06",
+      "files_created": [
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/db/redemptions.sql",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/services/redemption_tracker.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/main.py"
+      ],
+      "completion_summary": "Completed by martin on 2026-06-06. Files: redemptions.sql, redemption_tracker.py, main.py"
     },
     {
       "id": "TASK-1010",
