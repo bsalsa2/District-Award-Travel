@@ -1,160 +1,1056 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>District Award Travel - Real-time Alerts</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>District Award Travel — Operations</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:       #080c10;
+    --surface:  #0f1621;
+    --border:   #1a2540;
+    --green:    #00ff88;
+    --blue:     #00aaff;
+    --gold:     #ffd700;
+    --red:      #ff4757;
+    --orange:   #ff7043;
+    --purple:   #9b59ff;
+    --text:     #e8edf5;
+    --muted:    #7a8ba0;
+    --dim:      #3d5068;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── TOP NAV ── */
+  .topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo { display: flex; align-items: baseline; gap: 10px; }
+  .logo-main { font-size: 18px; font-weight: 800; color: var(--green); letter-spacing: -.3px; }
+  .logo-tag  { font-size: 10px; color: var(--muted); font-style: italic; letter-spacing: .06em; }
+  .nav-links { display: flex; gap: 4px; }
+  .nav-link {
+    padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+    color: var(--muted); cursor: pointer; transition: all .15s;
+    border: none; background: none; letter-spacing: .04em;
+  }
+  .nav-link:hover { color: var(--text); background: var(--border); }
+  .nav-link.active { color: var(--green); background: rgba(0,255,136,.08); }
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+  .badge {
+    font-size: 9px; font-family: monospace; letter-spacing: .1em;
+    padding: 3px 8px; border-radius: 4px; font-weight: 700;
+  }
+  .badge-green  { background: rgba(0,255,136,.12); color: var(--green); border: 1px solid rgba(0,255,136,.25); }
+  .badge-orange { background: rgba(255,112,67,.12); color: var(--orange); border: 1px solid rgba(255,112,67,.25); }
+  .badge-blue   { background: rgba(0,170,255,.12); color: var(--blue); border: 1px solid rgba(0,170,255,.25); }
+  .badge-red    { background: rgba(255,71,87,.14); color: var(--red); border: 1px solid rgba(255,71,87,.3); }
+  .badge-gold   { background: rgba(255,215,0,.1); color: var(--gold); border: 1px solid rgba(255,215,0,.25); }
+
+  /* ── URGENT BANNER ── */
+  .urgent-banner {
+    background: rgba(255,112,67,.08);
+    border-bottom: 1px solid rgba(255,112,67,.2);
+    padding: 10px 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .urgent-icon { font-size: 16px; }
+  .urgent-text { font-size: 13px; font-weight: 600; color: var(--orange); }
+  .urgent-sub  { font-size: 12px; color: var(--muted); margin-left: 4px; }
+  .urgent-right { margin-left: auto; }
+
+  /* ── LAYOUT ── */
+  .page { display: flex; height: calc(100vh - 57px); overflow: hidden; }
+  .sidebar {
+    width: 220px; flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 0;
+  }
+  .sidebar-section { margin-bottom: 24px; }
+  .sidebar-label {
+    font-size: 9px; font-family: monospace; letter-spacing: .12em;
+    color: var(--dim); text-transform: uppercase; padding: 0 16px; margin-bottom: 6px;
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 16px; cursor: pointer; transition: all .15s;
+    font-size: 13px; color: var(--muted); font-weight: 500;
+  }
+  .sidebar-item:hover { background: rgba(255,255,255,.03); color: var(--text); }
+  .sidebar-item.active { background: rgba(0,255,136,.06); color: var(--green); border-right: 2px solid var(--green); }
+  .sidebar-item .dot {
+    width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  }
+  .dot-green  { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .dot-orange { background: var(--orange); }
+  .dot-blue   { background: var(--blue); }
+  .dot-dim    { background: var(--dim); }
+  .sidebar-count {
+    margin-left: auto; font-size: 10px; font-family: monospace;
+    background: var(--border); color: var(--muted);
+    padding: 1px 6px; border-radius: 10px;
+  }
+
+  .main { flex: 1; overflow-y: auto; padding: 28px; }
+
+  /* ── STAT CARDS ── */
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 18px 20px;
+  }
+  .stat-val  { font-size: 26px; font-weight: 700; font-family: monospace; margin-bottom: 4px; }
+  .stat-label { font-size: 10px; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
+  .stat-sub  { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* ── SECTION HEADERS ── */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 10px; font-family: monospace; letter-spacing: .12em;
+    color: var(--green); text-transform: uppercase;
+  }
+  .section-action {
+    font-size: 11px; color: var(--muted); cursor: pointer;
+    padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border);
+    background: none; transition: all .15s;
+  }
+  .section-action:hover { color: var(--text); border-color: var(--muted); }
+
+  /* ── CLIENT CARDS ── */
+  .client-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+  .client-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+    transition: border-color .2s;
+    cursor: pointer;
+  }
+  .client-card:hover { border-color: var(--blue); }
+  .client-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
+  .client-name { font-size: 16px; font-weight: 700; color: var(--text); }
+  .client-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .client-status { text-align: right; }
+  .points-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .points-pill {
+    font-size: 10px; font-family: monospace;
+    padding: 3px 8px; border-radius: 4px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .points-pill span { font-weight: 700; }
+  .pp-amex    { border-color: rgba(0,170,255,.3); color: var(--blue); }
+  .pp-aa      { color: #f4a261; border-color: rgba(244,162,97,.3); }
+  .pp-marriott { color: #e76f51; border-color: rgba(231,111,81,.3); }
+  .pp-united  { color: var(--blue); border-color: rgba(0,170,255,.3); }
+  .trips-label { font-size: 9px; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
+  .trip-rows   { display: flex; flex-direction: column; gap: 5px; }
+  .trip-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 7px;
+    background: rgba(255,255,255,.025); border: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .trip-dest { font-weight: 600; color: var(--text); flex: 1; }
+  .trip-dates { font-size: 10px; color: var(--muted); font-family: monospace; }
+  .trip-tag  { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px; letter-spacing: .05em; }
+  .tag-active   { background: rgba(0,255,136,.12); color: var(--green); }
+  .tag-planning { background: rgba(0,170,255,.1); color: var(--blue); }
+  .tag-monitor  { background: rgba(255,215,0,.1); color: var(--gold); }
+  .tag-urgent   { background: rgba(255,71,87,.12); color: var(--red); }
+  .tag-group    { background: rgba(155,89,255,.1); color: var(--purple); }
+
+  /* ── ITINERARY TABLE ── */
+  .itin-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px; margin-bottom: 20px;
+    border-top: 3px solid var(--blue);
+  }
+  .itin-title  { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .itin-sub    { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 9px; font-family: monospace;
+    letter-spacing: .1em; color: var(--dim); text-transform: uppercase;
+    padding: 0 12px 8px; border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 11px 12px; border-bottom: 1px solid rgba(26,37,64,.5);
+    font-size: 12px; vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.015); }
+  .td-date  { font-family: monospace; color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .td-loc   { font-weight: 600; color: var(--text); }
+  .td-hotel { color: var(--text); }
+  .td-note  { color: var(--muted); font-size: 11px; }
+  .cover-tag {
+    display: inline-block; font-size: 9px; font-weight: 700;
+    padding: 2px 6px; border-radius: 3px; letter-spacing: .05em; margin-top: 2px;
+  }
+  .cover-employer { background: rgba(0,255,136,.1); color: var(--green); }
+  .cover-fhr      { background: rgba(0,170,255,.1); color: var(--blue); }
+  .cover-hc       { background: rgba(0,170,255,.08); color: var(--blue); }
+  .cover-points   { background: rgba(255,215,0,.1); color: var(--gold); }
+  .cover-cash     { background: rgba(255,255,255,.05); color: var(--muted); }
+  .cover-open     { background: rgba(255,71,87,.1); color: var(--red); }
+
+  /* ── SAVINGS CALC ── */
+  .savings-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .savings-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 18px;
+  }
+  .savings-card-title { font-size: 9px; color: var(--dim); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 8px; }
+  .savings-val { font-size: 22px; font-weight: 700; font-family: monospace; }
+  .savings-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* ── ACTION ITEMS ── */
+  .action-list { display: flex; flex-direction: column; gap: 8px; }
+  .action-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+  }
+  .action-item.urgent { border-left: 3px solid var(--red); }
+  .action-item.high   { border-left: 3px solid var(--orange); }
+  .action-item.medium { border-left: 3px solid var(--blue); }
+  .action-item.low    { border-left: 3px solid var(--dim); }
+  .action-icon { font-size: 16px; flex-shrink: 0; }
+  .action-text { flex: 1; }
+  .action-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .action-desc  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .action-due   { font-size: 10px; font-family: monospace; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
+  .due-red    { background: rgba(255,71,87,.12); color: var(--red); }
+  .due-orange { background: rgba(255,112,67,.1); color: var(--orange); }
+  .due-blue   { background: rgba(0,170,255,.1); color: var(--blue); }
+  .due-dim    { background: rgba(61,80,104,.3); color: var(--dim); }
+
+  /* ── FEE CALC BOX ── */
+  .fee-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px; margin-top: 20px;
+    border-top: 3px solid var(--gold);
+  }
+  .fee-title { font-size: 10px; color: var(--gold); letter-spacing: .1em; text-transform: uppercase; font-family: monospace; margin-bottom: 16px; }
+  .fee-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid rgba(26,37,64,.6); font-size: 13px;
+  }
+  .fee-row:last-child { border-bottom: none; }
+  .fee-row-label { color: var(--muted); }
+  .fee-row-val   { font-family: monospace; font-weight: 600; }
+  .fee-total-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0 0; font-size: 15px; font-weight: 700;
+  }
+  .fee-total-label { color: var(--gold); }
+  .fee-total-val   { font-family: monospace; color: var(--gold); font-size: 20px; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── DIVIDER ── */
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+  /* ── VIEW SECTIONS ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── HOTEL OPTION CARDS ── */
+  .hotel-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
+  .hotel-opt {
+    background: rgba(255,255,255,.02); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px;
+  }
+  .hotel-opt.best { border-color: rgba(0,255,136,.3); background: rgba(0,255,136,.04); }
+  .hotel-opt-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .hotel-opt-pts  { font-size: 13px; font-family: monospace; font-weight: 700; color: var(--gold); }
+  .hotel-opt-cash { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .hotel-opt-note { font-size: 10px; color: var(--dim); margin-top: 6px; }
+  .hotel-best-tag {
+    font-size: 8px; background: rgba(0,255,136,.15); color: var(--green);
+    padding: 2px 5px; border-radius: 3px; font-weight: 700; letter-spacing: .05em;
+  }
+
+  .empty { color: var(--dim); font-size: 13px; font-style: italic; padding: 20px 0; }
+</style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="app-header">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-plane-departure"></i>
-                    <span>District Award Travel</span>
-                </div>
-                <div class="user-info">
-                    <span id="user-name">Guest</span>
-                    <div class="user-avatar" id="user-avatar">G</div>
-                </div>
-            </div>
-        </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <div class="sidebar">
-                <div class="sidebar-section">
-                    <h3><i class="fas fa-user"></i> Your Profile</h3>
-                    <div class="profile-info">
-                        <div class="profile-field">
-                            <label>Cabin Class</label>
-                            <select id="cabin-class">
-                                <option value="economy">Economy</option>
-                                <option value="premium_economy">Premium Economy</option>
-                                <option value="business">Business</option>
-                                <option value="first">First</option>
-                            </select>
-                        </div>
-                        <div class="profile-field">
-                            <label>Preferred Airlines</label>
-                            <div class="airline-selector">
-                                <div class="airline-option">
-                                    <input type="checkbox" id="airline-aa" value="AA" checked>
-                                    <label for="airline-aa">American (AA)</label>
-                                </div>
-                                <div class="airline-option">
-                                    <input type="checkbox" id="airline-dl" value="DL" checked>
-                                    <label for="airline-dl">Delta (DL)</label>
-                                </div>
-                                <div class="airline-option">
-                                    <input type="checkbox" id="airline-ua" value="UA" checked>
-                                    <label for="airline-ua">United (UA)</label>
-                                </div>
-                                <div class="airline-option">
-                                    <input type="checkbox" id="airline-ba" value="BA" checked>
-                                    <label for="airline-ba">British Airways (BA)</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="profile-field">
-                            <label>Price Range (Points)</label>
-                            <div class="range-slider">
-                                <input type="range" id="price-min" min="0" max="200000" value="0">
-                                <input type="range" id="price-max" min="0" max="200000" value="100000">
-                                <div class="range-values">
-                                    <span id="price-min-value">0</span> -
-                                    <span id="price-max-value">100,000</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+<!-- ── TOP NAV ── -->
+<nav class="topnav">
+  <div class="logo">
+    <span class="logo-main">✈ District Award Travel</span>
+    <span class="logo-tag">We Architect Your Rewards</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="showView('dashboard')">Dashboard</button>
+    <button class="nav-link" onclick="showView('tammy-italy')">Tammy — Italy</button>
+    <button class="nav-link" onclick="showView('tammy-iceland')">Tammy — Iceland</button>
+    <button class="nav-link" onclick="showView('tammy-japan')">Tammy — Japan</button>
+    <button class="nav-link" onclick="showView('darren')">Darren — South Africa</button>
+    <button class="nav-link" onclick="showView('valuations')">Points Values</button>
+  </div>
+  <div class="nav-right">
+    <span class="badge badge-orange">2 ACTIVE CLIENTS</span>
+    <span class="badge badge-red">⚠ DEADLINE IN 24 DAYS</span>
+  </div>
+</nav>
 
-                <div class="sidebar-section">
-                    <h3><i class="fas fa-bell"></i> Alert Settings</h3>
-                    <div class="notification-channels">
-                        <div class="channel-option">
-                            <input type="checkbox" id="channel-web" checked>
-                            <label for="channel-web"><i class="fas fa-desktop"></i> Web</label>
-                        </div>
-                        <div class="channel-option">
-                            <input type="checkbox" id="channel-email">
-                            <label for="channel-email"><i class="fas fa-envelope"></i> Email</label>
-                        </div>
-                        <div class="channel-option">
-                            <input type="checkbox" id="channel-sms">
-                            <label for="channel-sms"><i class="fas fa-comment-sms"></i> SMS</label>
-                        </div>
-                        <div class="channel-option">
-                            <input type="checkbox" id="channel-push">
-                            <label for="channel-push"><i class="fas fa-bell"></i> Push</label>
-                        </div>
-                    </div>
-                </div>
+<!-- ── URGENT BANNER ── -->
+<div class="urgent-banner">
+  <span class="urgent-icon">⚠️</span>
+  <span class="urgent-text">ACTION REQUIRED: Casa di Langa (Piedmont) — Amex FHR 15% discount booking deadline is June 30, 2026.</span>
+  <span class="urgent-sub">Book via Amex FHR portal now. ~€1,360–1,700 for 4 nights with discount. Rate not available after June 30.</span>
+  <div class="urgent-right">
+    <button onclick="showView('tammy-italy')" style="background:rgba(255,112,67,.15);border:1px solid rgba(255,112,67,.3);color:#ff7043;padding:6px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.04em;">VIEW ITALY TRIP →</button>
+  </div>
+</div>
 
-                <button id="save-profile" class="btn-primary">
-                    <i class="fas fa-save"></i> Save Preferences
-                </button>
-            </div>
+<!-- ── MAIN LAYOUT ── -->
+<div class="page">
 
-            <div class="content-area">
-                <div class="alerts-header">
-                    <h2><i class="fas fa-bell"></i> Real-time Award Alerts</h2>
-                    <div class="alert-controls">
-                        <button id="refresh-alerts" class="btn-secondary">
-                            <i class="fas fa-sync-alt"></i> Refresh
-                        </button>
-                        <button id="mark-all-read" class="btn-secondary">
-                            <i class="fas fa-check-double"></i> Mark All Read
-                        </button>
-                    </div>
-                </div>
-
-                <div class="alerts-container" id="alerts-container">
-                    <!-- Alerts will be loaded here -->
-                    <div class="empty-state" id="empty-state">
-                        <i class="fas fa-bell-slash"></i>
-                        <h3>No alerts yet</h3>
-                        <p>Set up your preferences and we'll notify you of available award bookings</p>
-                    </div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Alert Modal -->
-        <div class="modal" id="alert-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-info-circle"></i> Award Booking Alert</h3>
-                    <button class="modal-close" id="modal-close">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="modal-body" id="modal-body">
-                    <!-- Alert details will be loaded here -->
-                </div>
-                <div class="modal-footer">
-                    <button class="btn-secondary" id="modal-cancel">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button class="btn-primary" id="modal-book">
-                        <i class="fas fa-plane"></i> Book Now
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Loading Indicator -->
-        <div class="loading-indicator" id="loading-indicator">
-            <div class="spinner"></div>
-            <p>Loading alerts...</p>
-        </div>
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Clients</div>
+      <div class="sidebar-item active" onclick="showView('dashboard')">
+        <span class="dot dot-green"></span> Overview
+      </div>
+      <div class="sidebar-item" onclick="showView('tammy-italy')">
+        <span class="dot dot-blue"></span> Tammy Jennissen
+        <span class="sidebar-count">3</span>
+      </div>
+      <div class="sidebar-item" onclick="showView('darren')">
+        <span class="dot dot-orange"></span> Darren Fernandez
+        <span class="sidebar-count">1</span>
+      </div>
     </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Tammy's Trips</div>
+      <div class="sidebar-item" onclick="showView('tammy-italy')">
+        <span class="dot dot-blue"></span> Italy Jul–Aug
+        <span class="badge badge-orange" style="font-size:8px;margin-left:auto;">ACTIVE</span>
+      </div>
+      <div class="sidebar-item" onclick="showView('tammy-iceland')">
+        <span class="dot dot-dim"></span> Iceland Oct
+      </div>
+      <div class="sidebar-item" onclick="showView('tammy-japan')">
+        <span class="dot dot-dim"></span> Japan Dec
+        <span class="badge badge-gold" style="font-size:8px;margin-left:auto;">MONITOR</span>
+      </div>
+    </div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Tools</div>
+      <div class="sidebar-item" onclick="showView('valuations')">
+        <span style="font-size:14px;">💰</span> Points Values
+      </div>
+    </div>
+  </aside>
 
-    <script src="app.js"></script>
+  <main class="main">
+
+    <!-- ════════════════════════════ DASHBOARD VIEW ════════════════════════════ -->
+    <div id="view-dashboard" class="view active">
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--green)">2</div>
+          <div class="stat-label">Active Clients</div>
+          <div class="stat-sub">Tammy Jennissen · Darren Fernandez</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--blue)">4</div>
+          <div class="stat-label">Trips in Planning</div>
+          <div class="stat-sub">Italy · Iceland · Japan · South Africa</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--gold)">$35K+</div>
+          <div class="stat-label">Est. Savings (Tammy)</div>
+          <div class="stat-sub">Japan JAL biz + Italy + Iceland</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:var(--purple)">$3,500+</div>
+          <div class="stat-label">Est. Fees (10% of savings)</div>
+          <div class="stat-sub">Pending final bookings</div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">── Active Clients</div>
+      </div>
+      <div class="client-grid">
+
+        <!-- TAMMY -->
+        <div class="client-card" onclick="showView('tammy-italy')">
+          <div class="client-header">
+            <div>
+              <div class="client-name">Tammy Jennissen</div>
+              <div class="client-meta">Director, Carne Group · Cayman Islands · Executive Platinum AA</div>
+            </div>
+            <div class="client-status">
+              <span class="badge badge-green">HIGH VALUE</span>
+            </div>
+          </div>
+          <div class="points-row">
+            <span class="points-pill pp-amex">Amex MR <span>1M+</span></span>
+            <span class="points-pill pp-aa">AA Miles <span>1.6M</span></span>
+            <span class="points-pill pp-marriott">Marriott <span>500K+</span></span>
+          </div>
+          <div class="trips-label">Active Trips</div>
+          <div class="trip-rows">
+            <div class="trip-row">
+              <span class="trip-dest">🇮🇹 Italy — Milan, Franciacorta, Piedmont, Lake Orta</span>
+              <span class="trip-dates">Jul 29–Aug 13</span>
+              <span class="trip-tag tag-active">ACTIVE</span>
+            </div>
+            <div class="trip-row">
+              <span class="trip-dest">🇮🇸 Iceland — Reykjavik, Blue Lagoon</span>
+              <span class="trip-dates">Oct 17–24</span>
+              <span class="trip-tag tag-planning">PLANNING</span>
+            </div>
+            <div class="trip-row">
+              <span class="trip-dest">🇯🇵 Japan — JFK→HND (JAL AA167)</span>
+              <span class="trip-dates">Dec 2026</span>
+              <span class="trip-tag tag-monitor">MONITORING</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- DARREN -->
+        <div class="client-card" onclick="showView('darren')">
+          <div class="client-header">
+            <div>
+              <div class="client-name">Darren Fernandez</div>
+              <div class="client-meta">Group Travel · 6 Passengers · Referred by Braden's father</div>
+            </div>
+            <div class="client-status">
+              <span class="badge badge-purple" style="background:rgba(155,89,255,.1);color:var(--purple);border:1px solid rgba(155,89,255,.25);">GROUP</span>
+            </div>
+          </div>
+          <div class="points-row">
+            <span class="points-pill pp-united">United MP <span>TBD</span></span>
+            <span class="points-pill pp-amex">Amex MR <span>TBD</span></span>
+          </div>
+          <div class="trips-label">Active Trips</div>
+          <div class="trip-rows">
+            <div class="trip-row">
+              <span class="trip-dest">🇿🇦 South Africa — DCA/IAD/BWI → JNB, open-jaw CPT</span>
+              <span class="trip-dates">Dec 16–Jan 1</span>
+              <span class="trip-tag tag-group">6 PAX</span>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding:10px 12px;background:rgba(255,71,87,.04);border:1px solid rgba(255,71,87,.15);border-radius:7px;font-size:11px;color:var(--muted);">
+            ⚠ <strong style="color:var(--orange)">Action needed:</strong> Confirm Darren's actual United MileagePlus and Amex MR point balances before proceeding with award search.
+          </div>
+        </div>
+
+      </div>
+
+      <div class="section-header" style="margin-top:28px;">
+        <div class="section-title">── Open Action Items</div>
+      </div>
+      <div class="action-list">
+        <div class="action-item urgent">
+          <span class="action-icon">📅</span>
+          <div class="action-text">
+            <div class="action-title">Book Casa di Langa via Amex FHR — 15% discount expires June 30</div>
+            <div class="action-desc">Tammy · Italy · Piedmont, Aug 5–9 (4 nights). ~€1,360–1,700 with discount. Amex FHR benefits: noon check-in, upgrade, breakfast, $100 credit, 4pm checkout. Book through amextravel.com/fhr. This is a cash booking only — no points available.</div>
+          </div>
+          <span class="action-due due-red">DUE JUN 30</span>
+        </div>
+        <div class="action-item high">
+          <span class="action-icon">🏨</span>
+          <div class="action-text">
+            <div class="action-title">Confirm Milan hotel selection with Tammy (Aug 11–13)</div>
+            <div class="action-desc">4 options identified: Milan Marriott (best value, 120K pts), Westin Palace (176K pts), Excelsior Gallia (201K pts), or Sheraton MXP (82K pts for 2 nights). Need to know: city vs. airport preference, exact nights needed.</div>
+          </div>
+          <span class="action-due due-orange">OPEN</span>
+        </div>
+        <div class="action-item high">
+          <span class="action-icon">✈️</span>
+          <div class="action-text">
+            <div class="action-title">Price GCM → Milan (MXP) flights for Tammy's Italy trip</div>
+            <div class="action-desc">Tammy departs Grand Cayman. Route and pricing not yet confirmed. Research options via PointsYeah, Google Flights, and AA AAdvantage for award availability.</div>
+          </div>
+          <span class="action-due due-orange">OPEN</span>
+        </div>
+        <div class="action-item medium">
+          <span class="action-icon">🇯🇵</span>
+          <div class="action-text">
+            <div class="action-title">Monitor JAL JFK→HND (AA167) award space for Tammy — Japan Dec</div>
+            <div class="action-desc">35,000 AA miles + $5.60 taxes via PointsYeah. Award window opens ~March 8, 2026 (355 days out). Tammy is first on EP upgrade list if business opens. Set calendar reminder. Return routing still unresolved.</div>
+          </div>
+          <span class="action-due due-blue">MAR 8 2026</span>
+        </div>
+        <div class="action-item medium">
+          <span class="action-icon">📊</span>
+          <div class="action-text">
+            <div class="action-title">Confirm Darren's actual points balances (United MP + Amex MR)</div>
+            <div class="action-desc">South Africa Dec 16–Jan 1, 6 pax. Cannot finalize strategy or do award search without knowing balances. Peak holiday + southern hemisphere summer makes 6 simultaneous seats near-impossible — cash fares on Turkish, Ethiopian, Qatar may be the real play.</div>
+          </div>
+          <span class="action-due due-blue">ASAP</span>
+        </div>
+        <div class="action-item low">
+          <span class="action-icon">💰</span>
+          <div class="action-text">
+            <div class="action-title">Finalize savings calculation methodology and fee collection process</div>
+            <div class="action-desc">Standardize: cash cost vs. points redemption cost delta = savings. 10% of savings = fee. Build intake, plan presentation, and invoice template.</div>
+          </div>
+          <span class="action-due due-dim">INTERNAL</span>
+        </div>
+      </div>
+
+    </div><!-- /dashboard -->
+
+
+    <!-- ════════════════════════════ TAMMY ITALY ════════════════════════════ -->
+    <div id="view-tammy-italy" class="view">
+
+      <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:6px;">
+        <div style="font-size:22px;font-weight:800;">🇮🇹 Tammy — Italy</div>
+        <span class="badge badge-orange">ACTIVE PLANNING</span>
+        <span class="badge badge-red" style="margin-left:auto;">⚠ BOOK CASA DI LANGA BY JUN 30</span>
+      </div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:24px;">July 29 – August 13, 2026 · Grand Cayman → Milan (MXP)</div>
+
+      <div class="itin-card">
+        <div class="itin-title">Full Itinerary</div>
+        <div class="itin-sub">Tammy Jennissen · Solo travel · Executive Platinum AA</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Dates</th>
+              <th>Location</th>
+              <th>Hotel</th>
+              <th>Booking</th>
+              <th>Cost / Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-date">Jul 29<br>evening arrival</td>
+              <td class="td-loc">Milan (MXP)</td>
+              <td class="td-hotel">Sheraton Milan Malpensa</td>
+              <td><span class="cover-tag cover-employer">EMPLOYER</span></td>
+              <td class="td-note">Employer-covered. Tammy arriving from GCM.</td>
+            </tr>
+            <tr>
+              <td class="td-date">Jul 30–Aug 5<br>(6 nights)</td>
+              <td class="td-loc">Franciacorta</td>
+              <td class="td-hotel">L'Albereta</td>
+              <td><span class="cover-tag cover-employer">WEDDING PARTY</span></td>
+              <td class="td-note">Wedding stay. Covered by wedding party. Tammy drives from MXP on Jul 30.</td>
+            </tr>
+            <tr style="background:rgba(255,112,67,.04);">
+              <td class="td-date">Aug 5–9<br>(4 nights)</td>
+              <td class="td-loc">Piedmont<br>Langhe / Barolo</td>
+              <td class="td-hotel">
+                <strong style="color:var(--orange);">Casa di Langa</strong><br>
+                <span style="font-size:10px;color:var(--dim);">Cerretto Langhe</span>
+              </td>
+              <td><span class="cover-tag cover-fhr">AMEX FHR</span></td>
+              <td class="td-note">
+                <strong style="color:var(--orange);">BOOK BY JUNE 30 — 15% FHR discount.</strong><br>
+                Base ~€400–500/night → €340–425 with discount.<br>
+                4 nights: ~€1,360–1,700. Cash only — no points.<br>
+                FHR benefits: noon check-in, room upgrade, daily breakfast for 2, $100 property credit, Wi-Fi, 4pm checkout. Michelin-starred dining.
+              </td>
+            </tr>
+            <tr>
+              <td class="td-date">Aug 9–11<br>(2 nights, optional)</td>
+              <td class="td-loc">Lake Orta<br>Pettenasco</td>
+              <td class="td-hotel">Laqua by the Lake</td>
+              <td><span class="cover-tag cover-hc">AMEX HOTEL COLLECTION</span></td>
+              <td class="td-note">
+                ~$800/night · ~$1,600 total. Cash only.<br>
+                2+ night Platinum benefits: one-category upgrade, $100 property credit, noon check-in, late checkout.
+              </td>
+            </tr>
+            <tr style="background:rgba(255,71,87,.03);">
+              <td class="td-date">Aug 11–13<br>(1–2 nights TBD)</td>
+              <td class="td-loc">Milan</td>
+              <td class="td-hotel" style="color:var(--red);">⚠ TBD — See Options</td>
+              <td><span class="cover-tag cover-points">MARRIOTT POINTS</span></td>
+              <td class="td-note">500K+ Bonvoy points available. City center or airport — awaiting Tammy's preference.</td>
+            </tr>
+            <tr>
+              <td class="td-date">Aug 12 evening</td>
+              <td class="td-loc">Milan (MXP)</td>
+              <td class="td-hotel">Sheraton Milan Malpensa</td>
+              <td><span class="cover-tag cover-employer">EMPLOYER</span></td>
+              <td class="td-note">Employer-covered (1 night).</td>
+            </tr>
+            <tr>
+              <td class="td-date">Aug 13 evening</td>
+              <td class="td-loc">Departure</td>
+              <td class="td-hotel">—</td>
+              <td>—</td>
+              <td class="td-note">Return to Grand Cayman (GCM).</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Milan hotel options -->
+      <div class="section-header">
+        <div class="section-title">── Milan Hotel Options (Aug 11–13) · Marriott Bonvoy Points</div>
+        <span style="font-size:11px;color:var(--muted);">Tammy has 500K+ points</span>
+      </div>
+      <div class="hotel-options">
+        <div class="hotel-opt best">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <div class="hotel-opt-name">Milan Marriott Hotel</div>
+            <span class="hotel-best-tag">BEST VALUE</span>
+          </div>
+          <div class="hotel-opt-pts">120,000 pts/stay</div>
+          <div class="hotel-opt-cash">€182/night cash · 1.4 mi city center</div>
+          <div class="hotel-opt-note">Rating: 3.4 · Strong value play on points</div>
+        </div>
+        <div class="hotel-opt">
+          <div class="hotel-opt-name">Westin Palace Milan</div>
+          <div class="hotel-opt-pts">176,000 pts/stay</div>
+          <div class="hotel-opt-cash">€261/night cash · 1.1 mi city center</div>
+          <div class="hotel-opt-note">Rating: 3.9</div>
+        </div>
+        <div class="hotel-opt">
+          <div class="hotel-opt-name">Excelsior Hotel Gallia</div>
+          <div class="hotel-opt-pts">201,000 pts/stay</div>
+          <div class="hotel-opt-cash">€379/night cash · 1.5 mi city center</div>
+          <div class="hotel-opt-note">Rating: 4.5 · Luxury Collection · Best hotel</div>
+        </div>
+        <div class="hotel-opt">
+          <div class="hotel-opt-name">Sheraton MXP (Airport)</div>
+          <div class="hotel-opt-pts">41,000 pts/night<br><span style="color:var(--dim)">82,000 for 2 nights</span></div>
+          <div class="hotel-opt-cash">Airport property · Lowest points cost</div>
+          <div class="hotel-opt-note">Alternative if Tammy prefers airport for easy departure</div>
+        </div>
+      </div>
+
+      <!-- Savings calc -->
+      <div class="section-header" style="margin-top:24px;">
+        <div class="section-title">── Estimated Savings &amp; Fee (Italy)</div>
+      </div>
+      <div class="savings-grid">
+        <div class="savings-card">
+          <div class="savings-card-title">Cash Cost if No Points (Milan hotel)</div>
+          <div class="savings-val" style="color:var(--text)">~€364+</div>
+          <div class="savings-sub">2 nights Westin/Marriott at ~€182–261/night</div>
+        </div>
+        <div class="savings-card">
+          <div class="savings-card-title">Points Redemption Cost</div>
+          <div class="savings-val" style="color:var(--green)">~$0</div>
+          <div class="savings-sub">120K–201K Marriott points (Tammy has 500K+)</div>
+        </div>
+        <div class="savings-card">
+          <div class="savings-card-title">Employer + Wedding Coverage</div>
+          <div class="savings-val" style="color:var(--blue)">~$2,000+</div>
+          <div class="savings-sub">MXP hotel + 6 nights Franciacorta (wedding)</div>
+        </div>
+      </div>
+      <div class="fee-box">
+        <div class="fee-title">── DAT Fee Calculation — Italy (Partial, Milan only)</div>
+        <div class="fee-row">
+          <span class="fee-row-label">Milan hotel cash value (2 nights, Westin)</span>
+          <span class="fee-row-val" style="color:var(--text)">~$580</span>
+        </div>
+        <div class="fee-row">
+          <span class="fee-row-label">Points redemption cost to Tammy</span>
+          <span class="fee-row-val" style="color:var(--green)">$0</span>
+        </div>
+        <div class="fee-row">
+          <span class="fee-row-label">Savings generated</span>
+          <span class="fee-row-val" style="color:var(--green)">~$580</span>
+        </div>
+        <div class="fee-total-row">
+          <span class="fee-total-label">DAT Fee (10% of savings)</span>
+          <span class="fee-total-val">~$58</span>
+        </div>
+        <div style="font-size:11px;color:var(--dim);margin-top:10px;">Note: Full fee calculation pending Milan hotel selection, GCM flight pricing, and confirmation of all bookings. Italy trip is mostly cash/employer/Amex benefits — Milan hotel points redemption is the primary savings event.</div>
+      </div>
+
+    </div><!-- /tammy-italy -->
+
+
+    <!-- ════════════════════════════ TAMMY ICELAND ════════════════════════════ -->
+    <div id="view-tammy-iceland" class="view">
+
+      <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:6px;">
+        <div style="font-size:22px;font-weight:800;">🇮🇸 Tammy — Iceland</div>
+        <span class="badge badge-blue">PLANNING</span>
+      </div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:24px;">October 17–24, 2026 · Grand Cayman → Reykjavik (KEF)</div>
+
+      <div class="itin-card" style="border-top-color:var(--blue);">
+        <div class="itin-title">Trip Overview</div>
+        <table>
+          <thead>
+            <tr><th>Segment</th><th>Detail</th><th>Status</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-loc">GCM → NYC leg</td>
+              <td>American Airlines (EP status)</td>
+              <td><span class="cover-tag cover-employer">EMPLOYER COVERED</span></td>
+              <td class="td-note">Employer covers this leg as NYC business trip segment.</td>
+            </tr>
+            <tr>
+              <td class="td-loc">JFK → Reykjavik (KEF)</td>
+              <td>Icelandair or PLAY</td>
+              <td><span class="cover-tag cover-cash">CASH</span></td>
+              <td class="td-note">~$400–550. No major alliance partnerships — points NOT viable on this route. Cash only.</td>
+            </tr>
+            <tr>
+              <td class="td-loc">The Retreat at Blue Lagoon</td>
+              <td>1 night · Oct 17</td>
+              <td><span class="cover-tag cover-cash">CASH</span></td>
+              <td class="td-note">~$1,000–1,500/night. Cash only — not bookable with points. Preferred property.</td>
+            </tr>
+            <tr>
+              <td class="td-loc">Reykjavik hotel(s)</td>
+              <td>Supplemental nights</td>
+              <td><span class="cover-tag cover-points">MARRIOTT POINTS</span></td>
+              <td class="td-note">Marriott Bonvoy points available for Reykjavik city nights.</td>
+            </tr>
+            <tr>
+              <td class="td-loc">Golden Circle day trip</td>
+              <td>Self-drive or tour</td>
+              <td><span class="cover-tag cover-cash">CASH</span></td>
+              <td>Car rental recommended.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="action-list">
+        <div class="action-item medium">
+          <span class="action-icon">✈️</span>
+          <div class="action-text">
+            <div class="action-title">Price JFK → KEF flights for October 17–24 window</div>
+            <div class="action-desc">Icelandair and PLAY both fly this route. No award options — cash only. Target: under $500 round trip. Note employer covers GCM→NYC separately.</div>
+          </div>
+          <span class="action-due due-blue">OPEN</span>
+        </div>
+        <div class="action-item medium">
+          <span class="action-icon">🏨</span>
+          <div class="action-text">
+            <div class="action-title">Identify Marriott properties in Reykjavik for supplemental nights</div>
+            <div class="action-desc">Search Marriott Bonvoy for Reykjavik Oct 17–24. Tammy has 500K+ points. Identify best properties and nightly point cost.</div>
+          </div>
+          <span class="action-due due-blue">OPEN</span>
+        </div>
+      </div>
+
+      <div class="fee-box" style="margin-top:24px;">
+        <div class="fee-title">── DAT Fee Calculation — Iceland</div>
+        <div class="fee-row">
+          <span class="fee-row-label">Reykjavik Marriott (est. 2 nights cash value)</span>
+          <span class="fee-row-val" style="color:var(--text)">~$600–800</span>
+        </div>
+        <div class="fee-row">
+          <span class="fee-row-label">Points redemption cost to Tammy</span>
+          <span class="fee-row-val" style="color:var(--green)">$0</span>
+        </div>
+        <div class="fee-total-row">
+          <span class="fee-total-label">DAT Fee (10%)</span>
+          <span class="fee-total-val">~$60–80</span>
+        </div>
+        <div style="font-size:11px;color:var(--dim);margin-top:10px;">Note: Iceland is mostly a cash trip (flights + Blue Lagoon). DAT value is in Reykjavik hotel points optimization and trip structuring.</div>
+      </div>
+
+    </div><!-- /tammy-iceland -->
+
+
+    <!-- ════════════════════════════ TAMMY JAPAN ════════════════════════════ -->
+    <div id="view-tammy-japan" class="view">
+
+      <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:6px;">
+        <div style="font-size:22px;font-weight:800;">🇯🇵 Tammy — Japan</div>
+        <span class="badge badge-gold">MONITORING AWARD SPACE</span>
+      </div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:24px;">December 2026 · JFK → Tokyo Haneda (HND) · JAL AA167</div>
+
+      <div class="itin-card" style="border-top-color:var(--gold);">
+        <div class="itin-title">Flight Strategy</div>
+        <table>
+          <thead>
+            <tr><th>Segment</th><th>Flight</th><th>Miles</th><th>Taxes</th><th>Cash Equivalent</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-loc">JFK → HND (Tokyo Haneda)</td>
+              <td>JAL AA167 · Nonstop</td>
+              <td><span style="color:var(--gold);font-family:monospace;font-weight:700;">35,000</span><br><span style="font-size:10px;color:var(--dim);">AA AAdvantage miles</span></td>
+              <td style="font-family:monospace;color:var(--green);">$5.60</td>
+              <td style="font-family:monospace;color:var(--text);">$913–983</td>
+              <td><span class="cover-tag cover-open" style="background:rgba(255,215,0,.1);color:var(--gold);border:none;">AWARD SPACE OPENS ~MAR 8 2026</span></td>
+            </tr>
+            <tr>
+              <td class="td-loc">Return — HND → JFK</td>
+              <td>TBD</td>
+              <td>—</td>
+              <td>—</td>
+              <td>—</td>
+              <td><span class="cover-tag cover-open">UNRESOLVED — AWAITING TAMMY</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;">
+        <div class="savings-card">
+          <div class="savings-card-title">Miles Required (One-Way)</div>
+          <div class="savings-val" style="color:var(--gold)">35,000</div>
+          <div class="savings-sub">AA AAdvantage miles · via PointsYeah</div>
+        </div>
+        <div class="savings-card">
+          <div class="savings-card-title">Taxes + Fees</div>
+          <div class="savings-val" style="color:var(--green)">$5.60</div>
+          <div class="savings-sub">Exceptional. Near-zero carrier fees.</div>
+        </div>
+        <div class="savings-card">
+          <div class="savings-card-title">Cash Price (same route)</div>
+          <div class="savings-val" style="color:var(--text)">$913–983</div>
+          <div class="savings-sub">Savings if business opens: $3,000+</div>
+        </div>
+      </div>
+
+      <div class="action-list">
+        <div class="action-item high" style="border-left-color:var(--gold);">
+          <span class="action-icon">🔔</span>
+          <div class="action-text">
+            <div class="action-title">Set award space monitoring — JAL AA167 JFK→HND opens ~March 8, 2026</div>
+            <div class="action-desc">355-day advance window. Tammy is #1 on EP upgrade list for business class if space opens. Use PointsYeah and Seats.aero to monitor from March 8. Must book immediately when space opens — award inventory goes fast on this route.</div>
+          </div>
+          <span class="action-due due-blue">MAR 8, 2026</span>
+        </div>
+        <div class="action-item medium">
+          <span class="action-icon">↩️</span>
+          <div class="action-text">
+            <div class="action-title">Confirm Tammy's Japan return routing</div>
+            <div class="action-desc">Return from Japan unresolved. Tammy joins group around Dec 8. Need to know return date and whether open-jaw (e.g., OKA or KIX → JFK) is desired. Note: open-jaw typically prices same as round trip on most programs.</div>
+          </div>
+          <span class="action-due due-blue">OPEN</span>
+        </div>
+        <div class="action-item low">
+          <span class="action-icon">🏨</span>
+          <div class="action-text">
+            <div class="action-title">Research Tokyo hotel options for Tammy's Japan trip</div>
+            <div class="action-desc">Tammy arrives solo ~Dec 8, joins group later. Research Marriott Bonvoy and AA partnership hotels in Tokyo for the solo portion. Tammy has 500K+ Marriott points and 1.6M AA miles.</div>
+          </div>
+          <span class="action-due due-dim">LATER</span>
+        </div>
+      </div>
+
+      <div class="fee-box" style="margin-top:24px;">
+        <div class="fee-title">── DAT Fee Calculation — Japan (Projected)</div>
+        <div class="fee-row">
+          <span class="fee-row-label">JFK→HND cash cost (economy reference)</span>
+          <span class="fee-row-val" style="color:var(--text)">~$950</span>
+        </div>
+        <div class="fee-row">
+          <span class="fee-row-label">If business class opens — cash business cost</span>
+          <span class="fee-row-val" style="color:var(--text)">~$3,500–5,000</span>
+        </div>
+        <div class="fee-row">
+          <span class="fee-row-label">Award redemption cost to Tammy</span>
+          <span class="fee-row-val" style="color:var(--green)">$5.60</span>
+        </div>
+        <div class="fee-row">
+          <span class="fee-row-label">Savings (economy scenario)</span>
+          <span class="fee-row-val" style="color:var(--green)">~$944</span>
+        </div>
+        <div class="fee-row">
+          <span class="fee-row-label">Savings (business class scenario)</span>
+          <span class="fee-row-val" style="color:var(--green)">~$3,494–4,994</span>
+        </div>
+        <div class="fee-total-row">
+          <span class="fee-total-label">DAT Fee (10%) — business class scenario</span>
+          <span class="fee-total-val">$349–499</span>
+        </div>
+        <div style="font-size:11px;color:var(--dim);margin-top:10px;">Japan is the highest-value single redemption in Tammy's portfolio. Business class on JAL at 35K miles is an exceptional deal. This is DAT's strongest case study.</div>
+      </div>
+
+    </div><!-- /tammy-japan -->
+
+
+    <!-- ════════════════════════════ DARREN ════════════════════════════ -->
+    <div id="view-darren" class="view">
+
+      <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:6px;">
+        <div style="font-size:22px;font-weight:800;">🇿🇦 Darren — South Africa</div>
+        <span class="badge" style="background:rgba(155,89,255,.1);color:var(--purple);border:1px solid rgba(155,89,255,.25);">GROUP · 6 PAX</span>
+      </div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:24px;">December 16 – January 1 · DCA/IAD/BWI → Johannesburg (JNB) · Open-jaw return from Cape Town (CPT) possible</div>
+
+      <div style="padding:16px;background:rgba(255,112,67,.06);border:1px solid rgba(255,112,67,.2);border-radius:10px;margin-bottom:20px;font-size:13px;">
+        <strong style="color:var(--orange);">⚠ Critical challenge:</strong> Peak Southern Hemisphere summer + holiday travel = near-impossible to find 6 simultaneous award seats on any single itinerary. Cash fares on Turkish Airlines (IST hub), Ethiopian Airlines (ADD hub), and Qatar Airways (DOH hub) may be more realistic than chasing award space for a group this size. Must get Darren's actual point balances before proceeding.
+      </div>
+
+      <div class="itin-card" style="border-top-color:var(--purple);">
+        <div class="itin-title">Trip Parameters</div>
+        <table>
+          <thead>
+            <tr><th>Item</th><th>Detail</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="td-loc">Passengers</td>
+              <td>6 adults</td>
+              <td><span class="badge" style="background:rgba(155,89,255,.1);color:var(--purple);border:1px solid rgba(155,89,255,.2);">GROUP</span></td>
+            </tr>
+            <tr>
+              <td class="td-loc">Origin</td>
+              <td>DCA / IAD / BWI (flexible)</td>
+              <td><span class="cover-tag cover-cash">FLEXIBLE</span></td>
+            </tr>
+            <tr>
+              <td class="td-loc">Destination</td>
+              <td>Johannesburg (JNB)</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td class="td-loc">Return</td>
+              <td>Possible open-jaw from Cape Town (CPT)</td>
+              <td><span class="cover-tag cover-open">TBD</span></td>
+            </tr>
+            <tr>
+              <td class="td-loc">Travel dates</td>
+              <td>December 16 – January 1</td>
+              <td><span class="cover-tag cover-open" style="background:rgba(255,71,87,.1);color:var(--red);">PEAK SEASON</span></td>
+            </tr>
+            <tr>
+              <td class="td-loc">Stops</td>
+              <td>Max 1 stop preferred</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td class="td-loc">Points currencies</td>
+              <td>United MileagePlus + Amex MR</td>
+              <td><span class="cover-tag cover-open">BALANCES NOT CONFIRMED</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title">── Routing Options to Research</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;">Turkish Airlines (IST)</div>
+          <div style="font-size:11px;color:var(--muted);">DCA/IAD → IST → JNB. Competitive cash fares. Star Alliance — bookable with United miles. Strong business class product.</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;">Ethiopian Airlines (ADD)</div>
+          <div style="font-size:11px;color:var(--muted);">IAD/DCA → ADD → JNB. Often competitive cash. Star Alliance — bookable with United miles. Good Africa hub.</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+          <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:6px;">Qatar Airways (DOH)</div>
+          <div style="font-size:11px;color:var(--muted);">IAD → DOH → JNB. Oneworld — bookable with Amex MR → BA Avios or AA miles. QSuites on some routes. Premium product.</div>
+        </div>
+      </div>
+
+      <div class="action-list">
+        <div class="action-item urgent">
+          <span class="action-icon">📊</span>
+          <div class="action-text">
+            <div class="action-title">Get Darren's actual United MileagePlus and Amex MR balances</div>
+            <div class="action-desc">Cannot proceed with any award search or strategy without knowing balances. If balances are insufficient for 6 pax, pivot immediately to cash fare comparison (Turkish/Ethiopian/Qatar).</div>
+          </div>
+          <span class="action-due due-red">BLOCKER</span>
+        </div>
+        <div class="action-item high">
+          <span class="action-icon">🔍</span>
+          <div class="action-text">
+            <div class="action-title">Research cash fares as primary alternative — Turkish, Ethiopian, Qatar</div>
+            <div class="action-desc">Peak Dec 16–Jan 1 + 6 simultaneous seats = award space likely unavailable. Price cash options on Turkish (via IST), Ethiopian (via ADD), Qatar (via DOH) for 6 pax. If cash fares are competitive, advise Darren directly rather than chasing award inventory.</div>
+          </div>
+          <span class="action-due due-orange">OPEN</span>
+        </div>
+      </div>
+
+    </div><!-- /darren -->
+
+
+    <!-- ════════════════════════════ POINTS VALUATIONS ════════════════════════════ -->
+    <div id="view-valuations" class="view">
+
+      <div style="font-size:22px;font-weight:800;margin-bottom:6px;">💰 Points Valuations</div>
+      <div style="color:var(--muted);font-size:13px;margin-bottom:24px;">Cents-per-point (CPP) reference · Used for savings calculations</div>
+
+      <table style="background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <thead>
+          <tr style="background:rgba(255,255,255,.03);">
+            <th>Program</th>
+            <th>Type</th>
+            <th>CPP (est.)</th>
+            <th>Tammy's Balance</th>
+            <th>Est. Value</th>
+            <th>Best Use</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="font-weight:600;color:var(--blue);">Amex Membership Rewards</td><td>Transfer</td><td style="font-family:monospace;color:var(--gold);">2.0¢</td><td style="font-family:monospace;">1,000,000+</td><td style="font-family:monospace;color:var(--green);">$20,000+</td><td style="color:var(--muted);font-size:11px;">Transfer to Air Canada, ANA, BA Avios, Delta, Turkish</td></tr>
+          <tr><td style="font-weight:600;color:var(--orange);">AA AAdvantage</td><td>Airline</td><td style="font-family:monospace;color:var(--gold);">1.5¢</td><td style="font-family:monospace;">1,600,000</td><td style="font-family:monospace;color:var(--green);">$24,000</td><td style="color:var(--muted);font-size:11px;">JAL nonstop JFK→HND · Cathay Pacific · British Airways</td></tr>
+          <tr><td style="font-weight:600;color:var(--orange);">Marriott Bonvoy</td><td>Hotel</td><td style="font-family:monospace;color:var(--gold);">0.8¢</td><td style="font-family:monospace;">500,000+</td><td style="font-family:monospace;color:var(--green);">$4,000+</td><td style="color:var(--muted);font-size:11px;">Milan, Reykjavik, Tokyo hotels</td></tr>
+          <tr style="border-top:1px solid var(--border);"><td style="font-weight:600;color:var(--blue);color:#a8c4e0;">Chase Ultimate Rewards</td><td>Transfer</td><td style="font-family:monospace;color:var(--gold);">2.0¢</td><td style="font-family:monospace;">—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Hyatt, United, BA, Southwest</td></tr>
+          <tr><td style="font-weight:600;color:var(--blue);color:#a8c4e0;">United MileagePlus</td><td>Airline</td><td style="font-family:monospace;color:var(--gold);">1.3¢</td><td style="font-family:monospace;">TBD (Darren)</td><td>—</td><td style="color:var(--muted);font-size:11px;">Star Alliance: Turkish, Ethiopian, Lufthansa</td></tr>
+          <tr><td style="font-weight:600;color:var(--blue);color:#a8c4e0;">Citi ThankYou</td><td>Transfer</td><td style="font-family:monospace;color:var(--gold);">1.7¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Turkish Miles, Air France/KLM, Avianca</td></tr>
+          <tr><td style="font-weight:600;color:var(--muted);">Delta SkyMiles</td><td>Airline</td><td style="font-family:monospace;color:var(--gold);">1.0¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Dynamic pricing — value highly variable</td></tr>
+          <tr><td style="font-weight:600;color:var(--muted);">Air Canada Aeroplan</td><td>Airline</td><td style="font-family:monospace;color:var(--gold);">1.5¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Star Alliance, no fuel surcharges on most</td></tr>
+          <tr><td style="font-weight:600;color:var(--muted);">British Avios</td><td>Airline</td><td style="font-family:monospace;color:var(--gold);">1.4¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Short-haul Oneworld. High fees on some routes.</td></tr>
+          <tr><td style="font-weight:600;color:var(--muted);">Turkish Miles & Smiles</td><td>Airline</td><td style="font-family:monospace;color:var(--gold);">1.5¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Best Star Alliance redemptions. Transfer from Amex/Citi.</td></tr>
+          <tr><td style="font-weight:600;color:var(--muted);">Air France/KLM Flying Blue</td><td>Airline</td><td style="font-family:monospace;color:var(--gold);">1.3¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">SkyTeam. Promo awards monthly.</td></tr>
+          <tr><td style="font-weight:600;color:var(--muted);">Singapore KrisFlyer</td><td>Airline</td><td style="font-family:monospace;color:var(--gold);">1.5¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Best for Singapore Suites/First. Transfer from Amex.</td></tr>
+          <tr><td style="font-weight:600;color:var(--muted);">World of Hyatt</td><td>Hotel</td><td style="font-family:monospace;color:var(--gold);">1.7¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Best hotel program. Fixed category pricing.</td></tr>
+          <tr><td style="font-weight:600;color:var(--muted);">Hilton Honors</td><td>Hotel</td><td style="font-family:monospace;color:var(--gold);">0.5¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Low CPP — use only when rate is exceptional</td></tr>
+          <tr><td style="font-weight:600;color:var(--muted);">IHG One Rewards</td><td>Hotel</td><td style="font-family:monospace;color:var(--gold);">0.5¢</td><td>—</td><td>—</td><td style="color:var(--muted);font-size:11px;">Low CPP — use for IHG-exclusive properties only</td></tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:16px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted);">
+        <strong style="color:var(--text);">DAT Savings Methodology:</strong> Cash cost of the same itinerary minus the out-of-pocket cost of the points redemption (taxes/fees only) = savings. DAT fee = 10% of savings. CPP estimates are conservative and used for client-facing calculations.
+      </div>
+
+    </div><!-- /valuations -->
+
+  </main>
+</div>
+
+<script>
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(l => l.classList.remove('active'));
+}
+</script>
 </body>
 </html>
