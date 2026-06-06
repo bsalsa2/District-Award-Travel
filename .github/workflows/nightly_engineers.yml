@@ -7,6 +7,9 @@ name: Nightly Engineering Run
     - cron: '0 8 * * *'
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   jensen-ideas:
     runs-on: ubuntu-latest
@@ -21,11 +24,12 @@ jobs:
           python-version: '3.11'
 
       - name: Install packages
-        run: pip install openai
+        run: pip install openai google-genai
 
       - name: Jensen Huang generates tasks
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
         run: python agents/jensen.py
 
@@ -54,7 +58,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install packages
-        run: pip install openai google-generativeai python-dotenv requests beautifulsoup4 fastapi sqlalchemy pydantic jinja2 aiohttp
+        run: pip install openai google-genai python-dotenv requests beautifulsoup4 fastapi sqlalchemy pydantic jinja2 aiohttp uvicorn
 
       - name: Run Mitchell (Infrastructure)
         env:
@@ -64,6 +68,17 @@ jobs:
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
         run: python agents/run_engineer.py mitchell
 
+      - name: Commit Mitchell's work
+        run: |
+          git config user.name "Mitchell Hashimoto"
+          git config user.email "mitchell@dat.ai"
+          git add -A -- ':!node_modules'
+          git diff --staged --quiet || git commit -m "Mitchell build $(date '+%Y-%m-%d')"
+          git push origin main --force
+
+      - name: Pull latest before Martin
+        run: git pull origin main --rebase
+
       - name: Run Martin (Backend)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -71,6 +86,17 @@ jobs:
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
         run: python agents/run_engineer.py martin
+
+      - name: Commit Martin's work
+        run: |
+          git config user.name "Martin Thompson"
+          git config user.email "martin@dat.ai"
+          git add -A -- ':!node_modules'
+          git diff --staged --quiet || git commit -m "Martin build $(date '+%Y-%m-%d')"
+          git push origin main --force
+
+      - name: Pull latest before Jeff
+        run: git pull origin main --rebase
 
       - name: Run Jeff (AI & Full-Stack)
         env:
@@ -80,12 +106,12 @@ jobs:
           COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
         run: python agents/run_engineer.py jeff
 
-      - name: Commit all engineer work
+      - name: Commit Jeff's work
         run: |
-          git config user.name "DAT Engineers"
-          git config user.email "engineers@dat.ai"
+          git config user.name "Jeff Dean"
+          git config user.email "jeff@dat.ai"
           git add -A -- ':!node_modules'
-          git diff --staged --quiet || git commit -m "Nightly build $(date '+%Y-%m-%d')"
+          git diff --staged --quiet || git commit -m "Jeff build $(date '+%Y-%m-%d')"
           git push origin main --force
 
   morning-email:

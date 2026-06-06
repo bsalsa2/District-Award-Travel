@@ -11,7 +11,6 @@ import re
 import time
 from pathlib import Path
 from openai import OpenAI
-import google.generativeai as genai
 
 BASE_DIR = Path(__file__).parent.parent
 TASKS_FILE = BASE_DIR / "tasks" / "backlog.json"
@@ -132,12 +131,18 @@ def call_gemini(prompt, engineer_id):
         raise ValueError("GEMINI_API_KEY not set")
 
     print("[" + engineer_id + "] Falling back to Gemini...")
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name="gemini-2.0-flash",
-        system_instruction=get_system_prompt(engineer_id)
+    from google import genai as google_genai
+    from google.genai import types as genai_types
+    client = google_genai.Client(api_key=api_key)
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt,
+        config=genai_types.GenerateContentConfig(
+            system_instruction=get_system_prompt(engineer_id),
+            temperature=0.3,
+            max_output_tokens=8000,
+        ),
     )
-    response = model.generate_content(prompt)
     print(response.text)
     return response.text
 
