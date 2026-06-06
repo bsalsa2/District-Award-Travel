@@ -2418,6 +2418,54 @@
       "priority": "high",
       "status": "pending",
       "description": "Build platform/src/api/clients.py with POST /clients (create), GET /clients (list all), GET /clients/{id} (get one), PATCH /clients/{id} (update). Build platform/src/database/clients_db.py with SQLite schema: id, name, email, phone, created_at, total_miles_managed, programs (JSON), notes, status. Build platform/public/clients.html: dark-themed dashboard with client table, search/filter, a New Client modal form, and a detail panel that shows when clicking a client. All data fetched from the FastAPI API. Write all styles in a style block, no external CSS frameworks."
+    },
+    {
+      "id": "TASK-1006",
+      "title": "Automated Award Flight Monitoring Cluster",
+      "assigned_to": "mitchell",
+      "priority": "high",
+      "status": "pending",
+      "description": "Design and implement a scalable cluster of microservices to monitor award flight availability in real-time. Create a Kubernetes deployment YAML file (platform/infra/deployment.yaml) and a Docker Compose file (platform/infra/docker-compose.yaml) to manage the cluster. Integrate with the existing Prometheus and Grafana setup to display monitoring metrics."
+    },
+    {
+      "id": "TASK-1007",
+      "title": "Infrastructure as Code for Award Travel Booking",
+      "assigned_to": "mitchell",
+      "priority": "medium",
+      "status": "pending",
+      "description": "Implement Infrastructure as Code (IaC) using Terraform to manage the infrastructure for the award travel booking system. Create a Terraform configuration file (platform/infra/main.tf) to provision and manage resources such as virtual machines, databases, and networking components."
+    },
+    {
+      "id": "TASK-1008",
+      "title": "Real-time Award Flight Data Warehouse",
+      "assigned_to": "martin",
+      "priority": "high",
+      "status": "pending",
+      "description": "Develop a real-time data warehouse to store and process award flight data using Apache Kafka, Apache Cassandra, and Apache Spark. Create a FastAPI endpoint (platform/src/endpoints/award_flights.py) to ingest data into the warehouse and a SQLite database schema (platform/src/db/award_flights.sql) to store the data."
+    },
+    {
+      "id": "TASK-1009",
+      "title": "Client Redemption Tracking API",
+      "assigned_to": "martin",
+      "priority": "medium",
+      "status": "pending",
+      "description": "Design and implement a RESTful API using FastAPI to track client redemptions and award flight bookings. Create a Python module (platform/src/services/redemption_tracker.py) to handle API requests and a SQLite database schema (platform/src/db/redemptions.sql) to store the data."
+    },
+    {
+      "id": "TASK-1010",
+      "title": "AI-powered Award Flight Recommendation Engine",
+      "assigned_to": "jeff",
+      "priority": "high",
+      "status": "pending",
+      "description": "Develop an AI-powered award flight recommendation engine using machine learning algorithms and natural language processing techniques. Create a Python module (platform/src/models/award_flight_recommender.py) to train and deploy the model and a frontend dashboard component (platform/public/components/award-flight-recommender.js) to display the recommendations."
+    },
+    {
+      "id": "TASK-1011",
+      "title": "Award Flight Availability Forecasting Dashboard",
+      "assigned_to": "jeff",
+      "priority": "medium",
+      "status": "pending",
+      "description": "Design and implement a dashboard to forecast award flight availability using historical data and machine learning algorithms. Create a frontend dashboard component (platform/public/components/award-flight-forecast.js) to display the forecast and a Python module (platform/src/models/award_flight_forecaster.py) to train and deploy the model."
     }
   ],
   "completed": []
