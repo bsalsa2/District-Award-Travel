@@ -1,19 +1,41 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: award-travel-deployment
+  name: award-flight-monitor
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: award-travel
+      app: award-flight-monitor
   template:
     metadata:
       labels:
-        app: award-travel
+        app: award-flight-monitor
     spec:
       containers:
-      - name: award-travel
-        image: award-travel:latest
+      - name: award-flight-monitor
+        image: district-award-travel/award-flight-monitor:latest
         ports:
         - containerPort: 8080
+        env:
+        - name: PROMETHEUS_PUSHGATEWAY
+          value: "http://prometheus-pushgateway:9091"
+        - name: GRAFANA_URL
+          value: "http://grafana:3000"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelay: 15
+          period: 15
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelay: 5
+          period: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1

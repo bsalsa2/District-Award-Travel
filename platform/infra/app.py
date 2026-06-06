@@ -1,19 +1,26 @@
 from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
+import requests
+from prometheus_client import Counter, Gauge, start_http_server
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://postgres:postgres@db:5432/award_travel"
-db = SQLAlchemy(app)
 
-class AwardTravel(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(200), nullable=False)
+# Prometheus metrics
+award_flight_counter = Counter('award_flight_count', 'Number of award flights')
+award_flight_gauge = Gauge('award_flight_availability', 'Award flight availability')
 
-@app.route("/awards", methods=["GET"])
-def get_awards():
-    awards = AwardTravel.query.all()
-    return jsonify([{"id": award.id, "name": award.name, "description": award.description} for award in awards])
+# Award flight monitoring endpoint
+@app.route('/monitor', methods=['GET'])
+def monitor():
+    award_flights = requests.get('https://example.com/award-flights').json()
+    award_flight_counter.inc(len(award_flights))
+    award_flight_gauge.set(len(award_flights))
+    return jsonify({'award_flights': award_flights})
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+# Health check endpoint
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok'})
+
+if __name__ == '__main__':
+    start_http_server(8080)
+    app.run(port=8080)
