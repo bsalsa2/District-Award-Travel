@@ -4,10 +4,11 @@ name: Daily Ops Briefing
 # every morning. Replaces the old nightly free-form engineering agents, which
 # were generating noise and causing repeated merge conflicts.
 
+# PAUSED: the scheduled briefing is disabled until the admin dashboard is
+# wired to the backend, so action items can be managed from the dashboard
+# (no manual file editing). Only manual runs are possible for now.
 "on":
-  schedule:
-    - cron: '0 11 * * *'   # 11:00 UTC ~ 7:00 AM ET
-  workflow_dispatch:        # lets you run it manually from the Actions tab
+  workflow_dispatch:        # manual-only; re-enable the schedule line later
 
 jobs:
   daily-briefing:

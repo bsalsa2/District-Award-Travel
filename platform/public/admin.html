@@ -269,8 +269,8 @@
     <h2>Admin Portal</h2>
     <p>Restricted access. Authorized personnel only.</p>
     <div class="form-group">
-      <label>Username</label>
-      <input type="text" id="admin-user" placeholder="admin" onkeydown="if(event.key==='Enter')doAdminLogin()">
+      <label>Email</label>
+      <input type="text" id="admin-user" placeholder="admin@districtawardtravel.com" onkeydown="if(event.key==='Enter')doAdminLogin()">
     </div>
     <div class="form-group">
       <label>Password</label>
@@ -810,17 +810,16 @@
 
     <div id="addclient-result" style="display:none">
       <div style="background:rgba(0,232,122,0.08);border:1px solid rgba(0,232,122,0.3);border-radius:10px;padding:20px;margin-bottom:16px">
-        <div style="font-weight:700;color:var(--green);margin-bottom:10px">&#10003; Client created &amp; active on this device</div>
+        <div style="font-weight:700;color:var(--green);margin-bottom:10px" id="res-title">&#10003; Client created</div>
         <div style="font-size:0.85rem;line-height:1.8">
-          <div><span style="color:var(--muted)">Portal:</span> <strong>client.html</strong></div>
           <div><span style="color:var(--muted)">Email:</span> <strong id="res-email"></strong></div>
           <div><span style="color:var(--muted)">Access Code:</span> <strong id="res-pass"></strong></div>
         </div>
       </div>
-      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:8px">To let this client log in from <em>their own</em> device, this entry must be saved into <strong>client.html</strong>. Copy the block below and paste it into the client list — or send it to your developer:</div>
-      <textarea id="res-snippet" readonly style="width:100%;height:130px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-family:monospace;font-size:0.76rem;resize:vertical"></textarea>
+      <div id="res-explain" style="font-size:0.82rem;color:var(--muted);margin-bottom:8px"></div>
+      <textarea id="res-snippet" readonly style="display:none;width:100%;height:130px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-family:monospace;font-size:0.76rem;resize:vertical"></textarea>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn-sm primary" onclick="copySnippet(this)">Copy Code Block</button>
+        <button class="btn-sm primary" id="res-copy-btn" onclick="copySnippet(this)" style="display:none">Copy Code Block</button>
         <button class="btn-sm" onclick="resetAddClient()">Add Another</button>
         <button class="btn-sm" onclick="closeAddClient()">Done</button>
       </div>
@@ -829,17 +828,93 @@
 </div>
 
 <script>
-function doAdminLogin() {
+let ADMIN_TOKEN = null;
+
+function adminError(msg) {
+  const err = document.getElementById('admin-error');
+  if (msg) err.textContent = msg;
+  err.style.display = 'block';
+  setTimeout(() => err.style.display = 'none', 3500);
+}
+
+function enterAdmin() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('admin').style.display = 'block';
+  loadClients();
+  loadIntakes();
+}
+
+async function doAdminLogin() {
   const u = document.getElementById('admin-user').value.trim();
   const p = document.getElementById('admin-pass').value.trim();
-  if ((u === 'braden' || u === 'admin') && p === 'dat2026') {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('admin').style.display = 'block';
-  } else {
-    const err = document.getElementById('admin-error');
-    err.style.display = 'block';
-    setTimeout(() => err.style.display = 'none', 3500);
+  const btn = document.querySelector('#login-screen .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
+
+  // 1) Try the live backend
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: u, password: p }),
+    });
+    if (res.ok) {
+      const { token } = await res.json();
+      ADMIN_TOKEN = token;
+      sessionStorage.setItem('dat_admin_token', token);
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      return enterAdmin();
+    } else if (res.status === 401) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      return adminError('Invalid credentials.');
+    }
+  } catch (e) {
+    // Backend unreachable — fall through to demo login
   }
+
+  // 2) Fallback demo login (offline preview only)
+  if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+  if ((u === 'braden' || u === 'admin' || u === 'admin@districtawardtravel.com') && p === 'dat2026') {
+    enterAdmin();
+  } else {
+    adminError('Invalid credentials.');
+  }
+}
+
+// Load the real client list from the backend (no-op if offline)
+async function loadClients() {
+  if (!ADMIN_TOKEN) return;
+  try {
+    const res = await fetch('/api/admin/clients', { headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN } });
+    if (!res.ok) return;
+    const clients = await res.json();
+    console.log('Loaded ' + clients.length + ' clients from backend.');
+    // The dashboard tables are pre-populated with your launch clients; the
+    // backend list is available here for future dynamic rendering.
+  } catch (e) {}
+}
+
+async function loadIntakes() {
+  if (!ADMIN_TOKEN) return;
+  try {
+    const res = await fetch('/api/admin/intakes', { headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN } });
+    if (!res.ok) return;
+    const intakes = await res.json();
+    renderIntakes(intakes);
+  } catch (e) {}
+}
+
+function renderIntakes(intakes) {
+  const panel = document.querySelector('#panel-intake .content');
+  if (!panel) return;
+  if (!intakes.length) return; // keep the existing empty-state message
+  panel.innerHTML = '<div class="intake-list">' + intakes.map(function(i) {
+    return '<div class="intake-card">' +
+      '<div><div class="intake-name">' + (i.name || 'Unknown') + '</div>' +
+      '<div class="intake-email">' + (i.email || '') + ' · ' + (i.phone || 'no phone') + '</div></div>' +
+      '<div class="intake-details">' + (i.payload && i.payload.travel_goals ? i.payload.travel_goals : '(no goals provided)') + '</div>' +
+      '<div class="intake-actions"><span style="font-size:0.72rem;color:var(--muted)">' + (i.created_at || '').slice(0,10) + '</span></div>' +
+      '</div>';
+  }).join('') + '</div>';
 }
 
 function doAdminLogout() {
@@ -866,7 +941,7 @@ function genCode() {
   const w = ['alpha','bravo','delta','miles','points','jet','award','first','cabin','lounge'];
   document.getElementById('ac-pass').value = w[Math.floor(Math.random()*w.length)] + Math.floor(1000 + Math.random()*9000);
 }
-function generateClient() {
+async function generateClient() {
   const first = document.getElementById('ac-first').value.trim();
   const last  = document.getElementById('ac-last').value.trim();
   const email = document.getElementById('ac-email').value.trim().toLowerCase();
@@ -874,21 +949,52 @@ function generateClient() {
   const tier  = document.getElementById('ac-tier').value.trim() || 'Client';
   if (!first || !email || !pass) { alert('First name, email, and access code are required.'); return; }
   const name = (first + ' ' + last).trim();
-  const client = {
-    pass: pass, name: name, tier: tier,
+  const data = {
     stats: { trips: 0, savings: '$0', fee: '$0', points: '—' },
     urgency: null, trips: [], savings: [], totalSavings: '$0', totalFee: '$0', points: [],
     messages: [{ from: 'Jordan Mills — DAT', time: 'Today', text: 'Welcome to District Award Travel, ' + first + "! Your portal is set up. We'll begin mapping your points and trips shortly.", unread: true }]
   };
-  // Persist on this device so the new client can log in immediately for testing/demo.
+
+  document.getElementById('res-email').textContent = email;
+  document.getElementById('res-pass').textContent = pass;
+
+  // 1) If signed into the live backend, save the client permanently.
+  if (ADMIN_TOKEN) {
+    try {
+      const res = await fetch('/api/admin/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ADMIN_TOKEN },
+        body: JSON.stringify({ email: email, password: pass, name: name, tier: tier, data: data }),
+      });
+      if (res.ok) {
+        document.getElementById('res-title').innerHTML = '&#10003; Client saved to your live database';
+        document.getElementById('res-explain').innerHTML = 'Done. <strong>' + name + '</strong> can now log in from any device at the client portal using the email and access code above. Share those with them.';
+        document.getElementById('res-snippet').style.display = 'none';
+        document.getElementById('res-copy-btn').style.display = 'none';
+        document.getElementById('addclient-form').style.display = 'none';
+        document.getElementById('addclient-result').style.display = 'block';
+        loadClients();
+        return;
+      } else if (res.status === 409) {
+        alert('A client with that email already exists.');
+        return;
+      }
+    } catch (e) {
+      // fall through to offline mode
+    }
+  }
+
+  // 2) Offline/preview fallback: store locally + generate paste-in snippet.
+  const client = Object.assign({ pass: pass, name: name, tier: tier }, data);
   const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
   store[email] = client;
   localStorage.setItem('dat_clients', JSON.stringify(store));
-  // Build a paste-ready snippet for permanent addition to client.html.
   const snippet = '  "' + email + '": ' + JSON.stringify(client, null, 2).split('\n').join('\n  ') + ',';
-  document.getElementById('res-email').textContent = email;
-  document.getElementById('res-pass').textContent = pass;
+  document.getElementById('res-title').innerHTML = '&#10003; Client created (offline preview)';
+  document.getElementById('res-explain').innerHTML = 'Not connected to the live backend, so this client only works on this device. To make it permanent, copy the block below into <strong>client.html</strong>, or sign in to the live admin and add them there.';
   document.getElementById('res-snippet').value = snippet;
+  document.getElementById('res-snippet').style.display = 'block';
+  document.getElementById('res-copy-btn').style.display = 'inline-flex';
   document.getElementById('addclient-form').style.display = 'none';
   document.getElementById('addclient-result').style.display = 'block';
 }
