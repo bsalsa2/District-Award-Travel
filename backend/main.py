@@ -288,6 +288,24 @@ def health():
     return {"status": "ok", "time": dt.datetime.utcnow().isoformat()}
 
 
+# ── Diagnostics (safe: never reveals the password itself) ──
+@app.get("/api/admin/diag")
+def admin_diag(db: Session = Depends(get_db)):
+    """Tells us whether the admin exists and whether the env-var password
+    actually matches the stored hash — so we can pinpoint a login failure
+    without leaking any secret. Reports the password LENGTH only."""
+    admin = db.query(Admin).filter(Admin.email == ADMIN_EMAIL).first()
+    return {
+        "expected_login_email": ADMIN_EMAIL,
+        "admin_exists": admin is not None,
+        "db_type": "postgres" if DATABASE_URL.startswith("postgresql") else "sqlite",
+        "env_password_length": len(ADMIN_PASSWORD),
+        "env_password_matches_stored": (
+            verify_pw(ADMIN_PASSWORD, admin.password_hash) if admin else None
+        ),
+    }
+
+
 # ── Intake ──
 @app.post("/api/intake")
 async def submit_intake(request: Request, db: Session = Depends(get_db)):
