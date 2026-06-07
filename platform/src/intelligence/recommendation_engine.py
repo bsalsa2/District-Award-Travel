@@ -1,450 +1,262 @@
 """
-Award Travel Recommendation Engine
-Uses collaborative filtering, content-based filtering, and hybrid approaches
-to suggest optimal award travel options based on user preferences and historical data.
+District Award Travel - AI Recommendation Engine
+Advanced machine learning models for award flight recommendations
 """
-
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Tuple, Optional
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import MinMaxScaler
-import logging
-from datetime import datetime, timedelta
-import json
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+import joblib
 import os
-from pathlib import Path
+import logging
+from typing import List, Dict, Optional
+from datetime import datetime
+import sqlite3
+from collections import defaultdict
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class AwardTravelRecommender:
+class AdvancedRecommendationEngine:
     """
-    Hybrid recommendation system for award travel options.
-    Combines collaborative filtering, content-based filtering, and business rules.
+    Advanced AI-powered recommendation engine for award flights.
+    Uses collaborative filtering, content-based filtering, and hybrid approaches.
     """
 
-    def __init__(self, data_path: str = "data/award_travel.db"):
-        self.data_path = data_path
-        self.user_preferences = {}
-        self.travel_data = None
-        self.user_history = None
-        self.airline_similarity = None
-        self.destination_similarity = None
-        self.model_weights = {
-            'collaborative': 0.4,
-            'content': 0.3,
-            'business_rules': 0.3
-        }
-        self.load_data()
+    def __init__(self, model_path: str = "platform/data/recommendation_model.pkl"):
+        self.model_path = model_path
+        self.model = None
+        self.scaler = StandardScaler()
+        self.user_profiles = defaultdict(dict)
+        self.flight_features = {}
+        self.is_trained = False
+        self.load_or_train_model()
 
-    def load_data(self):
-        """Load travel data, user preferences, and historical data"""
+    def load_or_train_model(self):
+        """Load existing model or train new one"""
+        if os.path.exists(self.model_path):
+            try:
+                self.model = joblib.load(self.model_path)
+                self.is_trained = True
+                logger.info("Loaded existing recommendation model")
+            except Exception as e:
+                logger.error(f"Failed to load model: {e}")
+                self.train_model()
+        else:
+            self.train_model()
+
+    def train_model(self):
+        """Train the recommendation model on historical data"""
         try:
-            # Load travel options data
-            self.travel_data = pd.read_csv('data/travel_options.csv')
+            # Load historical booking data
+            conn = sqlite3.connect("platform/data/award_travel.db")
+            query = """
+            SELECT
+                f.id as flight_id,
+                f.airline,
+                f.departure_airport,
+                f.arrival_airport,
+                f.duration_minutes,
+                f.distance_miles,
+                f.stops,
+                f.award_price,
+                b.user_id,
+                b.passengers,
+                CASE WHEN b.id IS NOT NULL THEN 1.0 ELSE 0.0 END as booked
+            FROM flights f
+            LEFT JOIN bookings b ON f.id = b.flight_id
+            WHERE f.departure_time >= date('now', '-1 year')
+            """
 
-            # Load user preferences
-            if os.path.exists('data/user_preferences.json'):
-                with open('data/user_preferences.json', 'r') as f:
-                    self.user_preferences = json.load(f)
+            df = pd.read_sql_query(query, conn)
+            conn.close()
 
-            # Load user history
-            if os.path.exists('data/user_history.csv'):
-                self.user_history = pd.read_csv('data/user_history.csv')
+            if df.empty:
+                logger.warning("No training data available")
+                return
 
-            # Precompute similarities
-            self._precompute_similarities()
+            # Feature engineering
+            df['hour_of_day'] = pd.to_datetime(df['departure_time']).dt.hour
+            df['day_of_week'] = pd.to_datetime(df['departure_time']).dt.dayofweek
+            df['is_weekend'] = (df['day_of_week'] >= 5).astype(int)
 
-            logger.info("Successfully loaded recommendation engine data")
+            # Create feature matrix
+            categorical_features = ['airline', 'departure_airport', 'arrival_airport']
+            numerical_features = ['duration_minutes', 'distance_miles', 'stops', 'award_price', 'hour_of_day', 'day_of_week', 'is_weekend']
+
+            # One-hot encode categorical features
+            df_encoded = pd.get_dummies(df, columns=categorical_features)
+
+            # Split data
+            X = df_encoded.drop(['flight_id', 'user_id', 'passengers', 'booked', 'departure_time'], axis=1, errors='ignore')
+            y = df_encoded['booked']
+
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+            # Create pipeline
+            pipeline = Pipeline([
+                ('scaler', StandardScaler()),
+                ('regressor', RandomForestRegressor(n_estimators=100, random_state=42))
+            ])
+
+            # Train model
+            pipeline.fit(X_train, y_train)
+
+            # Evaluate
+            y_pred = pipeline.predict(X_test)
+            mse = mean_squared_error(y_test, y_pred)
+            logger.info(f"Model trained with MSE: {mse:.4f}")
+
+            # Save model
+            self.model = pipeline
+            joblib.dump(pipeline, self.model_path)
+            self.is_trained = True
+
         except Exception as e:
-            logger.error(f"Error loading data: {e}")
-            raise
+            logger.error(f"Failed to train model: {e}")
+            self.is_trained = False
 
-    def _precompute_similarities(self):
-        """Precompute similarity matrices for airlines and destinations"""
-        try:
-            # Airline similarity based on route networks
-            airlines = self.travel_data['airline'].unique()
-            airline_matrix = np.zeros((len(airlines), len(airlines)))
-
-            for i, airline1 in enumerate(airlines):
-                for j, airline2 in enumerate(airlines):
-                    if airline1 == airline2:
-                        airline_matrix[i][j] = 1.0
-                    else:
-                        # Simple similarity based on common destinations
-                        dests1 = set(self.travel_data[self.travel_data['airline'] == airline1]['destination'])
-                        dests2 = set(self.travel_data[self.travel_data['airline'] == airline2]['destination'])
-                        common = len(dests1.intersection(dests2))
-                        airline_matrix[i][j] = common / max(len(dests1), len(dests2), 1)
-
-            self.airline_similarity = pd.DataFrame(
-                airline_matrix,
-                index=airlines,
-                columns=airlines
-            )
-
-            # Destination similarity based on traveler preferences
-            destinations = self.travel_data['destination'].unique()
-            dest_matrix = np.zeros((len(destinations), len(destinations)))
-
-            for i, dest1 in enumerate(destinations):
-                for j, dest2 in enumerate(destinations):
-                    if dest1 == dest2:
-                        dest_matrix[i][j] = 1.0
-                    else:
-                        # Simple similarity based on common airlines
-                        airlines1 = set(self.travel_data[self.travel_data['destination'] == dest1]['airline'])
-                        airlines2 = set(self.travel_data[self.travel_data['destination'] == dest2]['airline'])
-                        common = len(airlines1.intersection(airlines2))
-                        dest_matrix[i][j] = common / max(len(airlines1), len(airlines2), 1)
-
-            self.destination_similarity = pd.DataFrame(
-                dest_matrix,
-                index=destinations,
-                columns=destinations
-            )
-
-        except Exception as e:
-            logger.error(f"Error precomputing similarities: {e}")
-            raise
-
-    def update_user_preferences(self, user_id: str, preferences: Dict):
-        """Update user preferences and save to storage"""
-        self.user_preferences[user_id] = preferences
-        self._save_preferences()
-
-    def _save_preferences(self):
-        """Save user preferences to JSON file"""
-        try:
-            with open('data/user_preferences.json', 'w') as f:
-                json.dump(self.user_preferences, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving preferences: {e}")
-
-    def get_collaborative_filtering_recommendations(self, user_id: str, n: int = 5) -> List[Dict]:
+    def update_user_profile(self, user_id: int, flight_data: List[Dict]):
         """
-        Get recommendations based on similar users' preferences
+        Update user profile based on interactions with flight results.
+        Uses implicit feedback (clicks, views, bookings).
         """
-        if user_id not in self.user_preferences:
+        if not flight_data:
+            return
+
+        profile = self.user_profiles[user_id]
+
+        for flight in flight_data:
+            # Update airline preferences
+            if 'airline' in flight:
+                profile[f'airline_{flight["airline"]}'] = profile.get(f'airline_{flight["airline"]}', 0) + 1
+
+            # Update route preferences
+            if 'departure_airport' in flight and 'arrival_airport' in flight:
+                route_key = f"{flight['departure_airport']}-{flight['arrival_airport']}"
+                profile[f'route_{route_key}'] = profile.get(f'route_{route_key}', 0) + 1
+
+            # Update time preferences
+            if 'departure_time' in flight:
+                hour = datetime.strptime(flight['departure_time'], "%Y-%m-%d %H:%M:%S").hour
+                profile[f'hour_{hour}'] = profile.get(f'hour_{hour}', 0) + 1
+
+            # Update price sensitivity
+            if 'award_price' in flight:
+                price_category = int(flight['award_price'] // 5000)
+                profile[f'price_{price_category}'] = profile.get(f'price_{price_category}', 0) + 1
+
+    def predict_score(self, user_id: int, flight_features: Dict) -> float:
+        """
+        Predict recommendation score for a flight given user profile.
+        Returns score between 0 and 1.
+        """
+        if not self.is_trained or self.model is None:
+            return self._fallback_score(user_id, flight_features)
+
+        try:
+            # Create feature vector
+            feature_vector = []
+
+            # Numerical features
+            numerical_features = [
+                'duration_minutes', 'distance_miles', 'stops',
+                'award_price', 'hour_of_day', 'day_of_week', 'is_weekend'
+            ]
+
+            for feature in numerical_features:
+                if feature in flight_features:
+                    feature_vector.append(flight_features[feature])
+                else:
+                    feature_vector.append(0)
+
+            # Categorical features (one-hot encoded)
+            categorical_features = ['airline', 'departure_airport', 'arrival_airport']
+            for feature in categorical_features:
+                if feature in flight_features:
+                    # Create binary feature for this category
+                    value = flight_features[feature]
+                    for cat in self.model.named_steps['regressor'].feature_importances_:
+                        feature_vector.append(1 if cat == value else 0)
+                else:
+                    feature_vector.extend([0] * 100)  # Pad with zeros
+
+            # Scale features
+            scaled_features = self.model.named_steps['scaler'].transform([feature_vector])
+
+            # Predict probability of booking
+            score = self.model.named_steps['regressor'].predict_proba(scaled_features)[0][1]
+            return float(score)
+
+        except Exception as e:
+            logger.error(f"Prediction error: {e}")
+            return self._fallback_score(user_id, flight_features)
+
+    def _fallback_score(self, user_id: int, flight_features: Dict) -> float:
+        """Fallback scoring method when model is not available"""
+        score = 0.0
+
+        # Simple heuristics
+        if 'stops' in flight_features and flight_features['stops'] == 0:
+            score += 0.3
+        if 'award_price' in flight_features and flight_features['award_price'] < 25000:
+            score += 0.4
+        if 'airline' in flight_features and flight_features['airline'] == 'AA':
+            score += 0.2
+
+        # User-specific preferences
+        profile = self.user_profiles.get(user_id, {})
+        if 'airline_AA' in profile:
+            score += 0.15
+        if 'route_JFK-LAX' in profile:
+            score += 0.2
+
+        return min(1.0, max(0.0, score))
+
+    def recommend_flights(self, user_id: int, flights: List[Dict], limit: int = 10) -> List[Dict]:
+        """
+        Recommend top flights for a user based on their profile and flight features.
+        Returns list of flights with recommendation scores.
+        """
+        if not flights:
             return []
 
-        try:
-            user_prefs = self.user_preferences[user_id]
-            target_prefs = {
-                'destinations': user_prefs.get('preferred_destinations', []),
-                'airlines': user_prefs.get('preferred_airlines', []),
-                'budget': user_prefs.get('budget', 5000),
-                'travel_style': user_prefs.get('travel_style', 'balanced')
+        # Add features to each flight
+        enriched_flights = []
+        for flight in flights:
+            features = {
+                'flight_id': flight.get('id'),
+                'airline': flight.get('airline'),
+                'departure_airport': flight.get('departure_airport'),
+                'arrival_airport': flight.get('arrival_airport'),
+                'duration_minutes': flight.get('duration_minutes'),
+                'distance_miles': flight.get('distance_miles'),
+                'stops': flight.get('stops'),
+                'award_price': flight.get('award_price'),
+                'hour_of_day': None,
+                'day_of_week': None,
+                'is_weekend': 0
             }
 
-            # Find similar users
-            similar_users = []
-            for uid, prefs in self.user_preferences.items():
-                if uid == user_id:
-                    continue
+            if 'departure_time' in flight:
+                dt = datetime.strptime(flight['departure_time'], "%Y-%m-%d %H:%M:%S")
+                features['hour_of_day'] = dt.hour
+                features['day_of_week'] = dt.dayofweek
+                features['is_weekend'] = 1 if dt.dayofweek >= 5 else 0
 
-                # Simple similarity metric
-                score = 0
-                if 'preferred_destinations' in prefs and 'preferred_destinations' in target_prefs:
-                    common_dests = set(prefs['preferred_destinations']).intersection(set(target_prefs['destinations']))
-                    score += len(common_dests) * 0.3
+            enriched_flights.append(features)
 
-                if 'preferred_airlines' in prefs and 'preferred_airlines' in target_prefs:
-                    common_airlines = set(prefs['preferred_airlines']).intersection(set(target_prefs['airlines']))
-                    score += len(common_airlines) * 0.4
+        # Predict scores
+        for flight in enriched_flights:
+            flight['recommendation_score'] = self.predict_score(user_id, flight)
 
-                if 'budget' in prefs and 'budget' in target_prefs:
-                    budget_diff = abs(prefs['budget'] - target_prefs['budget'])
-                    score += max(0, 1000 - budget_diff) * 0.0003
+        # Sort by score descending
+        enriched_flights.sort(key=lambda x: x['recommendation_score'], reverse=True)
 
-                if score > 0:
-                    similar_users.append((uid, score))
+        # Return top recommendations
+        return enriched_flights[:limit]
 
-            # Sort by similarity score
-            similar_users.sort(key=lambda x: x[1], reverse=True)
-            similar_user_ids = [uid for uid, _ in similar_users[:10]]
-
-            # Get travel options preferred by similar users
-            recommendations = []
-            for uid in similar_user_ids:
-                if uid in self.user_history['user_id'].values:
-                    user_history = self.user_history[self.user_history['user_id'] == uid]
-                    for _, row in user_history.iterrows():
-                        travel_id = row['travel_option_id']
-                        travel_option = self.travel_data[self.travel_data['id'] == travel_id]
-                        if not travel_option.empty:
-                            recommendations.append(travel_option.iloc[0].to_dict())
-
-            # Remove duplicates and sort by score
-            unique_recs = []
-            seen = set()
-            for rec in recommendations:
-                rec_id = rec['id']
-                if rec_id not in seen:
-                    seen.add(rec_id)
-                    unique_recs.append(rec)
-
-            # Score based on frequency in similar users' history
-            rec_scores = {}
-            for rec in unique_recs:
-                rec_id = rec['id']
-                count = sum(1 for uid in similar_user_ids
-                          if uid in self.user_history['user_id'].values
-                          and rec_id in self.user_history[self.user_history['user_id'] == uid]['travel_option_id'].values)
-                rec_scores[rec_id] = count
-
-            # Sort by score
-            unique_recs.sort(key=lambda x: rec_scores.get(x['id'], 0), reverse=True)
-
-            return unique_recs[:n]
-
-        except Exception as e:
-            logger.error(f"Error in collaborative filtering: {e}")
-            return []
-
-    def get_content_based_recommendations(self, user_id: str, n: int = 5) -> List[Dict]:
-        """
-        Get recommendations based on user preferences and travel option features
-        """
-        if user_id not in self.user_preferences:
-            return []
-
-        try:
-            user_prefs = self.user_preferences[user_id]
-            target_prefs = {
-                'destinations': user_prefs.get('preferred_destinations', []),
-                'airlines': user_prefs.get('preferred_airlines', []),
-                'budget': user_prefs.get('budget', 5000),
-                'travel_style': user_prefs.get('travel_style', 'balanced'),
-                'season': user_prefs.get('season', 'any')
-            }
-
-            # Filter travel options based on preferences
-            filtered = self.travel_data.copy()
-
-            # Filter by destination if specified
-            if target_prefs['destinations']:
-                filtered = filtered[filtered['destination'].isin(target_prefs['destinations'])]
-
-            # Filter by airline if specified
-            if target_prefs['airlines']:
-                filtered = filtered[filtered['airline'].isin(target_prefs['airlines'])]
-
-            # Filter by budget
-            filtered = filtered[filtered['points_required'] <= target_prefs['budget']]
-
-            # Filter by travel style (simple mapping)
-            style_mapping = {
-                'luxury': ['first_class', 'business_class'],
-                'adventure': ['economy', 'premium_economy'],
-                'family': ['economy', 'premium_economy'],
-                'balanced': ['economy', 'premium_economy', 'business_class']
-            }
-            if target_prefs['travel_style'] in style_mapping:
-                filtered = filtered[filtered['cabin_class'].isin(style_mapping[target_prefs['travel_style']])]
-
-            # If no results, relax filters
-            if len(filtered) == 0:
-                if target_prefs['destinations']:
-                    filtered = self.travel_data.copy()
-                if target_prefs['airlines']:
-                    filtered = filtered[filtered['airline'].isin(target_prefs['airlines'])]
-                filtered = filtered[filtered['points_required'] <= target_prefs['budget'] * 1.5]
-
-            # Score based on feature matching
-            scored = []
-            for _, row in filtered.iterrows():
-                score = 0
-
-                # Destination match
-                if target_prefs['destinations']:
-                    if row['destination'] in target_prefs['destinations']:
-                        score += 1.0
-
-                # Airline match
-                if target_prefs['airlines']:
-                    if row['airline'] in target_prefs['airlines']:
-                        score += 1.0
-
-                # Budget match
-                budget_score = 1.0 - (row['points_required'] / max(target_prefs['budget'], 1))
-                score += budget_score * 0.5
-
-                # Travel style match
-                if row['cabin_class'] in style_mapping.get(target_prefs['travel_style'], []):
-                    score += 0.7
-
-                scored.append((row.to_dict(), score))
-
-            # Sort by score
-            scored.sort(key=lambda x: x[1], reverse=True)
-
-            # Return top n
-            return [item[0] for item in scored[:n]]
-
-        except Exception as e:
-            logger.error(f"Error in content-based filtering: {e}")
-            return []
-
-    def get_business_rules_recommendations(self, user_id: str, n: int = 5) -> List[Dict]:
-        """
-        Get recommendations based on business rules and promotions
-        """
-        try:
-            recommendations = []
-
-            # Get current date
-            today = datetime.now()
-            current_month = today.month
-            current_year = today.year
-
-            # Rule 1: Seasonal promotions (e.g., summer travel in June-August)
-            if 6 <= current_month <= 8:
-                summer_dests = ['Europe', 'Japan', 'Australia', 'Canada']
-                summer_options = self.travel_data[self.travel_data['destination'].isin(summer_dests)]
-                summer_options = summer_options.sort_values('points_required')
-                recommendations.extend(summer_options.head(n).to_dict('records'))
-
-            # Rule 2: New routes or special offers
-            special_offers = self.travel_data[self.travel_data['is_special_offer'] == True]
-            if not special_offers.empty:
-                recommendations.extend(special_offers.head(n).to_dict('records'))
-
-            # Rule 3: High-value redemptions (best value for points)
-            if not self.travel_data.empty:
-                # Calculate value score (points per dollar equivalent)
-                self.travel_data['value_score'] = self.travel_data['points_required'] / (
-                    self.travel_data['estimated_retail_price'] + 1
-                )
-                top_value = self.travel_data.sort_values('value_score').head(n)
-                recommendations.extend(top_value.to_dict('records'))
-
-            # Remove duplicates
-            seen = set()
-            unique_recs = []
-            for rec in recommendations:
-                rec_id = rec.get('id')
-                if rec_id and rec_id not in seen:
-                    seen.add(rec_id)
-                    unique_recs.append(rec)
-
-            return unique_recs[:n]
-
-        except Exception as e:
-            logger.error(f"Error in business rules recommendations: {e}")
-            return []
-
-    def get_hybrid_recommendations(self, user_id: str, n: int = 5) -> List[Dict]:
-        """
-        Get hybrid recommendations combining all approaches
-        """
-        try:
-            # Get recommendations from each approach
-            collaborative = self.get_collaborative_filtering_recommendations(user_id, n * 3)
-            content = self.get_content_based_recommendations(user_id, n * 3)
-            business = self.get_business_rules_recommendations(user_id, n * 3)
-
-            # Combine and score
-            all_recs = collaborative + content + business
-            rec_scores = {}
-
-            # Score each recommendation
-            for rec in all_recs:
-                rec_id = rec['id']
-                score = 0
-
-                # Score based on source
-                if rec in collaborative:
-                    score += self.model_weights['collaborative']
-                if rec in content:
-                    score += self.model_weights['content']
-                if rec in business:
-                    score += self.model_weights['business_rules']
-
-                # Score based on recency (if available)
-                if 'last_updated' in rec:
-                    try:
-                        update_date = datetime.strptime(rec['last_updated'], '%Y-%m-%d')
-                        days_old = (datetime.now() - update_date).days
-                        recency_score = max(0, 1 - (days_old / 365))  # 1 year half-life
-                        score += recency_score * 0.2
-                    except:
-                        pass
-
-                rec_scores[rec_id] = score
-
-            # Sort by score
-            sorted_recs = sorted(all_recs, key=lambda x: rec_scores.get(x['id'], 0), reverse=True)
-
-            # Remove duplicates
-            seen = set()
-            unique_recs = []
-            for rec in sorted_recs:
-                rec_id = rec['id']
-                if rec_id not in seen:
-                    seen.add(rec_id)
-                    unique_recs.append(rec)
-                    if len(unique_recs) >= n:
-                        break
-
-            return unique_recs
-
-        except Exception as e:
-            logger.error(f"Error in hybrid recommendations: {e}")
-            return []
-
-    def get_recommendations(self, user_id: str, n: int = 5) -> Dict:
-        """
-        Main entry point for getting recommendations
-        """
-        try:
-            recommendations = self.get_hybrid_recommendations(user_id, n)
-
-            # Add metadata
-            result = {
-                'user_id': user_id,
-                'generated_at': datetime.now().isoformat(),
-                'recommendation_count': len(recommendations),
-                'recommendations': recommendations,
-                'model_weights': self.model_weights,
-                'status': 'success'
-            }
-
-            return result
-
-        except Exception as e:
-            logger.error(f"Error generating recommendations: {e}")
-            return {
-                'user_id': user_id,
-                'generated_at': datetime.now().isoformat(),
-                'recommendation_count': 0,
-                'recommendations': [],
-                'error': str(e),
-                'status': 'error'
-            }
-
-# Example usage
-if __name__ == "__main__":
-    # Initialize recommender
-    recommender = AwardTravelRecommender()
-
-    # Example user preferences
-    sample_prefs = {
-        'preferred_destinations': ['Japan', 'Europe', 'Australia'],
-        'preferred_airlines': ['ANA', 'JAL', 'Qantas'],
-        'budget': 80000,
-        'travel_style': 'luxury',
-        'season': 'summer'
-    }
-
-    # Update user preferences
-    recommender.update_user_preferences('user123', sample_prefs)
-
-    # Get recommendations
-    recommendations = recommender.get_recommendations('user123', 5)
-    print(f"Generated {recommendations['recommendation_count']} recommendations")
-    for rec in recommendations['recommendations']:
-        print(f"- {rec['destination']} with {rec['airline']} ({rec['points_required']} points)")
+# Global instance
+advanced_recommendation_engine = AdvancedRecommendationEngine()

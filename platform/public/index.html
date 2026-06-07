@@ -3,22 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>District Award Travel</title>
+    <title>Award Flight Booking Analytics Dashboard</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>District Award Travel</h1>
-    <form id="book-travel-form">
-        <label for="origin">Origin:</label>
-        <input type="text" id="origin" name="origin"><br><br>
-        <label for="destination">Destination:</label>
-        <input type="text" id="destination" name="destination"><br><br>
-        <label for="travel_date">Travel Date:</label>
-        <input type="date" id="travel_date" name="travel_date"><br><br>
-        <input type="submit" value="Book Travel">
-    </form>
-    <div id="travel-options"></div>
-
+    <header>
+        <h1>Award Flight Booking Analytics Dashboard</h1>
+    </header>
+    <main>
+        <section id="booking-trends">
+            <h2>Booking Trends</h2>
+            <ul id="booking-trends-list"></ul>
+        </section>
+        <section id="revenue">
+            <h2>Revenue</h2>
+            <ul id="revenue-list"></ul>
+        </section>
+        <section id="customer-demographics">
+            <h2>Customer Demographics</h2>
+            <ul id="customer-demographics-list"></ul>
+        </section>
+    </main>
     <script src="script.js"></script>
 </body>
 </html>

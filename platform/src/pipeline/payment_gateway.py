@@ -1,18 +1,31 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 import sqlite3
-import numpy as np
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 app = FastAPI()
 
+class PaymentRequest(BaseModel):
+    user_id: int
+    flight_id: int
+    amount: float
+
+class PaymentResponse(BaseModel):
+    payment_id: int
+    status: str
+
 # Connect to SQLite database
-conn = sqlite3.connect('payment_gateway.db')
+conn = sqlite3.connect('district_award_travel.db')
 cursor = conn.cursor()
 
-# Create table if it doesn't exist
+# Create payment table if it doesn't exist
 cursor.execute('''
-    CREATE TABLE IF NOT EXISTS payments
-    (id INTEGER PRIMARY KEY, user_id INTEGER, amount REAL, payment_method TEXT)
+    CREATE TABLE IF NOT EXISTS payments (
+        payment_id INTEGER PRIMARY KEY,
+        user_id INTEGER,
+        flight_id INTEGER,
+        amount REAL,
+        status TEXT
+    )
 ''')
 
 # Commit changes and close connection
@@ -20,28 +33,24 @@ conn.commit()
 conn.close()
 
 # Define payment gateway API endpoint
-@app.post("/payment")
-async def make_payment(request: Request):
-    # Get payment details from request body
-    payment_details = await request.json()
-
-    # Validate payment details
-    if not payment_details.get('user_id') or not payment_details.get('amount') or not payment_details.get('payment_method'):
-        return JSONResponse({"error": "Invalid payment details"}, status_code=400)
-
+@app.post("/payment", response_model=PaymentResponse)
+async def make_payment(payment_request: PaymentRequest):
     # Connect to SQLite database
-    conn = sqlite3.connect('payment_gateway.db')
+    conn = sqlite3.connect('district_award_travel.db')
     cursor = conn.cursor()
 
-    # Insert payment details into database
+    # Insert payment into database
     cursor.execute('''
-        INSERT INTO payments (user_id, amount, payment_method)
-        VALUES (?, ?, ?)
-    ''', (payment_details['user_id'], payment_details['amount'], payment_details['payment_method']))
+        INSERT INTO payments (user_id, flight_id, amount, status)
+        VALUES (?, ?, ?, 'pending')
+    ''', (payment_request.user_id, payment_request.flight_id, payment_request.amount))
+
+    # Get payment ID
+    payment_id = cursor.lastrowid
 
     # Commit changes and close connection
     conn.commit()
     conn.close()
 
-    # Return success response
-    return JSONResponse({"message": "Payment successful"}, status_code=200)
+    # Return payment response
+    return PaymentResponse(payment_id=payment_id, status='pending')
