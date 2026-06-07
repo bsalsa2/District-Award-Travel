@@ -1,0 +1,39 @@
+# Render Blueprint for District Award Travel
+# ============================================
+# This file lets you deploy the whole backend + website in one click.
+# In Render: New + → Blueprint → connect this repo → it reads this file.
+#
+# After the first deploy, set the secret env vars in the Render dashboard
+# (GMAIL_APP_PASSWORD, ADMIN_PASSWORD) — they are marked sync:false below so
+# they are NOT stored in git.
+
+services:
+  - type: web
+    name: district-award-travel
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true          # Render generates a strong random value
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dat-db
+          property: connectionString
+      - key: ADMIN_EMAIL
+        value: admin@districtawardtravel.com
+      - key: ADMIN_PASSWORD
+        sync: false                  # set this yourself in the dashboard
+      - key: GMAIL_USER
+        value: districtawardtravel@gmail.com
+      - key: GMAIL_APP_PASSWORD
+        sync: false                  # set this yourself in the dashboard
+      - key: NOTIFY_EMAIL
+        value: districtawardtravel@gmail.com
+
+databases:
+  - name: dat-db
+    plan: free
