@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Redemption Schema",
+  "description": "Schema for validating redemption data from award flight booking system",
+  "type": "object",
+  "required": ["client_id", "booking_reference", "points_used"],
+  "properties": {
+    "client_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for the client"
+    },
+    "booking_reference": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique booking reference for the redemption"
+    },
+    "points_used": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Number of points redeemed"
+    },
+    "award_type": {
+      "type": "string",
+      "enum": ["flight", "hotel", "car", "package", "other"],
+      "default": "flight",
+      "description": "Type of award being redeemed"
+    },
+    "redemption_date": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the redemption was processed"
+    },
+    "flight_details": {
+      "type": "object",
+      "description": "Details about the flight award",
+      "properties": {
+        "flight_number": {"type": "string"},
+        "departure_airport": {"type": "string"},
+        "arrival_airport": {"type": "string"},
+        "departure_date": {"type": "string", "format": "date"},
+        "cabin_class": {"type": "string"},
+        "seats": {"type": "integer"}
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "completed", "failed", "cancelled"],
+      "default": "completed",
+      "description": "Status of the redemption"
+    }
+  },
+  "additionalProperties": false
+}
