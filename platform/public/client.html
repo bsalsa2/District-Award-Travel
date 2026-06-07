@@ -420,8 +420,8 @@ const CLIENTS = {
 
 let currentClient = null;
 
-// Clients registered through the admin dashboard are saved in this browser's
-// storage. Merge them with the built-in list so they can sign in right away.
+// Demo fallback: clients saved in this browser (used only if the backend
+// isn't reachable, e.g. when previewing the file directly off the server).
 function getRegisteredClient(email) {
   try {
     const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
@@ -429,25 +429,63 @@ function getRegisteredClient(email) {
   } catch (e) { return null; }
 }
 
-function doLogin() {
+function showPortal(client) {
+  currentClient = client;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('portal').style.display = 'block';
+  document.getElementById('nav-name').textContent = (client.name || 'Client').split(' ')[0];
+  renderPortal(client);
+}
+
+function loginError(msg) {
+  const err = document.getElementById('login-error');
+  if (msg) err.textContent = msg;
+  err.style.display = 'block';
+  setTimeout(() => err.style.display = 'none', 4000);
+}
+
+async function doLogin() {
   const email = document.getElementById('login-email').value.trim().toLowerCase();
   const pass = document.getElementById('login-pass').value.trim();
+  const btn = document.querySelector('#login-screen .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
+
+  // 1) Try the live backend
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+    if (res.ok) {
+      const { token } = await res.json();
+      sessionStorage.setItem('dat_client_token', token);
+      const me = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (me.ok) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+        return showPortal(await me.json());
+      }
+    } else if (res.status === 401) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      return loginError('Invalid credentials. Contact your advisor.');
+    }
+  } catch (e) {
+    // Backend unreachable — fall through to demo data
+  }
+
+  // 2) Fallback to built-in / locally-registered demo clients
   const client = CLIENTS[email] || getRegisteredClient(email);
+  if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
   if (client && client.pass === pass) {
-    currentClient = client;
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('portal').style.display = 'block';
-    document.getElementById('nav-name').textContent = client.name.split(' ')[0];
-    renderPortal(client);
+    showPortal(client);
   } else {
-    const err = document.getElementById('login-error');
-    err.style.display = 'block';
-    setTimeout(() => err.style.display = 'none', 4000);
+    loginError('Invalid credentials. Contact your advisor.');
   }
 }
 
 function logout() {
   currentClient = null;
+  sessionStorage.removeItem('dat_client_token');
   document.getElementById('portal').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-email').value = '';
