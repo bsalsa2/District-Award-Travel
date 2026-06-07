@@ -1,0 +1,23 @@
+version: '3'
+services:
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=secret
+    volumes:
+      - ./grafana:/etc/grafana
+    depends_on:
+      - award-flight-dashboard
+
+  award-flight-dashboard:
+    build: .
+    command: python award_flight_dashboard.py
+    depends_on:
+      - travel-api
+
+  travel-api:
+    image: travel-api:latest
+    ports:
+      - "8080:8080"

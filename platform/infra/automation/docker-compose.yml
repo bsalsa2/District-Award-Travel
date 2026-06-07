@@ -1,0 +1,14 @@
+version: '3'
+services:
+  alert-system:
+    build: .
+    environment:
+      - SMTP_SERVER
+      - SMTP_PORT
+      - SMTP_USERNAME
+      - SMTP_PASSWORD
+      - SMS_API_KEY
+      - SMS_API_SECRET
+    volumes:
+      - ./user_profiles.json:/app/user_profiles.json
+    command: python alert_system.py

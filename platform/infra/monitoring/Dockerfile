@@ -2,10 +2,8 @@ FROM python:3.9-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY award_flight_dashboard.py .
 
-RUN pip install -r requirements.txt
+RUN pip install requests
 
-COPY . .
-
-CMD ["python", "app.py"]
+CMD ["python", "award_flight_dashboard.py"]
