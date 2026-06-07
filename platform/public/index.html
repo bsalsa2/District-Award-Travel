@@ -1,29 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Award Flight Booking Analytics Dashboard</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>District Award Travel - Client Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <header>
-        <h1>Award Flight Booking Analytics Dashboard</h1>
-    </header>
-    <main>
-        <section id="booking-trends">
-            <h2>Booking Trends</h2>
-            <ul id="booking-trends-list"></ul>
-        </section>
-        <section id="revenue">
-            <h2>Revenue</h2>
-            <ul id="revenue-list"></ul>
-        </section>
-        <section id="customer-demographics">
-            <h2>Customer Demographics</h2>
-            <ul id="customer-demographics-list"></ul>
-        </section>
-    </main>
-    <script src="script.js"></script>
+  <div class="container-fluid">
+    <div class="row">
+      <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+        <div class="sidebar-sticky pt-3">
+          <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+            <span>District Award Travel</span>
+          </h6>
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link active" href="#" id="dashboard-link">
+                <span data-feather="home"></span> Dashboard
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" id="analytics-link">
+                <span data-feather="bar-chart-2"></span> Analytics
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" id="recommendations-link">
+                <span data-feather="gift"></span> Recommendations
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" id="settings-link">
+                <span data-feather="settings"></span> Settings
+              </a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2">Award Flight Analytics Dashboard</h1>
+          <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group mr-2">
+              <button class="btn btn-sm btn-outline-secondary" id="refresh-data">Refresh Data</button>
+              <button class="btn btn-sm btn-outline-secondary" id="export-csv">Export CSV</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-4">
+            <div class="card mb-4">
+              <div class="card-body">
+                <h5 class="card-title">Total Award Miles</h5>
+                <h2 class="card-text" id="total-miles">0</h2>
+                <p class="text-muted">Available for redemption</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card mb-4">
+              <div class="card-body">
+                <h5 class="card-title">Miles Redeemed</h5>
+                <h2 class="card-text" id="redeemed-miles">0</h2>
+                <p class="text-muted">This year</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card mb-4">
+              <div class="card-body">
+                <h5 class="card-title">Best Value Route</h5>
+                <h2 class="card-text" id="best-value">N/A</h2>
+                <p class="text-muted">Miles per dollar</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-8">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5>Miles Redemption History</h5>
+              </div>
+              <div class="card-body">
+                <div id="redemption-chart"></div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5>Award Availability</h5>
+              </div>
+              <div class="card-body">
+                <div id="availability-donut"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-12">
+            <div class="card mb-4">
+              <div class="card-header">
+                <h5>Recommended Award Flights</h5>
+              </div>
+              <div class="card-body">
+                <div class="table-responsive">
+                  <table class="table table-hover" id="recommendations-table">
+                    <thead>
+                      <tr>
+                        <th>Route</th>
+                        <th>Airline</th>
+                        <th>Miles Required</th>
+                        <th>Cash Cost</th>
+                        <th>Value Ratio</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="recommendations-body">
+                      <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+  <script>
+    feather.replace();
+  </script>
 </body>
 </html>
