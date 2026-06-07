@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>District Award Travel - Personalized Recommendations</title>
+    <link rel="stylesheet" href="/styles/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --accent: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --success: #27ae60;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--secondary);
+        }
+
+        .header h1 {
+            color: var(--primary);
+            font-size: 2.2rem;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .recommendation-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #e0e0e0;
+        }
+
+        .recommendation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--secondary), #2980b9);
+            color: white;
+            padding: 20px;
+            position: relative;
+        }
+
+        .card-header h3 {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+
+        .card-header .subheading {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+
+        .card-header .reward-points {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .flight-details {
+            margin-bottom: 15px;
+        }
+
+        .flight-route {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .flight-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .airline-logo {
+            width: 30px;
+            height: 30px;
+            background-color: var(--secondary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .flight-times {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .flight-duration {
+            font-size: 0.85rem;
+            color: #7f8c8d;
+        }
+
+        .stops-info {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        .price-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-top: 1px solid #e0e0e0;
+            margin-top: 15px;
+        }
+
+        .price-amount {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .price-currency {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        .recommendation-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: var(--secondary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: #ecf0f1;
+            color: var(--primary);
+            border: 1px solid #bdc3c7;
+        }
+
+        .btn-secondary:hover {
+            background-color: #bdc3c7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--secondary);
+        }
+
+        .loading i {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .recommendation-source {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .preference-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            background-color: #e8f4fc;
+            color: var(--secondary);
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-left: 5px;
+            font-weight: 500;
+        }
+
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-section h2 {
+            margin-bottom: 20px;
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .filter-group select, .filter-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .filter-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .no-recommendations {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .no-recommendations i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .no-recommendations h3 {
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+
+        .refresh-btn {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .refresh-btn:hover {
+            background-color: #219653;
+        }
+
+        @media (max-width: 768px) {
+            .recommendations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="header">
+            <h1><i class="fas fa-plane-departure"></i> Personalized Flight Recommendations</h1>
+            <div class="user-profile">
+                <div class="user-avatar">JD</div>
+                <span>Welcome back, Jeff!</span>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <h2><i class="fas fa-filter"></i> Customize Your Recommendations</h2>
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="destination">Destination</label>
+                    <select id="destination">
+                        <option value="">Anywhere</option>
+                        <option value="JFK">New York (JFK)</option>
+                        <option value="LAX">Los Angeles (LAX)</option>
+                        <option value="LHR">London (LHR)</option>
+                        <option value="CDG">Paris (CDG)</option>
+                        <option value="NRT">Tokyo (NRT)</option>
+                        <option value="SYD">Sydney (SYD)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="departure">Departure City</label>
+                    <select id="departure">
+                        <option value="">Anywhere</option>
+                        <option value="SFO">San Francisco (SFO)</option>
+                        <option value="ORD">Chicago (ORD)</option>
+                        <option value="DFW">Dallas (DFW)</option>
+                        <option value="MIA">Miami (MIA)</option>
+                        <option value="BOS">Boston (BOS)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="cabin">Cabin Class</label>
+                    <select id="cabin">
+                        <option value="">Any</option>
+                        <option value="economy">Economy</option>
+                        <option value="premium_economy">Premium Economy</option>
+                        <option value="business">Business</option>
+                        <option value="first">First Class</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="max-stops">Max Stops</label>
+                    <select id="max-stops">
+                        <option value="2">2 or fewer</option>
+                        <option value="0">Non-stop only</option>
+                        <option value="1">1 stop max</option>
+                        <option value="3">3 or fewer</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="max-price">Max Price (USD)</label>
+                    <input type="number" id="max-price" placeholder="Enter amount" min="0">
+                </div>
+                <div class="filter-group">
+                    <label for="travel-date">Travel Date</label>
+                    <input type="date" id="travel-date">
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button class="btn btn-primary" id="apply-filters"><i class="fas fa-check"></i> Apply Filters</button>
+                <button class="btn btn-secondary" id="reset-filters"><i class="fas fa-undo"></i> Reset</button>
+                <button class="btn refresh-btn" id="refresh-recommendations"><i class="fas fa-sync-alt"></i> Refresh Recommendations</button>
+            </div>
+        </div>
+
+        <div id="recommendations-container">
+            <div class="loading">
+                <i class="fas fa-spinner"></i>
+                <p>Loading personalized recommendations...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class RecommendationEngine {
+            constructor() {
+                this.userPreferences = this.loadUserPreferences();
+                this.recommendations = [];
+                this.isLoading = false;
+            }
+
+            loadUserPreferences() {
+                // Load from localStorage or return defaults
+                const saved = localStorage.getItem('userPreferences');
+                if (saved) {
+                    return JSON.parse(saved);
+                }
+                return {
+                    preferredAirlines: [],
+                    preferredCabin: 'economy',
+                    maxStops: 2,
+                    maxPrice: 5000,
+                    preferredDestinations: [],
+                    travelFrequency: 'monthly'
+                };
+            }
+
+            saveUserPreferences(preferences) {
+                this.userPreferences = preferences;
+                localStorage.setItem('userPreferences', JSON.stringify(preferences));
+            }
+
+            async fetchRecommendations(filters = {}) {
+                this.isLoading = true;
+                const recommendationsContainer = document.getElementById('recommendations-container');
+
+                try {
+                    // Show loading state
+                    recommendationsContainer.innerHTML = `
+                        <div class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <p>Loading personalized recommendations...</p>
+                        </div>
+                    `;
+
+                    // Combine user preferences with explicit filters
+                    const requestFilters = {
+                        ...this.userPreferences,
+                        ...filters,
+                        limit: 12
+                    };
+
+                    // Simulate API call to our backend
+                    const response = await this.callRecommendationAPI(requestFilters);
+
+                    if (response.success && response.recommendations.length > 0) {
+                        this.recommendations = response.recommendations;
+                        this.renderRecommendations();
+                    } else {
+                        this.renderNoRecommendations();
+                    }
+                } catch (error) {
+                    console.error('Error fetching recommendations:', error);
+                    recommendationsContainer.innerHTML = `
+                        <div class="error-message">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Failed to load recommendations. Please try again later.</p>
+                        </div>
+                    `;
+                } finally {
+                    this.isLoading = false;
+                }
+            }
+
+            async callRecommendationAPI(filters) {
+                // In a real implementation, this would be a fetch call to our FastAPI backend
+                // For now, we'll simulate the API response with realistic data
+
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 800));
+
+                // Generate realistic flight recommendations based on filters
+                const recommendations = this.generateMockRecommendations(filters);
+
+                return {
+                    success: true,
+                    recommendations: recommendations,
+                    timestamp: new Date().toISOString()
+                };
+            }
+
+            generateMockRecommendations(filters) {
+                const airlines = [
+                    { code: 'AA', name: 'American Airlines', logo: '🛫', color: '#0078d4' },
+                    { code: 'DL', name: 'Delta Air Lines', logo: '🛬', color: '#c41e3a' },
+                    { code: 'UA', name: 'United Airlines', logo: '✈️', color: '#004a85' },
+                    { code: 'BA', name: 'British Airways', logo: '🛩️', color: '#003663' },
+                    { code: 'JL', name: 'Japan Airlines', logo: '🛥️', color: '#d6001c' },
+                    { code: 'QF', name: 'Qantas', logo: '🛬', color: '#e47b27' },
+                    { code: 'EK', name: 'Emirates', logo: '🛩️', color: '#c8102e' },
+                    { code: 'LH', name: 'Lufthansa', logo: '✈️', color: '#051440' }
+                ];
+
+                const destinations = {
+                    'JFK': 'New York',
+                    'LAX': 'Los Angeles',
+                    'LHR': 'London',
+                    'CDG': 'Paris',
+                    'NRT': 'Tokyo',
+                    'SYD': 'Sydney',
+                    'SFO': 'San Francisco',
+                    'ORD': 'Chicago',
+                    'DFW': 'Dallas',
+                    'MIA': 'Miami',
+                    'BOS': 'Boston'
+                };
+
+                const now = new Date();
+                const travelDate = filters.travelDate ? new Date(filters.travelDate) : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+                const mockRecommendations = [];
+
+                for (let i = 0; i < 12; i++) {
+                    const airline = airlines[Math.floor(Math.random() * airlines.length)];
+                    const departure = filters.departure || Object.keys(destinations).find(d => d !== filters.destination);
+                    const destination = filters.destination || Object.keys(destinations).find(d => d !== departure);
+
+                    // Generate realistic flight details
+                    const departureTime = this.randomTime();
+                    const arrivalTime = this.calculateArrivalTime(departureTime, destination, departure);
+                    const duration = this.calculateDuration(departure, destination);
+                    const stops = this.determineStops(filters.maxStops);
+                    const price = this.calculatePrice(filters.maxPrice, airline.code, destination, filters.cabin);
+                    const rewardPoints = Math.floor(price * (1 + Math.random() * 0.5));
+
+                    mockRecommendations.push({
+                        id: `rec-${Date.now()}-${i}`,
+                        airline: airline.name,
+                        airlineCode: airline.code,
+                        airlineLogo: airline.logo,
+                        departure: {
+                            airport: departure,
+                            city: destinations[departure],
+                            time: departureTime
+                        },
+                        destination: {
+                            airport: destination,
+                            city: destinations[destination],
+                            time: arrivalTime
+                        },
+                        duration: duration,
+                        stops: stops,
+                        cabin: filters.cabin || ['economy', 'premium_economy', 'business', 'first'][Math.floor(Math.random() * 4)],
+                        price: {
+                            amount: price,
+                            currency: 'USD',
+                            display: `$${price.toLocaleString()}`
+                        },
+                        rewardPoints: rewardPoints,
+                        departureDate: travelDate.toISOString().split('T')[0],
+                        arrivalDate: this.calculateArrivalDate(travelDate, duration).toISOString().split('T')[0],
+                        flightNumber: `${airline.code}${Math.floor(100 + Math.random() * 900)}`,
+                        aircraft: ['Boeing 787', 'Airbus A350', 'Boeing 777', 'Airbus A330'][Math.floor(Math.random() * 4)],
+                        bookingUrl: `/book/${airline.code.toLowerCase()}/${departure.toLowerCase()}/${destination.toLowerCase()}`,
+                        source: ['AI Model', 'Historical Data', 'Popular Routes', 'Partner Airlines'][Math.floor(Math.random() * 4)],
+                        confidence: Math.floor(70 + Math.random() * 30)
+                    });
+                }
+
+                // Apply filters
+                return mockRecommendations.filter(rec => {
+                    if (filters.destination && rec.destination.airport !== filters.destination) return false;
+                    if (filters.departure && rec.departure.airport !== filters.departure) return false;
+                    if (filters.cabin && rec.cabin !== filters.cabin) return false;
+                    if (filters.maxStops && rec.stops > parseInt(filters.maxStops)) return false;
+                    if (filters.maxPrice && rec.price.amount > parseInt(filters.maxPrice)) return false;
+                    return true;
+                });
+            }
+
+            randomTime() {
+                const hours = Math.floor(Math.random() * 24);
+                const minutes = Math.floor(Math.random() * 60);
+                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+            }
+
+            calculateArrivalTime(departureTime, destination, departure) {
+                // Simple time calculation - in reality this would be more complex
+                const [hours, minutes] = departureTime.split(':').map(Number);
+                const totalMinutes = hours * 60 + minutes;
+
+                // Approximate flight duration based on destination
+                const durations = {
+                    'JFK': 5 * 60,    // 5 hours
+                    'LAX': 6 * 60,    // 6 hours
+                    'LHR': 10 * 60,   // 10 hours
+                    'CDG': 11 * 60,   // 11 hours
+                    'NRT': 12 * 60,   // 12 hours
+                    'SYD': 15 * 60,   // 15 hours
+                    'SFO': 1 * 60,    // 1 hour
+                    'ORD': 4 * 60,    // 4 hours
+                    'DFW': 3 * 60,    // 3 hours
+                    'MIA': 5 * 60,    // 5 hours
+                    'BOS': 5.5 * 60   // 5.5 hours
+                };
+
+                const duration = durations[destination] || 6 * 60;
+                const arrivalMinutes = totalMinutes + duration;
+                const arrivalHours = Math.floor(arrivalMinutes / 60) % 24;
+                const arrivalMins = arrivalMinutes % 60;
+
+                return `${arrivalHours.toString().padStart(2, '0')}:${arrivalMins.toString().padStart(2, '0')}`;
+            }
+
+            calculateDuration(departure, destination) {
+                const durations = {
+                    'JFK-LAX': '6h 30m',
+                    'LAX-JFK': '5h 30m',
+                    'SFO-JFK': '5h 15m',
+                    'JFK-SFO': '6h 45m',
+                    'LHR-JFK': '7h 30m',
+                    'JFK-LHR': '7h 15m',
+                    'CDG-JFK': '7h 45m',
+                    'JFK-CDG': '8h 15m',
+                    'NRT-LAX': '10h 30m',
+                    'LAX-NRT': '11h 15m',
+                    'SYD-LAX': '14h 30m',
+                    'LAX-SYD': '15h 45m',
+                    'ORD-LHR': '7h 45m',
+                    'LHR-ORD': '8h 30m'
+                };
+
+                const key = `${departure}-${destination}`;
+                return durations[key] || `${Math.floor(Math.random() * 6) + 3}h ${Math.floor(Math.random() * 60)}m`;
+            }
+
+            determineStops(maxStops) {
+                const stops = Math.floor(Math.random() * (parseInt(maxStops) + 1));
+                if (stops === 0) return 'Non-stop';
+                if (stops === 1) return '1 stop';
+                return `${stops} stops`;
+            }
+
+            calculatePrice(maxPrice, airline, destination, cabin) {
+                // Base price based on destination and cabin
+                const basePrices = {
+                    'economy': { 'JFK': 350, 'LAX': 400, 'LHR': 600, 'CDG': 650, 'NRT': 800, 'SYD': 1200 },
+                    'premium_economy': { 'JFK': 700, 'LAX': 800, 'LHR': 1200, 'CDG': 1300, 'NRT': 1600, 'SYD': 2400 },
+                    'business': { 'JFK': 1800, 'LAX': 2000, 'LHR': 3000, 'CDG': 3200, 'NRT': 4000, 'SYD': 5500 },
+                    'first': { 'JFK': 3500, 'LAX': 3800, 'LHR': 5500, 'CDG': 5800, 'NRT': 7000, 'SYD': 9000 }
+                };
+
+                let price = basePrices[cabin]?.[destination] || 500;
+
+                // Adjust based on airline
+                const airlineMultipliers = {
+                    'AA': 1.0, 'DL': 1.1, 'UA': 1.05, 'BA': 1.2, 'JL': 1.15, 'QF': 1.25, 'EK': 1.3, 'LH': 1.1
+                };
+                price *= airlineMultipliers[airline] || 1.0;
+
+                // Apply max price filter
+                if (maxPrice) {
+                    price = Math.min(price, parseInt(maxPrice));
+                }
+
+                // Add some randomness
+                price = Math.floor(price * (0.9 + Math.random() * 0.2));
+
+                return Math.max(100, price);
+            }
+
+            calculateArrivalDate(travelDate, duration) {
+                // Simple date calculation
+                const [hours, minutes] = duration.split('h').map(part => parseInt(part.trim()));
+                const totalHours = hours + (minutes / 60);
+                const arrivalDate = new Date(travelDate.getTime() + totalHours * 60 * 60 * 1000);
+                return arrivalDate;
+            }
+
+            renderRecommendations() {
+                const recommendationsContainer = document.getElementById('recommendations-container');
+
+                if (this.recommendations.length === 0) {
+                    this.renderNoRecommendations();
+                    return;
+                }
+
+                let html = '';
+
+                this.recommendations.forEach(rec => {
+                    const confidenceClass = rec.confidence > 85 ? 'high-confidence' :
+                                          rec.confidence > 70 ? 'medium-confidence' : 'low-confidence';
+
+                    html += `
+                        <div class="recommendation-card">
+                            <div class="card-header">
+                                <div class="recommendation-source">${rec.source}</div>
+                                <h3>${rec.airline} ${rec.flightNumber}</h3>
+                                <div class="subheading">
+                                    ${rec.departure.city} → ${rec.destination.city} • ${rec.departureDate}
+                                </div>
+                                <div class="reward-points">
+                                    <i class="fas fa-award"></i> ${rec.rewardPoints.toLocaleString()} pts
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="flight-details">
+                                    <div class="flight-route">
+                                        <div class="flight-info">
+                                            <div class="airline-logo" style="background-color: ${this.getAirlineColor(rec.airlineCode)}">${rec.airlineLogo}</div>
+                                            <div>
+                                                <div class="flight-times">${rec.departure.time}</div>
+                                                <div class="flight-duration">${rec.departure.airport}</div>
+                                            </div>
+                                        </div>
+                                        <div class="flight-info">
+                                            <div class="flight-times">${rec.destination.time}</div>
+                                            <div class="flight-duration">${rec.destination.airport}</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="stops-info">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>${rec.stops}</span>
+                                        <span class="preference-badge">${rec.cabin.replace('_', ' ')}</span>
+                                    </div>
+
+                                    <div class="price-section">
+                                        <div>
+                                            <div style="font-size: 0.85rem; color: #7f8c8d;">Estimated Total</div>
+                                            <div class="price-amount">${rec.price.display}</div>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div style="font-size: 0.85rem; color: #7f8c8d;">${rec.duration}</div>
+                                            <div style="font-size: 0.8rem; color: #95a5a6;">${rec.aircraft}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="recommendation-actions">
+                                    <a href="${rec.bookingUrl}" class="btn btn-primary">
+                                        <i class="fas fa-plane"></i> Book Flight
+                                    </a>
+                                    <button class="btn btn-secondary" onclick="window.recommendationEngine.savePreference('${rec.id}')">
+                                        <i class="fas fa-heart"></i> Save
+                                    </button>
+                                    <button class="btn btn-secondary" onclick="window.recommendationEngine.explainRecommendation('${rec.id}')">
+                                        <i class="fas fa-info-circle"></i> Why?
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                recommendationsContainer.innerHTML = html;
+            }
+
+            renderNoRecommendations() {
+                const recommendationsContainer = document.getElementById('recommendations-container');
+                recommendationsContainer.innerHTML = `
+                    <div class="no-recommendations">
+                        <i class="fas fa-plane-slash"></i>
+                        <h3>No Recommendations Found</h3>
+                        <p>Try adjusting your filters or check back later for new award flight opportunities.</p>
+                        <button class="btn refresh-btn" id="refresh-empty">
+                            <i class="fas fa-sync-alt"></i> Refresh Recommendations
+                        </button>
+                    </div>
+                `;
+
+                document.getElementById('refresh-empty').addEventListener('click', () => {
+                    this.fetchRecommendations(this.getCurrentFilters());
+                });
+            }
+
+            getAirlineColor(code) {
+                const colors = {
+                    'AA': '#0078d4', 'DL': '#c41e3a', 'UA': '#004a85', 'BA': '#003663',
+                    'JL': '#d6001c', 'QF': '#e47b27', 'EK': '#c8102e', 'LH': '#051440'
+                };
+                return colors[code] || '#3498db';
+            }
+
+            getCurrentFilters() {
+                return {
+                    destination: document.getElementById('destination').value,
+                    departure: document.getElementById('departure').value,
+                    cabin: document.getElementById('cabin').value,
+                    maxStops: document.getElementById('max-stops').value,
+                    maxPrice: document.getElementById('max-price').value,
+                    travelDate: document.getElementById('travel-date').value
+                };
+            }
+
+            async applyFilters() {
+                await this.fetchRecommendations(this.getCurrentFilters());
+            }
+
+            resetFilters() {
+                document.getElementById('destination').value = '';
+                document.getElementById('departure').value = '';
+                document.getElementById('cabin').value = '';
+                document.getElementById('max-stops').value = '2';
+                document.getElementById('max-price').value = '';
+                document.getElementById('travel-date').value = '';
+
+                // Reset to default preferences
+                this.saveUserPreferences({
+                    preferredAirlines: [],
+                    preferredCabin: 'economy',
+                    maxStops: 2,
+                    maxPrice: 5000,
+                    preferredDestinations: [],
+                    travelFrequency: 'monthly'
+                });
+
+                this.fetchRecommendations();
+            }
+
+            async refreshRecommendations() {
+                await this.fetchRecommendations(this.getCurrentFilters());
+            }
+
+            savePreference(recommendationId) {
+                // In a real implementation, this would save to user profile
+                alert(`Saved recommendation ${recommendationId} to your favorites!`);
+            }
+
+            explainRecommendation(recommendationId) {
+                const rec = this.recommendations.find(r => r.id === recommendationId);
+                if (rec) {
+                    alert(`This recommendation is based on:\n\n• Your travel preferences\n• Popular routes to ${rec.destination.city}\n• Current award availability\n• ${rec.source}`);
+                }
+            }
+        }
+
+        // Initialize the recommendation engine when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.recommendationEngine = new RecommendationEngine();
+
+            // Set up event listeners
+            document.getElementById('apply-filters').addEventListener('click', () => {
+                window.recommendationEngine.applyFilters();
+            });
+
+            document.getElementById('reset-filters').addEventListener('click', () => {
+                window.recommendationEngine.resetFilters();
+            });
+
+            document.getElementById('refresh-recommendations').addEventListener('click', () => {
+                window.recommendationEngine.refreshRecommendations();
+            });
+
+            // Load initial recommendations
+            window.recommendationEngine.fetchRecommendations();
+        });
+    </script>
+</body>
+</html>

@@ -1,15 +1,12 @@
-from pydantic import BaseModel
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.ext.declarative import declarative_base
 
-class AwardTravel(BaseModel):
-    id: int
-    description: str
-    availability: str
-    pricing: str
+Base = declarative_base()
 
-class Availability(BaseModel):
-    query: str
-    availability: str
-
-class Pricing(BaseModel):
-    query: str
-    pricing: str
+class AwardFlight(Base):
+    __tablename__ = 'award_flights'
+    id = Column(Integer, primary_key=True)
+    origin = Column(String)
+    destination = Column(String)
+    airline = Column(String)
+    award_availability = Column(Integer)

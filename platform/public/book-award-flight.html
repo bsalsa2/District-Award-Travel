@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book Award Flight</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <h1>Book Award Flight</h1>
+    <form id="book-award-flight-form">
+        <input type="submit" value="Book Award Flight">
+    </form>
+    <script>
+        const bookAwardFlightForm = document.getElementById("book-award-flight-form");
+        bookAwardFlightForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const token = localStorage.getItem("token");
+            const response = await fetch("/book-award-flight", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                }
+            });
+            const message = await response.json();
+            if (message.message) {
+                // Booking successful, display success message
+                alert(message.message);
+            } else {
+                // Booking failed, display error message
+                alert(message.error);
+            }
+        });
+    </script>
+</body>
+</html>

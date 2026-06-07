@@ -1,0 +1,11 @@
+[Unit]
+Description=Award Flight Alert System
+After=network.target
+
+[Service]
+User=runner
+ExecStart=/usr/bin/docker-compose up -d
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

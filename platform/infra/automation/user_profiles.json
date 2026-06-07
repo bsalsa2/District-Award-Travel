@@ -1,0 +1,14 @@
+[
+    {
+        "email": "user1@example.com",
+        "phone_number": "+1234567890",
+        "preferred_airlines": ["Airline1", "Airline2"],
+        "preferred_routes": ["Route1", "Route2"]
+    },
+    {
+        "email": "user2@example.com",
+        "phone_number": "+9876543210",
+        "preferred_airlines": ["Airline3", "Airline4"],
+        "preferred_routes": ["Route3", "Route4"]
+    }
+]

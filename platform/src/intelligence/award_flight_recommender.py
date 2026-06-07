@@ -1,16 +1,49 @@
 import numpy as np
-from platform.src.pipeline.flight_data_api import FlightDataAPI
+from fastapi import FastAPI
+from pydantic import BaseModel
 
-class AwardFlightRecommender:
-    def __init__(self, flight_data_api: FlightDataAPI):
-        self.flight_data_api = flight_data_api
+app = FastAPI()
 
-    def recommend_flights(self, origin: str, destination: str, departure_date: str) -> List[Dict]:
-        flights = self.flight_data_api.get_flights(origin, destination, departure_date)
-        recommended_flights = []
-        for flight in flights:
-            # Apply award flight recommendation logic here
-            # For example, filter by airline, flight duration, etc.
-            if flight["airline"] == "American Airlines" and flight["flight_duration"] < 5:
-                recommended_flights.append(flight)
-        return recommended_flights
+class AwardFlight(BaseModel):
+    airline: str
+    flight_number: str
+    departure_airport: str
+    departure_date: str
+    arrival_airport: str
+    arrival_date: str
+    estimated_value: float
+    booking_link: str
+
+class SearchQuery(BaseModel):
+    search: str
+
+@app.post("/api/award-flights")
+async def get_award_flights(search_query: SearchQuery):
+    # Simulate a database query
+    award_flights = [
+        AwardFlight(
+            airline="American Airlines",
+            flight_number="AA123",
+            departure_airport="JFK",
+            departure_date="2026-06-10",
+            arrival_airport="LAX",
+            arrival_date="2026-06-10",
+            estimated_value=25000.0,
+            booking_link="https://example.com/book-now"
+        ),
+        AwardFlight(
+            airline="Delta Air Lines",
+            flight_number="DL456",
+            departure_airport="LAX",
+            departure_date="2026-06-12",
+            arrival_airport="JFK",
+            arrival_date="2026-06-12",
+            estimated_value=30000.0,
+            booking_link="https://example.com/book-now"
+        ),
+    ]
+
+    # Filter award flights based on search query
+    filtered_award_flights = [flight for flight in award_flights if search_query.search.lower() in flight.airline.lower() or search_query.search.lower() in flight.flight_number.lower()]
+
+    return filtered_award_flights
