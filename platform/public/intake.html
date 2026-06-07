@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apply — District Award Travel</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -98,6 +99,22 @@ nav{
 .field textarea{resize:vertical;min-height:90px}
 .field-hint{font-size:11px;color:var(--dim);margin-top:2px}
 
+/* PROGRAM CHECKLIST */
+.pts-group-label{font-size:10px;font-family:monospace;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin:16px 0 8px}
+.pts-checklist{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.pts-check-item{
+  display:flex;align-items:center;gap:8px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s;
+  user-select:none;
+}
+.pts-check-item:hover{border-color:var(--green);background:rgba(0,232,122,.04)}
+.pts-check-item input[type=checkbox]{
+  width:15px;height:15px;accent-color:var(--green);flex-shrink:0;cursor:pointer;
+}
+.pts-check-name{font-size:12px;font-weight:600;color:var(--text);flex:1}
+.pts-check-tag{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+
 /* POINTS GRID */
 .points-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
 .points-card{
@@ -173,6 +190,7 @@ nav{
   nav{padding:0 16px}
   .page{padding:32px 16px 60px}
   .form-grid,.form-grid-3,.points-grid,.check-grid,.radio-grid{grid-template-columns:1fr 1fr}
+  .pts-checklist{grid-template-columns:1fr 1fr}
   .radio-grid{grid-template-columns:repeat(2,1fr)}
 }
 </style>
@@ -254,107 +272,72 @@ nav{
     <!-- ── STEP 2: POINTS ── -->
     <div class="form-section" data-step="2">
       <div class="form-card">
-        <div class="form-card-title">💰 Your Points &amp; Miles Balances</div>
-        <div class="form-card-sub">Enter your approximate current balances. Exact numbers aren't required — rough estimates are fine. Leave blank if you don't have the program.</div>
-        <div style="margin-bottom:18px">
-          <div style="font-size:10px;font-family:monospace;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-bottom:10px">── Flexible Points (Transfer to Airlines &amp; Hotels)</div>
-          <div class="points-grid">
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Amex Membership Rewards</span><span class="points-card-type type-transfer">TRANSFER</span></div>
-              <input type="text" name="pts_amex_mr" placeholder="e.g. 1,000,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 2.0¢/pt · Best in class</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Chase Ultimate Rewards</span><span class="points-card-type type-transfer">TRANSFER</span></div>
-              <input type="text" name="pts_chase_ur" placeholder="e.g. 200,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 2.0¢/pt · Hyatt, United, BA</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Citi ThankYou Points</span><span class="points-card-type type-transfer">TRANSFER</span></div>
-              <input type="text" name="pts_citi_ty" placeholder="e.g. 150,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.7¢/pt · Turkish, Flying Blue</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Capital One Miles</span><span class="points-card-type type-transfer">TRANSFER</span></div>
-              <input type="text" name="pts_cap1" placeholder="e.g. 100,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.5¢/pt</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Bilt Rewards</span><span class="points-card-type type-transfer">TRANSFER</span></div>
-              <input type="text" name="pts_bilt" placeholder="e.g. 50,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 2.0¢/pt · Hyatt, AA, United</div>
-            </div>
+        <div class="form-card-title">💰 Your Points &amp; Miles</div>
+        <div class="form-card-sub">First, check every program you have an account with — even if the balance is low. Then we'll ask for your balances.</div>
+
+        <!-- PHASE 1: SELECT PROGRAMS -->
+        <div id="pts-select-phase">
+          <div class="pts-group-label">── Flexible Points</div>
+          <div class="pts-checklist">
+            <label class="pts-check-item"><input type="checkbox" name="has_amex_mr" value="1" onchange="togglePtsBalance(this,'pts_amex_mr')"><span class="pts-check-name">Amex Membership Rewards</span><span class="pts-check-tag type-transfer">TRANSFER</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_chase_ur" value="1" onchange="togglePtsBalance(this,'pts_chase_ur')"><span class="pts-check-name">Chase Ultimate Rewards</span><span class="pts-check-tag type-transfer">TRANSFER</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_citi_ty" value="1" onchange="togglePtsBalance(this,'pts_citi_ty')"><span class="pts-check-name">Citi ThankYou Points</span><span class="pts-check-tag type-transfer">TRANSFER</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_cap1" value="1" onchange="togglePtsBalance(this,'pts_cap1')"><span class="pts-check-name">Capital One Miles</span><span class="pts-check-tag type-transfer">TRANSFER</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_bilt" value="1" onchange="togglePtsBalance(this,'pts_bilt')"><span class="pts-check-name">Bilt Rewards</span><span class="pts-check-tag type-transfer">TRANSFER</span></label>
+          </div>
+
+          <div class="pts-group-label">── Airline Miles</div>
+          <div class="pts-checklist">
+            <label class="pts-check-item"><input type="checkbox" name="has_aa" value="1" onchange="togglePtsBalance(this,'pts_aa')"><span class="pts-check-name">American AAdvantage</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_united" value="1" onchange="togglePtsBalance(this,'pts_united')"><span class="pts-check-name">United MileagePlus</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_delta" value="1" onchange="togglePtsBalance(this,'pts_delta')"><span class="pts-check-name">Delta SkyMiles</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_aeroplan" value="1" onchange="togglePtsBalance(this,'pts_aeroplan')"><span class="pts-check-name">Air Canada Aeroplan</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_avios" value="1" onchange="togglePtsBalance(this,'pts_avios')"><span class="pts-check-name">British Airways Avios</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_turkish" value="1" onchange="togglePtsBalance(this,'pts_turkish')"><span class="pts-check-name">Turkish Miles &amp; Smiles</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_flying_blue" value="1" onchange="togglePtsBalance(this,'pts_flying_blue')"><span class="pts-check-name">Air France Flying Blue</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_krisflyer" value="1" onchange="togglePtsBalance(this,'pts_krisflyer')"><span class="pts-check-name">Singapore KrisFlyer</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_alaska" value="1" onchange="togglePtsBalance(this,'pts_alaska')"><span class="pts-check-name">Alaska Mileage Plan</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_southwest" value="1" onchange="togglePtsBalance(this,'pts_southwest')"><span class="pts-check-name">Southwest Rapid Rewards</span><span class="pts-check-tag type-airline">AIRLINE</span></label>
+          </div>
+
+          <div class="pts-group-label">── Hotel Points</div>
+          <div class="pts-checklist">
+            <label class="pts-check-item"><input type="checkbox" name="has_marriott" value="1" onchange="togglePtsBalance(this,'pts_marriott')"><span class="pts-check-name">Marriott Bonvoy</span><span class="pts-check-tag type-hotel">HOTEL</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_hyatt" value="1" onchange="togglePtsBalance(this,'pts_hyatt')"><span class="pts-check-name">World of Hyatt</span><span class="pts-check-tag type-hotel">HOTEL</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_hilton" value="1" onchange="togglePtsBalance(this,'pts_hilton')"><span class="pts-check-name">Hilton Honors</span><span class="pts-check-tag type-hotel">HOTEL</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_ihg" value="1" onchange="togglePtsBalance(this,'pts_ihg')"><span class="pts-check-name">IHG One Rewards</span><span class="pts-check-tag type-hotel">HOTEL</span></label>
+            <label class="pts-check-item"><input type="checkbox" name="has_wyndham" value="1" onchange="togglePtsBalance(this,'pts_wyndham')"><span class="pts-check-name">Wyndham Rewards</span><span class="pts-check-tag type-hotel">HOTEL</span></label>
           </div>
         </div>
-        <div style="margin-bottom:18px">
-          <div style="font-size:10px;font-family:monospace;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-bottom:10px">── Airline Miles</div>
-          <div class="points-grid">
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">American AAdvantage</span><span class="points-card-type type-airline">AIRLINE</span></div>
-              <input type="text" name="pts_aa" placeholder="e.g. 500,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.5¢/mi · JAL, Cathay, BA</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">United MileagePlus</span><span class="points-card-type type-airline">AIRLINE</span></div>
-              <input type="text" name="pts_united" placeholder="e.g. 300,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.3¢/mi · Star Alliance</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Delta SkyMiles</span><span class="points-card-type type-airline">AIRLINE</span></div>
-              <input type="text" name="pts_delta" placeholder="e.g. 200,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.0¢/mi · Dynamic pricing</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Air Canada Aeroplan</span><span class="points-card-type type-airline">AIRLINE</span></div>
-              <input type="text" name="pts_aeroplan" placeholder="e.g. 100,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.5¢/pt · No fuel surcharges</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">British Airways Avios</span><span class="points-card-type type-airline">AIRLINE</span></div>
-              <input type="text" name="pts_avios" placeholder="e.g. 75,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.4¢/pt · Oneworld short-haul</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Turkish Miles &amp; Smiles</span><span class="points-card-type type-airline">AIRLINE</span></div>
-              <input type="text" name="pts_turkish" placeholder="e.g. 50,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.5¢/pt · Best Star Alliance rates</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Air France Flying Blue</span><span class="points-card-type type-airline">AIRLINE</span></div>
-              <input type="text" name="pts_flying_blue" placeholder="e.g. 50,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.3¢/pt · Monthly promos</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Singapore KrisFlyer</span><span class="points-card-type type-airline">AIRLINE</span></div>
-              <input type="text" name="pts_krisflyer" placeholder="e.g. 50,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.5¢/pt · Singapore First</div>
-            </div>
-          </div>
+
+        <!-- PHASE 2: BALANCES (shown per program as checked) -->
+        <div id="pts-balance-phase" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+          <div style="font-size:0.82rem;color:var(--muted);margin-bottom:16px">Great — now enter your approximate balances. Rough estimates are totally fine.</div>
+          <div class="points-grid" id="pts-balance-grid"></div>
         </div>
-        <div>
-          <div style="font-size:10px;font-family:monospace;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin-bottom:10px">── Hotel Points</div>
-          <div class="points-grid">
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Marriott Bonvoy</span><span class="points-card-type type-hotel">HOTEL</span></div>
-              <input type="text" name="pts_marriott" placeholder="e.g. 500,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 0.8¢/pt · Widest selection</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">World of Hyatt</span><span class="points-card-type type-hotel">HOTEL</span></div>
-              <input type="text" name="pts_hyatt" placeholder="e.g. 100,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 1.7¢/pt · Best hotel value</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">Hilton Honors</span><span class="points-card-type type-hotel">HOTEL</span></div>
-              <input type="text" name="pts_hilton" placeholder="e.g. 200,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 0.5¢/pt</div>
-            </div>
-            <div class="points-card">
-              <div class="points-card-header"><span class="points-card-name">IHG One Rewards</span><span class="points-card-type type-hotel">HOTEL</span></div>
-              <input type="text" name="pts_ihg" placeholder="e.g. 100,000" inputmode="numeric">
-              <div class="points-card-cpp">≈ 0.5¢/pt</div>
-            </div>
-          </div>
+
+        <!-- Hidden inputs carry balance values -->
+        <div style="display:none">
+          <input type="text" name="pts_amex_mr" id="pts_amex_mr">
+          <input type="text" name="pts_chase_ur" id="pts_chase_ur">
+          <input type="text" name="pts_citi_ty" id="pts_citi_ty">
+          <input type="text" name="pts_cap1" id="pts_cap1">
+          <input type="text" name="pts_bilt" id="pts_bilt">
+          <input type="text" name="pts_aa" id="pts_aa">
+          <input type="text" name="pts_united" id="pts_united">
+          <input type="text" name="pts_delta" id="pts_delta">
+          <input type="text" name="pts_aeroplan" id="pts_aeroplan">
+          <input type="text" name="pts_avios" id="pts_avios">
+          <input type="text" name="pts_turkish" id="pts_turkish">
+          <input type="text" name="pts_flying_blue" id="pts_flying_blue">
+          <input type="text" name="pts_krisflyer" id="pts_krisflyer">
+          <input type="text" name="pts_alaska" id="pts_alaska">
+          <input type="text" name="pts_southwest" id="pts_southwest">
+          <input type="text" name="pts_marriott" id="pts_marriott">
+          <input type="text" name="pts_hyatt" id="pts_hyatt">
+          <input type="text" name="pts_hilton" id="pts_hilton">
+          <input type="text" name="pts_ihg" id="pts_ihg">
+          <input type="text" name="pts_wyndham" id="pts_wyndham">
         </div>
       </div>
 
@@ -650,6 +633,50 @@ nav{
 </div><!-- /page -->
 
 <script>
+// ── Points program checkbox → balance toggle ──
+const PTS_META = {
+  pts_amex_mr:     { name:'Amex Membership Rewards',   tag:'TRANSFER', cls:'type-transfer', cpp:'≈ 2.0¢/pt · Best in class' },
+  pts_chase_ur:    { name:'Chase Ultimate Rewards',     tag:'TRANSFER', cls:'type-transfer', cpp:'≈ 2.0¢/pt · Hyatt, United, BA' },
+  pts_citi_ty:     { name:'Citi ThankYou Points',       tag:'TRANSFER', cls:'type-transfer', cpp:'≈ 1.7¢/pt · Turkish, Flying Blue' },
+  pts_cap1:        { name:'Capital One Miles',           tag:'TRANSFER', cls:'type-transfer', cpp:'≈ 1.5¢/pt' },
+  pts_bilt:        { name:'Bilt Rewards',               tag:'TRANSFER', cls:'type-transfer', cpp:'≈ 2.0¢/pt · Hyatt, AA, United' },
+  pts_aa:          { name:'American AAdvantage',        tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.5¢/mi · JAL, Cathay, BA' },
+  pts_united:      { name:'United MileagePlus',         tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.3¢/mi · Star Alliance' },
+  pts_delta:       { name:'Delta SkyMiles',             tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.0¢/mi · Dynamic pricing' },
+  pts_aeroplan:    { name:'Air Canada Aeroplan',        tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.5¢/pt · No fuel surcharges' },
+  pts_avios:       { name:'British Airways Avios',      tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.4¢/pt · Oneworld short-haul' },
+  pts_turkish:     { name:'Turkish Miles & Smiles',     tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.5¢/pt · Best Star Alliance rates' },
+  pts_flying_blue: { name:'Air France Flying Blue',     tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.3¢/pt · Monthly promos' },
+  pts_krisflyer:   { name:'Singapore KrisFlyer',        tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.5¢/pt · Singapore First' },
+  pts_alaska:      { name:'Alaska Mileage Plan',        tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.4¢/mi · Many partners' },
+  pts_southwest:   { name:'Southwest Rapid Rewards',    tag:'AIRLINE',  cls:'type-airline',  cpp:'≈ 1.4¢/pt · Companion Pass' },
+  pts_marriott:    { name:'Marriott Bonvoy',            tag:'HOTEL',    cls:'type-hotel',    cpp:'≈ 0.8¢/pt · Widest selection' },
+  pts_hyatt:       { name:'World of Hyatt',             tag:'HOTEL',    cls:'type-hotel',    cpp:'≈ 1.7¢/pt · Best hotel value' },
+  pts_hilton:      { name:'Hilton Honors',              tag:'HOTEL',    cls:'type-hotel',    cpp:'≈ 0.5¢/pt' },
+  pts_ihg:         { name:'IHG One Rewards',            tag:'HOTEL',    cls:'type-hotel',    cpp:'≈ 0.5¢/pt' },
+  pts_wyndham:     { name:'Wyndham Rewards',            tag:'HOTEL',    cls:'type-hotel',    cpp:'≈ 0.7¢/pt' },
+};
+
+function togglePtsBalance(chk, fieldId) {
+  const grid = document.getElementById('pts-balance-grid');
+  const phase = document.getElementById('pts-balance-phase');
+  if (chk.checked) {
+    if (!document.getElementById('bal-card-' + fieldId)) {
+      const m = PTS_META[fieldId] || {};
+      const card = document.createElement('div');
+      card.className = 'points-card';
+      card.id = 'bal-card-' + fieldId;
+      card.innerHTML = `<div class="points-card-header"><span class="points-card-name">${m.name}</span><span class="points-card-type ${m.cls}">${m.tag}</span></div><input type="text" placeholder="e.g. 500,000" inputmode="numeric" oninput="document.getElementById('${fieldId}').value=this.value"><div class="points-card-cpp">${m.cpp}</div>`;
+      grid.appendChild(card);
+    }
+  } else {
+    const existing = document.getElementById('bal-card-' + fieldId);
+    if (existing) existing.remove();
+    document.getElementById(fieldId).value = '';
+  }
+  phase.style.display = grid.children.length > 0 ? 'block' : 'none';
+}
+
 let currentStep = 1;
 const totalSteps = 4;
 
@@ -728,15 +755,68 @@ document.getElementById('intakeForm').addEventListener('submit',function(e){
   fd.forEach((v,k)=>data[k]=v);
   data.submitted_at=new Date().toISOString();
 
-  // Try to POST to API, fall back gracefully
-  fetch('/api/intake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
-    .catch(()=>{}) // server may not be running; that's OK
-    .finally(()=>{
-      document.getElementById('intakeForm').style.display='none';
-      document.querySelector('.progress-bar').style.display='none';
-      document.querySelector('.page-header').style.display='none';
-      document.getElementById('success').style.display='block';
-    });
+  // Show success immediately so the user isn't waiting
+  document.getElementById('intakeForm').style.display='none';
+  document.querySelector('.progress-bar').style.display='none';
+  document.querySelector('.page-header').style.display='none';
+  document.getElementById('success').style.display='block';
+
+  // Build a readable email body
+  const pts_programs = Object.keys(data).filter(k=>k.startsWith('pts_')&&data[k]).map(k=>k.replace('pts_','').replace('_',' ').toUpperCase()+': '+data[k]).join('\n');
+  const emailBody = [
+    '=== NEW INTAKE SUBMISSION ===',
+    'Date: '+data.submitted_at,
+    '',
+    '-- CONTACT --',
+    'Name: '+(data.first_name||'')+' '+(data.last_name||''),
+    'Email: '+(data.email||''),
+    'Phone: '+(data.phone||''),
+    'Home Airport: '+(data.home_airport||''),
+    'Referral: '+(data.referral_source||'')+' / '+(data.referral_name||''),
+    '',
+    '-- POINTS BALANCES --',
+    pts_programs || '(none entered)',
+    '',
+    '-- ELITE STATUS --',
+    'Airline: '+(data.airline_status||'None'),
+    'Hotel: '+(data.hotel_status||'None'),
+    'Amex Card: '+(data.amex_card||'None'),
+    'Chase Card: '+(data.chase_card||'None'),
+    '',
+    '-- TRAVEL GOALS --',
+    data.travel_goals||'',
+    'Trip 1: '+(data.trip1_dest||'')+' — '+(data.trip1_dates||''),
+    'Trip 2: '+(data.trip2_dest||'')+' — '+(data.trip2_dates||''),
+    'Trip 3: '+(data.trip3_dest||'')+' — '+(data.trip3_dates||''),
+    'Cabin: '+(data.cabin_pref||''),
+    'Hotel Tier: '+(data.hotel_tier||''),
+    '',
+    '-- PREFERENCES --',
+    'Flexibility: '+(data.date_flexibility||''),
+    'Comm Pref: '+(data.comm_pref||''),
+    'Max Stops: '+(data.max_stops||''),
+    'Trip Type: '+(data.trip_type||''),
+    'Notes: '+(data.notes||''),
+  ].join('\n');
+
+  // Send via EmailJS (free — you must set up a free account at emailjs.com)
+  // Steps: create account → add Gmail service → create template with {{message}} → paste IDs below
+  const EMAILJS_SERVICE  = 'YOUR_SERVICE_ID';   // replace after setup
+  const EMAILJS_TEMPLATE = 'YOUR_TEMPLATE_ID';  // replace after setup
+  const EMAILJS_PUBLIC   = 'YOUR_PUBLIC_KEY';   // replace after setup
+
+  if (typeof emailjs !== 'undefined' && EMAILJS_SERVICE !== 'YOUR_SERVICE_ID') {
+    emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
+      to_email: 'districtawardtravel@gmail.com',
+      from_name: (data.first_name||'') + ' ' + (data.last_name||''),
+      reply_to: data.email||'',
+      subject: 'New DAT Intake: ' + (data.first_name||'Someone') + ' ' + (data.last_name||''),
+      message: emailBody,
+    }).catch(()=>{});
+  }
+
+  // Always also try the backend API (when deployed)
+  fetch('/api/intake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(()=>{});
 });
 </script>
 </body>
