@@ -803,8 +803,8 @@ document.getElementById('intakeForm').addEventListener('submit',function(e){
   // Steps: create account → add Gmail service → create template with {{message}} → paste IDs below
   const EMAILJS_SERVICE  = 'service_407s8wc';
   const EMAILJS_TEMPLATE = 'template_4525djv';
-  const EMAILJS_PUBLIC   = 'PASTE_PUBLIC_KEY_HERE'; // get from EmailJS → Account → General
-  if (typeof emailjs !== 'undefined' && EMAILJS_PUBLIC !== 'PASTE_PUBLIC_KEY_HERE') {
+  const EMAILJS_PUBLIC   = 'd3KBln2jHflM1AYo5';
+  if (typeof emailjs !== 'undefined') {
     emailjs.init({ publicKey: EMAILJS_PUBLIC });
   }
 
