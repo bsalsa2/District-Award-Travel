@@ -308,7 +308,7 @@
         <div class="page-header">
           <div><h1>Overview</h1><p>District Award Travel — Operations Dashboard</p></div>
           <div class="header-actions">
-            <button class="btn-action" onclick="switchPanel('intake', document.querySelector('.nav-item:nth-child(6)'))">+ Add Client</button>
+            <button class="btn-action" onclick="openAddClient()">+ Add Client</button>
           </div>
         </div>
         <div class="content">
@@ -467,7 +467,7 @@
       <div class="panel" id="panel-clients">
         <div class="page-header">
           <div><h1>Clients</h1><p>All active and prospective clients</p></div>
-          <div class="header-actions"><button class="btn-action green">+ Add Client</button></div>
+          <div class="header-actions"><button class="btn-action green" onclick="openAddClient()">+ Add Client</button></div>
         </div>
         <div class="content">
           <div class="table-wrap">
@@ -782,6 +782,52 @@
   </div>
 </div>
 
+<!-- ADD CLIENT MODAL -->
+<div id="addclient-overlay" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.72);backdrop-filter:blur(4px);justify-content:center;align-items:flex-start;overflow:auto;padding:48px 20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:540px;padding:32px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <h2 style="font-size:1.3rem">Register New Client</h2>
+      <button onclick="closeAddClient()" style="background:none;border:none;color:var(--muted);font-size:1.6rem;cursor:pointer;line-height:1">&times;</button>
+    </div>
+    <p style="color:var(--muted);font-size:0.85rem;margin-bottom:24px">Creates portal login credentials. Share the email + access code with your client so they can sign in at the client portal.</p>
+
+    <div id="addclient-form">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group"><label>First Name</label><input type="text" id="ac-first" placeholder="Tammy"></div>
+        <div class="form-group"><label>Last Name</label><input type="text" id="ac-last" placeholder="Jennissen"></div>
+      </div>
+      <div class="form-group"><label>Email (login username)</label><input type="email" id="ac-email" placeholder="client@email.com"></div>
+      <div class="form-group">
+        <label>Access Code</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="ac-pass" placeholder="Set one or click Generate">
+          <button class="btn-sm" type="button" onclick="genCode()" style="white-space:nowrap">Generate</button>
+        </div>
+      </div>
+      <div class="form-group"><label>Status / Tier Label</label><input type="text" id="ac-tier" placeholder="e.g. Executive Platinum, Group Travel Client"></div>
+      <button class="btn-primary" style="margin-top:8px" onclick="generateClient()">Create Client</button>
+    </div>
+
+    <div id="addclient-result" style="display:none">
+      <div style="background:rgba(0,232,122,0.08);border:1px solid rgba(0,232,122,0.3);border-radius:10px;padding:20px;margin-bottom:16px">
+        <div style="font-weight:700;color:var(--green);margin-bottom:10px">&#10003; Client created &amp; active on this device</div>
+        <div style="font-size:0.85rem;line-height:1.8">
+          <div><span style="color:var(--muted)">Portal:</span> <strong>client.html</strong></div>
+          <div><span style="color:var(--muted)">Email:</span> <strong id="res-email"></strong></div>
+          <div><span style="color:var(--muted)">Access Code:</span> <strong id="res-pass"></strong></div>
+        </div>
+      </div>
+      <div style="font-size:0.82rem;color:var(--muted);margin-bottom:8px">To let this client log in from <em>their own</em> device, this entry must be saved into <strong>client.html</strong>. Copy the block below and paste it into the client list — or send it to your developer:</div>
+      <textarea id="res-snippet" readonly style="width:100%;height:130px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-family:monospace;font-size:0.76rem;resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn-sm primary" onclick="copySnippet(this)">Copy Code Block</button>
+        <button class="btn-sm" onclick="resetAddClient()">Add Another</button>
+        <button class="btn-sm" onclick="closeAddClient()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 function doAdminLogin() {
   const u = document.getElementById('admin-user').value.trim();
@@ -801,6 +847,57 @@ function doAdminLogout() {
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('admin-user').value = '';
   document.getElementById('admin-pass').value = '';
+}
+
+// ── Client registration ──
+function openAddClient() {
+  document.getElementById('addclient-overlay').style.display = 'flex';
+  resetAddClient();
+}
+function closeAddClient() {
+  document.getElementById('addclient-overlay').style.display = 'none';
+}
+function resetAddClient() {
+  document.getElementById('addclient-form').style.display = 'block';
+  document.getElementById('addclient-result').style.display = 'none';
+  ['ac-first','ac-last','ac-email','ac-pass','ac-tier'].forEach(id => document.getElementById(id).value = '');
+}
+function genCode() {
+  const w = ['alpha','bravo','delta','miles','points','jet','award','first','cabin','lounge'];
+  document.getElementById('ac-pass').value = w[Math.floor(Math.random()*w.length)] + Math.floor(1000 + Math.random()*9000);
+}
+function generateClient() {
+  const first = document.getElementById('ac-first').value.trim();
+  const last  = document.getElementById('ac-last').value.trim();
+  const email = document.getElementById('ac-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('ac-pass').value.trim();
+  const tier  = document.getElementById('ac-tier').value.trim() || 'Client';
+  if (!first || !email || !pass) { alert('First name, email, and access code are required.'); return; }
+  const name = (first + ' ' + last).trim();
+  const client = {
+    pass: pass, name: name, tier: tier,
+    stats: { trips: 0, savings: '$0', fee: '$0', points: '—' },
+    urgency: null, trips: [], savings: [], totalSavings: '$0', totalFee: '$0', points: [],
+    messages: [{ from: 'Jordan Mills — DAT', time: 'Today', text: 'Welcome to District Award Travel, ' + first + "! Your portal is set up. We'll begin mapping your points and trips shortly.", unread: true }]
+  };
+  // Persist on this device so the new client can log in immediately for testing/demo.
+  const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
+  store[email] = client;
+  localStorage.setItem('dat_clients', JSON.stringify(store));
+  // Build a paste-ready snippet for permanent addition to client.html.
+  const snippet = '  "' + email + '": ' + JSON.stringify(client, null, 2).split('\n').join('\n  ') + ',';
+  document.getElementById('res-email').textContent = email;
+  document.getElementById('res-pass').textContent = pass;
+  document.getElementById('res-snippet').value = snippet;
+  document.getElementById('addclient-form').style.display = 'none';
+  document.getElementById('addclient-result').style.display = 'block';
+}
+function copySnippet(btn) {
+  const t = document.getElementById('res-snippet');
+  t.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  if (navigator.clipboard) navigator.clipboard.writeText(t.value);
+  if (btn) { const o = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(() => btn.textContent = o, 1800); }
 }
 
 function switchPanel(id, btn) {

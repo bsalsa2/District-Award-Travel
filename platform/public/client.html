@@ -420,10 +420,19 @@ const CLIENTS = {
 
 let currentClient = null;
 
+// Clients registered through the admin dashboard are saved in this browser's
+// storage. Merge them with the built-in list so they can sign in right away.
+function getRegisteredClient(email) {
+  try {
+    const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
+    return store[email] || null;
+  } catch (e) { return null; }
+}
+
 function doLogin() {
   const email = document.getElementById('login-email').value.trim().toLowerCase();
   const pass = document.getElementById('login-pass').value.trim();
-  const client = CLIENTS[email];
+  const client = CLIENTS[email] || getRegisteredClient(email);
   if (client && client.pass === pass) {
     currentClient = client;
     document.getElementById('login-screen').style.display = 'none';

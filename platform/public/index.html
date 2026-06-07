@@ -307,7 +307,7 @@ footer{
   </div>
   <div class="nav-cta">
     <a href="client.html" class="btn btn-ghost">Client Login</a>
-    <a href="intake.html" class="btn btn-primary">Apply Now →</a>
+    <a href="intake.html" class="btn btn-primary">Get Started →</a>
   </div>
 </nav>
 
@@ -325,7 +325,7 @@ footer{
       You've spent years earning loyalty points. <strong>We turn them into first-class seats, luxury hotels, and trips you wouldn't believe you could afford.</strong> You only pay when we save you money.
     </p>
     <div class="hero-actions">
-      <a href="intake.html" class="btn btn-primary btn-lg">Apply for Advisory →</a>
+      <a href="intake.html" class="btn btn-primary btn-lg">Get Your Travel Plan →</a>
       <a href="#how-it-works" class="btn btn-outline btn-lg">How It Works</a>
     </div>
     <div class="hero-stats">
@@ -420,7 +420,7 @@ footer{
     <div style="text-align:center;max-width:600px;margin:0 auto">
       <div class="section-label" style="text-align:center">── Process</div>
       <h2 class="section-h2">Four steps from application to departure.</h2>
-      <p class="section-sub" style="margin:0 auto">Simple, transparent, results-focused. Most clients have a full redemption plan within 48 hours of their intake call.</p>
+      <p class="section-sub" style="margin:0 auto">Simple, transparent, results-focused. We monitor award space for you and reach out the moment strong redemptions open up.</p>
     </div>
     <div class="steps">
       <div class="step">
@@ -431,9 +431,9 @@ footer{
       </div>
       <div class="step">
         <div class="step-num">02</div>
-        <div class="step-title">Redemption Mapping</div>
-        <div class="step-desc">We analyze your portfolio across every program, identify transfer partners, and build a full redemption roadmap for your specific trips.</div>
-        <div class="step-tag"><span class="pill pill-dim">48 HRS</span></div>
+        <div class="step-title">Mapping & Monitoring</div>
+        <div class="step-desc">We analyze your portfolio across every program, identify transfer partners, and hunt for the strongest redemptions. You'll be notified the moment great award space opens up — and if nothing standout surfaces in the first two weeks, we follow up with alternative routings and a plan B.</div>
+        <div class="step-tag"><span class="pill pill-dim">WE MONITOR</span></div>
       </div>
       <div class="step">
         <div class="step-num">03</div>
@@ -563,7 +563,7 @@ footer{
     <div class="cta-label">── Get Started</div>
     <h2 class="cta-h2">Ready to put your points to work?</h2>
     <p class="cta-sub">Fill out our intake form — takes about 10 minutes. Tell us your points balances and where you want to go. We'll come back with a plan.</p>
-    <a href="intake.html" class="btn btn-primary btn-lg">Apply for Advisory →</a>
+    <a href="intake.html" class="btn btn-primary btn-lg">Get Your Travel Plan →</a>
     <div class="cta-note">No upfront cost. No credit card recommendations. DMV-based.</div>
   </div>
 </section>
@@ -571,13 +571,13 @@ footer{
 <!-- ── FOOTER ── -->
 <footer>
   <div class="footer-left">
-    <div class="f-logo">✈ District Award Travel</div>
+    <div class="f-logo" id="dat-mark">✈ District Award Travel</div>
     <div class="f-sub">We Architect Your Rewards · Washington, DC Metro Area</div>
   </div>
   <div class="footer-links">
     <a href="#how-it-works" class="footer-link">How It Works</a>
     <a href="#our-fee" class="footer-link">Our Fee</a>
-    <a href="intake.html" class="footer-link">Apply</a>
+    <a href="intake.html" class="footer-link">Get Started</a>
     <a href="client.html" class="footer-link">Client Login</a>
   </div>
   <div class="footer-right">
@@ -599,6 +599,26 @@ window.addEventListener('scroll',()=>{
   document.querySelector('nav').style.background=
     window.scrollY>40?'rgba(5,8,13,.98)':'rgba(5,8,13,.92)';
 });
+// ── Staff access: 5 quick clicks/taps on the footer logo opens the admin login.
+// No visible button — only someone who knows the gesture can find it.
+(function(){
+  var mark=document.getElementById('dat-mark');
+  if(!mark)return;
+  var taps=0,timer=null;
+  mark.style.cursor='default';
+  mark.addEventListener('click',function(){
+    taps++;
+    clearTimeout(timer);
+    timer=setTimeout(function(){taps=0;},1200);
+    if(taps>=5){taps=0;window.location.href='admin.html';}
+  });
+  // Desktop shortcut: Ctrl+Shift+A
+  document.addEventListener('keydown',function(e){
+    if(e.ctrlKey&&e.shiftKey&&(e.key==='A'||e.key==='a')){
+      e.preventDefault();window.location.href='admin.html';
+    }
+  });
+})();
 </script>
 </body>
 </html>
