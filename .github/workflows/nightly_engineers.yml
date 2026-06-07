@@ -1,20 +1,18 @@
-name: Nightly Engineering Run
+name: Daily Ops Briefing
+
+# Emails Braden a prioritized summary of client deadlines and action items
+# every morning. Replaces the old nightly free-form engineering agents, which
+# were generating noise and causing repeated merge conflicts.
 
 "on":
   schedule:
-    - cron: '0 2 * * *'
-    - cron: '0 1 * * *'
-    - cron: '0 8 * * *'
-  workflow_dispatch:
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    - cron: '0 11 * * *'   # 11:00 UTC ~ 7:00 AM ET
+  workflow_dispatch:        # lets you run it manually from the Actions tab
 
 jobs:
-  jensen-ideas:
+  daily-briefing:
     runs-on: ubuntu-latest
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -23,127 +21,9 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install packages
-        run: pip install openai google-genai
-
-      - name: Jensen Huang generates tasks
+      - name: Send daily ops briefing
         env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-        run: python agents/jensen.py
-
-      - name: Commit new tasks
-        run: |
-          git config user.name "Jensen Huang"
-          git config user.email "jensen@dat.ai"
-          git add tasks/backlog.json
-          git diff --staged --quiet || git commit -m "Jensen ideas $(date '+%Y-%m-%d')"
-          git push origin main --force
-
-  run-all-engineers:
-    runs-on: ubuntu-latest
-    needs: jensen-ideas
-    timeout-minutes: 120
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install packages
-        run: pip install openai google-genai python-dotenv requests beautifulsoup4 fastapi sqlalchemy pydantic jinja2 aiohttp uvicorn
-
-      - name: Run Mitchell (Infrastructure)
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
-        run: python agents/run_engineer.py mitchell
-
-      - name: Commit Mitchell's work
-        run: |
-          git config user.name "Mitchell Hashimoto"
-          git config user.email "mitchell@dat.ai"
-          git add -A -- ':!node_modules'
-          git diff --staged --quiet || git commit -m "Mitchell build $(date '+%Y-%m-%d')"
-          git push origin main --force
-
-      - name: Pull latest before Martin
-        run: git pull origin main --rebase
-
-      - name: Run Martin (Backend)
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
-        run: python agents/run_engineer.py martin
-
-      - name: Commit Martin's work
-        run: |
-          git config user.name "Martin Thompson"
-          git config user.email "martin@dat.ai"
-          git add -A -- ':!node_modules'
-          git diff --staged --quiet || git commit -m "Martin build $(date '+%Y-%m-%d')"
-          git push origin main --force
-
-      - name: Pull latest before Jeff
-        run: git pull origin main --rebase
-
-      - name: Run Jeff (AI & Full-Stack)
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
-        run: python agents/run_engineer.py jeff
-
-      - name: Commit Jeff's work
-        run: |
-          git config user.name "Jeff Dean"
-          git config user.email "jeff@dat.ai"
-          git add -A -- ':!node_modules'
-          git diff --staged --quiet || git commit -m "Jeff build $(date '+%Y-%m-%d')"
-          git push origin main --force
-
-  morning-email:
-    runs-on: ubuntu-latest
-    needs: run-all-engineers
-    if: always()
-    steps:
-
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install packages
-        run: pip install requests
-
-      - name: Send morning report
-        env:
-          REPORT_EMAIL: ${{ secrets.REPORT_EMAIL }}
-          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
         run: python agents/morning_brief.py
-
-      - name: Commit report
-        run: |
-          git config user.name "DAT Ops"
-          git config user.email "ops@dat.ai"
-          git add logs/
-          git diff --staged --quiet || git commit -m "Morning brief $(date '+%Y-%m-%d')"
-          git push origin main --force

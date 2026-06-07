@@ -1,0 +1,53 @@
+{
+  "_comment": "Edit this file to control your Daily Ops Briefing. Add/remove client action items and deadlines. The nightly agent reads this, computes days-until-due, and emails you a prioritized summary.",
+  "clients": [
+    {
+      "name": "Tammy Jennissen",
+      "note": "Executive Platinum AA · 1M+ Amex MR · 1.6M AA · 500K+ Marriott",
+      "items": [
+        {
+          "title": "Book Casa di Langa via Amex FHR",
+          "due": "2026-06-30",
+          "priority": "critical",
+          "detail": "Piedmont, Aug 5-9. 15% Amex Fine Hotels & Resorts discount expires Jun 30. Awaiting Tammy's confirmation to book."
+        },
+        {
+          "title": "Confirm & book Milan Marriott",
+          "due": "2026-07-15",
+          "priority": "high",
+          "detail": "120,000 Bonvoy points, Aug 11-13. Best value of the 4 options reviewed."
+        },
+        {
+          "title": "Book Laqua by the Lake (Orta)",
+          "due": "2026-07-15",
+          "priority": "medium",
+          "detail": "Aug 9-11 via Amex Hotel Collection."
+        },
+        {
+          "title": "Book Tokyo JAL AA167 (award space now open)",
+          "due": "2026-07-01",
+          "priority": "high",
+          "detail": "JFK->HND nonstop, 35,000 AA miles + $5.60. Award space opened ~Mar 2026. Cash value $913-983 - lock it in before Dec demand spikes."
+        },
+        {
+          "title": "Research Iceland award routing",
+          "due": "2026-09-01",
+          "priority": "low",
+          "detail": "Oct 17-24 trip. Routing TBD."
+        }
+      ]
+    },
+    {
+      "name": "Darren Fernandez",
+      "note": "Group travel, 6 passengers · United MileagePlus + Amex MR (balances TBD)",
+      "items": [
+        {
+          "title": "Get United & Amex MR balances",
+          "due": "2026-06-20",
+          "priority": "high",
+          "detail": "Needed to map South Africa Dec 16 - Jan 1 for 6 passengers. Peak season - Turkish/Ethiopian/Qatar as cash alternatives."
+        }
+      ]
+    }
+  ]
+}

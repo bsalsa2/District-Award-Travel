@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+
+# Local databases
+*.db
+
+# Generated briefing artifacts (the email is the deliverable, not the file)
+logs/daily_brief_*.html
+logs/morning_brief_*.html

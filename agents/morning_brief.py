@@ -1,157 +1,171 @@
+"""
+District Award Travel — Daily Ops Briefing
+==========================================
+Reads data/action_items.json, works out what's due (and how soon), and emails
+Braden a prioritized morning summary so nothing slips through the cracks —
+especially time-sensitive bookings like the Casa di Langa Amex FHR deadline.
+
+Email is sent via Gmail SMTP using the same credentials as the backend:
+  GMAIL_USER            districtawardtravel@gmail.com
+  GMAIL_APP_PASSWORD    16-char Google App Password
+  NOTIFY_EMAIL          where the briefing goes (defaults to GMAIL_USER)
+
+Set those three as GitHub Actions secrets. With none set, it just prints the
+briefing to the workflow log (still useful, just no email).
+"""
+
 import os
 import json
-import datetime
 import smtplib
+import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent
-TASKS_FILE = BASE_DIR / "tasks" / "backlog.json"
+DATA_FILE = BASE_DIR / "data" / "action_items.json"
 LOGS_DIR = BASE_DIR / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
 
-TODAY = datetime.date.today().isoformat()
+TODAY = datetime.date.today()
+TODAY_STR = TODAY.isoformat()
 NOW = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
+PRIORITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+PRIORITY_COLOR = {"critical": "#ff4d6d", "high": "#f5c842", "medium": "#38b6ff", "low": "#8896a6"}
 
-def load_backlog():
-    with open(TASKS_FILE) as f:
+
+def load_items():
+    if not DATA_FILE.exists():
+        return {"clients": []}
+    with open(DATA_FILE) as f:
         return json.load(f)
 
 
-def get_todays_completions(backlog):
-    return [
-        t for t in backlog.get("backlog", [])
-        if t.get("completed_at") == TODAY and t.get("status") == "completed"
-    ]
+def flatten(data):
+    """Return a flat list of action items with computed days-until-due."""
+    rows = []
+    for client in data.get("clients", []):
+        for item in client.get("items", []):
+            due_str = item.get("due", "")
+            days = None
+            try:
+                due = datetime.date.fromisoformat(due_str)
+                days = (due - TODAY).days
+            except ValueError:
+                pass
+            rows.append({
+                "client": client.get("name", "Unknown"),
+                "title": item.get("title", ""),
+                "detail": item.get("detail", ""),
+                "priority": item.get("priority", "low"),
+                "due": due_str,
+                "days": days,
+            })
+    # Sort: overdue/soonest first, then by priority
+    def sort_key(r):
+        days = r["days"] if r["days"] is not None else 9999
+        return (days, PRIORITY_RANK.get(r["priority"], 9))
+    return sorted(rows, key=sort_key)
 
 
-def get_pending_tasks(backlog):
-    order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
-    tasks = [t for t in backlog.get("backlog", []) if t.get("status") == "pending"]
-    return sorted(tasks, key=lambda t: order.get(t.get("priority", "low"), 9))
+def urgency_label(days):
+    if days is None:
+        return "No date"
+    if days < 0:
+        return f"OVERDUE by {abs(days)}d"
+    if days == 0:
+        return "DUE TODAY"
+    if days == 1:
+        return "Due tomorrow"
+    if days <= 14:
+        return f"Due in {days} days"
+    return f"Due in {days} days"
 
 
-def build_html_report(completions, pending_tasks):
-    engineer_info = {
-        "mitchell": {"name": "Mitchell Hashimoto", "role": "Infrastructure Engineer", "color": "#00ff88", "emoji": "🏗️"},
-        "martin":   {"name": "Martin Thompson",    "role": "Backend Engineer",         "color": "#00aaff", "emoji": "⚡"},
-        "jeff":     {"name": "Jeff Dean",           "role": "AI & Full-Stack Engineer", "color": "#9b59ff", "emoji": "🧠"},
-    }
-
-    by_engineer = {"mitchell": [], "martin": [], "jeff": []}
-    for t in completions:
-        eng = t.get("assigned_to")
-        if eng in by_engineer:
-            by_engineer[eng].append(t)
-
-    eng_html = ""
-    for eng_id, tasks in by_engineer.items():
-        info = engineer_info[eng_id]
-        tasks_html = ""
-        if tasks:
-            for t in tasks:
-                summary = t.get("completion_summary", "Task completed.")
-                files = t.get("files_created", [])
-                files_str = " · ".join([f.split("/")[-1] for f in files[:4]]) if files else ""
-                files_html = (
-                    "<div style='font-size:10px;color:#3d5068;font-family:monospace;margin-top:4px;'>FILES: " + files_str + "</div>"
-                ) if files_str else ""
-                tasks_html += (
-                    "<div style='background:#0f1621;border:1px solid #1a2540;border-left:3px solid " + info["color"] + ";border-radius:6px;padding:12px 16px;margin-bottom:8px;'>"
-                    "<div style='font-size:11px;color:#7a8ba0;font-family:monospace;'>" + t["id"] + " · " + t.get("priority", "").upper() + "</div>"
-                    "<div style='font-size:13px;color:#e8edf5;font-weight:600;margin:4px 0;'>" + t["title"] + "</div>"
-                    "<div style='font-size:12px;color:#7a8ba0;line-height:1.5;'>" + summary + "</div>"
-                    + files_html +
-                    "</div>"
-                )
-        else:
-            tasks_html = "<div style='font-size:12px;color:#3d5068;font-family:monospace;'>No tasks completed tonight.</div>"
-
-        eng_html += (
-            "<div style='margin-bottom:24px;'>"
-            "<div style='font-size:14px;font-weight:700;color:" + info["color"] + ";margin-bottom:10px;'>"
-            + info["emoji"] + " " + info["name"] + " — " + str(len(tasks)) + " task(s) completed</div>"
-            + tasks_html +
+def build_html(rows):
+    urgent = [r for r in rows if r["days"] is not None and r["days"] <= 14]
+    cards = ""
+    for r in rows:
+        color = PRIORITY_COLOR.get(r["priority"], "#8896a6")
+        label = urgency_label(r["days"])
+        soon = r["days"] is not None and r["days"] <= 7
+        label_color = "#ff4d6d" if (r["days"] is not None and r["days"] <= 7) else "#8896a6"
+        cards += (
+            "<div style='background:#0f1621;border:1px solid #1a2540;border-left:3px solid " + color + ";border-radius:8px;padding:14px 18px;margin-bottom:10px;'>"
+            "<div style='display:flex;justify-content:space-between;align-items:center;'>"
+            "<span style='font-size:10px;color:#7a8ba0;font-family:monospace;text-transform:uppercase;letter-spacing:.06em;'>" + r["client"] + " · " + r["priority"].upper() + "</span>"
+            "<span style='font-size:11px;font-weight:700;color:" + label_color + ";font-family:monospace;'>" + label + (" · " + r["due"] if r["due"] else "") + "</span>"
+            "</div>"
+            "<div style='font-size:14px;color:#e8edf5;font-weight:600;margin:6px 0 3px;'>" + r["title"] + "</div>"
+            "<div style='font-size:12px;color:#8896a6;line-height:1.5;'>" + r["detail"] + "</div>"
             "</div>"
         )
-
-    plan_html = ""
-    shown = set()
-    for t in pending_tasks:
-        eng_id = t.get("assigned_to")
-        if eng_id in engineer_info and eng_id not in shown:
-            info = engineer_info[eng_id]
-            plan_html += (
-                "<div style='background:#0f1621;border:1px solid #1a2540;border-left:3px solid " + info["color"] + ";border-radius:6px;padding:10px 14px;margin-bottom:6px;'>"
-                "<div style='font-size:10px;color:#3d5068;font-family:monospace;margin-bottom:3px;'>" + info["name"].upper() + " · " + t.get("priority", "").upper() + "</div>"
-                "<div style='font-size:12px;color:#e8edf5;'>" + t["title"] + "</div>"
-                "</div>"
-            )
-            shown.add(eng_id)
-
-    if not plan_html:
-        plan_html = "<div style='color:#3d5068;font-family:monospace;font-size:11px;'>Engineers will generate new tasks from tonight's work.</div>"
+    if not cards:
+        cards = "<div style='color:#3d5068;font-family:monospace;font-size:12px;'>No open action items. Enjoy the clear runway. ✈</div>"
 
     return (
         "<!DOCTYPE html><html><head><meta charset='UTF-8'>"
-        "<title>DAT Morning Brief — " + TODAY + "</title></head>"
+        "<title>DAT Daily Briefing — " + TODAY_STR + "</title></head>"
         "<body style='background:#080c10;color:#e8edf5;font-family:Segoe UI,sans-serif;margin:0;padding:0;'>"
         "<div style='max-width:680px;margin:0 auto;padding:32px 24px;'>"
 
-        "<div style='background:#0f1621;border:1px solid #1a2540;border-radius:12px;padding:24px;margin-bottom:24px;border-top:3px solid #00ff88;'>"
-        "<div style='font-size:22px;font-weight:800;color:#00ff88;'>✈ District Award Travel</div>"
-        "<div style='font-size:11px;color:#7a8ba0;font-family:monospace;margin-top:4px;'>MORNING BRIEFING · " + NOW + "</div>"
-        "<div style='color:#7a8ba0;font-size:13px;margin-top:10px;'>Your engineers worked through the night. Here is what they built.</div>"
+        "<div style='background:#0f1621;border:1px solid #1a2540;border-radius:12px;padding:24px;margin-bottom:24px;border-top:3px solid #00e87a;'>"
+        "<div style='font-size:22px;font-weight:800;color:#00e87a;'>✈ District Award Travel</div>"
+        "<div style='font-size:11px;color:#7a8ba0;font-family:monospace;margin-top:4px;'>DAILY OPS BRIEFING · " + NOW + "</div>"
+        "<div style='color:#8896a6;font-size:13px;margin-top:10px;'>Good morning, Braden. Here's what needs your attention today.</div>"
         "</div>"
 
-        "<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;'>"
-        "<div style='background:#0f1621;border:1px solid #1a2540;border-radius:8px;padding:14px;text-align:center;'>"
-        "<div style='font-size:28px;font-weight:700;color:#00ff88;font-family:monospace;'>" + str(len(completions)) + "</div>"
-        "<div style='font-size:9px;color:#3d5068;font-family:monospace;text-transform:uppercase;letter-spacing:.1em;margin-top:2px;'>Tasks Built</div></div>"
-        "<div style='background:#0f1621;border:1px solid #1a2540;border-radius:8px;padding:14px;text-align:center;'>"
-        "<div style='font-size:28px;font-weight:700;color:#00aaff;font-family:monospace;'>" + str(len(pending_tasks)) + "</div>"
-        "<div style='font-size:9px;color:#3d5068;font-family:monospace;text-transform:uppercase;letter-spacing:.1em;margin-top:2px;'>In Queue</div></div>"
-        "<div style='background:#0f1621;border:1px solid #1a2540;border-radius:8px;padding:14px;text-align:center;'>"
-        "<div style='font-size:28px;font-weight:700;color:#ffd700;font-family:monospace;'>3</div>"
-        "<div style='font-size:9px;color:#3d5068;font-family:monospace;text-transform:uppercase;letter-spacing:.1em;margin-top:2px;'>Engineers</div></div>"
+        "<div style='display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:28px;'>"
+        "<div style='background:#0f1621;border:1px solid #1a2540;border-radius:8px;padding:16px;text-align:center;'>"
+        "<div style='font-size:30px;font-weight:700;color:#ff4d6d;font-family:monospace;'>" + str(len(urgent)) + "</div>"
+        "<div style='font-size:9px;color:#3d5068;font-family:monospace;text-transform:uppercase;letter-spacing:.1em;margin-top:2px;'>Due Within 2 Weeks</div></div>"
+        "<div style='background:#0f1621;border:1px solid #1a2540;border-radius:8px;padding:16px;text-align:center;'>"
+        "<div style='font-size:30px;font-weight:700;color:#38b6ff;font-family:monospace;'>" + str(len(rows)) + "</div>"
+        "<div style='font-size:9px;color:#3d5068;font-family:monospace;text-transform:uppercase;letter-spacing:.1em;margin-top:2px;'>Total Open Items</div></div>"
         "</div>"
 
-        "<div style='font-size:9px;color:#00ff88;font-family:monospace;text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px;'>── What We Built Tonight</div>"
-        + eng_html +
-
-        "<div style='font-size:9px;color:#00ff88;font-family:monospace;text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px;margin-top:24px;'>── What We Are Building Tomorrow Night at 1 AM</div>"
-        + plan_html +
+        "<div style='font-size:9px;color:#00e87a;font-family:monospace;text-transform:uppercase;letter-spacing:.12em;margin-bottom:14px;'>── Action Items (soonest first)</div>"
+        + cards +
 
         "<div style='margin-top:32px;padding-top:16px;border-top:1px solid #1a2540;font-size:10px;color:#3d5068;font-family:monospace;text-align:center;'>"
-        "District Award Travel · Autonomous Engineering System · Mitchell · Martin · Jeff"
+        "District Award Travel · Daily Ops Briefing · edit data/action_items.json to update"
         "</div></div></body></html>"
     )
 
 
-def send_email(html_content):
-    smtp_server = os.environ.get("SMTP_SERVER")
-    smtp_user = os.environ.get("REPORT_EMAIL")
-    smtp_pass = os.environ.get("SMTP_PASSWORD")
-    report_email = os.environ.get("REPORT_EMAIL")
+def build_text(rows):
+    lines = ["DISTRICT AWARD TRAVEL — DAILY OPS BRIEFING", NOW, ""]
+    for r in rows:
+        lines.append(f"[{r['priority'].upper()}] {r['client']}: {r['title']}")
+        lines.append(f"    {urgency_label(r['days'])}" + (f" ({r['due']})" if r['due'] else ""))
+        lines.append(f"    {r['detail']}")
+        lines.append("")
+    if not rows:
+        lines.append("No open action items.")
+    return "\n".join(lines)
 
-    if not all([smtp_server, smtp_user, smtp_pass, report_email]):
-        print("Email secrets not configured — skipping email.")
+
+def send_email(html_content, text_content):
+    gmail_user = os.environ.get("GMAIL_USER")
+    gmail_pass = os.environ.get("GMAIL_APP_PASSWORD")
+    notify = os.environ.get("NOTIFY_EMAIL", gmail_user)
+
+    if not all([gmail_user, gmail_pass, notify]):
+        print("GMAIL_USER / GMAIL_APP_PASSWORD not set — skipping email (briefing printed above).")
         return False
 
     try:
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = "DAT Morning Brief — " + TODAY
-        msg["From"] = smtp_user
-        msg["To"] = report_email
+        msg["Subject"] = "DAT Daily Briefing — " + TODAY_STR
+        msg["From"] = "District Award Travel <" + gmail_user + ">"
+        msg["To"] = notify
+        msg.attach(MIMEText(text_content, "plain"))
         msg.attach(MIMEText(html_content, "html"))
-
-        with smtplib.SMTP(smtp_server, 587) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.sendmail(smtp_user, report_email, msg.as_string())
-        print("Morning brief emailed to " + report_email)
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(gmail_user, gmail_pass)
+            server.sendmail(gmail_user, [notify], msg.as_string())
+        print("Daily briefing emailed to " + notify)
         return True
     except Exception as e:
         print("Email failed: " + str(e))
@@ -159,26 +173,21 @@ def send_email(html_content):
 
 
 def main():
-    backlog = load_backlog()
-    completions = get_todays_completions(backlog)
-    pending_tasks = get_pending_tasks(backlog)
+    data = load_items()
+    rows = flatten(data)
 
-    html = build_html_report(completions, pending_tasks)
+    html = build_html(rows)
+    text = build_text(rows)
 
-    brief_path = LOGS_DIR / ("morning_brief_" + TODAY + ".html")
+    brief_path = LOGS_DIR / ("daily_brief_" + TODAY_STR + ".html")
     brief_path.write_text(html)
-    print("Morning brief saved: " + str(brief_path))
 
-    print("")
-    print("=" * 50)
-    print("DISTRICT AWARD TRAVEL — " + TODAY)
-    print("Tasks built tonight: " + str(len(completions)))
-    print("Tasks in queue: " + str(len(pending_tasks)))
-    for t in completions:
-        print("  [DONE] " + t.get("assigned_to", "?").upper() + " — " + t["title"])
-    print("=" * 50)
+    print("=" * 56)
+    print(text)
+    print("=" * 56)
+    print("Saved: " + str(brief_path))
 
-    send_email(html)
+    send_email(html, text)
 
 
 if __name__ == "__main__":
