@@ -801,9 +801,12 @@ document.getElementById('intakeForm').addEventListener('submit',function(e){
 
   // Send via EmailJS (free — you must set up a free account at emailjs.com)
   // Steps: create account → add Gmail service → create template with {{message}} → paste IDs below
-  const EMAILJS_SERVICE  = 'service_407s8wc';   // replace after setup
-  const EMAILJS_TEMPLATE = 'template_4525djv';  // replace after setup
-  const EMAILJS_PUBLIC   = 'd3KBln2jHflM1AYo5';   // replace after setup
+  const EMAILJS_SERVICE  = 'service_407s8wc';
+  const EMAILJS_TEMPLATE = 'template_4525djv';
+  const EMAILJS_PUBLIC   = 'd3KBln2jHflM1AYo5';
+  if (typeof emailjs !== 'undefined') {
+    emailjs.init({ publicKey: EMAILJS_PUBLIC });
+  }
 
   if (typeof emailjs !== 'undefined' && EMAILJS_SERVICE !== 'YOUR_SERVICE_ID') {
     emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
