@@ -244,7 +244,13 @@ app.add_middleware(
 
 @app.on_event("startup")
 def seed_admin():
-    """Create the admin account once, from env vars."""
+    """Ensure the admin account matches the current env vars.
+
+    The ADMIN_EMAIL / ADMIN_PASSWORD env vars are the single source of truth:
+    if the admin doesn't exist it's created, and if it does exist its password
+    is re-synced on every startup. This keeps a Render password change from
+    being silently ignored just because the admin row already existed.
+    """
     db = SessionLocal()
     try:
         existing = db.query(Admin).filter(Admin.email == ADMIN_EMAIL).first()
@@ -252,6 +258,12 @@ def seed_admin():
             db.add(Admin(email=ADMIN_EMAIL, password_hash=hash_pw(ADMIN_PASSWORD), name="Braden Salcetti"))
             db.commit()
             print(f"[startup] Seeded admin: {ADMIN_EMAIL}")
+        else:
+            # Re-sync the password to whatever ADMIN_PASSWORD currently is.
+            if not verify_pw(ADMIN_PASSWORD, existing.password_hash):
+                existing.password_hash = hash_pw(ADMIN_PASSWORD)
+                db.commit()
+                print(f"[startup] Re-synced admin password for: {ADMIN_EMAIL}")
     finally:
         db.close()
 
