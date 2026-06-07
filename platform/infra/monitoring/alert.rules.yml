@@ -1,0 +1,29 @@
+groups:
+- name: award-space-alerts
+  rules:
+  - alert: AwardSpaceAvailabilityChanged
+    expr: changes(award_space_current_availability[1h]) > 0
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Award space availability changed for {{ $labels.airline }} {{ $labels.route }} {{ $labels.class }}"
+      description: "Award space availability has changed from previous state. Check the monitoring dashboard for details."
+
+  - alert: AwardSpaceBecameAvailable
+    expr: award_space_current_availability == 1 and changes(award_space_current_availability[1h]) > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Award space became available for {{ $labels.airline }} {{ $labels.route }} {{ $labels.class }}"
+      description: "New award space availability detected! This is a prime opportunity for booking."
+
+  - alert: AwardSpaceBecameUnavailable
+    expr: award_space_current_availability == 0 and changes(award_space_current_availability[1h]) > 0
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Award space became unavailable for {{ $labels.airline }} {{ $labels.route }} {{ $labels.class }}"
+      description: "Award space has closed. Consider if this affects any pending bookings."

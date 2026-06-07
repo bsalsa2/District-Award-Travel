@@ -1,0 +1,121 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Award Space Monitoring",
+    "tags": ["award", "travel", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Award Space Availability Overview",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Current Availability by Airline",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 1},
+        "targets": [
+          {
+            "expr": "award_space_current_availability{airline=~\".+\"}",
+            "legendFormat": "{{airline}}"
+          }
+        ],
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Availability by Route",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 1},
+        "targets": [
+          {
+            "expr": "award_space_current_availability{route=~\".+\"}",
+            "legendFormat": "{{route}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Availability by Cabin Class",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 1},
+        "targets": [
+          {
+            "expr": "award_space_current_availability{class_=~\".+\"}",
+            "legendFormat": "{{class_}}"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Award Space Changes Over Time",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 9},
+        "targets": [
+          {
+            "expr": "changes(award_space_current_availability[1h])",
+            "legendFormat": "Changes per hour"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "Alerts Triggered",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 9},
+        "targets": [
+          {
+            "expr": "award_space_alerts_total",
+            "legendFormat": "Total alerts"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Monitoring Performance",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 17},
+        "targets": [
+          {
+            "expr": "rate(award_space_check_duration_seconds_sum[5m]) / rate(award_space_check_duration_seconds_count[5m])",
+            "legendFormat": "Avg check duration"
+          },
+          {
+            "expr": "award_space_checks_total",
+            "legendFormat": "Total checks"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Recent Alerts",
+        "type": "table",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 17},
+        "targets": [
+          {
+            "expr": "award_space_alerts_total offset 1h",
+            "legendFormat": "{{alertname}}"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": []
+        }
+      }
+    ],
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  },
+  "overwrite": true
+}

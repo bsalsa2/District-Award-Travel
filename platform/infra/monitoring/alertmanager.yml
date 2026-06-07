@@ -1,0 +1,19 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 5m
+  repeat_interval: 3h
+  receiver: 'district-award-travel-team'
+
+receivers:
+- name: 'district-award-travel-team'
+  email_configs:
+  - to: 'alerts@districtawardtravel.com'
+    from: 'monitoring@districtawardtravel.com'
+    smarthost: 'smtp.districtawardtravel.com:587'
+    auth_username: 'monitoring@districtawardtravel.com'
+    auth_password: '${SMTP_PASSWORD}'
+    require_tls: true
