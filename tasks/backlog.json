@@ -3091,16 +3091,35 @@
       "title": "Award Flight Recommendation Engine API",
       "assigned_to": "martin",
       "priority": "high",
-      "status": "pending",
-      "description": "Create a FastAPI endpoint to expose the award flight recommendation engine as a RESTful API. The API should accept client preferences, travel dates, and origin/destination airports as input, and return a list of recommended award flights. Create files in platform/src/endpoints/ and update the API documentation to include the new endpoint. The API should handle errors and exceptions, and return a JSON response with the recommended award flights."
+      "status": "completed",
+      "description": "Create a FastAPI endpoint to expose the award flight recommendation engine as a RESTful API. The API should accept client preferences, travel dates, and origin/destination airports as input, and return a list of recommended award flights. Create files in platform/src/endpoints/ and update the API documentation to include the new endpoint. The API should handle errors and exceptions, and return a JSON response with the recommended award flights.",
+      "completed_at": "2026-06-07",
+      "files_created": [
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/endpoints/award_flights.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/models.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/schemas.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/utils.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/main.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/docs.py"
+      ],
+      "completion_summary": "Completed by martin on 2026-06-07. Files: award_flights.py, models.py, schemas.py"
     },
     {
       "id": "TASK-1043",
       "title": "Client Redemption History API",
       "assigned_to": "martin",
       "priority": "high",
-      "status": "pending",
-      "description": "Develop a FastAPI endpoint to retrieve a client's redemption history. The API should accept a client ID as input, and return a list of past redemptions, including the award flight details, travel dates, and points redeemed. Create files in platform/src/endpoints/ and update the API documentation to include the new endpoint. The API should handle errors and exceptions, and return a JSON response with the client's redemption history."
+      "status": "completed",
+      "description": "Develop a FastAPI endpoint to retrieve a client's redemption history. The API should accept a client ID as input, and return a list of past redemptions, including the award flight details, travel dates, and points redeemed. Create files in platform/src/endpoints/ and update the API documentation to include the new endpoint. The API should handle errors and exceptions, and return a JSON response with the client's redemption history.",
+      "completed_at": "2026-06-07",
+      "files_created": [
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/endpoints/client_redemption_history.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/models.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/schemas.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/main.py",
+        "/home/runner/work/District-Award-Travel/District-Award-Travel/platform/src/database.py"
+      ],
+      "completion_summary": "Completed by martin on 2026-06-07. Files: client_redemption_history.py, models.py, schemas.py"
     },
     {
       "id": "TASK-1044",
