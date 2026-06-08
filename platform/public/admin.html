@@ -207,9 +207,43 @@
     border-radius:10px; font-size:.87rem; z-index:800; box-shadow:var(--shadow); opacity:0; transition:all .28s; pointer-events:none; }
   .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
 
-  @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,1fr)} }
+  /* DEAL CARDS */
+  .deal-cards-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:28px; }
+  .deal-card { background:linear-gradient(135deg,var(--surface2),var(--surface)); border:1px solid var(--border); border-radius:14px; padding:18px 20px; position:relative; overflow:hidden; }
+  .deal-card::before { content:''; position:absolute; top:-20px; right:-20px; width:110px; height:110px; background:radial-gradient(circle,rgba(255,179,71,.09),transparent 70%); pointer-events:none; }
+  .deal-route { font-size:1.1rem; font-weight:800; color:var(--gold); margin-bottom:3px; }
+  .deal-program { font-size:.76rem; color:var(--muted); margin-bottom:11px; }
+  .deal-badges { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:11px; }
+  .deal-price-badge { background:rgba(255,92,92,.15); color:var(--red); border:1px solid rgba(255,92,92,.3); padding:4px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+  .deal-pts-badge { background:rgba(255,179,71,.15); color:var(--gold); border:1px solid rgba(255,179,71,.3); padding:4px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+  .deal-cpp-badge { background:rgba(31,212,122,.15); color:var(--green); border:1px solid rgba(31,212,122,.3); padding:4px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+  .deal-avail-badge { background:rgba(69,179,255,.15); color:var(--blue); border:1px solid rgba(69,179,255,.3); padding:4px 10px; border-radius:20px; font-size:.72rem; font-weight:700; }
+  .deal-why { font-size:.82rem; color:var(--text); line-height:1.55; margin-bottom:12px; }
+
+  /* EXPIRING POINTS */
+  .expiring-list { display:flex; flex-direction:column; gap:8px; }
+  .expiring-row { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 16px; display:flex; align-items:center; gap:14px; }
+  .expiring-row.urgent { border-left:3px solid var(--red); }
+  .expiring-row.warning { border-left:3px solid var(--gold); }
+  .expiring-row.calm { border-left:3px solid var(--muted); }
+  .exp-days { font-size:1.1rem; font-weight:800; min-width:48px; text-align:center; }
+  .exp-days.urgent { color:var(--red); }
+  .exp-days.warning { color:var(--gold); }
+
+  /* IMPORT TABS */
+  .modal-tabs { display:flex; border-bottom:1px solid var(--border); margin-bottom:18px; }
+  .modal-tab { padding:9px 18px; font-size:.84rem; cursor:pointer; color:var(--muted); background:none; border:none; border-bottom:2px solid transparent; font-family:var(--font); transition:all .15s; }
+  .modal-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
+  .modal-tab:hover:not(.active) { color:var(--text); }
+
+  /* IMAGE UPLOAD */
+  .img-drop { border:2px dashed var(--border2); border-radius:12px; padding:32px; text-align:center; cursor:pointer; transition:all .2s; }
+  .img-drop:hover, .img-drop.drag { border-color:var(--orange); background:rgba(255,122,24,.04); }
+  .img-preview { max-width:100%; max-height:200px; border-radius:8px; margin-top:12px; display:none; }
+
+  @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,1fr)} .deal-cards-grid{grid-template-columns:1fr 1fr} }
   @media(max-width:800px){ .sidebar{display:none} .content{padding:16px} .page-header{padding:16px}
-    .metrics-grid{grid-template-columns:repeat(2,1fr)} .intake-card{grid-template-columns:1fr} }
+    .metrics-grid{grid-template-columns:repeat(2,1fr)} .intake-card{grid-template-columns:1fr} .deal-cards-grid{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
@@ -242,6 +276,7 @@
         <button class="nav-item" onclick="switchPanel('urgent',this)"><span class="nav-icon">⚡</span> Action Items <span class="nav-badge" id="nav-ai-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('intake',this)"><span class="nav-icon">📋</span> Intake Queue <span class="nav-badge muted" id="nav-intake-count">0</span></button>
+        <button class="nav-item" onclick="switchPanel('expiring',this)"><span class="nav-icon">🔥</span> Points at Risk <span class="nav-badge" id="nav-expiring-count" style="background:rgba(255,92,92,.2);color:var(--red)">0</span></button>
         <button class="nav-item" onclick="switchPanel('fees',this)"><span class="nav-icon">$</span> Savings &amp; Fees</button>
         <button class="nav-item" onclick="switchPanel('settings',this)"><span class="nav-icon">⚙</span> Settings</button>
       </nav>
@@ -270,7 +305,7 @@
             <div class="metric-card"><div class="metric-label">Intake Queue</div><div class="metric-val" id="ov-intake-count">—</div><div class="metric-delta">New applications</div></div>
             <div class="metric-card"><div class="metric-label">Open Action Items</div><div class="metric-val red" id="ov-ai-count">0</div><div class="metric-delta" id="ov-ai-next">—</div></div>
             <div class="metric-card"><div class="metric-label">Advisory Fees</div><div class="metric-val gold">10%</div><div class="metric-delta">of savings identified</div></div>
-            <div class="metric-card"><div class="metric-label">Service Model</div><div class="metric-val" style="font-size:1rem;padding-top:4px">Advisory</div><div class="metric-delta">You advise · client books</div></div>
+            <div class="metric-card" style="cursor:pointer" onclick="switchPanel('expiring',document.querySelector('.nav-item[onclick*=expiring]'))"><div class="metric-label">Points at Risk</div><div class="metric-val red" id="ov-expiring-count">—</div><div class="metric-delta">Expiring in 90 days</div></div>
           </div>
 
           <div class="section-header">
@@ -278,6 +313,14 @@
             <button class="btn-action" onclick="switchPanel('urgent',document.querySelectorAll('.nav-item')[1])">View all →</button>
           </div>
           <div class="ai-list" id="ov-ai-list"></div>
+
+          <div class="section-header" style="margin-top:28px">
+            <div class="section-title">🔥 Points at Risk <span class="badge badge-red" id="ov-expiring-badge">0 expiring</span></div>
+            <button class="btn-action" onclick="loadExpiringPoints()">↻ Refresh</button>
+          </div>
+          <div id="ov-expiring-list" style="margin-bottom:28px">
+            <div style="padding:18px;text-align:center;color:var(--muted);font-size:.83rem">Loading expiration data…</div>
+          </div>
 
           <div class="section-header">
             <div class="section-title">Clients</div>
@@ -331,6 +374,20 @@
         </div>
       </div>
 
+      <!-- POINTS AT RISK -->
+      <div class="panel" id="panel-expiring">
+        <div class="page-header">
+          <div><h1>Points at Risk</h1><p>Loyalty points expiring in the next 90 days — across all clients</p></div>
+          <div class="header-actions"><button class="btn-action" onclick="loadExpiringPoints()">↻ Refresh</button></div>
+        </div>
+        <div class="content">
+          <p style="font-size:.83rem;color:var(--muted);margin-bottom:20px">To populate this board, use <strong style="color:var(--blue)">📄 Scan</strong> on a client's loyalty statement — Gemini Vision reads the expiration date automatically. Points expiring within 30 days are shown in red.</p>
+          <div id="expiring-full-list">
+            <div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div>
+          </div>
+        </div>
+      </div>
+
       <!-- FEES (manual tracker) -->
       <div class="panel" id="panel-fees">
         <div class="page-header">
@@ -366,9 +423,11 @@
           </div>
           <div class="settings-section">
             <div class="settings-title">AI Integration</div>
-            <div class="setting-row"><div><div class="setting-label">Email Import (Groq/Llama)</div><div class="setting-sub">Paste a forwarded email → AI extracts client info instantly</div></div><div id="ai-status-badge"><span class="badge badge-muted">checking…</span></div></div>
-            <div class="setting-row"><div><div class="setting-label">Gemini Fallback</div><div class="setting-sub">Used if Groq is unavailable</div></div><div><span class="badge badge-muted" id="gemini-badge">checking…</span></div></div>
-            <div class="setting-row"><div><div class="setting-label">GROQ_API_KEY</div><div class="setting-sub">Set in Render → Environment</div></div><div><span class="badge badge-muted">Render env var</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">Email Import (Groq / Llama 3.1)</div><div class="setting-sub">Paste forwarded email → AI extracts client info instantly</div></div><div id="ai-status-badge"><span class="badge badge-muted">checking…</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">Gemini (email fallback + thread parse)</div><div class="setting-sub">Used if Groq is down; also powers conversation-thread importer</div></div><div><span class="badge badge-muted" id="gemini-badge">checking…</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">Gemini Vision (Document Scanner)</div><div class="setting-sub">Reads loyalty screenshots · extracts balance + expiration automatically</div></div><div><span class="badge badge-muted" id="vision-badge">checking…</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">Sweet Spot Oracle</div><div class="setting-sub">Gemini generates personalised award recommendations → pushed to client portal</div></div><div><span class="badge badge-green">Powered by Gemini</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">seats.aero (live award availability)</div><div class="setting-sub">Optional paid add-on: seats.aero Pro is $99.99/yr. Add SEATS_AERO_API_KEY in Render to layer real seat counts onto Gemini recommendations. Works fully without it.</div></div><div><span class="badge badge-muted">Optional · Paid</span></div></div>
           </div>
           <div class="settings-section">
             <div class="settings-title">Tools</div>
@@ -426,31 +485,76 @@
 <!-- IMPORT FROM EMAIL MODAL -->
 <div id="import-overlay" class="overlay">
   <div class="modal wide">
-    <div class="modal-head"><h2>✨ Import Client from Email</h2><button class="modal-close" onclick="closeImportEmail()">&times;</button></div>
-    <p class="modal-sub">Forward or paste a client's email below. AI (Groq/Llama) reads it and extracts their info — you review, edit, and create the account in one click. No manual entry.</p>
-    <div id="import-step1">
-      <div class="form-group"><label>Paste the forwarded email here</label>
-        <textarea id="import-raw" rows="9" placeholder="Paste the full email — including the sender's email address, name, any travel goals, points balances, destinations they mentioned, etc."></textarea>
-      </div>
-      <button class="btn-primary" onclick="runAIParse()" id="parse-btn">✨ Parse with AI</button>
+    <div class="modal-head"><h2>✨ Import Client</h2><button class="modal-close" onclick="closeImportEmail()">&times;</button></div>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-single" onclick="switchImportTab('single')">📧 Single Email</button>
+      <button class="modal-tab" id="tab-thread" onclick="switchImportTab('thread')">💬 Conversation Thread</button>
     </div>
-    <div id="import-step2" style="display:none">
-      <div class="ai-badge">✨ Parsed by <span id="parse-source-label">AI</span> · Review and edit below</div>
-      <div class="parse-result" id="parse-result-box" style="display:block">
-        <div class="parse-field"><div class="parse-key">First Name</div><div class="parse-val"><input type="text" id="pr-first"></div></div>
-        <div class="parse-field"><div class="parse-key">Last Name</div><div class="parse-val"><input type="text" id="pr-last"></div></div>
-        <div class="parse-field"><div class="parse-key">Email</div><div class="parse-val"><input type="email" id="pr-email"></div></div>
-        <div class="parse-field"><div class="parse-key">Phone</div><div class="parse-val"><input type="text" id="pr-phone"></div></div>
-        <div class="parse-field"><div class="parse-key">Home Airport</div><div class="parse-val"><input type="text" id="pr-airport"></div></div>
-        <div class="parse-field"><div class="parse-key">Travel Goals</div><div class="parse-val"><input type="text" id="pr-goals"></div></div>
-        <div class="parse-field"><div class="parse-key">Notes</div><div class="parse-val"><input type="text" id="pr-notes"></div></div>
+
+    <!-- SINGLE EMAIL TAB -->
+    <div id="import-tab-single">
+      <p class="modal-sub">Paste a forwarded email. Groq/Llama reads it and extracts client info — you review and create the account in one click.</p>
+      <div id="import-step1">
+        <div class="form-group"><label>Paste the forwarded email here</label>
+          <textarea id="import-raw" rows="8" placeholder="Paste the full email — including sender address, name, travel goals, points balances, destinations mentioned, etc."></textarea>
+        </div>
+        <button class="btn-primary" onclick="runAIParse()" id="parse-btn">✨ Parse with AI</button>
       </div>
-      <div class="form-group"><label>Access Code (for portal login)</label>
-        <div style="display:flex;gap:8px"><input type="text" id="pr-pass" placeholder="Set or generate"><button class="btn-sm" type="button" onclick="document.getElementById('pr-pass').value=genRandCode()">Generate</button></div>
+      <div id="import-step2" style="display:none">
+        <div class="ai-badge">✨ Parsed by <span id="parse-source-label">AI</span> · Review and edit below</div>
+        <div class="parse-result" id="parse-result-box" style="display:block">
+          <div class="parse-field"><div class="parse-key">First Name</div><div class="parse-val"><input type="text" id="pr-first"></div></div>
+          <div class="parse-field"><div class="parse-key">Last Name</div><div class="parse-val"><input type="text" id="pr-last"></div></div>
+          <div class="parse-field"><div class="parse-key">Email</div><div class="parse-val"><input type="email" id="pr-email"></div></div>
+          <div class="parse-field"><div class="parse-key">Phone</div><div class="parse-val"><input type="text" id="pr-phone"></div></div>
+          <div class="parse-field"><div class="parse-key">Home Airport</div><div class="parse-val"><input type="text" id="pr-airport"></div></div>
+          <div class="parse-field"><div class="parse-key">Travel Goals</div><div class="parse-val"><input type="text" id="pr-goals"></div></div>
+          <div class="parse-field"><div class="parse-key">Notes</div><div class="parse-val"><input type="text" id="pr-notes"></div></div>
+        </div>
+        <div class="form-group"><label>Access Code (for portal login)</label>
+          <div style="display:flex;gap:8px"><input type="text" id="pr-pass" placeholder="Set or generate"><button class="btn-sm" type="button" onclick="document.getElementById('pr-pass').value=genRandCode()">Generate</button></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <button class="btn-primary" onclick="createFromParsed()">Create Client Account</button>
+          <button class="btn-sm" onclick="backToImport()" style="align-self:center">← Re-paste</button>
+        </div>
       </div>
-      <div style="display:flex;gap:10px;margin-top:4px">
-        <button class="btn-primary" onclick="createFromParsed()">Create Client Account</button>
-        <button class="btn-sm" onclick="backToImport()" style="align-self:center">← Re-paste</button>
+    </div>
+
+    <!-- THREAD TAB -->
+    <div id="import-tab-thread" style="display:none">
+      <p class="modal-sub">Paste a full back-and-forth conversation from your personal email. Groq extracts the client profile, summarizes what was discussed, and auto-generates action items.</p>
+      <div id="thread-step1">
+        <div class="form-group"><label>Paste the full conversation thread</label>
+          <textarea id="thread-raw" rows="10" placeholder="Paste the entire email thread — include all messages, replies, and timestamps. The more context, the better the action items."></textarea>
+        </div>
+        <button class="btn-primary" onclick="runThreadParse()" id="thread-btn">✨ Parse Thread with AI</button>
+      </div>
+      <div id="thread-step2" style="display:none">
+        <div class="ai-badge">✨ Parsed by <span id="thread-source-label">AI</span> · Review below</div>
+        <div class="parse-result" style="display:block">
+          <div class="parse-field"><div class="parse-key">First Name</div><div class="parse-val"><input type="text" id="tr-first"></div></div>
+          <div class="parse-field"><div class="parse-key">Last Name</div><div class="parse-val"><input type="text" id="tr-last"></div></div>
+          <div class="parse-field"><div class="parse-key">Email</div><div class="parse-val"><input type="email" id="tr-email"></div></div>
+          <div class="parse-field"><div class="parse-key">Phone</div><div class="parse-val"><input type="text" id="tr-phone"></div></div>
+          <div class="parse-field"><div class="parse-key">Home Airport</div><div class="parse-val"><input type="text" id="tr-airport"></div></div>
+          <div class="parse-field"><div class="parse-key">Travel Goals</div><div class="parse-val"><input type="text" id="tr-goals"></div></div>
+        </div>
+        <div id="thread-summary-box" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;font-size:.83rem;line-height:1.6;display:none">
+          <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Conversation Summary</div>
+          <div id="thread-summary-text"></div>
+        </div>
+        <div id="thread-action-items-box" style="margin-bottom:14px;display:none">
+          <div style="font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Auto-generated Action Items</div>
+          <div id="thread-action-items-list"></div>
+        </div>
+        <div class="form-group"><label>Access Code (for portal login)</label>
+          <div style="display:flex;gap:8px"><input type="text" id="tr-pass" placeholder="Set or generate"><button class="btn-sm" type="button" onclick="document.getElementById('tr-pass').value=genRandCode()">Generate</button></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <button class="btn-primary" onclick="createFromThread()">Create Client + Add Action Items</button>
+          <button class="btn-sm" onclick="document.getElementById('thread-step1').style.display='block';document.getElementById('thread-step2').style.display='none'" style="align-self:center">← Re-paste</button>
+        </div>
       </div>
     </div>
   </div>
@@ -520,6 +624,66 @@
       Advisory fee: <strong style="color:var(--gold)" id="sv-fee-preview">$0</strong> (10% of savings)
     </div>
     <button class="btn-primary" onclick="saveSaving()">Log Entry</button>
+  </div>
+</div>
+
+<!-- DOCUMENT SCANNER MODAL -->
+<div id="scan-overlay" class="overlay">
+  <div class="modal wide">
+    <div class="modal-head"><h2>📄 Scan Loyalty Document</h2><button class="modal-close" onclick="closeScanDoc()">&times;</button></div>
+    <p class="modal-sub">Upload a photo or screenshot of any loyalty account — airline app, hotel rewards page, credit card statement, even a paper statement on your desk. Gemini Vision reads the balance and expiration date automatically.</p>
+    <div id="scan-step1">
+      <div class="form-group"><label>Attach to client (optional)</label>
+        <select id="scan-client-select">
+          <option value="">Don't attach — review only</option>
+        </select>
+      </div>
+      <div class="img-drop" id="scan-drop-zone" onclick="document.getElementById('scan-file-input').click()">
+        <div style="font-size:2.2rem;margin-bottom:8px">📸</div>
+        <div style="font-size:.9rem;color:var(--text);font-weight:600">Drop image here or click to upload</div>
+        <div style="font-size:.77rem;color:var(--muted);margin-top:5px">JPEG · PNG · WebP · HEIC · screenshots work great</div>
+        <input type="file" id="scan-file-input" accept="image/*" style="display:none" onchange="onScanFileChange(this)">
+        <img id="scan-img-preview" class="img-preview" alt="Preview">
+      </div>
+      <button class="btn-primary" style="margin-top:14px" id="scan-btn" onclick="runDocScan()">🔍 Scan with Gemini Vision</button>
+    </div>
+    <div id="scan-step2" style="display:none">
+      <div class="ai-badge" style="background:rgba(69,179,255,.15);color:var(--blue)">✓ Gemini Vision extracted — review and confirm</div>
+      <div class="parse-result" style="display:block">
+        <div class="parse-field"><div class="parse-key">Program</div><div class="parse-val"><input type="text" id="scan-program" placeholder="e.g. United MileagePlus"></div></div>
+        <div class="parse-field"><div class="parse-key">Balance</div><div class="parse-val"><input type="text" id="scan-balance" placeholder="e.g. 45,230"></div></div>
+        <div class="parse-field"><div class="parse-key">Expiration</div><div class="parse-val"><input type="text" id="scan-expiration" placeholder="YYYY-MM-DD or blank"></div></div>
+        <div class="parse-field"><div class="parse-key">Tier / Status</div><div class="parse-val"><input type="text" id="scan-tier" placeholder="e.g. Gold, Platinum, 1K"></div></div>
+        <div class="parse-field"><div class="parse-key">Notes</div><div class="parse-val"><input type="text" id="scan-notes" placeholder="Other details Gemini caught"></div></div>
+      </div>
+      <div style="display:flex;gap:9px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn-primary" onclick="saveScanResult()">💾 Save to Client Profile</button>
+        <button class="btn-sm" onclick="document.getElementById('scan-step1').style.display='block';document.getElementById('scan-step2').style.display='none'">← Scan Another</button>
+        <button class="btn-sm" onclick="closeScanDoc()">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SWEET SPOTS MODAL -->
+<div id="sweetspot-overlay" class="overlay">
+  <div class="modal wide">
+    <div class="modal-head"><h2>✨ Sweet Spot Oracle</h2><button class="modal-close" onclick="closeSweetSpots()">&times;</button></div>
+    <p class="modal-sub">Gemini analyzes this client's points portfolio and generates 3 personalised award recommendations. Results are pushed live to their client portal. Optionally, add a seats.aero Pro key ($99.99/yr) to layer in real live award availability.</p>
+    <div id="ss-loading" style="padding:32px;text-align:center;color:var(--muted)">
+      <div style="font-size:2rem;margin-bottom:12px">✨</div>
+      <div style="font-weight:700;margin-bottom:6px">Gemini is searching…</div>
+      <div style="font-size:.83rem">Analyzing points portfolio + checking award sweet spots</div>
+    </div>
+    <div id="ss-results" style="display:none">
+      <div id="ss-client-name" style="font-size:.88rem;color:var(--muted);margin-bottom:14px"></div>
+      <div class="deal-cards-grid" id="ss-cards"></div>
+      <div style="display:flex;gap:9px;margin-top:6px">
+        <button class="btn-sm" onclick="closeSweetSpots()">Close</button>
+        <button class="btn-sm ai" onclick="rerunSweetSpots()">↻ Regenerate</button>
+      </div>
+    </div>
+    <div id="ss-error" style="display:none;color:var(--red);font-size:.87rem;padding:16px">Error generating recommendations. Check GEMINI_API_KEY in Render.</div>
   </div>
 </div>
 
@@ -726,7 +890,11 @@ function renderClientsTable(){
             +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
             +'<td><span class="badge badge-blue">'+esc(c.tier)+'</span></td>'
             +'<td><div class="client-sub">'+(c.created_at||'').slice(0,10)+'</div></td>'
-            +'<td><button class="btn-sm" onclick="composeTo(\''+esc(c.name)+'\',\''+esc(c.email)+'\')">✉ Message</button></td></tr>';
+            +'<td><div style="display:flex;gap:5px;flex-wrap:wrap">'
+            +'<button class="btn-sm" onclick="composeTo(\''+esc(c.name)+'\',\''+esc(c.email)+'\')">✉</button>'
+            +'<button class="btn-sm" style="border-color:rgba(69,179,255,.4);color:var(--blue)" onclick="openScanDoc(\''+esc(c.email)+'\')">📄 Scan</button>'
+            +'<button class="btn-sm primary" onclick="runSweetSpots(\''+esc(c.email)+'\',\''+esc(c.name)+'\')">✨ Sweet Spots</button>'
+            +'</div></td></tr>';
         }).join('')
       + '</tbody></table>'
     : '<div style="padding:40px;text-align:center;color:var(--muted)">'
@@ -747,12 +915,301 @@ function populateComposeClients(){
     o.value=c.name+'|'+c.email; o.textContent=c.name+' — '+c.email;
     sel.appendChild(o);
   });
+  // also populate the scan client selector
+  const scanSel=document.getElementById('scan-client-select');
+  if(scanSel){
+    while(scanSel.options.length>1) scanSel.remove(1);
+    CLIENTS.forEach(function(c){
+      const o=document.createElement('option');
+      o.value=c.email; o.textContent=c.name+' — '+c.email;
+      scanSel.appendChild(o);
+    });
+  }
+}
+
+/* ════════════════════════════════════════════
+   EXPIRING POINTS
+   ════════════════════════════════════════════ */
+async function loadExpiringPoints(){
+  if(!ADMIN_TOKEN) return;
+  try{
+    const res=await fetch('/api/admin/expiring',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok) return;
+    renderExpiringPoints(await res.json());
+  }catch(e){}
+}
+function renderExpiringPoints(items){
+  const count=items.length;
+  const ovCount=document.getElementById('ov-expiring-count');
+  if(ovCount) ovCount.textContent=count||'0';
+  const navCount=document.getElementById('nav-expiring-count');
+  if(navCount) navCount.textContent=count;
+  const ovBadge=document.getElementById('ov-expiring-badge');
+  if(ovBadge) ovBadge.textContent=count+' expiring';
+  if(ovBadge) ovBadge.className='badge '+(count>0?'badge-red':'badge-green');
+
+  function rowsHTML(list){
+    if(!list.length) return '<div class="empty-state" style="padding:24px"><div class="em-ico">✅</div><div style="color:var(--text)">No points expiring in the next 90 days.</div></div>';
+    return '<div class="expiring-list">'+list.map(function(i){
+      const cls=i.days_remaining<30?'urgent':i.days_remaining<60?'warning':'calm';
+      return '<div class="expiring-row '+cls+'">'
+        +'<div class="exp-days '+cls+'">'+(i.days_remaining<0?'OVRD':i.days_remaining+'d')+'</div>'
+        +'<div style="flex:1"><div style="font-weight:600;font-size:.88rem">'+esc(i.client_name)+'</div>'
+        +'<div style="font-size:.76rem;color:var(--muted)">'+esc(i.program)+' · '+esc(i.balance)+'</div></div>'
+        +'<div style="text-align:right;min-width:80px"><div style="font-size:.74rem;color:var(--muted)">Expires '+i.expiration_date+'</div>'
+        +(i.est_value_usd?'<div style="font-size:.82rem;color:var(--red);font-weight:600">~$'+i.est_value_usd+' at risk</div>':'')+'</div>'
+        +'<button class="btn-sm primary" onclick="runSweetSpots(\''+esc(i.client_email)+'\',\''+esc(i.client_name)+'\')">✨ Rescue</button>'
+        +'</div>';
+    }).join('')+'</div>';
+  }
+
+  const ovList=document.getElementById('ov-expiring-list');
+  if(ovList) ovList.innerHTML=rowsHTML(items.slice(0,5));
+  const fullList=document.getElementById('expiring-full-list');
+  if(fullList) fullList.innerHTML=rowsHTML(items);
+}
+
+/* ════════════════════════════════════════════
+   DOCUMENT SCANNER (Gemini Vision)
+   ════════════════════════════════════════════ */
+let _scanClientEmail='';
+function openScanDoc(email){
+  _scanClientEmail=email||'';
+  document.getElementById('scan-overlay').classList.add('open');
+  document.getElementById('scan-step1').style.display='block';
+  document.getElementById('scan-step2').style.display='none';
+  const img=document.getElementById('scan-img-preview');
+  img.src=''; img.style.display='none';
+  document.getElementById('scan-file-input').value='';
+  const sel=document.getElementById('scan-client-select');
+  if(sel && email){
+    for(const o of sel.options){ if(o.value===email){ sel.value=email; break; } }
+  }
+}
+function closeScanDoc(){ document.getElementById('scan-overlay').classList.remove('open'); }
+
+document.addEventListener('DOMContentLoaded',function(){
+  const drop=document.getElementById('scan-drop-zone');
+  if(!drop) return;
+  drop.addEventListener('dragover',function(e){e.preventDefault();drop.classList.add('drag');});
+  drop.addEventListener('dragleave',function(){drop.classList.remove('drag');});
+  drop.addEventListener('drop',function(e){
+    e.preventDefault(); drop.classList.remove('drag');
+    if(e.dataTransfer.files[0]) handleScanFile(e.dataTransfer.files[0]);
+  });
+});
+function handleScanFile(file){
+  if(!file.type.startsWith('image/')){toast('Please upload an image file');return;}
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=document.getElementById('scan-img-preview');
+    img.src=e.target.result; img.style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+function onScanFileChange(input){ if(input.files[0]) handleScanFile(input.files[0]); }
+
+async function runDocScan(){
+  const img=document.getElementById('scan-img-preview');
+  if(!img.src||img.style.display==='none'){toast('Upload a document image first');return;}
+  const btn=document.getElementById('scan-btn');
+  btn.disabled=true; btn.textContent='🔍 Scanning…';
+  try{
+    const parts=img.src.split(',');
+    const mime=parts[0].split(':')[1].split(';')[0];
+    const b64=parts[1];
+    const clientEmail=document.getElementById('scan-client-select').value||_scanClientEmail;
+    const res=await fetch('/api/ai/scan-document',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify({image_b64:b64,image_mime:mime,client_email:clientEmail})});
+    if(!res.ok) throw new Error(res.status);
+    const {extracted}=await res.json();
+    document.getElementById('scan-program').value=extracted.program||'';
+    document.getElementById('scan-balance').value=extracted.balance||'';
+    document.getElementById('scan-expiration').value=extracted.expiration_date||'';
+    document.getElementById('scan-tier').value=extracted.tier||'';
+    document.getElementById('scan-notes').value=extracted.notes||'';
+    document.getElementById('scan-step1').style.display='none';
+    document.getElementById('scan-step2').style.display='block';
+    if(clientEmail) toast('✓ Scanned and saved to profile');
+    else toast('✓ Scanned — select a client to save');
+  }catch(e){
+    toast('Scan failed — check GEMINI_API_KEY in Render');
+  } finally { btn.disabled=false; btn.textContent='🔍 Scan with Gemini Vision'; }
+}
+
+async function saveScanResult(){
+  const email=document.getElementById('scan-client-select').value||_scanClientEmail;
+  if(!email){toast('Select a client to save to');return;}
+  const prog=document.getElementById('scan-program').value.trim();
+  if(!prog){toast('Program name required');return;}
+  try{
+    const res=await fetch('/api/admin/clients/'+encodeURIComponent(email)+'/points',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify({
+        program:prog,
+        balance:document.getElementById('scan-balance').value.trim(),
+        expiration_date:document.getElementById('scan-expiration').value.trim()||null,
+        tier:document.getElementById('scan-tier').value.trim()||null,
+      })});
+    if(res.ok){
+      closeScanDoc();
+      await loadExpiringPoints();
+      toast('✓ Points saved to '+email);
+    } else { toast('Save failed'); }
+  }catch(e){ toast('Save failed'); }
+}
+
+/* ════════════════════════════════════════════
+   SWEET SPOT ORACLE (Gemini)
+   ════════════════════════════════════════════ */
+let _ssEmail='', _ssName='';
+async function runSweetSpots(email, name){
+  _ssEmail=email; _ssName=name;
+  document.getElementById('sweetspot-overlay').classList.add('open');
+  document.getElementById('ss-loading').style.display='block';
+  document.getElementById('ss-results').style.display='none';
+  document.getElementById('ss-error').style.display='none';
+  try{
+    const res=await fetch('/api/ai/sweet-spots',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify({client_email:email})});
+    if(!res.ok) throw new Error(res.status);
+    const {recommendations, client_name}=await res.json();
+    document.getElementById('ss-client-name').textContent='Recommendations for '+client_name+' — pushed live to portal';
+    document.getElementById('ss-cards').innerHTML=recommendations.map(function(r){
+      const urgColors={high:'red',medium:'gold',low:'muted'};
+      const availBadge=r.seats_available!==undefined
+        ?'<span class="deal-avail-badge">'+r.seats_available+' seats found</span>':
+        r.next_available_date?'<span class="deal-avail-badge">Next: '+r.next_available_date+'</span>':'';
+      const bookBtn=r.book_link
+        ?'<a href="'+esc(r.book_link)+'" target="_blank" rel="noopener"><button class="btn-sm primary">Search Awards →</button></a>':'';
+      return '<div class="deal-card">'
+        +'<div class="deal-route">'+esc(r.origin||'')+' → '+esc(r.destination_city||r.destination||'')+'</div>'
+        +'<div class="deal-program">'+esc(r.program)+' · '+esc(r.cabin)+'</div>'
+        +'<div class="deal-badges">'
+        +'<span class="deal-pts-badge">'+Number(r.points_needed||0).toLocaleString()+' pts</span>'
+        +(r.est_cash_value?'<span class="deal-price-badge">$'+Number(r.est_cash_value).toLocaleString()+' cash</span>':'')
+        +(r.cpp?'<span class="deal-cpp-badge">'+Number(r.cpp).toFixed(1)+'cpp</span>':'')
+        +availBadge
+        +'<span class="badge badge-'+(urgColors[r.urgency]||'muted')+'">'+esc(r.urgency||'')+'</span>'
+        +'</div>'
+        +'<div class="deal-why">'+esc(r.why||'')+'</div>'
+        +'<div class="deal-actions">'+bookBtn+'</div>'
+        +'</div>';
+    }).join('');
+    document.getElementById('ss-loading').style.display='none';
+    document.getElementById('ss-results').style.display='block';
+    toast('✓ Sweet spots generated for '+client_name);
+  }catch(e){
+    document.getElementById('ss-loading').style.display='none';
+    document.getElementById('ss-error').style.display='block';
+  }
+}
+function closeSweetSpots(){ document.getElementById('sweetspot-overlay').classList.remove('open'); }
+function rerunSweetSpots(){ if(_ssEmail) runSweetSpots(_ssEmail,_ssName); }
+
+/* ════════════════════════════════════════════
+   IMPORT TABS
+   ════════════════════════════════════════════ */
+function switchImportTab(tab){
+  document.getElementById('tab-single').classList.toggle('active',tab==='single');
+  document.getElementById('tab-thread').classList.toggle('active',tab==='thread');
+  document.getElementById('import-tab-single').style.display=tab==='single'?'block':'none';
+  document.getElementById('import-tab-thread').style.display=tab==='thread'?'block':'none';
+}
+
+/* ════════════════════════════════════════════
+   THREAD IMPORT (Groq)
+   ════════════════════════════════════════════ */
+let _threadActionItems=[];
+async function runThreadParse(){
+  const raw=document.getElementById('thread-raw').value.trim();
+  if(!raw){alert('Paste a conversation thread first');return;}
+  const btn=document.getElementById('thread-btn');
+  btn.disabled=true; btn.textContent='✨ Parsing thread…';
+  try{
+    const res=await fetch('/api/ai/parse-threads',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify({raw_threads:raw})});
+    if(!res.ok) throw new Error(res.status);
+    const {data,source}=await res.json();
+    document.getElementById('thread-source-label').textContent=
+      source==='groq'?'Groq / Llama 3.1':source==='gemini'?'Gemini Flash':'manual (no AI key)';
+    document.getElementById('tr-first').value=data.first_name||'';
+    document.getElementById('tr-last').value=data.last_name||'';
+    document.getElementById('tr-email').value=data.email||'';
+    document.getElementById('tr-phone').value=data.phone||'';
+    document.getElementById('tr-airport').value=data.home_airport||'';
+    document.getElementById('tr-goals').value=data.travel_goals||'';
+    document.getElementById('tr-pass').value=genRandCode();
+    if(data.conversation_summary){
+      document.getElementById('thread-summary-text').textContent=data.conversation_summary;
+      document.getElementById('thread-summary-box').style.display='block';
+    }
+    _threadActionItems=data.action_items||[];
+    if(_threadActionItems.length){
+      const PCOL={critical:'red',high:'gold',medium:'blue',low:'muted'};
+      document.getElementById('thread-action-items-list').innerHTML=
+        _threadActionItems.map(function(ai,i){
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px">'
+            +'<span class="badge badge-'+(PCOL[ai.priority]||'muted')+'">'+esc(ai.priority)+'</span>'
+            +'<span style="flex:1;font-size:.84rem">'+esc(ai.title)+'</span>'
+            +(ai.due_days?'<span style="font-size:.74rem;color:var(--muted)">due in '+ai.due_days+'d</span>':'')
+            +'</div>';
+        }).join('');
+      document.getElementById('thread-action-items-box').style.display='block';
+    }
+    document.getElementById('thread-step1').style.display='none';
+    document.getElementById('thread-step2').style.display='block';
+  }catch(e){
+    toast('Parse failed — check backend logs');
+  } finally { btn.disabled=false; btn.textContent='✨ Parse Thread with AI'; }
+}
+
+async function createFromThread(){
+  const first=document.getElementById('tr-first').value.trim();
+  const last=document.getElementById('tr-last').value.trim();
+  const email=document.getElementById('tr-email').value.trim().toLowerCase();
+  const pass=document.getElementById('tr-pass').value.trim();
+  if(!first||!email||!pass){alert('First name, email, and access code are required');return;}
+  const name=(first+' '+last).trim();
+  const goals=document.getElementById('tr-goals').value.trim();
+  const data={stats:{trips:0,savings:'$0',fee:'$0',points:'—'},urgency:null,trips:[],savings:[],
+    totalSavings:'$0',totalFee:'$0',points:[],
+    messages:[{from:'Braden — DAT',time:'Today',text:'Welcome to District Award Travel, '+first+"! Your portal is ready. I'll start mapping your points and trips shortly.",unread:true}],
+    home_airport:document.getElementById('tr-airport').value.trim(),
+    travel_goals:goals};
+  if(!ADMIN_TOKEN){alert('Not connected to backend');return;}
+  try{
+    const res=await fetch('/api/admin/clients',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify({email,password:pass,name,tier:'Client',data})});
+    if(!res.ok){ if(res.status===409){alert('A client with that email already exists');} return; }
+    // add auto-generated action items to localStorage
+    if(_threadActionItems.length){
+      const today=new Date();
+      const newItems=_threadActionItems.map(function(ai){
+        let due='';
+        if(ai.due_days){ const d=new Date(today); d.setDate(d.getDate()+ai.due_days); due=d.toISOString().slice(0,10); }
+        return {id:'t'+Date.now()+Math.random().toString(36).slice(2),icon:'✉',priority:ai.priority||'medium',
+          client:name,email:email,title:ai.title,desc:'Auto-generated from email thread',due:due};
+      });
+      const c=loadCustom(); saveCustom(c.concat(newItems));
+      renderActionItems();
+    }
+    closeImportEmail();
+    await loadClients();
+    toast('✓ '+name+' added with '+_threadActionItems.length+' action items!');
+    setTimeout(function(){composeTo(name,email,'creds',pass);},400);
+  }catch(e){ toast('Error creating client'); }
 }
 
 /* ════════════════════════════════════════════
    AI EMAIL IMPORT
    ════════════════════════════════════════════ */
-function openImportEmail(){ document.getElementById('import-overlay').classList.add('open'); backToImport(); }
+function openImportEmail(){ document.getElementById('import-overlay').classList.add('open'); switchImportTab('single'); backToImport(); }
 function closeImportEmail(){ document.getElementById('import-overlay').classList.remove('open'); }
 function backToImport(){
   document.getElementById('import-step1').style.display='block';
@@ -990,6 +1447,7 @@ function enterAdmin(){
   document.getElementById('admin').style.display='block';
   loadClients();
   loadIntakes();
+  loadExpiringPoints();
   renderActionItems();
   renderFees();
   checkAIStatus();
@@ -1023,6 +1481,7 @@ function doAdminLogout(){
 async function checkAIStatus(){
   const badge=document.getElementById('ai-status-badge');
   const gBadge=document.getElementById('gemini-badge');
+  const vBadge=document.getElementById('vision-badge');
   if(!ADMIN_TOKEN||!badge) return;
   try{
     const res=await fetch('/api/ai/parse-email',{method:'POST',
@@ -1034,11 +1493,22 @@ async function checkAIStatus(){
       badge.innerHTML=src==='groq'?'<span class="badge badge-green">✓ Groq / Llama 3.1 active</span>'
         :src==='gemini'?'<span class="badge badge-blue">Groq down · Gemini active</span>'
         :'<span class="badge badge-muted">No AI key — add GROQ_API_KEY to Render</span>';
-      if(gBadge) gBadge.className='badge '+(src==='gemini'?'badge-green':'badge-muted');
-      if(gBadge) gBadge.textContent=src==='gemini'?'✓ Active':'Standby';
+      if(gBadge) gBadge.className='badge '+(src!=='none'?'badge-green':'badge-muted');
+      if(gBadge) gBadge.textContent=src!=='none'?'✓ Active':'No key';
     }
   }catch(e){
     if(badge) badge.innerHTML='<span class="badge badge-muted">unavailable</span>';
+  }
+  // Check Gemini Vision (used by scan-document + sweet-spots)
+  if(vBadge){
+    try{
+      const r2=await fetch('/api/ai/scan-document',{method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+        body:JSON.stringify({image_b64:'iVBORw0KGgo=',image_mime:'image/png',client_email:''})});
+      // 200 = key works, 400 = no key, 500 = key set but invalid image is fine
+      if(r2.status===400){vBadge.className='badge badge-muted';vBadge.textContent='No GEMINI_API_KEY';}
+      else {vBadge.className='badge badge-green';vBadge.textContent='✓ Vision active';}
+    }catch(e){vBadge.className='badge badge-muted';vBadge.textContent='unavailable';}
   }
 }
 

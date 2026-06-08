@@ -57,6 +57,7 @@ NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", GMAIL_USER or "districtawardtravel
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+SEATS_AERO_API_KEY = os.environ.get("SEATS_AERO_API_KEY", "")
 
 # Render gives a postgres:// URL; SQLAlchemy needs postgresql://
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
@@ -332,7 +333,7 @@ JSON schema (use null for missing fields):
 
 Rules:
 - Extract names, email addresses, phone numbers exactly as written.
-- Infer home airport from city mentions if obvious (e.g. "DC" → DCA/IAD).
+- Infer home airport from any U.S. city mentioned if obvious (e.g. "DC" → DCA/IAD, "NYC" → JFK/LGA/EWR, "LA" → LAX, "Chicago" → ORD).
 - Capture any mentioned points/miles programs and balances.
 - Put travel goals, destinations, and any other context in the relevant fields.
 - Return ONLY the JSON object, nothing else.
@@ -479,6 +480,410 @@ def create_client(body: ClientIn, _: dict = Depends(require_admin), db: Session 
     db.add(client)
     db.commit()
     return {"ok": True, "email": email}
+
+
+class UpdateClientDataIn(BaseModel):
+    data: dict
+
+
+@app.put("/api/admin/clients/{email}")
+def update_client_data(email: str, body: UpdateClientDataIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Merge a partial data dict into an existing client's JSON payload."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    existing = json.loads(client.data or "{}")
+    existing.update(body.data)
+    client.data = json.dumps(existing)
+    db.commit()
+    return {"ok": True}
+
+
+class PointEntryIn(BaseModel):
+    program: str
+    balance: str
+    expiration_date: Optional[str] = None
+    tier: Optional[str] = None
+
+
+@app.post("/api/admin/clients/{email}/points")
+def add_client_point(email: str, body: PointEntryIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Add or update a single points-program entry in a client's profile."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    data = json.loads(client.data or "{}")
+    points = data.get("points", [])
+    existing_pt = next((p for p in points if p.get("program", "").lower() == body.program.lower()), None)
+    entry = {
+        "program": body.program,
+        "balance": body.balance,
+        "expiration_date": body.expiration_date,
+        "tier": body.tier,
+    }
+    if existing_pt:
+        existing_pt.update(entry)
+    else:
+        points.append(entry)
+    data["points"] = points
+    client.data = json.dumps(data)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/admin/expiring")
+def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Return clients with points expiring within 90 days, sorted by urgency."""
+    clients = db.query(Client).all()
+    result = []
+    today = dt.date.today()
+    for c in clients:
+        try:
+            data = json.loads(c.data or "{}")
+            for p in data.get("points", []):
+                exp = p.get("expiration_date")
+                if not exp:
+                    continue
+                try:
+                    exp_date = dt.date.fromisoformat(str(exp)[:10])
+                    days = (exp_date - today).days
+                    if days <= 90:
+                        bal_str = str(p.get("balance", "0")).replace(",", "").replace(" ", "")
+                        try:
+                            bal_num = int("".join(filter(str.isdigit, bal_str)))
+                        except Exception:
+                            bal_num = 0
+                        result.append({
+                            "client_name": c.name,
+                            "client_email": c.email,
+                            "program": p.get("program", ""),
+                            "balance": p.get("balance", ""),
+                            "expiration_date": str(exp)[:10],
+                            "days_remaining": days,
+                            "est_value_usd": round(bal_num * 0.015),
+                        })
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    result.sort(key=lambda x: x["days_remaining"])
+    return result
+
+
+# ── AI: Gemini Vision document scanner ──
+SCAN_PROMPT = """You are analyzing a loyalty program document image. This could be an airline app screenshot, hotel rewards page, credit card statement, or any points/miles program.
+
+Extract the following and return ONLY valid JSON — no markdown, no extra text:
+{
+  "program": "full program name (e.g. United MileagePlus, Marriott Bonvoy, Chase Ultimate Rewards)",
+  "balance": "points or miles balance as shown (e.g. 45,230)",
+  "expiration_date": "expiration date in YYYY-MM-DD format if visible, null otherwise",
+  "tier": "elite status tier if visible (e.g. Gold, Platinum, 1K), null otherwise",
+  "card_type": "credit card name if this is a card statement, null otherwise",
+  "notes": "any other relevant details (upcoming expiry warnings, transfer bonuses, etc.) or null"
+}
+Return ONLY the JSON object, nothing else."""
+
+
+class ScanDocumentIn(BaseModel):
+    image_b64: str
+    image_mime: str = "image/jpeg"
+    client_email: str = ""
+
+
+@app.post("/api/ai/scan-document")
+async def scan_document(body: ScanDocumentIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Gemini Vision reads a loyalty document image and auto-fills client points data."""
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=400, detail="GEMINI_API_KEY not configured")
+
+    try:
+        import httpx
+        resp = httpx.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+            json={"contents": [{"parts": [
+                {"text": SCAN_PROMPT},
+                {"inline_data": {"mime_type": body.image_mime, "data": body.image_b64}},
+            ]}]},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        content = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        extracted = json.loads(content)
+    except Exception as e:
+        print(f"[gemini-vision] scan failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Gemini Vision scan failed: {e}")
+
+    saved = False
+    if body.client_email:
+        client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
+        if client:
+            data = json.loads(client.data or "{}")
+            points = data.get("points", [])
+            prog = extracted.get("program", "")
+            new_entry = {
+                "program": prog,
+                "balance": extracted.get("balance", ""),
+                "expiration_date": extracted.get("expiration_date"),
+                "tier": extracted.get("tier"),
+            }
+            existing_pt = next((p for p in points if p.get("program", "").lower() == prog.lower()), None)
+            if existing_pt:
+                existing_pt.update(new_entry)
+            else:
+                points.append(new_entry)
+            data["points"] = points
+            client.data = json.dumps(data)
+            db.commit()
+            saved = True
+
+    return {"ok": True, "source": "gemini", "extracted": extracted, "saved": saved}
+
+
+# ── AI: Gemini Sweet Spot Oracle ──
+SWEET_SPOT_PROMPT = """You are Braden's AI co-pilot at District Award Travel, a points-and-miles advisory firm.
+
+Client points portfolio:
+{points_portfolio}
+
+Travel goals: {travel_goals}
+Home airport: {home_airport}
+Client name: {client_name}
+
+Generate exactly 3 personalized award travel recommendations. Focus on high-value redemptions (ideally 2+ cpp) achievable with their current balances.
+
+Key sweet spots to consider:
+- Chase UR → Hyatt (hotels, 2-5 cpp)
+- Amex MR → ANA Business/First Class (4-5 cpp)
+- Citi TYP → Turkish Miles&Smiles (Star Alliance, great rates)
+- United MileagePlus → Lufthansa/ANA partner awards
+- Alaska Mileage Plan → Cathay Pacific, Finnair, JAL
+- Flying Blue Promo Awards (monthly 30-50% off sales)
+- Delta SkyMiles → partner redemptions during sales
+- Marriott/Hilton points → category awards or transfer to airlines
+- Capital One → Turkish/Avianca (1:1 transfers)
+
+Return ONLY valid JSON array — no markdown, no extra text:
+[
+  {
+    "origin": "3-letter IATA code",
+    "destination": "3-letter IATA code",
+    "destination_city": "City name",
+    "program": "loyalty program name for booking",
+    "cabin": "Economy|Business|First",
+    "points_needed": integer,
+    "est_cash_value": integer (USD, one-way or per night),
+    "cpp": float,
+    "why": "1-2 sentences personalised to this client's goals and points",
+    "book_link": "direct URL to award search page for this program",
+    "urgency": "low|medium|high"
+  }
+]"""
+
+
+class SweetSpotIn(BaseModel):
+    client_email: str
+
+
+@app.post("/api/ai/sweet-spots")
+async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Gemini generates 3 personalized award recommendations + seats.aero live availability."""
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=400, detail="GEMINI_API_KEY not configured")
+
+    client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    data = json.loads(client.data or "{}")
+    points = data.get("points", [])
+    travel_goals = data.get("travel_goals", "not specified")
+    home_airport = data.get("home_airport", "not specified")
+
+    pts_str = "\n".join([
+        f"- {p.get('program','')}: {p.get('balance','?')} pts"
+        + (f" (expires {p['expiration_date']})" if p.get("expiration_date") else "")
+        for p in points
+    ]) or "No points data on file yet — generate general top-value recommendations."
+
+    prompt = (SWEET_SPOT_PROMPT
+              .replace("{points_portfolio}", pts_str)
+              .replace("{travel_goals}", travel_goals)
+              .replace("{home_airport}", home_airport)
+              .replace("{client_name}", client.name))
+
+    try:
+        import httpx
+        resp = httpx.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            timeout=30,
+        )
+        resp.raise_for_status()
+        content = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if content.startswith("```"):
+            content = content.split("```")[1]
+            if content.startswith("json"):
+                content = content[4:]
+        recs = json.loads(content)
+    except Exception as e:
+        print(f"[gemini] sweet spots failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Gemini request failed: {e}")
+
+    # Enrich with seats.aero live award availability
+    if SEATS_AERO_API_KEY:
+        import httpx
+        prog_map = {
+            "united": "united", "delta": "delta", "american": "american",
+            "alaska": "alaska", "aeroplan": "aeroplan", "air canada": "aeroplan",
+            "lifemiles": "lifemiles", "avianca": "lifemiles",
+            "flyingblue": "flyingblue", "flying blue": "flyingblue",
+            "british airways": "ba", "virgin atlantic": "virgin_atlantic",
+            "turkish": "turkish", "ana": "ana",
+        }
+        cabin_map = {"Economy": "economy", "Business": "business", "First": "first"}
+        start = (dt.date.today() + dt.timedelta(days=30)).strftime("%Y-%m-%d")
+        end = (dt.date.today() + dt.timedelta(days=120)).strftime("%Y-%m-%d")
+
+        for rec in recs:
+            prog_lower = rec.get("program", "").lower()
+            source = next((v for k, v in prog_map.items() if k in prog_lower), None)
+            cabin = cabin_map.get(rec.get("cabin", ""), "business")
+            if source:
+                try:
+                    sa = httpx.get(
+                        "https://seats.aero/partnerapi/availability",
+                        params={
+                            "source": source,
+                            "origin_airport": rec.get("origin", ""),
+                            "destination_airport": rec.get("destination", ""),
+                            "cabin": cabin,
+                            "start_date": start,
+                            "end_date": end,
+                        },
+                        headers={"Partner-Authorization": SEATS_AERO_API_KEY},
+                        timeout=10,
+                    )
+                    if sa.status_code == 200:
+                        avail = sa.json().get("data", [])
+                        rec["seats_available"] = len(avail)
+                        if avail:
+                            rec["next_available_date"] = avail[0].get("Date", "")
+                except Exception as e2:
+                    print(f"[seats.aero] {rec.get('destination')}: {e2}")
+
+    # Save to client profile
+    data["recommendations"] = recs
+    data["recommendations_generated_at"] = dt.datetime.utcnow().isoformat()
+    client.data = json.dumps(data)
+    db.commit()
+
+    return {"ok": True, "recommendations": recs, "client_name": client.name}
+
+
+# ── AI: Groq multi-thread email importer ──
+THREAD_PARSE_PROMPT = """You are an assistant for District Award Travel, a points-and-miles advisory firm.
+
+The advisor has pasted a multi-message email conversation thread with a client or prospect.
+Extract all available information and return ONLY valid JSON — no markdown, no extra text.
+
+Schema:
+{
+  "first_name": string|null,
+  "last_name": string|null,
+  "email": string|null,
+  "phone": string|null,
+  "home_airport": string|null,
+  "travel_goals": string|null,
+  "trips": [{"destination": string, "dates": string}],
+  "points": [{"program": string, "balance": string}],
+  "cabin_pref": string|null,
+  "notes": string|null,
+  "conversation_summary": "2-3 sentence summary: what was discussed, any commitments made",
+  "action_items": [
+    {
+      "title": "specific action for the advisor",
+      "priority": "critical|high|medium|low",
+      "due_days": integer or null
+    }
+  ]
+}
+
+Rules:
+- Extract names/emails/phones exactly as written
+- Capture ALL mentioned loyalty programs with balances
+- action_items = any follow-ups promised, research to do, info to send
+- Return ONLY the JSON object.
+
+Thread:
+"""
+
+
+class ParseThreadsIn(BaseModel):
+    raw_threads: str
+
+
+@app.post("/api/ai/parse-threads")
+async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
+    """Groq parses a multi-message email thread into a client profile + action items."""
+    raw = body.raw_threads.strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="raw_threads is required")
+
+    def strip_fences(s: str) -> str:
+        if s.startswith("```"):
+            s = s.split("```")[1]
+            if s.startswith("json"):
+                s = s[4:]
+        return s.strip()
+
+    if GROQ_API_KEY:
+        try:
+            import httpx
+            resp = httpx.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [{"role": "user", "content": THREAD_PARSE_PROMPT + raw}],
+                    "temperature": 0.1,
+                    "max_tokens": 900,
+                },
+                timeout=25,
+            )
+            resp.raise_for_status()
+            content = strip_fences(resp.json()["choices"][0]["message"]["content"].strip())
+            parsed = json.loads(content)
+            return {"ok": True, "source": "groq", "data": parsed}
+        except Exception as e:
+            print(f"[groq] thread parse failed: {e}")
+
+    if GEMINI_API_KEY:
+        try:
+            import httpx
+            resp = httpx.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+                json={"contents": [{"parts": [{"text": THREAD_PARSE_PROMPT + raw}]}]},
+                timeout=25,
+            )
+            resp.raise_for_status()
+            content = strip_fences(resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip())
+            parsed = json.loads(content)
+            return {"ok": True, "source": "gemini", "data": parsed}
+        except Exception as e:
+            print(f"[gemini] thread parse failed: {e}")
+
+    return {"ok": True, "source": "none", "data": {
+        "first_name": None, "last_name": None, "email": None, "phone": None,
+        "home_airport": None, "travel_goals": None, "trips": [], "points": [],
+        "cabin_pref": None, "notes": raw[:300],
+        "conversation_summary": "AI not available — review manually.",
+        "action_items": [],
+    }}
 
 
 @app.get("/api/admin/intakes")
