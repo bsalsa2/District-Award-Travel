@@ -601,43 +601,47 @@ def delete_client(email: str, _: dict = Depends(require_admin), db: Session = De
     return {"ok": True}
 
 
-@app.get("/api/admin/expiring")
-def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    """Return clients with points expiring within 90 days, sorted by urgency."""
-    clients = db.query(Client).all()
-    result = []
-    today = dt.date.today()
-    for c in clients:
-        try:
-            data = json.loads(c.data or "{}")
-            for p in data.get("points", []):
-                exp = p.get("expiration_date")
-                if not exp:
-                    continue
-                try:
-                    exp_date = dt.date.fromisoformat(str(exp)[:10])
-                    days = (exp_date - today).days
-                    if days <= 90:
-                        bal_str = str(p.get("balance", "0")).replace(",", "").replace(" ", "")
-                        try:
-                            bal_num = int("".join(filter(str.isdigit, bal_str)))
-                        except Exception:
-                            bal_num = 0
-                        result.append({
-                            "client_name": c.name,
-                            "client_email": c.email,
-                            "program": p.get("program", ""),
-                            "balance": p.get("balance", ""),
-                            "expiration_date": str(exp)[:10],
-                            "days_remaining": days,
-                            "est_value_usd": round(bal_num * 0.015),
-                        })
-                except Exception:
-                    pass
-        except Exception:
-            pass
-    result.sort(key=lambda x: x["days_remaining"])
-    return result
+class SendMessageIn(BaseModel):
+    client_email: str
+    subject: str
+    body: str
+    is_plan: bool = False
+    plan_details: Optional[dict] = None
+
+
+@app.post("/api/admin/send-message")
+def send_message(msg_in: SendMessageIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Save a message to a client's portal and optionally send email notification."""
+    client = db.query(Client).filter(Client.email == msg_in.client_email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    data = json.loads(client.data or "{}")
+    messages = data.get("messages", [])
+
+    message = {
+        "from": "Braden — DAT",
+        "time": dt.datetime.utcnow().isoformat(),
+        "subject": msg_in.subject,
+        "text": msg_in.body,
+        "unread": True,
+    }
+    if msg_in.is_plan and msg_in.plan_details:
+        message["plan"] = msg_in.plan_details
+
+    messages.append(message)
+    data["messages"] = messages
+    client.data = json.dumps(data)
+    db.commit()
+
+    # Also send email notification
+    send_email_to(
+        client.email,
+        f"New message: {msg_in.subject}",
+        f"Hi {client.name.split()[0]},\n\n{msg_in.body}\n\nLog in to your portal to view this message.\n\nBest,\nBraden\nDistrict Award Travel"
+    )
+
+    return {"ok": True, "message_id": len(messages) - 1}
 
 
 # ── AI: Gemini Vision document scanner ──
