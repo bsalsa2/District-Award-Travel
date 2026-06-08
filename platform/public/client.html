@@ -3,331 +3,942 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Portal — District Award Travel</title>
+<title>Client Portal — District Award Travel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #05080d;
-    --surface: #0c1118;
-    --surface2: #111820;
-    --border: #1e2a38;
-    --green: #00e87a;
-    --blue: #38b6ff;
-    --gold: #f5c842;
-    --red: #ff5c5c;
-    --text: #e8edf3;
-    --muted: #6b7a8d;
-    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+:root {
+  --bg: #0a0805;
+  --surface: #12100d;
+  --surface2: #1a1510;
+  --border: #2a2018;
+  --orange: #ff8a1e;
+  --orange-dim: rgba(255,138,30,0.1);
+  --orange-border: rgba(255,138,30,0.25);
+  --gold: #ffb347;
+  --green: #00e87a;
+  --blue: #38b6ff;
+  --red: #ff5c5c;
+  --text: #f0e8dc;
+  --muted: #8a7a68;
+  --font: 'Inter', system-ui, -apple-system, sans-serif;
+}
 
-  /* NAV */
-  nav {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(5,8,13,0.95); backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 32px; height: 60px;
-  }
-  .nav-logo { font-size: 1rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); text-decoration: none; }
-  .nav-logo span { color: var(--green); }
-  .nav-right { display: flex; align-items: center; gap: 20px; }
-  .nav-user { font-size: 0.8rem; color: var(--muted); }
-  .nav-user strong { color: var(--text); }
-  .btn-logout {
-    background: none; border: 1px solid var(--border);
-    color: var(--muted); padding: 6px 14px; border-radius: 6px;
-    font-size: 0.78rem; cursor: pointer; transition: all 0.2s;
-  }
-  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-  /* LOGIN GATE */
-  #login-screen {
-    display: flex; align-items: center; justify-content: center;
-    min-height: calc(100vh - 60px); padding: 40px 20px;
-  }
-  .login-box {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 48px 40px; width: 100%; max-width: 420px;
-  }
-  .login-box h2 { font-size: 1.6rem; margin-bottom: 8px; }
-  .login-box p { color: var(--muted); font-size: 0.9rem; margin-bottom: 32px; }
-  .form-group { margin-bottom: 20px; }
-  .form-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
-  .form-group input {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); padding: 12px 16px; border-radius: 8px; font-size: 0.95rem;
-    outline: none; transition: border 0.2s;
-  }
-  .form-group input:focus { border-color: var(--green); }
-  .btn-primary {
-    width: 100%; background: var(--green); color: #000;
-    border: none; padding: 14px; border-radius: 8px;
-    font-size: 0.95rem; font-weight: 700; cursor: pointer;
-    transition: opacity 0.2s; letter-spacing: 0.02em;
-  }
-  .btn-primary:hover { opacity: 0.9; }
-  .login-error { color: var(--red); font-size: 0.85rem; margin-top: 12px; display: none; text-align: center; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
 
-  /* PORTAL */
-  #portal { display: none; }
-  .portal-header {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 32px 48px 0;
+/* ─── LOGIN ─────────────────────────────────────────────────── */
+#login-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,138,30,0.07) 0%, transparent 70%),
+              var(--bg);
+}
+
+.login-wrap {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.login-logo-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+  gap: 12px;
+}
+
+.login-logo-row img {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+.login-brand {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.login-sub {
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: -4px;
+}
+
+.login-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 40px 36px 36px;
+  width: 100%;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 7px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.form-group input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 13px 16px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: var(--font);
+}
+
+.form-group input:focus {
+  border-color: var(--orange-border);
+  box-shadow: 0 0 0 3px var(--orange-dim);
+}
+
+.form-group input::placeholder { color: var(--muted); opacity: 0.6; }
+
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, #ff8a1e 0%, #e85d04 100%);
+  color: #fff;
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  letter-spacing: 0.03em;
+  font-family: var(--font);
+  margin-top: 4px;
+}
+
+.btn-primary:hover { opacity: 0.92; }
+.btn-primary:active { transform: scale(0.99); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.login-error {
+  color: var(--red);
+  font-size: 0.83rem;
+  margin-top: 12px;
+  display: none;
+  text-align: center;
+}
+
+.login-footer {
+  margin-top: 20px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+.login-footer a {
+  color: var(--orange);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-footer a:hover { text-decoration: underline; }
+
+/* ─── PORTAL LAYOUT ─────────────────────────────────────────── */
+#portal {
+  display: none;
+  min-height: 100vh;
+}
+
+.portal-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ─── SIDEBAR ───────────────────────────────────────────────── */
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-header img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.sidebar-brand {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gold);
+  line-height: 1.3;
+}
+
+.sidebar-client {
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-client-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.sidebar-tier {
+  font-size: 0.72rem;
+  color: var(--orange);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.sidebar-nav {
+  padding: 12px 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.87rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font);
+  font-weight: 500;
+}
+
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+
+.nav-item.active {
+  background: var(--orange-dim);
+  color: var(--orange);
+  border: 1px solid var(--orange-border);
+}
+
+.nav-icon {
+  font-size: 1rem;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  padding: 16px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-signout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font);
+  font-weight: 500;
+}
+
+.btn-signout:hover { color: var(--red); background: rgba(255,92,92,0.07); }
+
+/* ─── MAIN CONTENT ──────────────────────────────────────────── */
+.main-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.panel {
+  display: none;
+  padding: 40px 48px;
+  max-width: 1100px;
+}
+
+.panel.active { display: block; }
+
+/* ─── PANEL HEADERS ─────────────────────────────────────────── */
+.panel-heading {
+  margin-bottom: 36px;
+}
+
+.panel-heading h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+
+.panel-heading p {
+  font-size: 0.88rem;
+  color: var(--muted);
+}
+
+/* ─── STAT CARDS ────────────────────────────────────────────── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  transition: border-color 0.2s;
+}
+
+.stat-card:hover { border-color: rgba(42,32,24,0.8); }
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stat-value.orange { color: var(--orange); }
+.stat-value.gold   { color: var(--gold); }
+.stat-value.blue   { color: var(--blue); }
+
+.stat-sub {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+/* ─── URGENCY BANNER ────────────────────────────────────────── */
+.urgency-banner {
+  background: rgba(255,179,71,0.07);
+  border: 1px solid rgba(255,179,71,0.3);
+  border-radius: 12px;
+  padding: 16px 22px;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.urgency-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 1px; }
+
+.urgency-text {
+  font-size: 0.87rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.urgency-text strong { color: var(--gold); }
+
+/* ─── SECTION TITLE ─────────────────────────────────────────── */
+.section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ─── BADGE ─────────────────────────────────────────────────── */
+.badge {
+  font-size: 0.68rem;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.badge-active  { background: rgba(0,232,122,0.12); color: var(--green); }
+.badge-urgent  { background: rgba(255,179,71,0.15); color: var(--gold); }
+.badge-pending { background: rgba(56,182,255,0.12); color: var(--blue); }
+.badge-planned { background: rgba(138,122,104,0.15); color: var(--muted); }
+
+/* ─── RECENT MESSAGES PREVIEW ───────────────────────────────── */
+.overview-messages {
+  margin-top: 36px;
+}
+
+.msg-preview-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.msg-preview-item:hover { border-color: var(--orange-border); }
+.msg-preview-item.unread { border-left: 3px solid var(--orange); }
+
+/* ─── TRIP CARDS ────────────────────────────────────────────── */
+.trips-grid { display: grid; gap: 20px; }
+
+.trip-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.trip-card:hover { border-color: rgba(255,138,30,0.2); }
+.trip-card.urgent { border-color: rgba(255,179,71,0.35); }
+
+.trip-header {
+  padding: 24px 28px 20px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.trip-dest {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.trip-dates { font-size: 0.84rem; color: var(--muted); }
+
+.trip-body { padding: 24px 28px; }
+
+.trip-segments { display: grid; gap: 10px; }
+
+.segment {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.seg-label {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 3px;
+  font-weight: 500;
+}
+
+.seg-val { font-size: 0.9rem; font-weight: 600; }
+
+.seg-arrow { color: var(--muted); font-size: 1rem; }
+
+.seg-status { text-align: right; }
+
+.seg-status-text { font-size: 0.75rem; font-weight: 500; }
+.seg-status-text.confirmed { color: var(--green); }
+.seg-status-text.pending   { color: var(--gold); }
+.seg-status-text.action    { color: var(--red); }
+
+.seg-notes { font-size: 0.74rem; color: var(--muted); margin-top: 3px; }
+
+.action-box {
+  background: rgba(255,179,71,0.06);
+  border: 1px solid rgba(255,179,71,0.28);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-top: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.action-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+
+.action-text { font-size: 0.84rem; line-height: 1.6; color: var(--text); }
+.action-text strong { color: var(--gold); display: block; margin-bottom: 3px; }
+
+/* ─── SAVINGS ───────────────────────────────────────────────── */
+.savings-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 8px 0;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.savings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  gap: 16px;
+}
+
+.savings-row:last-child { border-bottom: none; }
+
+.savings-row-label { font-size: 0.9rem; color: var(--text); font-weight: 500; }
+.savings-row-sub { font-size: 0.77rem; color: var(--muted); margin-top: 2px; }
+.savings-row-val { font-size: 0.92rem; font-weight: 600; text-align: right; }
+
+.savings-total {
+  background: rgba(0,232,122,0.05);
+  border: 1px solid rgba(0,232,122,0.2);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.savings-total-label { font-size: 1rem; font-weight: 600; }
+.savings-total-sub { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
+.savings-total-val { font-size: 2rem; font-weight: 800; color: var(--green); letter-spacing: -0.02em; }
+
+.fee-box {
+  background: rgba(255,179,71,0.05);
+  border: 1px solid rgba(255,179,71,0.2);
+  border-radius: 12px;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fee-box-label { font-size: 0.92rem; font-weight: 600; }
+.fee-box-val { font-size: 1.6rem; font-weight: 800; color: var(--gold); letter-spacing: -0.02em; }
+
+/* ─── POINTS ────────────────────────────────────────────────── */
+.points-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.points-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 22px;
+  transition: border-color 0.2s;
+}
+
+.points-card:hover { border-color: var(--orange-border); }
+
+.points-program {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
+.points-balance {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--blue);
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+
+.points-est { font-size: 0.75rem; color: var(--muted); }
+
+/* ─── MESSAGES ──────────────────────────────────────────────── */
+.messages-list { display: grid; gap: 12px; }
+
+.message-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  transition: border-color 0.2s;
+}
+
+.message-item:hover { border-color: var(--orange-border); }
+.message-item.unread { border-left: 3px solid var(--orange); }
+
+.msg-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255,138,30,0.15), rgba(255,138,30,0.05));
+  border: 1px solid var(--orange-border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: var(--orange);
+}
+
+.msg-content { flex: 1; min-width: 0; }
+
+.msg-from {
+  font-size: 0.84rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.msg-unread-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--orange);
+  flex-shrink: 0;
+}
+
+.msg-text {
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.msg-time {
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── MOBILE: Bottom tab bar ────────────────────────────────── */
+@media (max-width: 767px) {
+  .sidebar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    height: auto;
+    width: 100%;
+    flex-direction: row;
+    border-right: none;
+    border-top: 1px solid var(--border);
+    z-index: 100;
   }
-  .portal-header h1 { font-size: 1.6rem; margin-bottom: 4px; }
-  .portal-header p { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
-  .portal-tabs { display: flex; gap: 0; }
-  .tab-btn {
-    background: none; border: none; color: var(--muted);
-    padding: 12px 24px; font-size: 0.88rem; cursor: pointer;
-    border-bottom: 2px solid transparent; transition: all 0.2s;
+
+  .sidebar.mobile-open { display: flex; }
+
+  .mobile-bottom-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 100;
+    height: 60px;
+  }
+
+  .mobile-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 0.6rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s;
+    border: none;
+    background: none;
     font-family: var(--font);
+    font-weight: 500;
+    letter-spacing: 0.03em;
   }
-  .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
-  .tab-btn:hover:not(.active) { color: var(--text); }
 
-  .portal-body { padding: 40px 48px; max-width: 1200px; }
+  .mobile-tab.active { color: var(--orange); }
+  .mobile-tab-icon { font-size: 1.15rem; }
 
-  /* STATS ROW */
-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px; }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px;
-  }
-  .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-  .stat-value { font-size: 1.8rem; font-weight: 700; }
-  .stat-value.green { color: var(--green); }
-  .stat-value.gold { color: var(--gold); }
-  .stat-value.blue { color: var(--blue); }
-  .stat-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+  .portal-layout { flex-direction: column; }
 
-  /* TRIPS */
-  .section-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-  .badge {
-    font-size: 0.7rem; padding: 3px 10px; border-radius: 20px;
-    font-weight: 600; letter-spacing: 0.04em;
-  }
-  .badge-active { background: rgba(0,232,122,0.15); color: var(--green); }
-  .badge-urgent { background: rgba(245,200,66,0.15); color: var(--gold); }
-  .badge-pending { background: rgba(56,182,255,0.15); color: var(--blue); }
-  .badge-planned { background: rgba(107,122,141,0.2); color: var(--muted); }
+  .main-content { padding-bottom: 70px; }
 
-  .trips-grid { display: grid; gap: 20px; margin-bottom: 48px; }
-  .trip-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; overflow: hidden; transition: border-color 0.2s;
-  }
-  .trip-card:hover { border-color: #2a3a50; }
-  .trip-card.urgent { border-color: rgba(245,200,66,0.4); }
-  .trip-header {
-    padding: 24px 28px 20px;
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .trip-dest { font-size: 1.25rem; font-weight: 700; margin-bottom: 4px; }
-  .trip-dates { font-size: 0.85rem; color: var(--muted); }
-  .trip-status-col { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-  .trip-body { padding: 24px 28px; }
-  .trip-segments { display: grid; gap: 12px; }
-  .segment {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px 20px;
-    display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: center; gap: 16px;
-  }
-  .seg-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
-  .seg-val { font-size: 0.95rem; font-weight: 600; }
-  .seg-arrow { color: var(--muted); font-size: 1.2rem; }
-  .seg-status { text-align: right; }
-  .seg-status-text { font-size: 0.75rem; }
-  .seg-status-text.confirmed { color: var(--green); }
-  .seg-status-text.pending { color: var(--gold); }
-  .seg-status-text.action { color: var(--red); }
-  .seg-notes { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+  .panel { padding: 24px 18px; }
 
-  .action-box {
-    background: rgba(245,200,66,0.07); border: 1px solid rgba(245,200,66,0.3);
-    border-radius: 10px; padding: 16px 20px; margin-top: 16px;
-    display: flex; align-items: flex-start; gap: 12px;
-  }
-  .action-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
-  .action-text { font-size: 0.85rem; line-height: 1.5; }
-  .action-text strong { color: var(--gold); display: block; margin-bottom: 2px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
-  /* SAVINGS */
-  .savings-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 28px; margin-bottom: 48px;
-  }
-  .savings-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
-  .savings-row:last-child { border-bottom: none; }
-  .savings-row-label { font-size: 0.9rem; color: var(--text); }
-  .savings-row-sub { font-size: 0.78rem; color: var(--muted); }
-  .savings-row-val { font-size: 1rem; font-weight: 600; text-align: right; }
-  .savings-total {
-    background: rgba(0,232,122,0.06); border: 1px solid rgba(0,232,122,0.25);
-    border-radius: 12px; padding: 20px 24px; margin-top: 20px;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .savings-total-label { font-size: 1rem; font-weight: 600; }
-  .savings-total-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
-  .savings-total-val { font-size: 2rem; font-weight: 800; color: var(--green); }
+  .points-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
 
-  /* POINTS */
-  .points-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 48px; }
-  .points-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px;
-  }
-  .points-program { font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
-  .points-balance { font-size: 1.4rem; font-weight: 700; color: var(--blue); }
-  .points-est { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .segment { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .seg-arrow { display: none; }
 
-  /* MESSAGES */
-  .messages-list { display: grid; gap: 12px; }
-  .message-item {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px 24px;
-    display: flex; gap: 16px; align-items: flex-start;
-  }
-  .message-item.unread { border-left: 3px solid var(--green); }
-  .msg-avatar {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, #00e87a22, #38b6ff22);
-    border: 1px solid var(--border); flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.8rem; color: var(--green);
-  }
-  .msg-content { flex: 1; }
-  .msg-from { font-size: 0.85rem; font-weight: 600; margin-bottom: 2px; }
-  .msg-text { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
-  .msg-time { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+  .trip-header { flex-direction: column; gap: 10px; }
+}
 
-  /* TABS */
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+@media (min-width: 768px) {
+  .mobile-bottom-bar { display: none; }
+}
 
-  /* URGENCY BANNER */
-  .urgency-banner {
-    background: rgba(245,200,66,0.08); border: 1px solid rgba(245,200,66,0.3);
-    border-radius: 12px; padding: 16px 24px; margin-bottom: 32px;
-    display: flex; align-items: center; gap: 16px;
-  }
-  .urgency-icon { font-size: 1.4rem; flex-shrink: 0; }
-  .urgency-text { font-size: 0.88rem; line-height: 1.5; }
-  .urgency-text strong { color: var(--gold); }
-
-  @media (max-width: 900px) {
-    .portal-body { padding: 24px 20px; }
-    .portal-header { padding: 24px 20px 0; }
-    .stats-row { grid-template-columns: repeat(2, 1fr); }
-    .points-grid { grid-template-columns: repeat(2, 1fr); }
-    .segment { grid-template-columns: 1fr 1fr; }
-  }
+@media (max-width: 1050px) and (min-width: 768px) {
+  .panel { padding: 32px 28px; }
+  .points-grid { grid-template-columns: repeat(2, 1fr); }
+  .stats-row { grid-template-columns: repeat(3, 1fr); }
+}
 </style>
 </head>
 <body>
 
-<nav>
-  <a href="index.html" class="nav-logo">DAT <span>●</span></a>
-  <div class="nav-right">
-    <span class="nav-user">Welcome, <strong id="nav-name">—</strong></span>
-    <button class="btn-logout" onclick="logout()">Sign Out</button>
-  </div>
-</nav>
-
-<!-- LOGIN -->
+<!-- ═══════════════════════ LOGIN ═══════════════════════════════ -->
 <div id="login-screen">
-  <div class="login-box">
-    <h2>Client Portal</h2>
-    <p>Sign in to view your trips, savings plan, and account details.</p>
-    <div class="form-group">
-      <label>Email Address</label>
-      <input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()">
+  <div class="login-wrap">
+    <div class="login-logo-row">
+      <img src="assets/dat-logo.svg" alt="District Award Travel">
+      <div class="login-brand">District Award Travel</div>
+      <div class="login-sub">Client Portal</div>
     </div>
-    <div class="form-group">
-      <label>Access Code</label>
-      <input type="password" id="login-pass" placeholder="Provided by your advisor" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="login-box">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="login-email" placeholder="you@example.com"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="form-group">
+        <label>Access Code</label>
+        <input type="password" id="login-pass" placeholder="Provided by your advisor"
+               onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign In</button>
+      <div class="login-error" id="login-error">Invalid credentials. Contact your advisor.</div>
     </div>
-    <button class="btn-primary" onclick="doLogin()">Sign In</button>
-    <div class="login-error" id="login-error">Invalid credentials. Contact your advisor.</div>
-    <p style="margin-top:20px;font-size:0.78rem;color:var(--muted);text-align:center;">
-      New client? <a href="intake.html" style="color:var(--green);text-decoration:none;">Start your intake →</a>
+    <p class="login-footer">
+      New client? <a href="intake.html">Start your intake &rarr;</a>
     </p>
   </div>
 </div>
 
-<!-- PORTAL -->
+<!-- ═══════════════════════ PORTAL ══════════════════════════════ -->
 <div id="portal">
-  <div class="portal-header">
-    <h1 id="portal-greeting">My Dashboard</h1>
-    <p id="portal-subtitle">District Award Travel — Client Portal</p>
-    <div class="portal-tabs">
-      <button class="tab-btn active" onclick="switchTab('trips',this)">My Trips</button>
-      <button class="tab-btn" onclick="switchTab('savings',this)">Savings &amp; Fees</button>
-      <button class="tab-btn" onclick="switchTab('points',this)">My Points</button>
-      <button class="tab-btn" onclick="switchTab('messages',this)">Messages</button>
-    </div>
+  <div class="portal-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <img src="assets/dat-logo.svg" alt="DAT">
+        <div class="sidebar-brand">District<br>Award Travel</div>
+      </div>
+      <div class="sidebar-client">
+        <div class="sidebar-client-name" id="sidebar-name">—</div>
+        <div class="sidebar-tier" id="sidebar-tier">—</div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" onclick="switchPanel('overview',this)" data-panel="overview">
+          <span class="nav-icon">◈</span> Overview
+        </button>
+        <button class="nav-item" onclick="switchPanel('trips',this)" data-panel="trips">
+          <span class="nav-icon">✈</span> My Trips
+        </button>
+        <button class="nav-item" onclick="switchPanel('savings',this)" data-panel="savings">
+          <span class="nav-icon">◎</span> Savings &amp; Fees
+        </button>
+        <button class="nav-item" onclick="switchPanel('points',this)" data-panel="points">
+          <span class="nav-icon">⬡</span> My Points
+        </button>
+        <button class="nav-item" onclick="switchPanel('messages',this)" data-panel="messages">
+          <span class="nav-icon">◻</span> Messages
+          <span id="sidebar-unread" style="display:none;margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--orange);"></span>
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn-signout" onclick="logout()">
+          <span class="nav-icon">↩</span> Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+      <!-- OVERVIEW -->
+      <div class="panel active" id="panel-overview">
+        <div class="panel-heading">
+          <h1 id="overview-greeting">Welcome back</h1>
+          <p id="overview-sub">District Award Travel — Client Portal</p>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Savings</div>
+            <div class="stat-value orange" id="stat-savings">—</div>
+            <div class="stat-sub">cash vs. points cost</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Advisory Fee</div>
+            <div class="stat-value gold" id="stat-fee">—</div>
+            <div class="stat-sub">10% of savings generated</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Points Portfolio</div>
+            <div class="stat-value blue" id="stat-points">—</div>
+            <div class="stat-sub">across all programs</div>
+          </div>
+        </div>
+
+        <div class="urgency-banner" id="urgency-banner" style="display:none">
+          <div class="urgency-icon">⚠️</div>
+          <div class="urgency-text" id="urgency-text"></div>
+        </div>
+
+        <div class="overview-messages">
+          <div class="section-title">Recent Messages</div>
+          <div id="overview-messages-list"></div>
+        </div>
+      </div>
+
+      <!-- MY TRIPS -->
+      <div class="panel" id="panel-trips">
+        <div class="panel-heading">
+          <h1>My Trips</h1>
+          <p id="trips-sub">Your active and upcoming itineraries</p>
+        </div>
+        <div class="trips-grid" id="trips-container"></div>
+      </div>
+
+      <!-- SAVINGS & FEES -->
+      <div class="panel" id="panel-savings">
+        <div class="panel-heading">
+          <h1>Savings &amp; Fees</h1>
+          <p>Breakdown of value generated through points redemptions</p>
+        </div>
+        <div id="savings-container"></div>
+      </div>
+
+      <!-- MY POINTS -->
+      <div class="panel" id="panel-points">
+        <div class="panel-heading">
+          <h1>My Points</h1>
+          <p>Current balances across all loyalty programs</p>
+        </div>
+        <div class="points-grid" id="points-container"></div>
+      </div>
+
+      <!-- MESSAGES -->
+      <div class="panel" id="panel-messages">
+        <div class="panel-heading">
+          <h1>Messages</h1>
+          <p>Updates and notes from your advisor</p>
+        </div>
+        <div class="messages-list" id="messages-container"></div>
+      </div>
+
+    </main>
   </div>
 
-  <div class="portal-body">
-    <!-- STATS -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Active Trips</div>
-        <div class="stat-value blue" id="stat-trips">—</div>
-        <div class="stat-sub" id="stat-trips-sub">in planning</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Savings</div>
-        <div class="stat-value green" id="stat-savings">—</div>
-        <div class="stat-sub">cash vs. points cost</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Fee Owed</div>
-        <div class="stat-value gold" id="stat-fee">—</div>
-        <div class="stat-sub">10% of savings</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Points Deployed</div>
-        <div class="stat-value" id="stat-points">—</div>
-        <div class="stat-sub">across all trips</div>
-      </div>
-    </div>
-
-    <!-- URGENCY BANNER -->
-    <div class="urgency-banner" id="urgency-banner" style="display:none">
-      <div class="urgency-icon">⚠️</div>
-      <div class="urgency-text" id="urgency-text"></div>
-    </div>
-
-    <!-- TRIPS TAB -->
-    <div class="tab-panel active" id="tab-trips">
-      <div class="section-title">Upcoming Travel <span class="badge badge-active" id="trips-count-badge">0 trips</span></div>
-      <div class="trips-grid" id="trips-container"></div>
-    </div>
-
-    <!-- SAVINGS TAB -->
-    <div class="tab-panel" id="tab-savings">
-      <div class="section-title">Savings Breakdown</div>
-      <div class="savings-card" id="savings-container"></div>
-    </div>
-
-    <!-- POINTS TAB -->
-    <div class="tab-panel" id="tab-points">
-      <div class="section-title">Your Points Balances</div>
-      <div class="points-grid" id="points-container"></div>
-    </div>
-
-    <!-- MESSAGES TAB -->
-    <div class="tab-panel" id="tab-messages">
-      <div class="section-title">Messages from Your Advisor</div>
-      <div class="messages-list" id="messages-container"></div>
-    </div>
+  <!-- MOBILE BOTTOM BAR -->
+  <div class="mobile-bottom-bar">
+    <button class="mobile-tab active" data-panel="overview" onclick="switchPanel('overview',this)">
+      <span class="mobile-tab-icon">◈</span>Overview
+    </button>
+    <button class="mobile-tab" data-panel="trips" onclick="switchPanel('trips',this)">
+      <span class="mobile-tab-icon">✈</span>Trips
+    </button>
+    <button class="mobile-tab" data-panel="savings" onclick="switchPanel('savings',this)">
+      <span class="mobile-tab-icon">◎</span>Savings
+    </button>
+    <button class="mobile-tab" data-panel="points" onclick="switchPanel('points',this)">
+      <span class="mobile-tab-icon">⬡</span>Points
+    </button>
+    <button class="mobile-tab" data-panel="messages" onclick="switchPanel('messages',this)">
+      <span class="mobile-tab-icon">◻</span>Messages
+    </button>
   </div>
 </div>
 
 <script>
+/* ─── DEMO CLIENTS ──────────────────────────────────────────── */
 const CLIENTS = {
   "tammy@carnegroup.com": {
     pass: "tammy2026",
@@ -348,7 +959,7 @@ const CLIENTS = {
           { from: "Orta", to: "Milan Marriott Hotel", date: "Aug 11–13", method: "120,000 Marriott Points", status: "pending", notes: "Best value option confirmed by advisor" },
           { from: "Milan (MXP)", to: "Washington, DC", date: "Aug 13", method: "TBD", status: "pending", notes: "Return flight TBD" }
         ],
-        action: { show: true, text: "<strong>Urgent: Casa di Langa booking deadline June 30, 2026</strong>\nYour advisor has confirmed availability Aug 5–9 through Amex Fine Hotels & Resorts. The 15% FHR discount applies only through the Amex portal and expires June 30. Confirm to lock in your rate." }
+        action: { show: true, text: "<strong>Urgent: Casa di Langa booking deadline June 30, 2026</strong>Your advisor has confirmed availability Aug 5–9 through Amex Fine Hotels & Resorts. The 15% FHR discount applies only through the Amex portal and expires June 30. Confirm to lock in your rate." }
       },
       {
         dest: "Iceland",
@@ -403,7 +1014,7 @@ const CLIENTS = {
           { from: "Washington, DC", to: "South Africa", date: "Dec 16", method: "TBD — Research in Progress", status: "pending", notes: "6 passengers. Peak season. Award space extremely limited." },
           { from: "South Africa", to: "Washington, DC", date: "Jan 1", method: "TBD", status: "pending", notes: "Return routing TBD" }
         ],
-        action: { show: true, text: "<strong>Points balance confirmation needed</strong>\nYour advisor needs your current United MileagePlus and Amex Membership Rewards balances to finalize the redemption strategy. Peak December travel for 6 passengers is challenging — Turkish (via Istanbul), Ethiopian (via Addis Ababa), and Qatar (via Doha) are the primary cash alternatives being evaluated." }
+        action: { show: true, text: "<strong>Points balance confirmation needed</strong>Your advisor needs your current United MileagePlus and Amex Membership Rewards balances to finalize the redemption strategy. Peak December travel for 6 passengers is challenging — Turkish (via Istanbul), Ethiopian (via Addis Ababa), and Qatar (via Doha) are the primary cash alternatives being evaluated." }
       }
     ],
     savings: [],
@@ -420,21 +1031,32 @@ const CLIENTS = {
 
 let currentClient = null;
 
-// Demo fallback: clients saved in this browser (used only if the backend
-// isn't reachable, e.g. when previewing the file directly off the server).
+/* ─── SESSION RESTORE ───────────────────────────────────────── */
+(async function restoreSession() {
+  const token = localStorage.getItem('dat_client_token');
+  if (!token) return;
+  try {
+    const res = await fetch('/api/client/me', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (res.ok) {
+      const client = await res.json();
+      showPortal(client);
+    } else {
+      localStorage.removeItem('dat_client_token');
+    }
+  } catch (e) {
+    // Backend unreachable — stay on login
+    localStorage.removeItem('dat_client_token');
+  }
+})();
+
+/* ─── HELPERS ───────────────────────────────────────────────── */
 function getRegisteredClient(email) {
   try {
     const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
     return store[email] || null;
   } catch (e) { return null; }
-}
-
-function showPortal(client) {
-  currentClient = client;
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('portal').style.display = 'block';
-  document.getElementById('nav-name').textContent = (client.name || 'Client').split(' ')[0];
-  renderPortal(client);
 }
 
 function loginError(msg) {
@@ -444,13 +1066,15 @@ function loginError(msg) {
   setTimeout(() => err.style.display = 'none', 4000);
 }
 
+/* ─── LOGIN ─────────────────────────────────────────────────── */
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pass = document.getElementById('login-pass').value.trim();
-  const btn = document.querySelector('#login-screen .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
+  const pass  = document.getElementById('login-pass').value.trim();
+  const btn   = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
 
-  // 1) Try the live backend
+  // 1) Try live backend
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -459,23 +1083,25 @@ async function doLogin() {
     });
     if (res.ok) {
       const { token } = await res.json();
-      sessionStorage.setItem('dat_client_token', token);
-      const me = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      localStorage.setItem('dat_client_token', token);
+      const me = await fetch('/api/client/me', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
       if (me.ok) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+        btn.disabled = false; btn.textContent = 'Sign In';
         return showPortal(await me.json());
       }
     } else if (res.status === 401) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+      btn.disabled = false; btn.textContent = 'Sign In';
       return loginError('Invalid credentials. Contact your advisor.');
     }
   } catch (e) {
     // Backend unreachable — fall through to demo data
   }
 
-  // 2) Fallback to built-in / locally-registered demo clients
+  // 2) Fallback: built-in / locally-registered demo clients
   const client = CLIENTS[email] || getRegisteredClient(email);
-  if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+  btn.disabled = false; btn.textContent = 'Sign In';
   if (client && client.pass === pass) {
     showPortal(client);
   } else {
@@ -483,53 +1109,92 @@ async function doLogin() {
   }
 }
 
+/* ─── PORTAL ────────────────────────────────────────────────── */
+function showPortal(client) {
+  currentClient = client;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('portal').style.display = 'block';
+  renderPortal(client);
+}
+
 function logout() {
   currentClient = null;
-  sessionStorage.removeItem('dat_client_token');
+  localStorage.removeItem('dat_client_token');
   document.getElementById('portal').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('login-email').value = '';
   document.getElementById('login-pass').value = '';
+  // Reset to overview panel for next session
+  switchPanel('overview', document.querySelector('.nav-item[data-panel="overview"]'), true);
 }
 
 function renderPortal(c) {
-  document.getElementById('portal-greeting').textContent = 'Welcome back, ' + c.name.split(' ')[0];
-  document.getElementById('portal-subtitle').textContent = c.tier + ' — District Award Travel';
-  document.getElementById('stat-trips').textContent = c.stats.trips;
+  const firstName = (c.name || 'Client').split(' ')[0];
+
+  // Sidebar
+  document.getElementById('sidebar-name').textContent = c.name || 'Client';
+  document.getElementById('sidebar-tier').textContent = c.tier || '';
+
+  // Overview
+  document.getElementById('overview-greeting').textContent = 'Welcome back, ' + firstName;
+  document.getElementById('overview-sub').textContent = (c.tier || '') + ' — District Award Travel';
+
+  // Stats
   document.getElementById('stat-savings').textContent = c.stats.savings;
   document.getElementById('stat-fee').textContent = c.stats.fee;
   document.getElementById('stat-points').textContent = c.stats.points;
 
+  // Urgency
   if (c.urgency) {
     const b = document.getElementById('urgency-banner');
     b.style.display = 'flex';
     document.getElementById('urgency-text').innerHTML = c.urgency;
   }
 
-  document.getElementById('trips-count-badge').textContent = c.trips.length + ' trip' + (c.trips.length !== 1 ? 's' : '');
-  const tc = document.getElementById('trips-container');
-  tc.innerHTML = c.trips.map(t => renderTrip(t)).join('');
+  // Trips subtitle
+  document.getElementById('trips-sub').textContent =
+    c.trips.length + ' trip' + (c.trips.length !== 1 ? 's' : '') + ' — active & upcoming';
 
+  // Render sections
+  document.getElementById('trips-container').innerHTML = c.trips.map(renderTrip).join('');
   renderSavings(c);
   renderPoints(c);
   renderMessages(c);
+  renderOverviewMessages(c);
+
+  // Unread indicator
+  const hasUnread = c.messages.some(m => m.unread);
+  document.getElementById('sidebar-unread').style.display = hasUnread ? 'block' : 'none';
 }
 
 function renderTrip(t) {
-  const statusBadge = {active:'badge-active',urgent:'badge-urgent',pending:'badge-pending',planned:'badge-planned'}[t.status] || 'badge-planned';
-  const statusLabel = {active:'Active',urgent:'Urgent',pending:'Pending',planned:'Planning'}[t.status] || 'Planning';
-  const segs = t.segments.map(s => `
+  const statusMap = {
+    active:  { cls: 'badge-active',  label: 'Active'    },
+    urgent:  { cls: 'badge-urgent',  label: 'Urgent'    },
+    pending: { cls: 'badge-pending', label: 'Pending'   },
+    planned: { cls: 'badge-planned', label: 'Planning'  }
+  };
+  const s = statusMap[t.status] || statusMap.planned;
+
+  const segs = t.segments.map(seg => `
     <div class="segment">
-      <div><div class="seg-label">From</div><div class="seg-val">${s.from}</div></div>
+      <div><div class="seg-label">From</div><div class="seg-val">${seg.from}</div></div>
       <div class="seg-arrow">→</div>
-      <div><div class="seg-label">To</div><div class="seg-val">${s.to}</div></div>
+      <div><div class="seg-label">To</div><div class="seg-val">${seg.to}</div></div>
       <div class="seg-status">
-        <div class="seg-label">${s.date}</div>
-        <div class="seg-status-text ${s.status}">${s.method}</div>
-        ${s.notes ? '<div class="seg-notes">' + s.notes + '</div>' : ''}
+        <div class="seg-label">${seg.date}</div>
+        <div class="seg-status-text ${seg.status}">${seg.method}</div>
+        ${seg.notes ? '<div class="seg-notes">' + seg.notes + '</div>' : ''}
       </div>
     </div>`).join('');
-  const actionHtml = t.action && t.action.show ? `<div class="action-box"><div class="action-icon">⚡</div><div class="action-text">${t.action.text}</div></div>` : '';
+
+  const actionHtml = t.action && t.action.show
+    ? `<div class="action-box">
+         <div class="action-icon">⚡</div>
+         <div class="action-text">${t.action.text}</div>
+       </div>`
+    : '';
+
   return `
     <div class="trip-card ${t.status === 'urgent' ? 'urgent' : ''}">
       <div class="trip-header">
@@ -537,7 +1202,7 @@ function renderTrip(t) {
           <div class="trip-dest">${t.dest}</div>
           <div class="trip-dates">${t.dates}</div>
         </div>
-        <div class="trip-status-col"><span class="badge ${statusBadge}">${statusLabel}</span></div>
+        <span class="badge ${s.cls}">${s.label}</span>
       </div>
       <div class="trip-body">
         <div class="trip-segments">${segs}</div>
@@ -549,33 +1214,46 @@ function renderTrip(t) {
 function renderSavings(c) {
   const sc = document.getElementById('savings-container');
   if (!c.savings || c.savings.length === 0) {
-    sc.innerHTML = '<p style="color:var(--muted);padding:20px 0">Savings analysis in progress. Your advisor will update this section once your redemption plan is finalized.</p>';
+    sc.innerHTML = `<div class="savings-card">
+      <div class="savings-row">
+        <p style="color:var(--muted);font-size:0.88rem;padding:8px 0">
+          Savings analysis in progress. Your advisor will update this section once your redemption plan is finalized.
+        </p>
+      </div>
+    </div>`;
     return;
   }
+
   const rows = c.savings.map(s => `
     <div class="savings-row">
-      <div><div class="savings-row-label">${s.label}</div><div class="savings-row-sub">${s.sub}</div></div>
+      <div>
+        <div class="savings-row-label">${s.label}</div>
+        <div class="savings-row-sub">${s.sub}</div>
+      </div>
       <div class="savings-row-val">
-        <div style="color:var(--muted);font-size:0.8rem">Cash: ${s.cash}</div>
-        <div style="color:var(--muted);font-size:0.8rem">Points Cost: ${s.points}</div>
+        <div style="color:var(--muted);font-size:0.78rem;margin-bottom:2px">Cash: ${s.cash} &nbsp;·&nbsp; Points cost: ${s.points}</div>
         <div style="color:var(--green)">Save ${s.save}</div>
-        <div style="color:var(--gold);font-size:0.8rem">Fee: ${s.fee}</div>
+        <div style="color:var(--gold);font-size:0.78rem">Advisory fee: ${s.fee}</div>
       </div>
     </div>`).join('');
-  sc.innerHTML = rows + `
+
+  sc.innerHTML = `
+    <div class="savings-card">${rows}</div>
     <div class="savings-total">
-      <div><div class="savings-total-label">Total Savings Generated</div><div class="savings-total-sub">Your DAT fee is 10% of this figure</div></div>
+      <div>
+        <div class="savings-total-label">Total Savings Generated</div>
+        <div class="savings-total-sub">Your DAT advisory fee is 10% of this figure</div>
+      </div>
       <div class="savings-total-val">${c.totalSavings}</div>
     </div>
-    <div style="margin-top:12px;padding:16px 20px;background:rgba(245,200,66,0.06);border:1px solid rgba(245,200,66,0.2);border-radius:10px;display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:0.9rem;font-weight:600">Advisory Fee Owed (10%)</div>
-      <div style="font-size:1.4rem;font-weight:700;color:var(--gold)">${c.totalFee}</div>
+    <div class="fee-box" style="margin-top:12px">
+      <div class="fee-box-label">Advisory Fee Owed (10%)</div>
+      <div class="fee-box-val">${c.totalFee}</div>
     </div>`;
 }
 
 function renderPoints(c) {
-  const pc = document.getElementById('points-container');
-  pc.innerHTML = c.points.map(p => `
+  document.getElementById('points-container').innerHTML = c.points.map(p => `
     <div class="points-card">
       <div class="points-program">${p.program}</div>
       <div class="points-balance">${p.balance}</div>
@@ -584,23 +1262,53 @@ function renderPoints(c) {
 }
 
 function renderMessages(c) {
-  const mc = document.getElementById('messages-container');
-  mc.innerHTML = c.messages.map(m => `
+  document.getElementById('messages-container').innerHTML = c.messages.map(m => `
     <div class="message-item ${m.unread ? 'unread' : ''}">
       <div class="msg-avatar">JM</div>
       <div class="msg-content">
-        <div class="msg-from">${m.from} ${m.unread ? '<span style="color:var(--green);font-size:0.7rem;margin-left:6px">● NEW</span>' : ''}</div>
+        <div class="msg-from">
+          ${m.from}
+          ${m.unread ? '<span class="msg-unread-dot"></span>' : ''}
+        </div>
         <div class="msg-text">${m.text}</div>
       </div>
       <div class="msg-time">${m.time}</div>
     </div>`).join('');
 }
 
-function switchTab(id, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('tab-' + id).classList.add('active');
+function renderOverviewMessages(c) {
+  const preview = c.messages.slice(0, 2);
+  document.getElementById('overview-messages-list').innerHTML = preview.map(m => `
+    <div class="msg-preview-item ${m.unread ? 'unread' : ''}" onclick="switchPanel('messages', document.querySelector('.nav-item[data-panel=messages]'))">
+      <div class="msg-avatar">JM</div>
+      <div class="msg-content">
+        <div class="msg-from">
+          ${m.from}
+          ${m.unread ? '<span class="msg-unread-dot"></span>' : ''}
+        </div>
+        <div class="msg-text">${m.text.length > 120 ? m.text.slice(0, 120) + '…' : m.text}</div>
+      </div>
+      <div class="msg-time">${m.time}</div>
+    </div>`).join('');
+}
+
+/* ─── PANEL SWITCHING ───────────────────────────────────────── */
+function switchPanel(id, btn, silent) {
+  // Deactivate all panels
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  // Activate target
+  const target = document.getElementById('panel-' + id);
+  if (target) target.classList.add('active');
+
+  // Sidebar nav buttons
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  const sidebarBtn = document.querySelector('.nav-item[data-panel="' + id + '"]');
+  if (sidebarBtn) sidebarBtn.classList.add('active');
+
+  // Mobile tab buttons
+  document.querySelectorAll('.mobile-tab').forEach(b => b.classList.remove('active'));
+  const mobileBtn = document.querySelector('.mobile-tab[data-panel="' + id + '"]');
+  if (mobileBtn) mobileBtn.classList.add('active');
 }
 </script>
 </body>
