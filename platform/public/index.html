@@ -7,10 +7,10 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#05080d;--surface:#0c1118;--card:#101820;--border:#1c2a3a;
-  --green:#00e87a;--green-dim:rgba(0,232,122,.1);--green-border:rgba(0,232,122,.2);
-  --blue:#38b6ff;--gold:#f5c842;--red:#ff4d6d;
-  --text:#edf2f7;--muted:#8896a6;--dim:#3d5068;
+  --bg:#0a0805;--surface:#12100d;--card:#1a1814;--border:#2a2620;
+  --orange:#ff8a1e;--orange-dim:rgba(255,138,30,.1);--orange-border:rgba(255,138,30,.2);
+  --gold:#ffb347;--orange-dark:#e85d04;--red:#ff6b6b;
+  --text:#faf8f3;--muted:#a89a8f;--dim:#6b6159;
   --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 html{scroll-behavior:smooth}
@@ -23,26 +23,21 @@ nav{
   position:fixed;top:0;left:0;right:0;z-index:200;
   display:flex;align-items:center;justify-content:space-between;
   padding:0 48px;height:64px;
-  background:rgba(5,8,13,.92);
+  background:rgba(10,8,5,.92);
   backdrop-filter:blur(16px);
-  border-bottom:1px solid rgba(28,42,58,.7);
+  border-bottom:2px solid var(--orange);
   transition:background .3s;
 }
 .nav-logo{display:flex;align-items:center;gap:10px}
-.nav-logo-mark{
-  width:34px;height:34px;border-radius:8px;
-  background:var(--green-dim);border:1px solid var(--green-border);
-  display:flex;align-items:center;justify-content:center;
-  font-size:16px;
-}
-.nav-logo-text{font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+.nav-logo img{width:36px;height:36px}
+.nav-logo-text{font-size:16px;font-weight:800;color:var(--gold);letter-spacing:-.3px}
 .nav-logo-sub{font-size:10px;color:var(--muted);letter-spacing:.06em;margin-top:-2px}
 .nav-links{display:flex;align-items:center;gap:6px}
 .nav-link{
   padding:7px 16px;border-radius:7px;font-size:13px;font-weight:500;
   color:var(--muted);transition:all .15s;
 }
-.nav-link:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.nav-link:hover{color:var(--gold);background:rgba(255,138,30,.1)}
 .nav-cta{
   display:flex;align-items:center;gap:10px;
 }
@@ -52,18 +47,18 @@ nav{
   letter-spacing:.02em;cursor:pointer;transition:all .2s;border:none;
 }
 .btn-primary{
-  background:var(--green);color:#030a05;
+  background:linear-gradient(135deg,var(--gold),var(--orange));color:#1a0e00;
 }
-.btn-primary:hover{background:#00ff88;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,232,122,.25)}
+.btn-primary:hover{filter:brightness(1.1);transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,138,30,.35)}
 .btn-ghost{
   background:transparent;color:var(--muted);border:1px solid var(--border);
 }
-.btn-ghost:hover{color:var(--text);border-color:var(--muted)}
+.btn-ghost:hover{color:var(--gold);border-color:var(--orange)}
 .btn-lg{padding:16px 36px;font-size:15px;border-radius:10px}
 .btn-outline{
-  background:transparent;color:var(--green);border:1px solid var(--green-border);
+  background:transparent;color:var(--orange);border:1px solid var(--orange-border);
 }
-.btn-outline:hover{background:var(--green-dim)}
+.btn-outline:hover{background:var(--orange-dim)}
 
 /* ── HERO ── */
 .hero{
@@ -73,8 +68,8 @@ nav{
 .hero-bg{
   position:absolute;inset:0;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,232,122,.06) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 40% at 80% 60%, rgba(56,182,255,.04) 0%, transparent 60%);
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,138,30,.08) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 80% 60%, rgba(255,179,71,.04) 0%, transparent 60%);
   pointer-events:none;
 }
 .hero-grid{
@@ -88,17 +83,17 @@ nav{
 .hero-inner{position:relative;z-index:1;max-width:820px;margin:0 auto}
 .hero-eyebrow{
   display:inline-flex;align-items:center;gap:8px;
-  background:var(--green-dim);border:1px solid var(--green-border);
-  color:var(--green);font-size:11px;font-weight:700;letter-spacing:.1em;
+  background:var(--orange-dim);border:1px solid var(--orange-border);
+  color:var(--orange);font-size:11px;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;padding:6px 14px;border-radius:20px;margin-bottom:28px;
 }
-.hero-eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+.hero-eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .hero-h1{
   font-size:clamp(44px,7vw,80px);font-weight:900;line-height:1.05;
   letter-spacing:-2px;color:var(--text);margin-bottom:8px;
 }
-.hero-h1 span{color:var(--green)}
+.hero-h1 span{color:var(--gold)}
 .hero-tagline{
   font-size:clamp(16px,2.5vw,22px);color:var(--muted);
   font-weight:400;margin-bottom:40px;max-width:600px;margin-left:auto;margin-right:auto;
@@ -108,9 +103,9 @@ nav{
 .hero-actions{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:64px}
 .hero-stats{
   display:flex;align-items:center;justify-content:center;gap:48px;flex-wrap:wrap;
-  padding-top:48px;border-top:1px solid var(--border);
+  padding-top:48px;border-top:2px solid var(--orange);
 }
-.hero-stat-val{font-size:32px;font-weight:800;font-family:monospace;color:var(--text)}
+.hero-stat-val{font-size:32px;font-weight:800;font-family:monospace;color:var(--gold)}
 .hero-stat-label{font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
 .hero-stat-sub{font-size:11px;color:var(--dim);margin-top:3px}
 
@@ -119,7 +114,7 @@ section{padding:100px 48px}
 .section-inner{max-width:1100px;margin:0 auto}
 .section-label{
   font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
-  color:var(--green);margin-bottom:14px;font-family:monospace;
+  color:var(--orange);margin-bottom:14px;font-family:monospace;
 }
 .section-h2{
   font-size:clamp(30px,4vw,46px);font-weight:800;letter-spacing:-1px;
@@ -135,7 +130,7 @@ section{padding:100px 48px}
 }
 .what-visual::before{
   content:'';position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,var(--green),var(--blue));
+  background:linear-gradient(90deg,var(--orange),var(--gold));
 }
 .what-card-row{
   display:flex;align-items:center;justify-content:space-between;
@@ -152,8 +147,8 @@ section{padding:100px 48px}
   font-size:10px;font-weight:700;letter-spacing:.06em;
   padding:3px 9px;border-radius:4px;
 }
-.pill-green{background:rgba(0,232,122,.1);color:var(--green);border:1px solid rgba(0,232,122,.2)}
-.pill-blue{background:rgba(56,182,255,.1);color:var(--blue);border:1px solid rgba(56,182,255,.2)}
+.pill-green{background:rgba(255,138,30,.1);color:var(--orange);border:1px solid rgba(255,138,30,.2)}
+.pill-blue{background:rgba(255,179,71,.1);color:var(--gold);border:1px solid rgba(255,179,71,.2)}
 .pill-gold{background:rgba(245,200,66,.1);color:var(--gold);border:1px solid rgba(245,200,66,.2)}
 .pill-red{background:rgba(255,77,109,.1);color:var(--red);border:1px solid rgba(255,77,109,.2)}
 .pill-dim{background:rgba(61,80,104,.2);color:var(--muted);border:1px solid var(--border)}
@@ -180,10 +175,10 @@ section{padding:100px 48px}
   border:1px solid var(--border);background:var(--card);
   display:flex;align-items:center;justify-content:center;
   font-size:22px;font-weight:800;font-family:monospace;
-  color:var(--green);position:relative;z-index:1;
+  color:var(--orange);position:relative;z-index:1;
   transition:all .3s;
 }
-.step:hover .step-num{border-color:var(--green);background:var(--green-dim);box-shadow:0 0 24px rgba(0,232,122,.2)}
+.step:hover .step-num{border-color:var(--orange);background:var(--green-dim);box-shadow:0 0 24px rgba(255,138,30,.2)}
 .step-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px}
 .step-desc{font-size:13px;color:var(--muted);line-height:1.55}
 .step-tag{margin-top:12px}
@@ -192,9 +187,9 @@ section{padding:100px 48px}
 .fee-grid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;margin-top:56px}
 .fee-main{
   background:var(--card);border:1px solid var(--border);border-radius:16px;
-  padding:36px;border-top:3px solid var(--green);
+  padding:36px;border-top:3px solid var(--orange);
 }
-.fee-headline{font-size:48px;font-weight:900;font-family:monospace;color:var(--green);line-height:1}
+.fee-headline{font-size:48px;font-weight:900;font-family:monospace;color:var(--orange);line-height:1}
 .fee-headline-sub{font-size:14px;color:var(--muted);margin-top:8px}
 .fee-divider{height:1px;background:var(--border);margin:24px 0}
 .fee-item{display:flex;align-items:flex-start;gap:14px;margin-bottom:18px}
@@ -239,7 +234,7 @@ section{padding:100px 48px}
   padding:12px 10px;text-align:center;font-size:11px;font-weight:600;
   color:var(--muted);transition:all .2s;
 }
-.program-chip:hover{border-color:var(--blue);color:var(--blue);background:rgba(56,182,255,.05)}
+.program-chip:hover{border-color:var(--gold);color:var(--gold);background:rgba(255,179,71,.05)}
 .program-chip .prog-pts{font-size:9px;font-family:monospace;color:var(--dim);margin-top:3px}
 
 /* ── CTA ── */
@@ -247,14 +242,14 @@ section{padding:100px 48px}
 .cta-inner{
   max-width:700px;margin:0 auto;
   background:var(--card);border:1px solid var(--border);border-radius:20px;
-  padding:60px 48px;border-top:3px solid var(--green);position:relative;overflow:hidden;
+  padding:60px 48px;border-top:3px solid var(--orange);position:relative;overflow:hidden;
 }
 .cta-inner::before{
   content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 60% 50% at 50% 0%, rgba(0,232,122,.06), transparent);
+  background:radial-gradient(ellipse 60% 50% at 50% 0%, rgba(255,138,30,.06), transparent);
   pointer-events:none;
 }
-.cta-label{font-size:10px;font-family:monospace;letter-spacing:.12em;color:var(--green);text-transform:uppercase;margin-bottom:16px}
+.cta-label{font-size:10px;font-family:monospace;letter-spacing:.12em;color:var(--orange);text-transform:uppercase;margin-bottom:16px}
 .cta-h2{font-size:clamp(28px,4vw,42px);font-weight:800;letter-spacing:-.8px;color:var(--text);margin-bottom:16px;line-height:1.2}
 .cta-sub{font-size:16px;color:var(--muted);margin-bottom:36px;line-height:1.6}
 .cta-note{font-size:12px;color:var(--dim);margin-top:14px}
@@ -330,7 +325,7 @@ footer{
     </div>
     <div class="hero-stats">
       <div>
-        <div class="hero-stat-val" style="color:var(--green)">10%</div>
+        <div class="hero-stat-val" style="color:var(--orange)">10%</div>
         <div class="hero-stat-label">Our Fee</div>
         <div class="hero-stat-sub">of savings generated — nothing more</div>
       </div>
@@ -342,7 +337,7 @@ footer{
       </div>
       <div style="width:1px;height:48px;background:var(--border)"></div>
       <div>
-        <div class="hero-stat-val" style="color:var(--blue)">15+</div>
+        <div class="hero-stat-val" style="color:var(--gold)">15+</div>
         <div class="hero-stat-label">Programs Mastered</div>
         <div class="hero-stat-sub">Amex, AA, United, Marriott + more</div>
       </div>
@@ -394,19 +389,19 @@ footer{
         </div>
         <div class="what-card-row">
           <div class="wcr-left"><span class="wcr-icon">🏆</span><span class="wcr-label">Award redemption</span></div>
-          <div class="wcr-val" style="color:var(--green)">35K miles + $5.60</div>
+          <div class="wcr-val" style="color:var(--orange)">35K miles + $5.60</div>
         </div>
         <div class="what-card-row">
           <div class="wcr-left"><span class="wcr-icon">📊</span><span class="wcr-label">Savings generated</span></div>
-          <div class="wcr-val" style="color:var(--green)">$4,194</div>
+          <div class="wcr-val" style="color:var(--orange)">$4,194</div>
         </div>
         <div class="what-card-row" style="border-bottom:none">
           <div class="wcr-left"><span class="wcr-icon">💼</span><span class="wcr-label">DAT advisory fee (10%)</span></div>
           <div class="wcr-val" style="color:var(--gold)">$419</div>
         </div>
-        <div style="margin-top:20px;padding:14px;background:rgba(0,232,122,.05);border:1px solid var(--green-border);border-radius:8px;text-align:center;">
+        <div style="margin-top:20px;padding:14px;background:rgba(255,138,30,.05);border:1px solid var(--green-border);border-radius:8px;text-align:center;">
           <div style="font-size:11px;color:var(--muted);margin-bottom:4px">You come out ahead by</div>
-          <div style="font-size:26px;font-weight:800;font-family:monospace;color:var(--green)">$3,775</div>
+          <div style="font-size:26px;font-weight:800;font-family:monospace;color:var(--orange)">$3,775</div>
           <div style="font-size:10px;color:var(--dim);margin-top:2px">After paying our fee</div>
         </div>
       </div>
@@ -499,8 +494,8 @@ footer{
           <div class="fee-ex-route">✈ JFK → Tokyo (Nonstop, Business Class)</div>
           <div class="fee-ex-rows">
             <div class="fee-ex-row"><span>Cash price</span><span style="color:var(--text)">$4,200</span></div>
-            <div class="fee-ex-row"><span>Points cost (35K AA miles)</span><span style="color:var(--green)">$5.60</span></div>
-            <div class="fee-ex-row"><span>Savings generated</span><span style="color:var(--green)">$4,194</span></div>
+            <div class="fee-ex-row"><span>Points cost (35K AA miles)</span><span style="color:var(--orange)">$5.60</span></div>
+            <div class="fee-ex-row"><span>Savings generated</span><span style="color:var(--orange)">$4,194</span></div>
           </div>
           <div class="fee-ex-total"><span>DAT Fee (10%)</span><span>$419</span></div>
         </div>
@@ -508,8 +503,8 @@ footer{
           <div class="fee-ex-route">🏨 Milan City Hotel (2 Nights, Marriott)</div>
           <div class="fee-ex-rows">
             <div class="fee-ex-row"><span>Cash price (Westin Palace)</span><span style="color:var(--text)">$580</span></div>
-            <div class="fee-ex-row"><span>Points cost (176K Marriott)</span><span style="color:var(--green)">$0</span></div>
-            <div class="fee-ex-row"><span>Savings generated</span><span style="color:var(--green)">$580</span></div>
+            <div class="fee-ex-row"><span>Points cost (176K Marriott)</span><span style="color:var(--orange)">$0</span></div>
+            <div class="fee-ex-row"><span>Savings generated</span><span style="color:var(--orange)">$580</span></div>
           </div>
           <div class="fee-ex-total"><span>DAT Fee (10%)</span><span>$58</span></div>
         </div>
@@ -517,8 +512,8 @@ footer{
           <div class="fee-ex-route">✈ DCA → Johannesburg (Group, 6 Pax)</div>
           <div class="fee-ex-rows">
             <div class="fee-ex-row"><span>Cash price (6 pax, economy)</span><span style="color:var(--text)">$9,600</span></div>
-            <div class="fee-ex-row"><span>Points cost (United MileagePlus)</span><span style="color:var(--green)">~$300 taxes</span></div>
-            <div class="fee-ex-row"><span>Savings generated</span><span style="color:var(--green)">$9,300</span></div>
+            <div class="fee-ex-row"><span>Points cost (United MileagePlus)</span><span style="color:var(--orange)">~$300 taxes</span></div>
+            <div class="fee-ex-row"><span>Savings generated</span><span style="color:var(--orange)">$9,300</span></div>
           </div>
           <div class="fee-ex-total"><span>DAT Fee (10%)</span><span>$930</span></div>
         </div>
