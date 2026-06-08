@@ -97,8 +97,6 @@ class Client(Base):
     tier = Column(String, default="Client")
     # Full portal payload (trips, savings, points, messages) stored as JSON text
     data = Column(Text, default="{}")
-    # "active" | "completed" | "archived"
-    status = Column(String, default="active")
     created_at = Column(DateTime, default=dt.datetime.utcnow)
 
 
@@ -521,7 +519,7 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
 def list_clients(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
     clients = db.query(Client).order_by(Client.created_at.desc()).all()
     return [
-        {"email": c.email, "name": c.name, "tier": c.tier, "status": c.status or "active", "created_at": c.created_at.isoformat()}
+        {"email": c.email, "name": c.name, "tier": c.tier, "created_at": c.created_at.isoformat()}
         for c in clients
     ]
 
@@ -590,23 +588,6 @@ def add_client_point(email: str, body: PointEntryIn, _: dict = Depends(require_a
     client.data = json.dumps(data)
     db.commit()
     return {"ok": True}
-
-
-class ClientStatusIn(BaseModel):
-    status: str  # "active" | "completed" | "archived"
-
-
-@app.patch("/api/admin/clients/{email}/status")
-def set_client_status(email: str, body: ClientStatusIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    """Update a client's lifecycle status (active / completed / archived)."""
-    if body.status not in ("active", "completed", "archived"):
-        raise HTTPException(status_code=400, detail="status must be active, completed, or archived")
-    client = db.query(Client).filter(Client.email == email.lower()).first()
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    client.status = body.status
-    db.commit()
-    return {"ok": True, "status": body.status}
 
 
 @app.delete("/api/admin/clients/{email}")
