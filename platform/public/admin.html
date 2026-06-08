@@ -1449,12 +1449,13 @@ function renderIntakes(intakes){
     const goals=(i.payload&&i.payload.travel_goals)?i.payload.travel_goals:'(no goals stated)';
     const email_btn=i.email?'<button class="btn-sm primary" onclick="composeTo(\''+esc(i.name||'')+'\',\''+esc(i.email)+'\')">✉ Reply</button>':'';
     const import_btn='<button class="btn-sm ai" onclick="prefillImportFromIntake('+i.id+')">✨ Create Account</button>';
+    const delete_btn='<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteIntake('+i.id+',\''+esc(i.name||'Unknown')+'\')">🗑</button>';
     return '<div class="intake-card">'
       +'<div><div class="intake-name">'+esc(i.name||'Unknown')+'</div><div class="intake-email">'+esc(i.email||'')+(i.phone?' · '+esc(i.phone):'')+'</div></div>'
       +'<div class="intake-details">'+esc(goals)+'</div>'
       +'<div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">'
       +'<span style="font-size:.7rem;color:var(--muted)">'+(i.created_at||'').slice(0,10)+'</span>'
-      +import_btn+email_btn+'</div></div>';
+      +'<div style="display:flex;gap:4px">'+import_btn+email_btn+delete_btn+'</div></div></div>';
   }).join('')+'</div>';
 }
 function prefillImportFromIntake(id){
@@ -1470,6 +1471,18 @@ function prefillImportFromIntake(id){
     document.getElementById('ac-tier').value='Client';
     genCode();
   },100);
+}
+async function deleteIntake(id,name){
+  if(!confirm('Delete intake from "'+name+'"? This cannot be undone.')) return;
+  if(!ADMIN_TOKEN){alert('Not connected to backend');return;}
+  try{
+    const res=await fetch('/api/admin/intakes/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(res.ok){
+      delete _intakeMap[id];
+      loadIntakes();
+      toast('Intake deleted');
+    }
+  }catch(e){}
 }
 
 /* ════════════════════════════════════════════
