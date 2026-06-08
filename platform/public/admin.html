@@ -1020,7 +1020,20 @@ function openScanDoc(email){
 }
 function closeScanDoc(){ document.getElementById('scan-overlay').classList.remove('open'); }
 
-document.addEventListener('DOMContentLoaded',function(){
+document.addEventListener('DOMContentLoaded',async function(){
+  // Restore session from localStorage so page refresh doesn't log out
+  const saved=localStorage.getItem('dat_admin_token');
+  if(saved){
+    try{
+      const res=await fetch('/api/admin/clients',{headers:{'Authorization':'Bearer '+saved}});
+      if(res.ok){
+        ADMIN_TOKEN=saved;
+        enterAdmin();
+      } else {
+        localStorage.removeItem('dat_admin_token');
+      }
+    }catch(e){ /* backend unreachable — stay on login */ }
+  }
   const drop=document.getElementById('scan-drop-zone');
   if(!drop) return;
   drop.addEventListener('dragover',function(e){e.preventDefault();drop.classList.add('drag');});
@@ -1510,7 +1523,7 @@ async function doAdminLogin(){
   if(btn){btn.disabled=true;btn.textContent='Signing in…';}
   try{
     const res=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:u,password:p})});
-    if(res.ok){const d=await res.json();ADMIN_TOKEN=d.token;sessionStorage.setItem('dat_admin_token',d.token);
+    if(res.ok){const d=await res.json();ADMIN_TOKEN=d.token;localStorage.setItem('dat_admin_token',d.token);
       if(btn){btn.disabled=false;btn.textContent='Sign In';} return enterAdmin();}
     else if(res.status===401){if(btn){btn.disabled=false;btn.textContent='Sign In';} return adminError('Invalid credentials.');}
   }catch(e){}
@@ -1525,7 +1538,7 @@ function doAdminLogout(){
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('admin-user').value='';
   document.getElementById('admin-pass').value='';
-  ADMIN_TOKEN=null; sessionStorage.removeItem('dat_admin_token'); CLIENTS=[];
+  ADMIN_TOKEN=null; localStorage.removeItem('dat_admin_token'); CLIENTS=[];
 }
 
 /* ════════════════════════════════════════════
