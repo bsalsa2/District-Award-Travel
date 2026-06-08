@@ -524,6 +524,18 @@ def list_clients(_: dict = Depends(require_admin), db: Session = Depends(get_db)
     ]
 
 
+@app.get("/api/admin/clients/{email}")
+def get_client(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Return full client data including their portal JSON for the admin profile drawer."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    payload = json.loads(client.data or "{}")
+    payload.update({"name": client.name, "tier": client.tier, "email": client.email,
+                     "created_at": client.created_at.isoformat()})
+    return payload
+
+
 @app.post("/api/admin/clients")
 def create_client(body: ClientIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
     email = body.email.lower()
