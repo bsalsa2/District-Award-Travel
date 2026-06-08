@@ -890,60 +890,38 @@ function updateClientMetrics(){
   const nb=document.getElementById('nav-client-count');
   if(nb) nb.textContent=CLIENTS.length;
 }
-function statusBadge(s){
-  if(s==='completed') return '<span class="badge" style="background:rgba(16,185,129,.15);color:#10b981">✓ Completed</span>';
-  if(s==='archived') return '<span class="badge" style="background:rgba(107,114,128,.15);color:#9ca3af">Archived</span>';
-  return '<span class="badge badge-blue">Active</span>';
-}
-function renderClientsTable(filterStatus){
-  filterStatus=filterStatus||'active';
-  const filtered=CLIENTS.filter(function(c){ return (c.status||'active')===filterStatus; });
-  const counts={active:0,completed:0,archived:0};
-  CLIENTS.forEach(function(c){ const s=c.status||'active'; if(counts[s]!==undefined) counts[s]++; });
-  const filterBar='<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
-    +['active','completed','archived'].map(function(s){
-      const labels={active:'Active',completed:'Completed',archived:'Archived'};
-      const active=s===filterStatus;
-      return '<button onclick="renderClientsTable(\''+s+'\')" style="padding:4px 14px;border-radius:20px;border:1px solid '+(active?'var(--blue)':'rgba(255,255,255,.12)')+';background:'+(active?'rgba(69,179,255,.15)':'transparent')+';color:'+(active?'var(--blue)':'var(--muted)')+';cursor:pointer;font-size:.8rem">'+labels[s]+' ('+counts[s]+')</button>';
-    }).join('')+'</div>';
-  const rows = filtered.length
-    ? filtered.map(function(c){
-        return '<tr><td><div class="client-name">'+esc(c.name)+'</div></td>'
-          +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
-          +'<td>'+statusBadge(c.status||'active')+'<span class="badge badge-blue" style="margin-left:4px">'+esc(c.tier)+'</span></td>'
-          +'<td><div class="client-sub">'+(c.created_at||'').slice(0,10)+'</div></td>'
-          +'<td><div style="display:flex;gap:5px;flex-wrap:wrap">'
-          +'<button class="btn-sm" onclick="composeTo(\''+esc(c.name)+'\',\''+esc(c.email)+'\')">✉</button>'
-          +'<button class="btn-sm" style="border-color:rgba(69,179,255,.4);color:var(--blue)" onclick="openScanDoc(\''+esc(c.email)+'\')">📄 Scan</button>'
-          +'<button class="btn-sm primary" onclick="runSweetSpots(\''+esc(c.email)+'\',\''+esc(c.name)+'\')">✨ Sweet Spots</button>'
-          +(c.status!=='completed'?'<button class="btn-sm" style="border-color:rgba(16,185,129,.4);color:#10b981" onclick="setClientStatus(\''+esc(c.email)+'\',\'completed\')">✓ Done</button>':'')
-          +(c.status!=='active'?'<button class="btn-sm" style="border-color:rgba(69,179,255,.2);color:var(--muted)" onclick="setClientStatus(\''+esc(c.email)+'\',\'active\')">↩ Restore</button>':'')
-          +'<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="confirmDeleteClient(\''+esc(c.email)+'\',\''+esc(c.name)+'\')">🗑</button>'
-          +'</div></td></tr>';
-      }).join('')
-    : '<tr><td colspan="5" style="padding:30px;text-align:center;color:var(--muted)">No '+filterStatus+' clients</td></tr>';
-  const html=filterBar+'<table><thead><tr><th>Name</th><th>Email</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+function renderClientsTable(){
+  const html = CLIENTS.length
+    ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Added</th><th></th></tr></thead><tbody>'
+      + CLIENTS.map(function(c){
+          return '<tr><td><div class="client-name">'+esc(c.name)+'</div></td>'
+            +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
+            +'<td><span class="badge badge-blue">'+esc(c.tier)+'</span></td>'
+            +'<td><div class="client-sub">'+(c.created_at||'').slice(0,10)+'</div></td>'
+            +'<td><div style="display:flex;gap:5px;flex-wrap:wrap">'
+            +'<button class="btn-sm" onclick="composeTo(\''+esc(c.name)+'\',\''+esc(c.email)+'\')">✉</button>'
+            +'<button class="btn-sm" style="border-color:rgba(69,179,255,.4);color:var(--blue)" onclick="openScanDoc(\''+esc(c.email)+'\')">📄 Scan</button>'
+            +'<button class="btn-sm primary" onclick="runSweetSpots(\''+esc(c.email)+'\',\''+esc(c.name)+'\')">✨ Sweet Spots</button>'
+            +'<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="confirmDeleteClient(\''+esc(c.email)+'\',\''+esc(c.name)+'\')">🗑</button>'
+            +'</div></td></tr>';
+        }).join('')
+      + '</tbody></table>'
+    : '<div style="padding:40px;text-align:center;color:var(--muted)">'
+      +'<div style="font-size:1.5rem;margin-bottom:10px">👤</div>'
+      +'<div style="color:var(--text);margin-bottom:6px">No clients yet</div>'
+      +'<div style="font-size:.83rem">Add a client manually or use <strong style="color:var(--purple)">✨ Import from Email</strong> to create one from a forwarded email.</div></div>';
   const wrap1=document.getElementById('ov-clients-table');
   const wrap2=document.getElementById('clients-table-wrap');
   const tableWrap='<div class="table-wrap">'+html+'</div>';
   if(wrap1) wrap1.innerHTML=tableWrap;
   if(wrap2) wrap2.innerHTML=tableWrap;
 }
-async function setClientStatus(email,status){
-  const res=await fetch('/api/admin/clients/'+encodeURIComponent(email)+'/status',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},body:JSON.stringify({status:status})});
-  if(res.ok){
-    const c=CLIENTS.find(function(x){return x.email===email;});
-    if(c) c.status=status;
-    renderClientsTable(status==='active'?'active':status);
-    toast(status==='completed'?'Client marked as completed':'Client restored to active');
-  }
-}
 async function confirmDeleteClient(email,name){
-  if(!confirm('Permanently delete "'+name+'"? This cannot be undone.\n\nTip: Use "✓ Done" to mark a completed client instead of deleting them.')) return;
+  if(!confirm('Permanently delete "'+name+'"? This cannot be undone.')) return;
   const res=await fetch('/api/admin/clients/'+encodeURIComponent(email),{method:'DELETE',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
   if(res.ok){
     CLIENTS=CLIENTS.filter(function(c){return c.email!==email;});
-    renderClientsTable('active');
+    renderClientsTable();
     toast('Client deleted');
   }
 }
