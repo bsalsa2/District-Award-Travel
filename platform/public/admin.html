@@ -922,8 +922,7 @@ function renderClientsTable(filterStatus){
   if(wrap2) wrap2.innerHTML=tableWrap;
 }
 async function setClientStatus(email,status){
-  const tok=localStorage.getItem('dat_admin_token');
-  const res=await fetch('/api/admin/clients/'+encodeURIComponent(email)+'/status',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({status:status})});
+  const res=await fetch('/api/admin/clients/'+encodeURIComponent(email)+'/status',{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},body:JSON.stringify({status:status})});
   if(res.ok){
     const c=CLIENTS.find(function(x){return x.email===email;});
     if(c) c.status=status;
@@ -933,8 +932,7 @@ async function setClientStatus(email,status){
 }
 async function confirmDeleteClient(email,name){
   if(!confirm('Permanently delete "'+name+'"? This cannot be undone.\n\nTip: Use "✓ Done" to mark a completed client instead of deleting them.')) return;
-  const tok=localStorage.getItem('dat_admin_token');
-  const res=await fetch('/api/admin/clients/'+encodeURIComponent(email),{method:'DELETE',headers:{'Authorization':'Bearer '+tok}});
+  const res=await fetch('/api/admin/clients/'+encodeURIComponent(email),{method:'DELETE',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
   if(res.ok){
     CLIENTS=CLIENTS.filter(function(c){return c.email!==email;});
     renderClientsTable('active');
@@ -1364,8 +1362,10 @@ function cmApplyTemplate(){
 function sendCompose(){
   const email=document.getElementById('cm-email').value.trim();
   if(!email){alert('Enter an email');return;}
-  window.location.href='mailto:'+email+'?subject='+encodeURIComponent(document.getElementById('cm-subject').value)+'&body='+encodeURIComponent(document.getElementById('cm-body').value);
-  closeCompose(); toast('Opening mail app…');
+  const subject=encodeURIComponent(document.getElementById('cm-subject').value);
+  const body=encodeURIComponent(document.getElementById('cm-body').value);
+  window.open('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(email)+'&su='+subject+'&body='+body,'_blank');
+  closeCompose(); toast('Opening Gmail…');
 }
 function quickComposeCreds(){
   const email=document.getElementById('res-email').textContent;
@@ -1418,8 +1418,8 @@ async function generateClient(){
       } else if(res.status===409){alert('A client with that email already exists');return;}
     }catch(e){}
   }
-  document.getElementById('res-title').innerHTML='✓ Client created (offline only)';
-  document.getElementById('res-explain').innerHTML='Not connected to backend. Sign in with admin credentials to save permanently.';
+  document.getElementById('res-title').innerHTML='⚠️ Not saved — backend offline';
+  document.getElementById('res-explain').innerHTML='The backend is not connected. This client was <strong>not</strong> saved — they cannot log in yet. Deploy the app on Render and sign in with your real admin credentials to save clients permanently.';
   document.getElementById('addclient-form').style.display='none';
   document.getElementById('addclient-result').style.display='block';
 }
@@ -1502,8 +1502,10 @@ async function doAdminLogin(){
     else if(res.status===401){if(btn){btn.disabled=false;btn.textContent='Sign In';} return adminError('Invalid credentials.');}
   }catch(e){}
   if(btn){btn.disabled=false;btn.textContent='Sign In';}
-  if((u==='braden'||u==='admin'||u==='admin@districtawardtravel.com')&&p==='dat2026') enterAdmin();
-  else adminError('Invalid credentials.');
+  if((u==='braden'||u==='admin'||u==='admin@districtawardtravel.com')&&p==='dat2026'){
+    enterAdmin();
+    setTimeout(function(){toast('⚠️ Backend offline — running in preview mode. Clients will not be saved.');},800);
+  } else adminError('Invalid credentials.');
 }
 function doAdminLogout(){
   document.getElementById('admin').style.display='none';

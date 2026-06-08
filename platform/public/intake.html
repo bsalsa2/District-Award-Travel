@@ -85,13 +85,25 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .points-card input::placeholder{color:var(--dim)}
 .points-card-cpp{font-size:10px;color:var(--dim);margin-top:5px;font-family:monospace}
 
-/* ELITE STATUS CHECKBOXES */
-.status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px}
-.status-item{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 12px;cursor:pointer;transition:all .15s;font-size:12px;font-weight:500;user-select:none}
-.status-item:hover{border-color:var(--blue)}
-.status-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
-.status-item.checked{border-color:var(--green-border);background:var(--green-dim);color:var(--green)}
-.status-group-label{font-size:10px;font-family:monospace;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin:16px 0 6px}
+/* STATUS PICKER */
+.status-picker{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+.status-picker select{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;min-width:180px}
+.status-picker select:focus{border-color:var(--green)}
+.status-picker select option{background:var(--surface)}
+.status-picker button{padding:10px 16px;border-radius:8px;border:1px solid var(--green-border);background:var(--green-dim);color:var(--green);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.status-picker button:hover{background:var(--green);color:#030a05}
+.status-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.status-tag{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid}
+.status-tag .tag-remove{cursor:pointer;font-size:14px;line-height:1;opacity:.6;transition:opacity .15s}
+.status-tag .tag-remove:hover{opacity:1}
+.status-tag-airline{background:rgba(0,232,122,.08);color:var(--green);border-color:rgba(0,232,122,.2)}
+.status-tag-hotel{background:rgba(245,200,66,.08);color:var(--gold);border-color:rgba(245,200,66,.2)}
+.status-other-row{display:flex;gap:8px;margin-top:10px}
+.status-other-row input{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none}
+.status-other-row input:focus{border-color:var(--green)}
+.status-other-row input::placeholder{color:var(--dim)}
+.status-other-row button{padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
+.status-other-row button:hover{border-color:var(--green);color:var(--green)}
 
 /* RADIO CARDS */
 .radio-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
@@ -153,10 +165,11 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
   .form-grid,.points-grid{grid-template-columns:1fr 1fr}
   .pts-checklist{grid-template-columns:1fr 1fr}
   .radio-grid,.radio-grid-3{grid-template-columns:repeat(2,1fr)}
-  .status-grid{grid-template-columns:1fr 1fr}
   .trip-grid{grid-template-columns:1fr}
   .trip-date-row{grid-template-columns:1fr 1fr}
   .profile-check-grid{grid-template-columns:1fr}
+  .status-picker{flex-direction:column;align-items:stretch}
+  .status-picker select{min-width:auto}
 }
 </style>
 </head>
@@ -176,9 +189,10 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 
   <div class="progress-bar" id="progressBar">
     <div class="prog-step active" onclick="goToStep(1)"><span class="prog-num">1</span>About You</div>
-    <div class="prog-step" onclick="goToStep(2)"><span class="prog-num">2</span>Your Points</div>
-    <div class="prog-step" onclick="goToStep(3)"><span class="prog-num">3</span>Your Trips</div>
+    <div class="prog-step" onclick="goToStep(2)"><span class="prog-num">2</span>Points</div>
+    <div class="prog-step" onclick="goToStep(3)"><span class="prog-num">3</span>Trips</div>
     <div class="prog-step" onclick="goToStep(4)"><span class="prog-num">4</span>Preferences</div>
+    <div class="prog-step" onclick="goToStep(5)"><span class="prog-num">5</span>Your Profile</div>
   </div>
 
   <form id="intakeForm" novalidate>
@@ -228,51 +242,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
         </div>
       </div>
 
-      <!-- TRAVEL PROFILE -->
-      <div class="form-card">
-        <div class="form-card-title">✨ Build Your Travel Profile</div>
-        <div class="form-card-sub">Help us get to know you. This shapes our recommendations.</div>
-
-        <div style="margin-bottom:22px">
-          <div class="field-hint" style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Who do you usually travel with?</div>
-          <div class="radio-grid">
-            <label class="radio-card"><input type="radio" name="travel_with" value="solo"><div class="radio-card-icon">🧳</div><div class="radio-card-label">Solo</div><div class="radio-card-sub">Just me</div></label>
-            <label class="radio-card"><input type="radio" name="travel_with" value="couple"><div class="radio-card-icon">👫</div><div class="radio-card-label">Partner</div><div class="radio-card-sub">Two of us</div></label>
-            <label class="radio-card"><input type="radio" name="travel_with" value="family"><div class="radio-card-icon">👨‍👩‍👧</div><div class="radio-card-label">Family</div><div class="radio-card-sub">Kids in tow</div></label>
-            <label class="radio-card"><input type="radio" name="travel_with" value="group"><div class="radio-card-icon">👥</div><div class="radio-card-label">Groups</div><div class="radio-card-sub">Friends / work</div></label>
-          </div>
-        </div>
-
-        <div style="margin-bottom:22px">
-          <div class="field-hint" style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Your points experience level</div>
-          <div class="radio-grid-3">
-            <label class="radio-card"><input type="radio" name="pts_experience" value="new"><div class="radio-card-icon">🌱</div><div class="radio-card-label">Brand New</div><div class="radio-card-sub">Just getting started</div></label>
-            <label class="radio-card"><input type="radio" name="pts_experience" value="some"><div class="radio-card-icon">📈</div><div class="radio-card-label">Some Experience</div><div class="radio-card-sub">Have used points before</div></label>
-            <label class="radio-card"><input type="radio" name="pts_experience" value="savvy"><div class="radio-card-icon">🎯</div><div class="radio-card-label">Points Savvy</div><div class="radio-card-sub">Know my way around</div></label>
-          </div>
-        </div>
-
-        <div style="margin-bottom:22px">
-          <div class="field-hint" style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">What's your biggest travel frustration? (check all that apply)</div>
-          <div class="profile-check-grid" id="frustration-grid">
-            <label class="profile-check-item"><input type="checkbox" name="frustration" value="cant_afford_biz"> Can't afford business class with cash</label>
-            <label class="profile-check-item"><input type="checkbox" name="frustration" value="no_award_space"> Can never find award availability</label>
-            <label class="profile-check-item"><input type="checkbox" name="frustration" value="too_complicated"> The whole system is too complicated</label>
-            <label class="profile-check-item"><input type="checkbox" name="frustration" value="dont_know_start"> Don't know where to even start</label>
-            <label class="profile-check-item"><input type="checkbox" name="frustration" value="bad_redemptions"> Wasting points on bad-value redemptions</label>
-            <label class="profile-check-item"><input type="checkbox" name="frustration" value="group_travel"> Booking for groups is a nightmare</label>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>Dream destinations — bucket list</label>
-          <textarea name="dream_destinations" rows="3" placeholder="e.g. Japan for cherry blossom season, Maldives overwater bungalow, Safari in Kenya, Northern Lights in Iceland…"></textarea>
-          <div class="field-hint">Even vague ideas are helpful. No commitment — just your wishlist.</div>
-        </div>
-      </div>
-
       <div class="form-nav">
-        <div class="step-indicator">Step 1 of 4</div>
+        <div class="step-indicator">Step 1 of 5</div>
         <button type="button" class="btn btn-primary" onclick="nextStep(1)">Next: Your Points →</button>
       </div>
     </div>
@@ -354,63 +325,71 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
         </div>
       </div>
 
-      <!-- ELITE STATUS (multiple selection) -->
+      <!-- ELITE STATUS -->
       <div class="form-card">
         <div class="form-card-title">🎖️ Elite Status</div>
-        <div class="form-card-sub">Select every status you currently hold — many clients have multiple. This affects award availability, upgrade priority, and booking strategy.</div>
+        <div class="form-card-sub">Add every status you currently hold. Pick the airline or hotel, then the tier — this affects upgrade priority and booking strategy.</div>
 
-        <div class="status-group-label">── Airline Status</div>
-        <div class="status-grid" id="airline-status-grid">
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="AA Gold"> AA Gold</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="AA Platinum"> AA Platinum</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="AA Platinum Pro"> AA Platinum Pro</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="AA Executive Platinum"> AA Executive Platinum</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="United Silver"> United Silver</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="United Gold"> United Gold</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="United Platinum"> United Platinum</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="United 1K"> United 1K</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Delta Silver Medallion"> Delta Silver</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Delta Gold Medallion"> Delta Gold</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Delta Platinum Medallion"> Delta Platinum</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Delta Diamond Medallion"> Delta Diamond</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Alaska MVP"> Alaska MVP</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Alaska MVP Gold"> Alaska MVP Gold</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Alaska MVP Gold 75K"> Alaska MVP Gold 75K</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Southwest A-List"> Southwest A-List</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Southwest A-List Preferred"> SW A-List Preferred</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Flying Blue Silver"> Flying Blue Silver</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Flying Blue Gold"> Flying Blue Gold</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Flying Blue Platinum"> Flying Blue Platinum</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="British Airways Silver"> BA Silver</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="British Airways Gold"> BA Gold</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Singapore KrisFlyer Elite"> KrisFlyer Elite</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Singapore KrisFlyer Elite Gold"> KrisFlyer Elite Gold</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Cathay Diamond"> Cathay Diamond</label>
-          <label class="status-item"><input type="checkbox" class="airline-status-check" value="Virgin Atlantic Gold"> Virgin Atlantic Gold</label>
+        <div class="pts-group-label">── Airline Status</div>
+        <div class="status-picker" id="airline-status-picker">
+          <select id="airline-pick">
+            <option value="">Choose airline…</option>
+            <option value="American Airlines">American Airlines</option>
+            <option value="United">United</option>
+            <option value="Delta">Delta</option>
+            <option value="Alaska">Alaska</option>
+            <option value="Southwest">Southwest</option>
+            <option value="Air France/KLM Flying Blue">Flying Blue</option>
+            <option value="British Airways">British Airways</option>
+            <option value="Singapore KrisFlyer">Singapore KrisFlyer</option>
+            <option value="Cathay Pacific">Cathay Pacific</option>
+            <option value="Virgin Atlantic">Virgin Atlantic</option>
+            <option value="ANA">ANA</option>
+            <option value="JAL">JAL</option>
+            <option value="Finnair">Finnair</option>
+            <option value="Air Canada Aeroplan">Air Canada Aeroplan</option>
+            <option value="Qantas">Qantas</option>
+            <option value="Emirates">Emirates</option>
+          </select>
+          <select id="airline-tier-pick">
+            <option value="">Choose tier…</option>
+          </select>
+          <button type="button" onclick="addAirlineStatus()">+ Add</button>
+        </div>
+        <div class="status-tags" id="airline-status-tags"></div>
+        <div class="status-other-row">
+          <input type="text" id="airline-status-other" placeholder="Don't see your program? Type it here, e.g. Turkish Miles & Smiles Elite">
+          <button type="button" onclick="addAirlineOther()">+ Add</button>
         </div>
 
-        <div class="status-group-label">── Hotel Status</div>
-        <div class="status-grid" id="hotel-status-grid">
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Marriott Silver Elite"> Bonvoy Silver</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Marriott Gold Elite"> Bonvoy Gold</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Marriott Platinum Elite"> Bonvoy Platinum</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Marriott Titanium Elite"> Bonvoy Titanium</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Marriott Ambassador Elite"> Bonvoy Ambassador</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Hyatt Discoverist"> Hyatt Discoverist</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Hyatt Explorist"> Hyatt Explorist</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Hyatt Globalist"> Hyatt Globalist</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Hilton Silver"> Hilton Silver</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Hilton Gold"> Hilton Gold</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="Hilton Diamond"> Hilton Diamond</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="IHG Silver"> IHG Silver</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="IHG Gold"> IHG Gold</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="IHG Platinum"> IHG Platinum</label>
-          <label class="status-item"><input type="checkbox" class="hotel-status-check" value="IHG Spire Elite"> IHG Spire Elite</label>
+        <div class="pts-group-label" style="margin-top:28px">── Hotel Status</div>
+        <div class="status-picker" id="hotel-status-picker">
+          <select id="hotel-pick">
+            <option value="">Choose hotel…</option>
+            <option value="Marriott Bonvoy">Marriott Bonvoy</option>
+            <option value="World of Hyatt">World of Hyatt</option>
+            <option value="Hilton Honors">Hilton Honors</option>
+            <option value="IHG One Rewards">IHG One Rewards</option>
+            <option value="Wyndham Rewards">Wyndham Rewards</option>
+            <option value="Accor Live Limitless">Accor Live Limitless</option>
+            <option value="Best Western Rewards">Best Western Rewards</option>
+          </select>
+          <select id="hotel-tier-pick">
+            <option value="">Choose tier…</option>
+          </select>
+          <button type="button" onclick="addHotelStatus()">+ Add</button>
+        </div>
+        <div class="status-tags" id="hotel-status-tags"></div>
+        <div class="status-other-row">
+          <input type="text" id="hotel-status-other" placeholder="Don't see your program? Type it here, e.g. Radisson Rewards Premium">
+          <button type="button" onclick="addHotelOther()">+ Add</button>
         </div>
 
-        <div class="form-grid" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
+        <div class="pts-group-label" style="margin-top:28px">── Credit Cards</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Select your premium travel cards — these determine which transfer partners and perks you have access to.</div>
+        <div class="form-grid">
           <div class="field">
-            <label>Amex Card Level</label>
+            <label>Amex Card</label>
             <select name="amex_card">
               <option value="">No Amex card</option>
               <option>Amex Green</option>
@@ -420,10 +399,10 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
               <option>Amex Business Platinum</option>
               <option>Amex Centurion (Black)</option>
             </select>
-            <div class="field-hint">Affects Fine Hotels &amp; Resorts and Hotel Collection access.</div>
+            <div class="field-hint">Fine Hotels &amp; Resorts, Hotel Collection access.</div>
           </div>
           <div class="field">
-            <label>Chase Card Level</label>
+            <label>Chase Card</label>
             <select name="chase_card">
               <option value="">No Chase card</option>
               <option>Chase Sapphire Preferred</option>
@@ -432,12 +411,30 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
               <option>Chase Ink Business Reserve</option>
             </select>
           </div>
+          <div class="field">
+            <label>Capital One Card</label>
+            <select name="cap1_card">
+              <option value="">No Capital One card</option>
+              <option>Capital One Venture</option>
+              <option>Capital One Venture X</option>
+              <option>Capital One Venture X Business</option>
+              <option>Capital One Spark Miles</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Bilt Card</label>
+            <select name="bilt_card">
+              <option value="">No Bilt card</option>
+              <option>Bilt Mastercard</option>
+            </select>
+            <div class="field-hint">Bilt earns points on rent — great transfer partner access.</div>
+          </div>
         </div>
       </div>
 
       <div class="form-nav">
         <button type="button" class="btn btn-ghost" onclick="prevStep(2)">← Back</button>
-        <div class="step-indicator">Step 2 of 4</div>
+        <div class="step-indicator">Step 2 of 5</div>
         <button type="button" class="btn btn-primary" onclick="nextStep(2)">Next: Your Trips →</button>
       </div>
     </div>
@@ -510,7 +507,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
               <div class="radio-card-label">Mid-Scale</div>
               <div class="radio-card-sub">Comfortable</div>
             </label>
-            <label class="radio-card" id="rh-upscale">
+            <label class="radio-card">
               <input type="radio" name="hotel_pref" value="upscale" checked>
               <div class="radio-card-icon">🏰</div>
               <div class="radio-card-label">Upscale</div>
@@ -528,7 +525,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 
       <div class="form-nav">
         <button type="button" class="btn btn-ghost" onclick="prevStep(3)">← Back</button>
-        <div class="step-indicator">Step 3 of 4</div>
+        <div class="step-indicator">Step 3 of 5</div>
         <button type="button" class="btn btn-primary" onclick="nextStep(3)">Next: Preferences →</button>
       </div>
     </div>
@@ -587,6 +584,57 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
         </div>
       </div>
 
+      <div class="form-nav">
+        <button type="button" class="btn btn-ghost" onclick="prevStep(4)">← Back</button>
+        <div class="step-indicator">Step 4 of 5</div>
+        <button type="button" class="btn btn-primary" onclick="nextStep(4)">Next: Build Your Profile →</button>
+      </div>
+    </div>
+
+    <!-- ── STEP 5: BUILD YOUR PROFILE + SUBMIT ── -->
+    <div class="form-section" data-step="5">
+      <div class="form-card">
+        <div class="form-card-title">✨ Build Your Travel Profile</div>
+        <div class="form-card-sub">Almost done! This helps us personalize everything — from recommendations to how we communicate with you.</div>
+
+        <div style="margin-bottom:22px">
+          <div class="field-hint" style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Who do you usually travel with?</div>
+          <div class="radio-grid">
+            <label class="radio-card"><input type="radio" name="travel_with" value="solo"><div class="radio-card-icon">🧳</div><div class="radio-card-label">Solo</div><div class="radio-card-sub">Just me</div></label>
+            <label class="radio-card"><input type="radio" name="travel_with" value="couple"><div class="radio-card-icon">👫</div><div class="radio-card-label">Partner</div><div class="radio-card-sub">Two of us</div></label>
+            <label class="radio-card"><input type="radio" name="travel_with" value="family"><div class="radio-card-icon">👨‍👩‍👧</div><div class="radio-card-label">Family</div><div class="radio-card-sub">Kids in tow</div></label>
+            <label class="radio-card"><input type="radio" name="travel_with" value="group"><div class="radio-card-icon">👥</div><div class="radio-card-label">Groups</div><div class="radio-card-sub">Friends / work</div></label>
+          </div>
+        </div>
+
+        <div style="margin-bottom:22px">
+          <div class="field-hint" style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">Your points experience level</div>
+          <div class="radio-grid-3">
+            <label class="radio-card"><input type="radio" name="pts_experience" value="new"><div class="radio-card-icon">🌱</div><div class="radio-card-label">Brand New</div><div class="radio-card-sub">Just getting started</div></label>
+            <label class="radio-card"><input type="radio" name="pts_experience" value="some"><div class="radio-card-icon">📈</div><div class="radio-card-label">Some Experience</div><div class="radio-card-sub">Have used points before</div></label>
+            <label class="radio-card"><input type="radio" name="pts_experience" value="savvy"><div class="radio-card-icon">🎯</div><div class="radio-card-label">Points Savvy</div><div class="radio-card-sub">Know my way around</div></label>
+          </div>
+        </div>
+
+        <div style="margin-bottom:22px">
+          <div class="field-hint" style="font-size:12px;color:var(--muted);margin-bottom:8px;font-weight:600">What's your biggest travel frustration? (check all that apply)</div>
+          <div class="profile-check-grid" id="frustration-grid">
+            <label class="profile-check-item"><input type="checkbox" name="frustration" value="cant_afford_biz"> Can't afford business class with cash</label>
+            <label class="profile-check-item"><input type="checkbox" name="frustration" value="no_award_space"> Can never find award availability</label>
+            <label class="profile-check-item"><input type="checkbox" name="frustration" value="too_complicated"> The whole system is too complicated</label>
+            <label class="profile-check-item"><input type="checkbox" name="frustration" value="dont_know_start"> Don't know where to even start</label>
+            <label class="profile-check-item"><input type="checkbox" name="frustration" value="bad_redemptions"> Wasting points on bad-value redemptions</label>
+            <label class="profile-check-item"><input type="checkbox" name="frustration" value="group_travel"> Booking for groups is a nightmare</label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Dream destinations — bucket list</label>
+          <textarea name="dream_destinations" rows="3" placeholder="e.g. Japan for cherry blossom season, Maldives overwater bungalow, Safari in Kenya, Northern Lights in Iceland…"></textarea>
+          <div class="field-hint">Even vague ideas are helpful. No commitment — just your wishlist.</div>
+        </div>
+      </div>
+
       <div class="submit-card">
         <div class="form-card-title" style="margin-bottom:8px">✅ Ready to Submit</div>
         <div style="font-size:14px;color:var(--muted);line-height:1.6">
@@ -599,8 +647,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
       </div>
 
       <div class="form-nav">
-        <button type="button" class="btn btn-ghost" onclick="prevStep(4)">← Back</button>
-        <div class="step-indicator">Step 4 of 4</div>
+        <button type="button" class="btn btn-ghost" onclick="prevStep(5)">← Back</button>
+        <div class="step-indicator">Step 5 of 5</div>
         <button type="submit" class="btn btn-primary" id="submitBtn">Submit Application →</button>
       </div>
     </div>
@@ -659,7 +707,7 @@ function togglePtsBalance(chk, fieldId) {
       const m = PTS_META[fieldId] || {};
       const card = document.createElement('div');
       card.className = 'points-card'; card.id = 'bal-card-' + fieldId;
-      card.innerHTML = `<div class="points-card-header"><span class="points-card-name">${m.name}</span><span class="points-card-type ${m.cls}">${m.tag}</span></div><input type="text" placeholder="e.g. 500,000" inputmode="numeric" oninput="document.getElementById('${fieldId}').value=this.value"><div class="points-card-cpp">${m.cpp}</div>`;
+      card.innerHTML = '<div class="points-card-header"><span class="points-card-name">'+m.name+'</span><span class="points-card-type '+m.cls+'">'+m.tag+'</span></div><input type="text" placeholder="e.g. 500,000" inputmode="numeric" oninput="document.getElementById(\''+fieldId+'\').value=this.value"><div class="points-card-cpp">'+m.cpp+'</div>';
       grid.appendChild(card);
     }
   } else {
@@ -670,13 +718,109 @@ function togglePtsBalance(chk, fieldId) {
   phase.style.display = grid.children.length > 0 ? 'block' : 'none';
 }
 
-/* ── Elite status toggle ── */
-document.querySelectorAll('.status-item').forEach(function(item) {
-  item.addEventListener('click', function() {
-    const cb = item.querySelector('input[type=checkbox]');
-    item.classList.toggle('checked', cb.checked);
+/* ── Elite Status Picker ── */
+const AIRLINE_TIERS = {
+  'American Airlines': ['Gold', 'Platinum', 'Platinum Pro', 'Executive Platinum'],
+  'United': ['Silver', 'Gold', 'Platinum', '1K', 'Global Services'],
+  'Delta': ['Silver Medallion', 'Gold Medallion', 'Platinum Medallion', 'Diamond Medallion'],
+  'Alaska': ['MVP', 'MVP Gold', 'MVP Gold 75K'],
+  'Southwest': ['A-List', 'A-List Preferred'],
+  'Air France/KLM Flying Blue': ['Silver', 'Gold', 'Platinum', 'Ultimate'],
+  'British Airways': ['Bronze', 'Silver', 'Gold'],
+  'Singapore KrisFlyer': ['Elite Silver', 'Elite Gold', 'PPS Club'],
+  'Cathay Pacific': ['Green', 'Silver', 'Gold', 'Diamond'],
+  'Virgin Atlantic': ['Silver', 'Gold'],
+  'ANA': ['Bronze', 'Platinum', 'Diamond', 'Super Flyers'],
+  'JAL': ['Crystal', 'Sapphire', 'JGC Premier', 'Diamond'],
+  'Finnair': ['Silver', 'Gold', 'Platinum', 'Platinum Lumo'],
+  'Air Canada Aeroplan': ['25K', '35K', '50K', '75K', 'Super Elite'],
+  'Qantas': ['Silver', 'Gold', 'Platinum', 'Platinum One'],
+  'Emirates': ['Silver', 'Gold', 'Platinum'],
+};
+const HOTEL_TIERS = {
+  'Marriott Bonvoy': ['Silver Elite', 'Gold Elite', 'Platinum Elite', 'Titanium Elite', 'Ambassador Elite'],
+  'World of Hyatt': ['Discoverist', 'Explorist', 'Globalist'],
+  'Hilton Honors': ['Silver', 'Gold', 'Diamond'],
+  'IHG One Rewards': ['Silver', 'Gold', 'Platinum', 'Diamond', 'Spire Elite'],
+  'Wyndham Rewards': ['Gold', 'Platinum', 'Diamond'],
+  'Accor Live Limitless': ['Silver', 'Gold', 'Platinum', 'Diamond'],
+  'Best Western Rewards': ['Gold', 'Platinum', 'Diamond', 'Diamond Select'],
+};
+
+let airlineStatuses = [];
+let hotelStatuses = [];
+
+document.getElementById('airline-pick').addEventListener('change', function() {
+  const tierSel = document.getElementById('airline-tier-pick');
+  tierSel.innerHTML = '<option value="">Choose tier…</option>';
+  const tiers = AIRLINE_TIERS[this.value] || [];
+  tiers.forEach(function(t) {
+    const o = document.createElement('option'); o.value = t; o.textContent = t;
+    tierSel.appendChild(o);
   });
 });
+
+document.getElementById('hotel-pick').addEventListener('change', function() {
+  const tierSel = document.getElementById('hotel-tier-pick');
+  tierSel.innerHTML = '<option value="">Choose tier…</option>';
+  const tiers = HOTEL_TIERS[this.value] || [];
+  tiers.forEach(function(t) {
+    const o = document.createElement('option'); o.value = t; o.textContent = t;
+    tierSel.appendChild(o);
+  });
+});
+
+function renderStatusTags(list, containerId, cls) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = list.map(function(s, i) {
+    return '<span class="status-tag '+cls+'">'+s+' <span class="tag-remove" onclick="removeStatus(\''+cls+'\','+i+')">✕</span></span>';
+  }).join('');
+}
+
+function removeStatus(cls, i) {
+  if (cls === 'status-tag-airline') { airlineStatuses.splice(i, 1); renderStatusTags(airlineStatuses, 'airline-status-tags', 'status-tag-airline'); }
+  else { hotelStatuses.splice(i, 1); renderStatusTags(hotelStatuses, 'hotel-status-tags', 'status-tag-hotel'); }
+}
+
+function addAirlineStatus() {
+  const airline = document.getElementById('airline-pick').value;
+  const tier = document.getElementById('airline-tier-pick').value;
+  if (!airline || !tier) return;
+  const val = airline + ' ' + tier;
+  if (airlineStatuses.indexOf(val) === -1) airlineStatuses.push(val);
+  renderStatusTags(airlineStatuses, 'airline-status-tags', 'status-tag-airline');
+  document.getElementById('airline-pick').value = '';
+  document.getElementById('airline-tier-pick').innerHTML = '<option value="">Choose tier…</option>';
+}
+
+function addAirlineOther() {
+  const inp = document.getElementById('airline-status-other');
+  const val = inp.value.trim();
+  if (!val) return;
+  if (airlineStatuses.indexOf(val) === -1) airlineStatuses.push(val);
+  renderStatusTags(airlineStatuses, 'airline-status-tags', 'status-tag-airline');
+  inp.value = '';
+}
+
+function addHotelStatus() {
+  const hotel = document.getElementById('hotel-pick').value;
+  const tier = document.getElementById('hotel-tier-pick').value;
+  if (!hotel || !tier) return;
+  const val = hotel + ' ' + tier;
+  if (hotelStatuses.indexOf(val) === -1) hotelStatuses.push(val);
+  renderStatusTags(hotelStatuses, 'hotel-status-tags', 'status-tag-hotel');
+  document.getElementById('hotel-pick').value = '';
+  document.getElementById('hotel-tier-pick').innerHTML = '<option value="">Choose tier…</option>';
+}
+
+function addHotelOther() {
+  const inp = document.getElementById('hotel-status-other');
+  const val = inp.value.trim();
+  if (!val) return;
+  if (hotelStatuses.indexOf(val) === -1) hotelStatuses.push(val);
+  renderStatusTags(hotelStatuses, 'hotel-status-tags', 'status-tag-hotel');
+  inp.value = '';
+}
 
 /* ── Trip builder ── */
 let tripCount = 0;
@@ -686,69 +830,47 @@ const thisYear = new Date().getFullYear();
 function buildTripBlock(n) {
   const block = document.createElement('div');
   block.className = 'trip-block'; block.id = 'trip-block-' + n;
-  const monthOpts = '<option value="">Month</option>' + MONTHS.map((m,i)=>`<option value="${m}">${m}</option>`).join('');
-  const yearOpts = '<option value="">Year</option>' + [0,1,2,3].map(i=>`<option>${thisYear+i}</option>`).join('');
-  const paxOpts = [1,2,3,4,5,6,7,8,9,10].map(i=>`<option value="${i}">${i} passenger${i>1?'s':''}</option>`).join('') + '<option value="11-15">11-15 passengers</option><option value="16+">16+ passengers (group)</option>';
-  block.innerHTML = `
-    <div class="trip-block-header">
-      <span class="trip-num-label">✈ Trip ${n}</span>
-      ${n > 1 ? `<button type="button" class="trip-remove" onclick="removeTrip(${n})" title="Remove trip">✕</button>` : ''}
-    </div>
-    <div class="trip-grid">
-      <div class="field" style="grid-column:1/-1">
-        <label>Destination</label>
-        <input type="text" class="trip-dest" name="trip${n}_dest" placeholder="e.g. Tokyo, Japan">
-      </div>
-      <div>
-        <div class="trip-section-label">Travel Window</div>
-        <div class="trip-date-row">
-          <div class="field"><select class="trip-month" name="trip${n}_month">${monthOpts}</select></div>
-          <div class="field"><select class="trip-year" name="trip${n}_year">${yearOpts}</select></div>
-          <div class="field">
-            <select name="trip${n}_pax">${paxOpts}</select>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="trip-section-label">Date Flexibility</div>
-        <div class="flex-btns" data-trip="${n}">
-          <button type="button" class="flex-btn active" data-flex="fixed" onclick="setFlex(this)">Fixed dates</button>
-          <button type="button" class="flex-btn" data-flex="few_days" onclick="setFlex(this)">±2–3 days</button>
-          <button type="button" class="flex-btn" data-flex="week" onclick="setFlex(this)">±1 week</button>
-          <button type="button" class="flex-btn" data-flex="very_flexible" onclick="setFlex(this)">Very flexible</button>
-        </div>
-        <input type="hidden" class="trip-flex" name="trip${n}_flex" value="fixed">
-      </div>
-    </div>`;
+  const monthOpts = '<option value="">Month</option>' + MONTHS.map(function(m){return '<option value="'+m+'">'+m+'</option>';}).join('');
+  const yearOpts = '<option value="">Year</option>' + [0,1,2,3].map(function(i){return '<option>'+(thisYear+i)+'</option>';}).join('');
+  const paxOpts = [1,2,3,4,5,6,7,8,9,10].map(function(i){return '<option value="'+i+'">'+i+' passenger'+(i>1?'s':'')+'</option>';}).join('') + '<option value="11-15">11-15 passengers</option><option value="16+">16+ passengers (group)</option>';
+  block.innerHTML = '<div class="trip-block-header"><span class="trip-num-label">✈ Trip '+n+'</span>'
+    +(n > 1 ? '<button type="button" class="trip-remove" onclick="removeTrip('+n+')" title="Remove trip">✕</button>' : '')
+    +'</div><div class="trip-grid"><div class="field" style="grid-column:1/-1"><label>Destination</label><input type="text" class="trip-dest" name="trip'+n+'_dest" placeholder="e.g. Tokyo, Japan"></div>'
+    +'<div><div class="trip-section-label">Travel Window</div><div class="trip-date-row"><div class="field"><select class="trip-month" name="trip'+n+'_month">'+monthOpts+'</select></div><div class="field"><select class="trip-year" name="trip'+n+'_year">'+yearOpts+'</select></div><div class="field"><select name="trip'+n+'_pax">'+paxOpts+'</select></div></div></div>'
+    +'<div><div class="trip-section-label">Date Flexibility</div><div class="flex-btns" data-trip="'+n+'">'
+    +'<button type="button" class="flex-btn active" data-flex="fixed" onclick="setFlex(this)">Fixed dates</button>'
+    +'<button type="button" class="flex-btn" data-flex="few_days" onclick="setFlex(this)">±2–3 days</button>'
+    +'<button type="button" class="flex-btn" data-flex="week" onclick="setFlex(this)">±1 week</button>'
+    +'<button type="button" class="flex-btn" data-flex="very_flexible" onclick="setFlex(this)">Very flexible</button>'
+    +'</div><input type="hidden" class="trip-flex" name="trip'+n+'_flex" value="fixed"></div></div>';
   return block;
 }
 
 function addTrip() {
   tripCount++;
-  const container = document.getElementById('trips-container');
+  var container = document.getElementById('trips-container');
   container.appendChild(buildTripBlock(tripCount));
   if (tripCount >= 5) document.getElementById('add-trip-btn').style.display = 'none';
   renumberTrips();
 }
 
 function removeTrip(n) {
-  const block = document.getElementById('trip-block-' + n);
+  var block = document.getElementById('trip-block-' + n);
   if (block) block.remove();
   if (tripCount < 5) document.getElementById('add-trip-btn').style.display = 'block';
   renumberTrips();
 }
 
 function renumberTrips() {
-  const blocks = document.querySelectorAll('.trip-block');
+  var blocks = document.querySelectorAll('.trip-block');
   tripCount = blocks.length;
   blocks.forEach(function(block, i) {
-    const num = i + 1;
+    var num = i + 1;
     block.id = 'trip-block-' + num;
-    const label = block.querySelector('.trip-num-label');
+    var label = block.querySelector('.trip-num-label');
     if (label) label.textContent = '✈ Trip ' + num;
-    const removeBtn = block.querySelector('.trip-remove');
+    var removeBtn = block.querySelector('.trip-remove');
     if (removeBtn) { removeBtn.setAttribute('onclick', 'removeTrip(' + num + ')'); if (num === 1) removeBtn.style.display = 'none'; }
-    // Rename inputs
     block.querySelectorAll('[name^="trip"]').forEach(function(el) {
       el.name = el.name.replace(/trip\d+_/, 'trip' + num + '_');
     });
@@ -756,14 +878,13 @@ function renumberTrips() {
 }
 
 function setFlex(btn) {
-  const group = btn.closest('.flex-btns');
+  var group = btn.closest('.flex-btns');
   group.querySelectorAll('.flex-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
-  const flexInput = btn.closest('.trip-block').querySelector('.trip-flex');
+  var flexInput = btn.closest('.trip-block').querySelector('.trip-flex');
   if (flexInput) flexInput.value = btn.dataset.flex;
 }
 
-// Init with one trip on load
 document.addEventListener('DOMContentLoaded', function() { addTrip(); });
 
 /* ── Cabin/Hotel radio visual ── */
@@ -782,14 +903,14 @@ document.querySelectorAll('.radio-card input:checked').forEach(function(r) {
 /* ── Profile checkbox toggle ── */
 document.querySelectorAll('.profile-check-item').forEach(function(item) {
   item.addEventListener('click', function() {
-    const cb = item.querySelector('input[type=checkbox]');
+    var cb = item.querySelector('input[type=checkbox]');
     setTimeout(function() { item.classList.toggle('checked', cb.checked); }, 0);
   });
 });
 
 /* ── Step navigation ── */
-let currentStep = 1;
-const totalSteps = 4;
+var currentStep = 1;
+var totalSteps = 5;
 
 function updateProgress() {
   document.querySelectorAll('.prog-step').forEach(function(el, i) {
@@ -806,15 +927,15 @@ function showStep(n) {
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function validateStep(n) {
-  const section = document.querySelector('[data-step="'+n+'"]');
-  const required = section.querySelectorAll('[required]');
-  let ok = true;
+  var section = document.querySelector('[data-step="'+n+'"]');
+  var required = section.querySelectorAll('[required]');
+  var ok = true;
   required.forEach(function(f) {
     f.style.borderColor = '';
     if (f.type === 'checkbox') {
-      if (!f.checked) { ok = false; f.closest('.agree-row')?.classList.add('shake'); }
+      if (!f.checked) { ok = false; var row = f.closest('.agree-row'); if(row) row.classList.add('shake'); }
     } else if (!f.value.trim()) {
-      f.style.borderColor = 'var(--red)'; ok = false; if (ok === true) f.focus();
+      f.style.borderColor = 'var(--red)'; ok = false;
     }
   });
   return ok;
@@ -825,34 +946,34 @@ function prevStep(n) { if (n > 1) showStep(n-1); }
 /* ── Submit ── */
 document.getElementById('intakeForm').addEventListener('submit', function(e) {
   e.preventDefault();
-  if (!validateStep(4)) { return; }
-  const btn = document.getElementById('submitBtn');
+  if (!validateStep(5)) { return; }
+  var btn = document.getElementById('submitBtn');
   btn.disabled = true; btn.textContent = 'Submitting…';
 
-  const fd = new FormData(this);
-  const data = {};
+  var fd = new FormData(this);
+  var data = {};
   fd.forEach(function(v, k) { data[k] = v; });
   data.submitted_at = new Date().toISOString();
 
-  // Collect multi-select elite statuses
-  data.airline_status = [...document.querySelectorAll('.airline-status-check:checked')].map(function(c){return c.value;}).join(', ') || 'None';
-  data.hotel_status   = [...document.querySelectorAll('.hotel-status-check:checked')].map(function(c){return c.value;}).join(', ')   || 'None';
+  // Collect statuses from picker tags
+  data.airline_status = airlineStatuses.length ? airlineStatuses.join(', ') : 'None';
+  data.hotel_status = hotelStatuses.length ? hotelStatuses.join(', ') : 'None';
 
   // Collect frustrations
-  data.frustrations = [...document.querySelectorAll('#frustration-grid input:checked')].map(function(c){return c.value;}).join(', ');
+  data.frustrations = [].slice.call(document.querySelectorAll('#frustration-grid input:checked')).map(function(c){return c.value;}).join(', ');
 
   // Collect trips from dynamic builder
   document.querySelectorAll('.trip-block').forEach(function(block, i) {
-    const num = i + 1;
-    const dest = block.querySelector('.trip-dest')?.value.trim() || '';
-    const month = block.querySelector('.trip-month')?.value || '';
-    const year = block.querySelector('.trip-year')?.value || '';
-    const pax = block.querySelector('select[name$="_pax"]')?.value || '1';
-    const flex = block.querySelector('.trip-flex')?.value || '';
-    data['trip'+num+'_dest']  = dest;
-    data['trip'+num+'_dates'] = [month, year].filter(Boolean).join(' ');
-    data['trip'+num+'_pax']   = pax;
-    data['trip'+num+'_flex']  = flex;
+    var num = i + 1;
+    var dest = block.querySelector('.trip-dest');
+    var month = block.querySelector('.trip-month');
+    var year = block.querySelector('.trip-year');
+    var pax = block.querySelector('select[name$="_pax"]');
+    var flex = block.querySelector('.trip-flex');
+    data['trip'+num+'_dest']  = dest ? dest.value.trim() : '';
+    data['trip'+num+'_dates'] = [month?month.value:'', year?year.value:''].filter(Boolean).join(' ');
+    data['trip'+num+'_pax']   = pax ? pax.value : '1';
+    data['trip'+num+'_flex']  = flex ? flex.value : '';
   });
 
   // Show success immediately
@@ -861,14 +982,14 @@ document.getElementById('intakeForm').addEventListener('submit', function(e) {
   document.querySelector('.page-header').style.display = 'none';
   document.getElementById('success').style.display = 'block';
 
-  const pts_programs = Object.keys(data).filter(function(k){return k.startsWith('pts_')&&data[k];}).map(function(k){return k.replace('pts_','').replace(/_/g,' ').toUpperCase()+': '+data[k];}).join('\n');
+  var pts_programs = Object.keys(data).filter(function(k){return k.startsWith('pts_')&&data[k];}).map(function(k){return k.replace('pts_','').replace(/_/g,' ').toUpperCase()+': '+data[k];}).join('\n');
 
-  const tripLines = [];
-  for (let i = 1; i <= 5; i++) {
+  var tripLines = [];
+  for (var i = 1; i <= 5; i++) {
     if (data['trip'+i+'_dest']) tripLines.push('Trip '+i+': '+data['trip'+i+'_dest']+' — '+(data['trip'+i+'_dates']||'?')+' · '+data['trip'+i+'_pax']+' pax · '+(data['trip'+i+'_flex']||''));
   }
 
-  const emailBody = [
+  var emailBody = [
     '=== NEW INTAKE SUBMISSION ===',
     'Date: '+data.submitted_at,
     '',
@@ -908,9 +1029,9 @@ document.getElementById('intakeForm').addEventListener('submit', function(e) {
     'Notes: '+(data.notes||''),
   ].join('\n');
 
-  const EMAILJS_SERVICE  = 'service_407s8wc';
-  const EMAILJS_TEMPLATE = 'template_4525djv';
-  const EMAILJS_PUBLIC   = 'd3KBln2jHflM1AYo5';
+  var EMAILJS_SERVICE  = 'service_407s8wc';
+  var EMAILJS_TEMPLATE = 'template_4525djv';
+  var EMAILJS_PUBLIC   = 'd3KBln2jHflM1AYo5';
   if (typeof emailjs !== 'undefined') emailjs.init({ publicKey: EMAILJS_PUBLIC });
   if (typeof emailjs !== 'undefined' && EMAILJS_SERVICE !== 'YOUR_SERVICE_ID') {
     emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
