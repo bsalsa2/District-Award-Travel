@@ -960,6 +960,17 @@ def list_intakes(_: dict = Depends(require_admin), db: Session = Depends(get_db)
     ]
 
 
+@app.delete("/api/admin/intakes/{intake_id}")
+def delete_intake(intake_id: int, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Delete an intake request (typically test submissions or duplicates)."""
+    intake = db.query(Intake).filter(Intake.id == intake_id).first()
+    if not intake:
+        raise HTTPException(status_code=404, detail="Intake not found")
+    db.delete(intake)
+    db.commit()
+    return {"ok": True}
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # Static website (served last so /api routes take precedence)
 # ──────────────────────────────────────────────────────────────────────────
