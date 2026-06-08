@@ -8,10 +8,10 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#05080d;--surface:#0c1118;--card:#101820;--border:#1c2a3a;
-  --green:#00e87a;--green-dim:rgba(0,232,122,.08);--green-border:rgba(0,232,122,.2);
-  --blue:#38b6ff;--gold:#f5c842;--red:#ff4d6d;
-  --text:#edf2f7;--muted:#8896a6;--dim:#3d5068;
+  --bg:#0a0805;--surface:#12100d;--card:#1a1814;--border:#2a2620;
+  --orange:#ff8a1e;--orange-dim:rgba(255,138,30,.08);--orange-border:rgba(255,138,30,.2);
+  --gold:#ffb347;--orange-dark:#e85d04;--red:#ff6b6b;
+  --text:#faf8f3;--muted:#a89a8f;--dim:#6b6159;
   --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 html{scroll-behavior:smooth}
@@ -19,29 +19,29 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 
 nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:60px;background:var(--surface);border-bottom:1px solid var(--border)}
 .nav-logo{font-size:15px;font-weight:800;color:var(--text);text-decoration:none;display:flex;align-items:center;gap:8px}
-.nav-logo span{color:var(--green)}
+.nav-logo span{color:var(--orange)}
 .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;border:none;text-decoration:none}
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
 .btn-ghost:hover{color:var(--text);border-color:var(--muted)}
-.btn-primary{background:var(--green);color:#030a05}
-.btn-primary:hover{background:#00ff88;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,232,122,.2)}
+.btn-primary{background:var(--orange);color:#1a0e00}
+.btn-primary:hover{background:#ffb347;transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,138,30,.2)}
 .btn-primary:disabled{background:var(--dim);color:var(--muted);transform:none;box-shadow:none;cursor:not-allowed}
 .btn-add{background:var(--card);border:1px dashed var(--border);color:var(--muted);padding:10px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;width:100%}
-.btn-add:hover{border-color:var(--green);color:var(--green)}
+.btn-add:hover{border-color:var(--orange);color:var(--orange)}
 
 .page{max-width:760px;margin:0 auto;padding:48px 24px 80px}
 .page-header{margin-bottom:40px}
-.page-eyebrow{display:inline-flex;align-items:center;gap:7px;background:var(--green-dim);border:1px solid var(--green-border);color:var(--green);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;border-radius:20px;margin-bottom:18px}
+.page-eyebrow{display:inline-flex;align-items:center;gap:7px;background:var(--green-dim);border:1px solid var(--green-border);color:var(--orange);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;border-radius:20px;margin-bottom:18px}
 .page-h1{font-size:32px;font-weight:800;letter-spacing:-.8px;color:var(--text);margin-bottom:10px}
 .page-sub{font-size:15px;color:var(--muted);line-height:1.6}
 
 .progress-bar{display:flex;align-items:center;gap:0;margin-bottom:44px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:4px}
 .prog-step{flex:1;text-align:center;padding:10px 8px;border-radius:7px;font-size:11px;font-weight:600;color:var(--dim);cursor:pointer;transition:all .2s;position:relative}
-.prog-step.active{background:var(--green-dim);color:var(--green);border:1px solid var(--green-border)}
-.prog-step.done{color:var(--green);opacity:.6}
+.prog-step.active{background:var(--green-dim);color:var(--orange);border:1px solid var(--green-border)}
+.prog-step.done{color:var(--orange);opacity:.6}
 .prog-step.done::after{content:'✓';margin-left:4px}
 .prog-num{width:22px;height:22px;border-radius:50%;background:var(--border);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;margin-right:6px;transition:all .2s}
-.prog-step.active .prog-num{background:var(--green);color:#030a05}
+.prog-step.active .prog-num{background:var(--orange);color:#1a0e00}
 
 .form-section{display:none}
 .form-section.active{display:block}
@@ -56,7 +56,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.04em}
 .field label .req{color:var(--red);margin-left:2px}
 .field input,.field select,.field textarea{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:11px 14px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--orange)}
 .field input::placeholder,.field textarea::placeholder{color:var(--dim)}
 .field select option{background:var(--surface)}
 .field textarea{resize:vertical;min-height:90px}
@@ -66,8 +66,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .pts-group-label{font-size:10px;font-family:monospace;letter-spacing:.1em;color:var(--dim);text-transform:uppercase;margin:16px 0 8px}
 .pts-checklist{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .pts-check-item{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer;transition:border-color .15s,background .15s;user-select:none}
-.pts-check-item:hover{border-color:var(--green);background:rgba(0,232,122,.04)}
-.pts-check-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--green);flex-shrink:0;cursor:pointer}
+.pts-check-item:hover{border-color:var(--orange);background:rgba(255,138,30,.04)}
+.pts-check-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--orange);flex-shrink:0;cursor:pointer}
 .pts-check-name{font-size:12px;font-weight:600;color:var(--text);flex:1}
 .pts-check-tag{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
 
@@ -77,73 +77,73 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .points-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .points-card-name{font-size:12px;font-weight:600;color:var(--text)}
 .points-card-type{font-size:9px;padding:2px 7px;border-radius:3px;font-weight:700;letter-spacing:.05em}
-.type-transfer{background:rgba(56,182,255,.1);color:var(--blue);border:1px solid rgba(56,182,255,.2)}
-.type-airline{background:rgba(0,232,122,.08);color:var(--green);border:1px solid rgba(0,232,122,.15)}
+.type-transfer{background:rgba(255,179,71,.1);color:var(--gold);border:1px solid rgba(255,179,71,.2)}
+.type-airline{background:rgba(255,138,30,.08);color:var(--orange);border:1px solid rgba(255,138,30,.15)}
 .type-hotel{background:rgba(245,200,66,.08);color:var(--gold);border:1px solid rgba(245,200,66,.15)}
 .points-card input{width:100%;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 10px;font-size:13px;font-family:monospace;outline:none;transition:border-color .15s}
-.points-card input:focus{border-color:var(--green)}
+.points-card input:focus{border-color:var(--orange)}
 .points-card input::placeholder{color:var(--dim)}
 .points-card-cpp{font-size:10px;color:var(--dim);margin-top:5px;font-family:monospace}
 
 /* STATUS PICKER */
 .status-picker{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
 .status-picker select{background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;min-width:180px}
-.status-picker select:focus{border-color:var(--green)}
+.status-picker select:focus{border-color:var(--orange)}
 .status-picker select option{background:var(--surface)}
-.status-picker button{padding:10px 16px;border-radius:8px;border:1px solid var(--green-border);background:var(--green-dim);color:var(--green);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
-.status-picker button:hover{background:var(--green);color:#030a05}
+.status-picker button{padding:10px 16px;border-radius:8px;border:1px solid var(--green-border);background:var(--green-dim);color:var(--orange);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.status-picker button:hover{background:var(--orange);color:#1a0e00}
 .status-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .status-tag{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid}
 .status-tag .tag-remove{cursor:pointer;font-size:14px;line-height:1;opacity:.6;transition:opacity .15s}
 .status-tag .tag-remove:hover{opacity:1}
-.status-tag-airline{background:rgba(0,232,122,.08);color:var(--green);border-color:rgba(0,232,122,.2)}
+.status-tag-airline{background:rgba(255,138,30,.08);color:var(--orange);border-color:rgba(255,138,30,.2)}
 .status-tag-hotel{background:rgba(245,200,66,.08);color:var(--gold);border-color:rgba(245,200,66,.2)}
 .status-other-row{display:flex;gap:8px;margin-top:10px}
 .status-other-row input{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none}
-.status-other-row input:focus{border-color:var(--green)}
+.status-other-row input:focus{border-color:var(--orange)}
 .status-other-row input::placeholder{color:var(--dim)}
 .status-other-row button{padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
-.status-other-row button:hover{border-color:var(--green);color:var(--green)}
+.status-other-row button:hover{border-color:var(--orange);color:var(--orange)}
 
 /* RADIO CARDS */
 .radio-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px}
 .radio-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
 .radio-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;text-align:center;cursor:pointer;transition:all .15s}
-.radio-card:hover{border-color:var(--blue)}
+.radio-card:hover{border-color:var(--gold)}
 .radio-card.selected{border-color:var(--green-border);background:var(--green-dim)}
 .radio-card input{display:none}
 .radio-card-icon{font-size:22px;margin-bottom:6px}
 .radio-card-label{font-size:12px;font-weight:600;color:var(--text)}
 .radio-card-sub{font-size:10px;color:var(--dim);margin-top:2px}
-.radio-card.selected .radio-card-label{color:var(--green)}
+.radio-card.selected .radio-card-label{color:var(--orange)}
 
 /* PROFILE CHECKBOXES */
 .profile-check-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:6px}
 .profile-check-item{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 13px;cursor:pointer;transition:all .15s;font-size:13px;user-select:none}
-.profile-check-item:hover{border-color:var(--blue)}
-.profile-check-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
-.profile-check-item.checked{border-color:var(--green-border);background:var(--green-dim);color:var(--green)}
+.profile-check-item:hover{border-color:var(--gold)}
+.profile-check-item input[type=checkbox]{width:15px;height:15px;accent-color:var(--orange);cursor:pointer;flex-shrink:0}
+.profile-check-item.checked{border-color:var(--green-border);background:var(--green-dim);color:var(--orange)}
 
 /* TRIP BUILDER */
 .trip-block{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:20px;margin-bottom:12px;position:relative}
 .trip-block-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
-.trip-num-label{font-size:13px;font-weight:700;color:var(--green)}
+.trip-num-label{font-size:13px;font-weight:700;color:var(--orange)}
 .trip-remove{background:none;border:none;color:var(--dim);cursor:pointer;font-size:1.2rem;line-height:1;padding:0;transition:color .15s}
 .trip-remove:hover{color:var(--red)}
 .trip-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .trip-date-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .flex-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .flex-btn{padding:7px 13px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--muted);transition:all .15s;font-family:var(--font)}
-.flex-btn.active{border-color:var(--green-border);background:var(--green-dim);color:var(--green)}
+.flex-btn.active{border-color:var(--green-border);background:var(--green-dim);color:var(--orange)}
 .flex-btn:hover:not(.active){border-color:var(--muted);color:var(--text)}
 .trip-section-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.04em;margin-bottom:4px}
 
 /* SUBMIT CARD */
-.submit-card{background:linear-gradient(135deg,rgba(0,232,122,.06),rgba(0,232,122,.02));border:2px solid rgba(0,232,122,.3);border-radius:14px;padding:28px 32px}
+.submit-card{background:linear-gradient(135deg,rgba(255,138,30,.06),rgba(255,138,30,.02));border:2px solid rgba(255,138,30,.3);border-radius:14px;padding:28px 32px}
 .agree-row{display:flex;align-items:flex-start;gap:14px;margin-top:18px;background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:18px 20px;cursor:pointer;transition:all .2s}
-.agree-row:hover{border-color:rgba(0,232,122,.4)}
+.agree-row:hover{border-color:rgba(255,138,30,.4)}
 .agree-row.checked{border-color:var(--green-border);background:var(--green-dim)}
-.agree-row input[type=checkbox]{width:22px;height:22px;accent-color:var(--green);cursor:pointer;flex-shrink:0;margin-top:2px}
+.agree-row input[type=checkbox]{width:22px;height:22px;accent-color:var(--orange);cursor:pointer;flex-shrink:0;margin-top:2px}
 .agree-row label{font-size:14px;color:var(--text);cursor:pointer;line-height:1.5;font-weight:500}
 
 .form-nav{display:flex;align-items:center;justify-content:space-between;margin-top:28px}
@@ -157,7 +157,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .success-next-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px}
 .success-next-item{display:flex;gap:12px;font-size:13px;color:var(--muted);margin-bottom:10px;align-items:flex-start}
 .success-next-item:last-child{margin-bottom:0}
-.success-next-num{width:22px;height:22px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);color:var(--green);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.success-next-num{width:22px;height:22px;border-radius:50%;background:var(--green-dim);border:1px solid var(--green-border);color:var(--orange);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
 
 @media(max-width:640px){
   nav{padding:0 16px}
@@ -638,7 +638,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
       <div class="submit-card">
         <div class="form-card-title" style="margin-bottom:8px">✅ Ready to Submit</div>
         <div style="font-size:14px;color:var(--muted);line-height:1.6">
-          District Award Travel charges a <strong style="color:var(--green)">10% fee on savings we identify</strong> — and nothing at all if we can't beat the cash price. We never recommend credit cards and earn zero referral commissions.
+          District Award Travel charges a <strong style="color:var(--orange)">10% fee on savings we identify</strong> — and nothing at all if we can't beat the cash price. We never recommend credit cards and earn zero referral commissions.
         </div>
         <label class="agree-row" id="agree-row" onclick="this.classList.toggle('checked')">
           <input type="checkbox" id="agree" name="agree" required onchange="document.getElementById('agree-row').classList.toggle('checked',this.checked)">

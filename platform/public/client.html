@@ -6,16 +6,16 @@
 <title>My Portal — District Award Travel</title>
 <style>
   :root {
-    --bg: #05080d;
-    --surface: #0c1118;
-    --surface2: #111820;
-    --border: #1e2a38;
-    --green: #00e87a;
-    --blue: #38b6ff;
-    --gold: #f5c842;
-    --red: #ff5c5c;
-    --text: #e8edf3;
-    --muted: #6b7a8d;
+    --bg: #0a0805;
+    --surface: #12100d;
+    --surface2: #1a1814;
+    --border: #2a2620;
+    --orange: #ff8a1e;
+    --gold: #ffb347;
+    --orange-dark: #e85d04;
+    --red: #ff6b6b;
+    --text: #faf8f3;
+    --muted: #a89a8f;
     --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,7 +30,7 @@
     padding: 0 32px; height: 60px;
   }
   .nav-logo { font-size: 1rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); text-decoration: none; }
-  .nav-logo span { color: var(--green); }
+  .nav-logo span { color: var(--orange); }
   .nav-right { display: flex; align-items: center; gap: 20px; }
   .nav-user { font-size: 0.8rem; color: var(--muted); }
   .nav-user strong { color: var(--text); }
@@ -59,9 +59,9 @@
     color: var(--text); padding: 12px 16px; border-radius: 8px; font-size: 0.95rem;
     outline: none; transition: border 0.2s;
   }
-  .form-group input:focus { border-color: var(--green); }
+  .form-group input:focus { border-color: var(--orange); }
   .btn-primary {
-    width: 100%; background: var(--green); color: #000;
+    width: 100%; background: var(--orange); color: #000;
     border: none; padding: 14px; border-radius: 8px;
     font-size: 0.95rem; font-weight: 700; cursor: pointer;
     transition: opacity 0.2s; letter-spacing: 0.02em;
@@ -84,7 +84,7 @@
     border-bottom: 2px solid transparent; transition: all 0.2s;
     font-family: var(--font);
   }
-  .tab-btn.active { color: var(--green); border-bottom-color: var(--green); }
+  .tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
   .tab-btn:hover:not(.active) { color: var(--text); }
 
   .portal-body { padding: 40px 48px; max-width: 1200px; }
@@ -97,9 +97,9 @@
   }
   .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
   .stat-value { font-size: 1.8rem; font-weight: 700; }
-  .stat-value.green { color: var(--green); }
+  .stat-value.green { color: var(--orange); }
   .stat-value.gold { color: var(--gold); }
-  .stat-value.blue { color: var(--blue); }
+  .stat-value.blue { color: var(--gold); }
   .stat-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
 
   /* TRIPS */
@@ -108,9 +108,9 @@
     font-size: 0.7rem; padding: 3px 10px; border-radius: 20px;
     font-weight: 600; letter-spacing: 0.04em;
   }
-  .badge-active { background: rgba(0,232,122,0.15); color: var(--green); }
+  .badge-active { background: rgba(255,138,30,0.15); color: var(--orange); }
   .badge-urgent { background: rgba(245,200,66,0.15); color: var(--gold); }
-  .badge-pending { background: rgba(56,182,255,0.15); color: var(--blue); }
+  .badge-pending { background: rgba(255,179,71,0.15); color: var(--gold); }
   .badge-planned { background: rgba(107,122,141,0.2); color: var(--muted); }
 
   .trips-grid { display: grid; gap: 20px; margin-bottom: 48px; }
@@ -140,7 +140,7 @@
   .seg-arrow { color: var(--muted); font-size: 1.2rem; }
   .seg-status { text-align: right; }
   .seg-status-text { font-size: 0.75rem; }
-  .seg-status-text.confirmed { color: var(--green); }
+  .seg-status-text.confirmed { color: var(--orange); }
   .seg-status-text.pending { color: var(--gold); }
   .seg-status-text.action { color: var(--red); }
   .seg-notes { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
@@ -165,13 +165,13 @@
   .savings-row-sub { font-size: 0.78rem; color: var(--muted); }
   .savings-row-val { font-size: 1rem; font-weight: 600; text-align: right; }
   .savings-total {
-    background: rgba(0,232,122,0.06); border: 1px solid rgba(0,232,122,0.25);
+    background: rgba(255,138,30,0.06); border: 1px solid rgba(255,138,30,0.25);
     border-radius: 12px; padding: 20px 24px; margin-top: 20px;
     display: flex; justify-content: space-between; align-items: center;
   }
   .savings-total-label { font-size: 1rem; font-weight: 600; }
   .savings-total-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
-  .savings-total-val { font-size: 2rem; font-weight: 800; color: var(--green); }
+  .savings-total-val { font-size: 2rem; font-weight: 800; color: var(--orange); }
 
   /* POINTS */
   .points-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 48px; }
@@ -180,7 +180,7 @@
     border-radius: 12px; padding: 20px;
   }
   .points-program { font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
-  .points-balance { font-size: 1.4rem; font-weight: 700; color: var(--blue); }
+  .points-balance { font-size: 1.4rem; font-weight: 700; color: var(--gold); }
   .points-est { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
 
   /* MESSAGES */
@@ -190,13 +190,13 @@
     border-radius: 12px; padding: 20px 24px;
     display: flex; gap: 16px; align-items: flex-start;
   }
-  .message-item.unread { border-left: 3px solid var(--green); }
+  .message-item.unread { border-left: 3px solid var(--orange); }
   .msg-avatar {
     width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, #00e87a22, #38b6ff22);
+    background: linear-gradient(135deg, #ff8a1e22, #ffb34722);
     border: 1px solid var(--border); flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.8rem; color: var(--green);
+    font-weight: 700; font-size: 0.8rem; color: var(--orange);
   }
   .msg-content { flex: 1; }
   .msg-from { font-size: 0.85rem; font-weight: 600; margin-bottom: 2px; }
@@ -252,7 +252,7 @@
     <button class="btn-primary" onclick="doLogin()">Sign In</button>
     <div class="login-error" id="login-error">Invalid credentials. Contact your advisor.</div>
     <p style="margin-top:20px;font-size:0.78rem;color:var(--muted);text-align:center;">
-      New client? <a href="intake.html" style="color:var(--green);text-decoration:none;">Start your intake →</a>
+      New client? <a href="intake.html" style="color:var(--orange);text-decoration:none;">Start your intake →</a>
     </p>
   </div>
 </div>
@@ -558,7 +558,7 @@ function renderSavings(c) {
       <div class="savings-row-val">
         <div style="color:var(--muted);font-size:0.8rem">Cash: ${s.cash}</div>
         <div style="color:var(--muted);font-size:0.8rem">Points Cost: ${s.points}</div>
-        <div style="color:var(--green)">Save ${s.save}</div>
+        <div style="color:var(--orange)">Save ${s.save}</div>
         <div style="color:var(--gold);font-size:0.8rem">Fee: ${s.fee}</div>
       </div>
     </div>`).join('');
@@ -589,7 +589,7 @@ function renderMessages(c) {
     <div class="message-item ${m.unread ? 'unread' : ''}">
       <div class="msg-avatar">JM</div>
       <div class="msg-content">
-        <div class="msg-from">${m.from} ${m.unread ? '<span style="color:var(--green);font-size:0.7rem;margin-left:6px">● NEW</span>' : ''}</div>
+        <div class="msg-from">${m.from} ${m.unread ? '<span style="color:var(--orange);font-size:0.7rem;margin-left:6px">● NEW</span>' : ''}</div>
         <div class="msg-text">${m.text}</div>
       </div>
       <div class="msg-time">${m.time}</div>
