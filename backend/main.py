@@ -455,6 +455,22 @@ districtawardtravel@gmail.com
     return {"ok": True, "id": rec.id}
 
 
+@app.post("/api/setup/admin")
+def setup_admin(body: LoginIn, db: Session = Depends(get_db)):
+    """Create the first admin account. Only works if no admins exist yet."""
+    existing = db.query(Admin).first()
+    if existing:
+        raise HTTPException(status_code=403, detail="Admin already exists. Use normal login.")
+    admin = Admin(
+        email=body.email.lower(),
+        password_hash=hash_pw(body.password),
+        name=body.email.split("@")[0].title(),
+    )
+    db.add(admin)
+    db.commit()
+    return {"ok": True, "message": "Admin account created. You can now log in normally."}
+
+
 # ── Auth ──
 @app.post("/api/admin/login")
 def admin_login(body: LoginIn, db: Session = Depends(get_db)):
