@@ -97,6 +97,8 @@ class Client(Base):
     tier = Column(String, default="Client")
     # Full portal payload (trips, savings, points, messages) stored as JSON text
     data = Column(Text, default="{}")
+    # "active" | "completed" | "archived"
+    status = Column(String, default="active")
     created_at = Column(DateTime, default=dt.datetime.utcnow)
 
 
@@ -167,21 +169,26 @@ def require_admin(identity: dict = Depends(current_identity)) -> dict:
 # Email
 # ──────────────────────────────────────────────────────────────────────────
 def send_email(subject: str, body: str, reply_to: str = "") -> bool:
-    """Send a plain-text email via Gmail SMTP. Returns True on success."""
+    """Send a plain-text email to the admin notify address."""
+    return send_email_to(NOTIFY_EMAIL, subject, body, reply_to=reply_to)
+
+
+def send_email_to(to: str, subject: str, body: str, reply_to: str = "") -> bool:
+    """Send a plain-text email via Gmail SMTP to any address. Returns True on success."""
     if not GMAIL_USER or not GMAIL_APP_PASSWORD:
         print("[email] GMAIL_USER / GMAIL_APP_PASSWORD not set — skipping send.")
         return False
     try:
         msg = MIMEMultipart()
         msg["From"] = f"District Award Travel <{GMAIL_USER}>"
-        msg["To"] = NOTIFY_EMAIL
+        msg["To"] = to
         msg["Subject"] = subject
         if reply_to:
             msg["Reply-To"] = reply_to
         msg.attach(MIMEText(body, "plain"))
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_USER, [NOTIFY_EMAIL], msg.as_string())
+            server.sendmail(GMAIL_USER, [to], msg.as_string())
         return True
     except Exception as e:
         print(f"[email] send failed: {e}")
@@ -417,11 +424,34 @@ async def submit_intake(request: Request, db: Session = Depends(get_db)):
     db.add(rec)
     db.commit()
     name = f"{data.get('first_name','')} {data.get('last_name','')}".strip() or "Someone"
+    # Notify admin
     send_email(
         subject=f"New DAT Intake: {name}",
         body=format_intake_email(data),
         reply_to=data.get("email", ""),
     )
+    # Confirmation email to client
+    client_email = data.get("email", "")
+    if client_email:
+        confirmation_body = f"""Hi {data.get('first_name', 'there')},
+
+Thanks for reaching out to District Award Travel! We've received your profile and will be in touch shortly to discuss how we can help you make the most of your points and miles.
+
+Here's a quick recap of what you submitted:
+  Home Airport: {data.get('home_airport', '—')}
+  Cabin Preference: {data.get('cabin_pref', '—')}
+  Travel Goals: {data.get('travel_goals', '—')}
+
+We typically respond within 1-2 business days. In the meantime, feel free to reply to this email with any questions.
+
+— The District Award Travel Team
+districtawardtravel@gmail.com
+"""
+        send_email_to(
+            to=client_email,
+            subject="We received your submission — District Award Travel",
+            body=confirmation_body,
+        )
     return {"ok": True, "id": rec.id}
 
 
@@ -460,7 +490,7 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
 def list_clients(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
     clients = db.query(Client).order_by(Client.created_at.desc()).all()
     return [
-        {"email": c.email, "name": c.name, "tier": c.tier, "created_at": c.created_at.isoformat()}
+        {"email": c.email, "name": c.name, "tier": c.tier, "status": c.status or "active", "created_at": c.created_at.isoformat()}
         for c in clients
     ]
 
@@ -527,6 +557,34 @@ def add_client_point(email: str, body: PointEntryIn, _: dict = Depends(require_a
         points.append(entry)
     data["points"] = points
     client.data = json.dumps(data)
+    db.commit()
+    return {"ok": True}
+
+
+class ClientStatusIn(BaseModel):
+    status: str  # "active" | "completed" | "archived"
+
+
+@app.patch("/api/admin/clients/{email}/status")
+def set_client_status(email: str, body: ClientStatusIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Update a client's lifecycle status (active / completed / archived)."""
+    if body.status not in ("active", "completed", "archived"):
+        raise HTTPException(status_code=400, detail="status must be active, completed, or archived")
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    client.status = body.status
+    db.commit()
+    return {"ok": True, "status": body.status}
+
+
+@app.delete("/api/admin/clients/{email}")
+def delete_client(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Permanently delete a client record. Use only for test/duplicate accounts."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    db.delete(client)
     db.commit()
     return {"ok": True}
 
