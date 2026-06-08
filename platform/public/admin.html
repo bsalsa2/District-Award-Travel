@@ -1401,6 +1401,7 @@ async function loadIntakes(){
     renderIntakes(await res.json());
   }catch(e){}
 }
+const _intakeMap={};
 function renderIntakes(intakes){
   const nb=document.getElementById('nav-intake-count');
   if(nb) nb.textContent=intakes.length;
@@ -1410,9 +1411,10 @@ function renderIntakes(intakes){
   const panel=document.getElementById('intake-content');
   if(!panel) return;
   panel.innerHTML='<div class="intake-list">'+intakes.map(function(i){
+    _intakeMap[i.id]=i;
     const goals=(i.payload&&i.payload.travel_goals)?i.payload.travel_goals:'(no goals stated)';
     const email_btn=i.email?'<button class="btn-sm primary" onclick="composeTo(\''+esc(i.name||'')+'\',\''+esc(i.email)+'\')">✉ Reply</button>':'';
-    const import_btn='<button class="btn-sm ai" onclick="prefillImportFromIntake('+JSON.stringify(i).replace(/'/g,'&#39;')+')">✨ Create Account</button>';
+    const import_btn='<button class="btn-sm ai" onclick="prefillImportFromIntake('+i.id+')">✨ Create Account</button>';
     return '<div class="intake-card">'
       +'<div><div class="intake-name">'+esc(i.name||'Unknown')+'</div><div class="intake-email">'+esc(i.email||'')+(i.phone?' · '+esc(i.phone):'')+'</div></div>'
       +'<div class="intake-details">'+esc(goals)+'</div>'
@@ -1421,13 +1423,15 @@ function renderIntakes(intakes){
       +import_btn+email_btn+'</div></div>';
   }).join('')+'</div>';
 }
-function prefillImportFromIntake(intake){
+function prefillImportFromIntake(id){
+  const intake=_intakeMap[id];
+  if(!intake) return;
   closeImportEmail();
   openAddClient();
   const p=intake.payload||{};
   setTimeout(function(){
-    document.getElementById('ac-first').value=p.first_name||'';
-    document.getElementById('ac-last').value=p.last_name||'';
+    document.getElementById('ac-first').value=p.first_name||intake.name&&intake.name.split(' ')[0]||'';
+    document.getElementById('ac-last').value=p.last_name||intake.name&&intake.name.split(' ').slice(1).join(' ')||'';
     document.getElementById('ac-email').value=intake.email||p.email||'';
     document.getElementById('ac-tier').value='Client';
     genCode();
