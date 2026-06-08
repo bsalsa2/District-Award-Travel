@@ -260,6 +260,7 @@
       <input type="password" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
     <button class="btn-primary" onclick="doAdminLogin()">Sign In</button>
     <button class="btn-ghost" style="margin-top:8px;width:100%" onclick="toggleSetupForm()">Create Admin Account</button>
+    <button class="btn-ghost" style="margin-top:4px;width:100%;font-size:11px" onclick="syncAdminPassword()">↻ Sync with Render Password</button>
     <div class="login-error" id="admin-error">Invalid credentials.</div>
     <div id="setup-form" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">First time? Create your admin account below (only works if no admin exists):</div>
@@ -1526,6 +1527,21 @@ function enterAdmin(){
 function toggleSetupForm(){
   const form=document.getElementById('setup-form');
   form.style.display=form.style.display==='none'?'block':'none';
+}
+async function syncAdminPassword(){
+  if(!confirm('This will update the admin password to match your Render ADMIN_PASSWORD env var. Continue?')) return;
+  try{
+    const res=await fetch('/api/setup/sync-password',{method:'POST'});
+    if(res.ok){
+      alert('Password synced! Try signing in now with your Render ADMIN_PASSWORD.');
+      document.getElementById('admin-pass').focus();
+    } else {
+      const err=await res.json();
+      alert('Sync failed: '+(err.detail||'Check that ADMIN_PASSWORD is set in Render'));
+    }
+  }catch(e){
+    alert('Error: Backend is not reachable.');
+  }
 }
 async function doSetupAdmin(){
   const email=document.getElementById('setup-email').value.trim();
