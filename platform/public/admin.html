@@ -284,7 +284,6 @@
         <button class="nav-item" onclick="switchPanel('urgent',this)"><span class="nav-icon">⚡</span> Action Items <span class="nav-badge" id="nav-ai-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('intake',this)"><span class="nav-icon">📋</span> Intake Queue <span class="nav-badge muted" id="nav-intake-count">0</span></button>
-        <button class="nav-item" onclick="switchPanel('expiring',this)"><span class="nav-icon">🔥</span> Points at Risk <span class="nav-badge" id="nav-expiring-count" style="background:rgba(255,92,92,.2);color:var(--red)">0</span></button>
         <button class="nav-item" onclick="switchPanel('fees',this)"><span class="nav-icon">$</span> Savings &amp; Fees</button>
         <button class="nav-item" onclick="switchPanel('settings',this)"><span class="nav-icon">⚙</span> Settings</button>
       </nav>
@@ -303,6 +302,7 @@
           <div><h1>Overview</h1><p>District Award Travel — Advisory Operations</p></div>
           <div class="header-actions">
             <button class="btn-action ai" onclick="openImportEmail()">✨ Import from Email</button>
+            <button class="btn-action" onclick="openPlan()">📋 Build Plan</button>
             <button class="btn-action" onclick="openCompose()">✉ Message Client</button>
             <button class="btn-action solid" onclick="openAddClient()">+ Add Client</button>
           </div>
@@ -313,7 +313,6 @@
             <div class="metric-card"><div class="metric-label">Intake Queue</div><div class="metric-val" id="ov-intake-count">—</div><div class="metric-delta">New applications</div></div>
             <div class="metric-card"><div class="metric-label">Open Action Items</div><div class="metric-val red" id="ov-ai-count">0</div><div class="metric-delta" id="ov-ai-next">—</div></div>
             <div class="metric-card"><div class="metric-label">Advisory Fees</div><div class="metric-val gold">10%</div><div class="metric-delta">of savings identified</div></div>
-            <div class="metric-card" style="cursor:pointer" onclick="switchPanel('expiring',document.querySelector('.nav-item[onclick*=expiring]'))"><div class="metric-label">Points at Risk</div><div class="metric-val red" id="ov-expiring-count">—</div><div class="metric-delta">Expiring in 90 days</div></div>
           </div>
 
           <div class="section-header">
@@ -321,14 +320,6 @@
             <button class="btn-action" onclick="switchPanel('urgent',document.querySelectorAll('.nav-item')[1])">View all →</button>
           </div>
           <div class="ai-list" id="ov-ai-list"></div>
-
-          <div class="section-header" style="margin-top:28px">
-            <div class="section-title">🔥 Points at Risk <span class="badge badge-red" id="ov-expiring-badge">0 expiring</span></div>
-            <button class="btn-action" onclick="loadExpiringPoints()">↻ Refresh</button>
-          </div>
-          <div id="ov-expiring-list" style="margin-bottom:28px">
-            <div style="padding:18px;text-align:center;color:var(--muted);font-size:.83rem">Loading expiration data…</div>
-          </div>
 
           <div class="section-header">
             <div class="section-title">Clients</div>
@@ -378,20 +369,6 @@
           <div class="empty-state"><div class="em-ico">📋</div>
             <div style="font-size:.95rem;margin-bottom:8px;color:var(--text)">No pending applications</div>
             <div style="font-size:.83rem">Submissions from <a href="intake.html" target="_blank" style="color:var(--gold)">the intake form</a> appear here.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- POINTS AT RISK -->
-      <div class="panel" id="panel-expiring">
-        <div class="page-header">
-          <div><h1>Points at Risk</h1><p>Loyalty points expiring in the next 90 days — across all clients</p></div>
-          <div class="header-actions"><button class="btn-action" onclick="loadExpiringPoints()">↻ Refresh</button></div>
-        </div>
-        <div class="content">
-          <p style="font-size:.83rem;color:var(--muted);margin-bottom:20px">To populate this board, use <strong style="color:var(--blue)">📄 Scan</strong> on a client's loyalty statement — Gemini Vision reads the expiration date automatically. Points expiring within 30 days are shown in red.</p>
-          <div id="expiring-full-list">
-            <div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div>
           </div>
         </div>
       </div>
@@ -673,6 +650,46 @@
   </div>
 </div>
 
+<!-- PLAN BUILDER MODAL -->
+<div id="plan-overlay" class="overlay">
+  <div class="modal wide">
+    <div class="modal-head"><h2>📋 Build Travel Plan</h2><button class="modal-close" onclick="closePlan()">&times;</button></div>
+    <p class="modal-sub">Compose a travel plan with specific recommendations and send directly to the client's portal. They'll see it when they log in.</p>
+    <div class="form-group"><label>Client</label>
+      <select id="plan-client" onchange="planSyncEmail()">
+        <option value="">Select a client…</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Plan Title</label><input type="text" id="plan-title" placeholder="e.g. Japan Trip — Your Award Options"></div>
+    <div class="form-group"><label>Plan Overview</label><textarea id="plan-overview" rows="3" placeholder="e.g. I've mapped 3 routes to Tokyo that maximize your points..."></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="form-group"><label>Destination</label><input type="text" id="plan-dest" placeholder="e.g. Tokyo (NRT/HND)"></div>
+      <div class="form-group"><label>Dates</label><input type="text" id="plan-dates" placeholder="e.g. Mar 15-28, 2026"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="form-group"><label>Award Program</label><input type="text" id="plan-program" placeholder="e.g. Chase UR to United"></div>
+      <div class="form-group"><label>Points Cost</label><input type="text" id="plan-points" placeholder="e.g. 65,000 pts"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div class="form-group"><label>Estimated Cash Value</label><input type="text" id="plan-value" placeholder="e.g. $1,200"></div>
+      <div class="form-group"><label>Cabin</label>
+        <select id="plan-cabin">
+          <option value="">Select cabin</option>
+          <option value="Economy">Economy</option>
+          <option value="Premium Economy">Premium Economy</option>
+          <option value="Business">Business</option>
+          <option value="First">First</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Your Recommendation & Details</label><textarea id="plan-details" rows="5" placeholder="Why this is perfect for you, what to book, best dates, any risks or limitations..."></textarea></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">
+      <button class="btn-primary" onclick="sendPlan()">📤 Send Plan to Client Portal</button>
+      <button class="btn-sm" onclick="closePlan()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- SWEET SPOTS MODAL -->
 <div id="sweetspot-overlay" class="overlay">
   <div class="modal wide">
@@ -943,49 +960,18 @@ function populateComposeClients(){
       scanSel.appendChild(o);
     });
   }
-}
-
-/* ════════════════════════════════════════════
-   EXPIRING POINTS
-   ════════════════════════════════════════════ */
-async function loadExpiringPoints(){
-  if(!ADMIN_TOKEN) return;
-  try{
-    const res=await fetch('/api/admin/expiring',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
-    if(!res.ok) return;
-    renderExpiringPoints(await res.json());
-  }catch(e){}
-}
-function renderExpiringPoints(items){
-  const count=items.length;
-  const ovCount=document.getElementById('ov-expiring-count');
-  if(ovCount) ovCount.textContent=count||'0';
-  const navCount=document.getElementById('nav-expiring-count');
-  if(navCount) navCount.textContent=count;
-  const ovBadge=document.getElementById('ov-expiring-badge');
-  if(ovBadge) ovBadge.textContent=count+' expiring';
-  if(ovBadge) ovBadge.className='badge '+(count>0?'badge-red':'badge-green');
-
-  function rowsHTML(list){
-    if(!list.length) return '<div class="empty-state" style="padding:24px"><div class="em-ico">✅</div><div style="color:var(--text)">No points expiring in the next 90 days.</div></div>';
-    return '<div class="expiring-list">'+list.map(function(i){
-      const cls=i.days_remaining<30?'urgent':i.days_remaining<60?'warning':'calm';
-      return '<div class="expiring-row '+cls+'">'
-        +'<div class="exp-days '+cls+'">'+(i.days_remaining<0?'OVRD':i.days_remaining+'d')+'</div>'
-        +'<div style="flex:1"><div style="font-weight:600;font-size:.88rem">'+esc(i.client_name)+'</div>'
-        +'<div style="font-size:.76rem;color:var(--muted)">'+esc(i.program)+' · '+esc(i.balance)+'</div></div>'
-        +'<div style="text-align:right;min-width:80px"><div style="font-size:.74rem;color:var(--muted)">Expires '+i.expiration_date+'</div>'
-        +(i.est_value_usd?'<div style="font-size:.82rem;color:var(--red);font-weight:600">~$'+i.est_value_usd+' at risk</div>':'')+'</div>'
-        +'<button class="btn-sm primary" onclick="runSweetSpots(\''+esc(i.client_email)+'\',\''+esc(i.client_name)+'\')">✨ Rescue</button>'
-        +'</div>';
-    }).join('')+'</div>';
+  // and populate the plan client selector
+  const planSel=document.getElementById('plan-client');
+  if(planSel){
+    while(planSel.options.length>1) planSel.remove(1);
+    CLIENTS.forEach(function(c){
+      const o=document.createElement('option');
+      o.value=c.name+'|'+c.email; o.textContent=c.name+' — '+c.email;
+      planSel.appendChild(o);
+    });
   }
-
-  const ovList=document.getElementById('ov-expiring-list');
-  if(ovList) ovList.innerHTML=rowsHTML(items.slice(0,5));
-  const fullList=document.getElementById('expiring-full-list');
-  if(fullList) fullList.innerHTML=rowsHTML(items);
 }
+
 
 /* ════════════════════════════════════════════
    DOCUMENT SCANNER (Gemini Vision)
@@ -1365,6 +1351,55 @@ function sendCompose(){
   const body=encodeURIComponent(document.getElementById('cm-body').value);
   window.open('https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent(email)+'&su='+subject+'&body='+body,'_blank');
   closeCompose(); toast('Opening Gmail…');
+}
+
+/* ════════════════════════════════════════════
+   PLAN BUILDER
+   ════════════════════════════════════════════ */
+function openPlan(){ document.getElementById('plan-overlay').classList.add('open'); resetPlan(); }
+function closePlan(){ document.getElementById('plan-overlay').classList.remove('open'); }
+function resetPlan(){
+  ['plan-client','plan-title','plan-overview','plan-dest','plan-dates','plan-program','plan-points','plan-value','plan-cabin','plan-details']
+    .forEach(id => document.getElementById(id).value='');
+}
+function planSyncEmail(){
+  const v=document.getElementById('plan-client').value.split('|');
+  // email not needed in this version, but we could use it
+}
+function sendPlan(){
+  const client_email=document.getElementById('plan-client').value.split('|')[1];
+  const title=document.getElementById('plan-title').value.trim();
+  const overview=document.getElementById('plan-overview').value.trim();
+  const dest=document.getElementById('plan-dest').value.trim();
+  const dates=document.getElementById('plan-dates').value.trim();
+  const program=document.getElementById('plan-program').value.trim();
+  const points=document.getElementById('plan-points').value.trim();
+  const value=document.getElementById('plan-value').value.trim();
+  const cabin=document.getElementById('plan-cabin').value.trim();
+  const details=document.getElementById('plan-details').value.trim();
+
+  if(!client_email||!title||!details){alert('Client, title, and details are required');return;}
+
+  const plan_details={
+    title, dest, dates, program, points, value, cabin, overview
+  };
+  const subject=title;
+  const body=overview+'\n\n'+details+'\n\nProgram: '+program+'\nPoints: '+points+'\nEstimated Value: '+value+'\nCabin: '+cabin;
+
+  document.getElementById('plan-client').disabled=true;
+  fetch('/api/admin/send-message',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+    body:JSON.stringify({client_email,subject,body,is_plan:true,plan_details})})
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.ok){
+        toast('✓ Plan sent to '+client_email);
+        closePlan();
+        resetPlan();
+      }else alert('Error: '+data.detail||'unknown error');
+      document.getElementById('plan-client').disabled=false;
+    })
+    .catch(e=>{alert('Error sending plan: '+e);document.getElementById('plan-client').disabled=false;});
 }
 function quickComposeCreds(){
   const email=document.getElementById('res-email').textContent;
