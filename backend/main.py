@@ -471,6 +471,21 @@ def setup_admin(body: LoginIn, db: Session = Depends(get_db)):
     return {"ok": True, "message": "Admin account created. You can now log in normally."}
 
 
+@app.post("/api/setup/sync-password")
+def sync_admin_password(db: Session = Depends(get_db)):
+    """Sync admin password with ADMIN_PASSWORD env var. Use if stuck on login."""
+    admin_password = os.environ.get("ADMIN_PASSWORD", "")
+    if not admin_password:
+        raise HTTPException(status_code=400, detail="ADMIN_PASSWORD env var not set")
+    admin = db.query(Admin).filter(Admin.email == "admin@districtawardtravel.com").first()
+    if not admin:
+        raise HTTPException(status_code=404, detail="Admin account not found")
+    admin.password_hash = hash_pw(admin_password)
+    db.commit()
+    return {"ok": True, "message": "Admin password synced with env var. Try signing in again."}
+
+
+
 # ── Auth ──
 @app.post("/api/admin/login")
 def admin_login(body: LoginIn, db: Session = Depends(get_db)):
