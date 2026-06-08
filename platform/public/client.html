@@ -493,26 +493,36 @@ function logout() {
 }
 
 function renderPortal(c) {
-  document.getElementById('portal-greeting').textContent = 'Welcome back, ' + c.name.split(' ')[0];
-  document.getElementById('portal-subtitle').textContent = c.tier + ' — District Award Travel';
-  document.getElementById('stat-trips').textContent = c.stats.trips;
-  document.getElementById('stat-savings').textContent = c.stats.savings;
-  document.getElementById('stat-fee').textContent = c.stats.fee;
-  document.getElementById('stat-points').textContent = c.stats.points;
+  const data = c.data ? (typeof c.data === 'string' ? JSON.parse(c.data) : c.data) : c;
+  const name = c.name || data.name || 'Client';
+  const tier = c.tier || data.tier || 'Client';
+  document.getElementById('portal-greeting').textContent = 'Welcome back, ' + name.split(' ')[0];
+  document.getElementById('portal-subtitle').textContent = tier + ' — District Award Travel';
 
-  if (c.urgency) {
+  const stats = data.stats || c.stats || {};
+  const trips = data.trips || c.trips || [];
+  const savings = data.savings || c.savings || [];
+  const points = data.points || c.points || [];
+  const messages = data.messages || c.messages || [];
+  const urgency = data.urgency || c.urgency || null;
+
+  document.getElementById('stat-trips').textContent = stats.trips !== undefined ? stats.trips : trips.length;
+  document.getElementById('stat-savings').textContent = stats.savings || data.totalSavings || (savings.length ? 'See breakdown' : '—');
+  document.getElementById('stat-fee').textContent = stats.fee || data.totalFee || (savings.length ? 'See breakdown' : '—');
+  document.getElementById('stat-points').textContent = stats.points || (points.length ? points.length + ' programs' : '—');
+
+  if (urgency) {
     const b = document.getElementById('urgency-banner');
     b.style.display = 'flex';
-    document.getElementById('urgency-text').innerHTML = c.urgency;
+    document.getElementById('urgency-text').innerHTML = urgency;
   }
 
-  document.getElementById('trips-count-badge').textContent = c.trips.length + ' trip' + (c.trips.length !== 1 ? 's' : '');
-  const tc = document.getElementById('trips-container');
-  tc.innerHTML = c.trips.map(t => renderTrip(t)).join('');
+  document.getElementById('trips-count-badge').textContent = trips.length + ' trip' + (trips.length !== 1 ? 's' : '');
+  document.getElementById('trips-container').innerHTML = trips.map(t => renderTrip(t)).join('') || '<p style="color:var(--muted);padding:20px 0">No trips on file yet — your advisor will add these once your plan is ready.</p>';
 
-  renderSavings(c);
-  renderPoints(c);
-  renderMessages(c);
+  renderSavings({ savings, totalSavings: data.totalSavings || c.totalSavings, totalFee: data.totalFee || c.totalFee });
+  renderPoints({ points });
+  renderMessages({ messages });
 }
 
 function renderTrip(t) {
@@ -585,14 +595,20 @@ function renderPoints(c) {
 
 function renderMessages(c) {
   const mc = document.getElementById('messages-container');
-  mc.innerHTML = c.messages.map(m => `
+  const msgs = c.messages || [];
+  if (!msgs.length) {
+    mc.innerHTML = '<p style="color:var(--muted);padding:20px 0">No messages yet. Your advisor will reach out once your plan is in progress.</p>';
+    return;
+  }
+  mc.innerHTML = msgs.slice().reverse().map(m => `
     <div class="message-item ${m.unread ? 'unread' : ''}">
-      <div class="msg-avatar">JM</div>
+      <div class="msg-avatar">B</div>
       <div class="msg-content">
-        <div class="msg-from">${m.from} ${m.unread ? '<span style="color:var(--orange);font-size:0.7rem;margin-left:6px">● NEW</span>' : ''}</div>
-        <div class="msg-text">${m.text}</div>
+        <div class="msg-from">Braden — District Award Travel ${m.unread ? '<span style="color:var(--orange);font-size:0.7rem;margin-left:6px">● NEW</span>' : ''}</div>
+        ${m.subject ? '<div style="font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:3px">' + m.subject + '</div>' : ''}
+        <div class="msg-text">${m.text || ''}</div>
       </div>
-      <div class="msg-time">${m.time}</div>
+      <div class="msg-time">${m.time ? new Date(m.time).toLocaleDateString() : ''}</div>
     </div>`).join('');
 }
 
