@@ -35,6 +35,12 @@ services:
         sync: false                  # set this yourself in the dashboard
       - key: NOTIFY_EMAIL
         value: districtawardtravel@gmail.com
+      - key: GROQ_API_KEY
+        sync: false                  # set in Render dashboard (from GitHub Secrets)
+      - key: GEMINI_API_KEY
+        sync: false                  # set in Render dashboard (from GitHub Secrets)
+      - key: SEATS_AERO_API_KEY
+        sync: false                  # optional — free key at seats.aero for live award availability
 
 databases:
   - name: dat-db
