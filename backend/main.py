@@ -333,7 +333,7 @@ JSON schema (use null for missing fields):
 
 Rules:
 - Extract names, email addresses, phone numbers exactly as written.
-- Infer home airport from city mentions if obvious (e.g. "DC" → DCA/IAD).
+- Infer home airport from any U.S. city mentioned if obvious (e.g. "DC" → DCA/IAD, "NYC" → JFK/LGA/EWR, "LA" → LAX, "Chicago" → ORD).
 - Capture any mentioned points/miles programs and balances.
 - Put travel goals, destinations, and any other context in the relevant fields.
 - Return ONLY the JSON object, nothing else.

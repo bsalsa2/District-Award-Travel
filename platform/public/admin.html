@@ -381,7 +381,7 @@
           <div class="header-actions"><button class="btn-action" onclick="loadExpiringPoints()">↻ Refresh</button></div>
         </div>
         <div class="content">
-          <p style="font-size:.83rem;color:var(--muted);margin-bottom:20px">To populate this board, use <strong style="color:var(--purple)">📄 Scan Doc</strong> on a client's loyalty statement — Gemini Vision reads the expiration date automatically. Points expiring within 30 days are shown in red.</p>
+          <p style="font-size:.83rem;color:var(--muted);margin-bottom:20px">To populate this board, use <strong style="color:var(--blue)">📄 Scan</strong> on a client's loyalty statement — Gemini Vision reads the expiration date automatically. Points expiring within 30 days are shown in red.</p>
           <div id="expiring-full-list">
             <div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div>
           </div>
@@ -427,7 +427,7 @@
             <div class="setting-row"><div><div class="setting-label">Gemini (email fallback + thread parse)</div><div class="setting-sub">Used if Groq is down; also powers conversation-thread importer</div></div><div><span class="badge badge-muted" id="gemini-badge">checking…</span></div></div>
             <div class="setting-row"><div><div class="setting-label">Gemini Vision (Document Scanner)</div><div class="setting-sub">Reads loyalty screenshots · extracts balance + expiration automatically</div></div><div><span class="badge badge-muted" id="vision-badge">checking…</span></div></div>
             <div class="setting-row"><div><div class="setting-label">Sweet Spot Oracle</div><div class="setting-sub">Gemini generates personalised award recommendations → pushed to client portal</div></div><div><span class="badge badge-green">Powered by Gemini</span></div></div>
-            <div class="setting-row"><div><div class="setting-label">seats.aero (live award availability)</div><div class="setting-sub">Optional: add SEATS_AERO_API_KEY in Render for real seat counts · free at seats.aero</div></div><div><span class="badge badge-muted">Optional</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">seats.aero (live award availability)</div><div class="setting-sub">Optional paid add-on: seats.aero Pro is $99.99/yr. Add SEATS_AERO_API_KEY in Render to layer real seat counts onto Gemini recommendations. Works fully without it.</div></div><div><span class="badge badge-muted">Optional · Paid</span></div></div>
           </div>
           <div class="settings-section">
             <div class="settings-title">Tools</div>
@@ -669,7 +669,7 @@
 <div id="sweetspot-overlay" class="overlay">
   <div class="modal wide">
     <div class="modal-head"><h2>✨ Sweet Spot Oracle</h2><button class="modal-close" onclick="closeSweetSpots()">&times;</button></div>
-    <p class="modal-sub">Gemini analyzes this client's points portfolio and generates 3 personalised award recommendations. Results are pushed live to their client portal. If you have a seats.aero key, real award availability is checked.</p>
+    <p class="modal-sub">Gemini analyzes this client's points portfolio and generates 3 personalised award recommendations. Results are pushed live to their client portal. Optionally, add a seats.aero Pro key ($99.99/yr) to layer in real live award availability.</p>
     <div id="ss-loading" style="padding:32px;text-align:center;color:var(--muted)">
       <div style="font-size:2rem;margin-bottom:12px">✨</div>
       <div style="font-weight:700;margin-bottom:6px">Gemini is searching…</div>
