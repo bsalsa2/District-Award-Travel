@@ -6,272 +6,243 @@
 <title>Admin — District Award Travel</title>
 <style>
   :root {
-    --bg: #06080c;
-    --surface: #0d1119;
-    --surface2: #131925;
-    --surface3: #1a2230;
-    --border: #232f40;
-    --border2: #2e3c50;
-    --green: #1fd47a;
-    --blue: #45b3ff;
-    --gold: #ffb347;
-    --orange: #ff7a18;
-    --red: #ff5c5c;
-    --purple: #b06bff;
-    --text: #eaf0f7;
-    --muted: #7d8ca0;
+    --bg: #06080c; --surface: #0d1119; --surface2: #131925; --surface3: #1a2230;
+    --border: #232f40; --border2: #2e3c50;
+    --green: #1fd47a; --blue: #45b3ff; --gold: #ffb347; --orange: #ff7a18;
+    --red: #ff5c5c; --purple: #b06bff;
+    --text: #eaf0f7; --muted: #7d8ca0;
     --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
     --shadow: 0 8px 30px rgba(0,0,0,0.4);
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--border2); }
-  a { color: inherit; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font); min-height:100vh; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:6px; }
+  a { color:inherit; text-decoration:none; }
 
-  /* ── LOGIN ── */
-  #login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 40px 20px;
-    background: radial-gradient(circle at 50% 30%, rgba(255,122,24,0.07), transparent 60%); }
-  .login-box { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 44px 40px; width: 100%; max-width: 400px; box-shadow: var(--shadow); }
-  .login-logo { width: 76px; height: 76px; display: block; margin: 0 auto 18px; }
-  .login-box h2 { font-size: 1.5rem; margin-bottom: 6px; text-align: center; }
-  .login-box .sub { color: var(--muted); font-size: 0.85rem; margin-bottom: 30px; text-align: center; }
-  .form-group { margin-bottom: 18px; }
-  .form-group label { display: block; font-size: 0.72rem; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+  /* LOGIN */
+  #login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:40px 20px;
+    background:radial-gradient(circle at 50% 30%,rgba(255,122,24,.08),transparent 60%); }
+  .login-box { background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:44px 40px;
+    width:100%; max-width:400px; box-shadow:var(--shadow); }
+  .login-logo { width:76px; height:76px; display:block; margin:0 auto 18px; }
+  .login-box h2 { font-size:1.5rem; margin-bottom:6px; text-align:center; }
+  .login-box .sub { color:var(--muted); font-size:.85rem; margin-bottom:28px; text-align:center; }
+  .login-error { color:var(--red); font-size:.85rem; margin-top:12px; display:none; text-align:center; }
+
+  /* FORMS */
+  .form-group { margin-bottom:16px; }
+  .form-group label { display:block; font-size:.72rem; color:var(--muted); margin-bottom:6px;
+    letter-spacing:.06em; text-transform:uppercase; }
   .form-group input, .form-group textarea, .form-group select {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
-    padding: 12px 14px; border-radius: 9px; font-size: 0.95rem; outline: none; transition: border 0.2s; font-family: var(--font); }
-  .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--orange); }
-  .btn-primary { width: 100%; background: linear-gradient(135deg, var(--gold), var(--orange)); color: #1a0e00;
-    border: none; padding: 14px; border-radius: 9px; font-size: 0.95rem; font-weight: 700; cursor: pointer; transition: filter 0.2s; }
-  .btn-primary:hover { filter: brightness(1.08); }
-  .login-error { color: var(--red); font-size: 0.85rem; margin-top: 12px; display: none; text-align: center; }
+    width:100%; background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    padding:11px 14px; border-radius:9px; font-size:.93rem; outline:none; transition:border .2s; font-family:var(--font); }
+  .form-group textarea { resize:vertical; }
+  .form-group input:focus,.form-group textarea:focus,.form-group select:focus { border-color:var(--orange); }
+  .btn-primary { width:100%; background:linear-gradient(135deg,var(--gold),var(--orange)); color:#1a0e00;
+    border:none; padding:13px; border-radius:9px; font-size:.94rem; font-weight:700; cursor:pointer; transition:filter .2s; }
+  .btn-primary:hover { filter:brightness(1.08); }
 
-  /* ── LAYOUT ── */
-  #admin { display: none; }
-  .admin-layout { display: flex; min-height: 100vh; }
+  /* LAYOUT */
+  #admin { display:none; }
+  .admin-layout { display:flex; min-height:100vh; }
 
-  /* ── SIDEBAR ── */
-  .sidebar { width: 230px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
-    display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
-  .sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
-  .sidebar-logo img { width: 40px; height: 40px; }
-  .sidebar-logo .lt { font-size: 0.92rem; font-weight: 800; letter-spacing: 0.02em; line-height: 1.1; }
-  .sidebar-logo .lt span { color: var(--orange); }
-  .sidebar-logo .lb { font-size: 0.62rem; color: var(--muted); margin-top: 3px; letter-spacing: 0.08em; text-transform: uppercase; }
-  .sidebar-nav { flex: 1; padding: 14px 12px; display: flex; flex-direction: column; gap: 3px; }
-  .nav-item { display: flex; align-items: center; gap: 11px; padding: 11px 13px; border-radius: 9px; cursor: pointer;
-    font-size: 0.86rem; color: var(--muted); transition: all 0.15s; border: 1px solid transparent; background: none;
-    width: 100%; text-align: left; font-family: var(--font); }
-  .nav-item:hover { background: var(--surface2); color: var(--text); }
-  .nav-item.active { background: linear-gradient(135deg, rgba(255,179,71,0.14), rgba(255,122,24,0.08));
-    color: var(--gold); border-color: rgba(255,179,71,0.25); }
-  .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
-  .nav-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 0.65rem; padding: 2px 7px; border-radius: 10px; font-weight: 700; }
-  .nav-badge.muted { background: var(--border2); color: var(--text); }
-  .sidebar-user { padding: 14px 18px; border-top: 1px solid var(--border); font-size: 0.8rem; }
-  .sidebar-user-name { font-weight: 600; }
-  .sidebar-user-role { color: var(--muted); font-size: 0.72rem; margin-top: 2px; }
-  .btn-logout-sm { margin-top: 10px; background: none; border: 1px solid var(--border); color: var(--muted);
-    padding: 6px 11px; border-radius: 7px; font-size: 0.72rem; cursor: pointer; transition: all 0.2s; }
-  .btn-logout-sm:hover { border-color: var(--red); color: var(--red); }
+  /* SIDEBAR */
+  .sidebar { width:232px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; position:sticky; top:0; height:100vh; overflow:hidden; }
+  .sidebar-logo { padding:20px 18px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; }
+  .sidebar-logo img { width:42px; height:42px; }
+  .sidebar-logo .lt { font-size:.9rem; font-weight:800; line-height:1.2; }
+  .sidebar-logo .lt span { color:var(--orange); }
+  .sidebar-logo .lb { font-size:.6rem; color:var(--muted); margin-top:3px; text-transform:uppercase; letter-spacing:.08em; }
+  .sidebar-nav { flex:1; padding:12px 10px; display:flex; flex-direction:column; gap:2px; overflow-y:auto; }
+  .nav-item { display:flex; align-items:center; gap:11px; padding:10px 12px; border-radius:9px; cursor:pointer;
+    font-size:.85rem; color:var(--muted); transition:all .15s; border:1px solid transparent;
+    background:none; width:100%; text-align:left; font-family:var(--font); }
+  .nav-item:hover { background:var(--surface2); color:var(--text); }
+  .nav-item.active { background:linear-gradient(135deg,rgba(255,179,71,.14),rgba(255,122,24,.08));
+    color:var(--gold); border-color:rgba(255,179,71,.25); }
+  .nav-icon { font-size:.95rem; width:20px; text-align:center; }
+  .nav-badge { margin-left:auto; background:var(--red); color:#fff; font-size:.63rem; padding:2px 7px; border-radius:10px; font-weight:700; }
+  .nav-badge.muted { background:var(--border2); color:var(--text); }
+  .nav-badge.blue { background:rgba(69,179,255,.25); color:var(--blue); }
+  .sidebar-user { padding:14px 18px; border-top:1px solid var(--border); font-size:.8rem; }
+  .sidebar-user-name { font-weight:600; }
+  .sidebar-user-role { color:var(--muted); font-size:.7rem; margin-top:2px; }
+  .btn-logout-sm { margin-top:10px; background:none; border:1px solid var(--border); color:var(--muted);
+    padding:6px 10px; border-radius:7px; font-size:.7rem; cursor:pointer; transition:all .2s; }
+  .btn-logout-sm:hover { border-color:var(--red); color:var(--red); }
 
-  /* ── MAIN ── */
-  .main { flex: 1; overflow: auto; }
-  .page-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 24px 36px;
-    display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 20; }
-  .page-header h1 { font-size: 1.35rem; }
-  .page-header p { color: var(--muted); font-size: 0.84rem; margin-top: 3px; }
-  .header-actions { display: flex; gap: 10px; }
-  .btn-action { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 9px 16px;
-    border-radius: 9px; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; font-family: var(--font); }
-  .btn-action:hover { border-color: var(--orange); color: var(--gold); }
-  .btn-action.solid { background: linear-gradient(135deg, var(--gold), var(--orange)); color: #1a0e00; border: none; font-weight: 700; }
-  .btn-action.solid:hover { filter: brightness(1.08); }
-  .content { padding: 32px 36px; max-width: 1280px; }
+  /* MAIN */
+  .main { flex:1; overflow:auto; }
+  .page-header { background:var(--surface); border-bottom:1px solid var(--border); padding:22px 34px;
+    display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:20; }
+  .page-header h1 { font-size:1.3rem; }
+  .page-header p { color:var(--muted); font-size:.83rem; margin-top:3px; }
+  .header-actions { display:flex; gap:9px; flex-wrap:wrap; }
+  .btn-action { background:var(--surface2); border:1px solid var(--border); color:var(--text);
+    padding:8px 15px; border-radius:9px; font-size:.81rem; cursor:pointer; transition:all .2s; font-family:var(--font); white-space:nowrap; }
+  .btn-action:hover { border-color:var(--orange); color:var(--gold); }
+  .btn-action.solid { background:linear-gradient(135deg,var(--gold),var(--orange)); color:#1a0e00; border:none; font-weight:700; }
+  .btn-action.solid:hover { filter:brightness(1.08); color:#1a0e00; }
+  .btn-action.ai { background:linear-gradient(135deg,rgba(176,107,255,.2),rgba(69,179,255,.15));
+    border-color:rgba(176,107,255,.4); color:var(--purple); font-weight:600; }
+  .btn-action.ai:hover { filter:brightness(1.15); color:var(--purple); border-color:var(--purple); }
+  .content { padding:28px 34px; }
 
-  .panel { display: none; }
-  .panel.active { display: block; animation: fade 0.25s ease; }
-  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .panel { display:none; }
+  .panel.active { display:block; animation:fade .22s ease; }
+  @keyframes fade { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
 
-  /* ── METRICS ── */
-  .metrics-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 34px; }
-  .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: 13px; padding: 18px 20px; transition: border 0.2s; }
-  .metric-card:hover { border-color: var(--border2); }
-  .metric-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
-  .metric-val { font-size: 1.65rem; font-weight: 800; }
-  .metric-val.green { color: var(--green); } .metric-val.gold { color: var(--gold); }
-  .metric-val.blue { color: var(--blue); } .metric-val.red { color: var(--red); }
-  .metric-delta { font-size: 0.74rem; color: var(--muted); margin-top: 4px; }
+  /* METRICS */
+  .metrics-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:28px; }
+  .metric-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+  .metric-label { font-size:.67rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:7px; }
+  .metric-val { font-size:1.6rem; font-weight:800; }
+  .metric-val.green{color:var(--green)} .metric-val.gold{color:var(--gold)}
+  .metric-val.blue{color:var(--blue)} .metric-val.red{color:var(--red)}
+  .metric-delta { font-size:.73rem; color:var(--muted); margin-top:4px; }
 
-  /* ── SECTIONS ── */
-  .section-header { display: flex; align-items: center; justify-content: space-between; margin: 0 0 16px; }
-  .section-title { font-size: 1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
-  .badge { font-size: 0.67rem; padding: 3px 9px; border-radius: 20px; font-weight: 600; letter-spacing: 0.03em; white-space: nowrap; }
-  .badge-red { background: rgba(255,92,92,0.15); color: var(--red); }
-  .badge-gold { background: rgba(255,179,71,0.15); color: var(--gold); }
-  .badge-green { background: rgba(31,212,122,0.15); color: var(--green); }
-  .badge-blue { background: rgba(69,179,255,0.15); color: var(--blue); }
-  .badge-purple { background: rgba(176,107,255,0.15); color: var(--purple); }
-  .badge-muted { background: rgba(125,140,160,0.18); color: var(--muted); }
+  /* BADGES */
+  .section-header { display:flex; align-items:center; justify-content:space-between; margin:0 0 14px; }
+  .section-title { font-size:.95rem; font-weight:700; display:flex; align-items:center; gap:10px; }
+  .badge { font-size:.65rem; padding:3px 9px; border-radius:20px; font-weight:600; white-space:nowrap; }
+  .badge-red{background:rgba(255,92,92,.15);color:var(--red)}
+  .badge-gold{background:rgba(255,179,71,.15);color:var(--gold)}
+  .badge-green{background:rgba(31,212,122,.15);color:var(--green)}
+  .badge-blue{background:rgba(69,179,255,.15);color:var(--blue)}
+  .badge-purple{background:rgba(176,107,255,.15);color:var(--purple)}
+  .badge-muted{background:rgba(125,140,160,.18);color:var(--muted)}
 
-  /* ── ACTION ITEM CARDS ── */
-  .ai-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
-  .ai-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border2);
-    border-radius: 12px; padding: 18px 22px; display: flex; gap: 16px; align-items: flex-start; transition: all 0.2s; }
-  .ai-card:hover { border-color: var(--border2); }
-  .ai-card.p-critical { border-left-color: var(--red); }
-  .ai-card.p-high { border-left-color: var(--gold); }
-  .ai-card.p-medium { border-left-color: var(--blue); }
-  .ai-card.p-low { border-left-color: var(--muted); }
-  .ai-card.done { opacity: 0.5; }
-  .ai-card.done .ai-title { text-decoration: line-through; }
-  .ai-icon { font-size: 1.3rem; flex-shrink: 0; line-height: 1.3; }
-  .ai-body { flex: 1; min-width: 0; }
-  .ai-title { font-size: 0.92rem; font-weight: 600; margin-bottom: 5px; }
-  .ai-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
-  .ai-meta { font-size: 0.74rem; color: var(--muted); margin-top: 8px; display: flex; gap: 14px; flex-wrap: wrap; }
-  .ai-due { font-weight: 700; font-family: monospace; }
-  .ai-due.soon { color: var(--red); } .ai-due.ok { color: var(--muted); }
-  .ai-actions { display: flex; flex-direction: column; gap: 7px; flex-shrink: 0; }
-  .btn-sm { padding: 7px 13px; border-radius: 7px; font-size: 0.76rem; cursor: pointer; font-family: var(--font);
-    border: 1px solid var(--border); background: var(--surface2); color: var(--text); transition: all 0.15s; white-space: nowrap; }
-  .btn-sm:hover { border-color: var(--orange); color: var(--gold); }
-  .btn-sm.primary { background: linear-gradient(135deg, var(--gold), var(--orange)); color: #1a0e00; border: none; font-weight: 700; }
-  .btn-sm.primary:hover { filter: brightness(1.08); color: #1a0e00; }
-  .btn-sm.green { border-color: rgba(31,212,122,0.4); color: var(--green); }
-  .btn-sm.green:hover { background: rgba(31,212,122,0.12); }
+  /* ACTION ITEMS */
+  .ai-list { display:flex; flex-direction:column; gap:10px; margin-bottom:28px; }
+  .ai-card { background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--border2);
+    border-radius:12px; padding:16px 20px; display:flex; gap:14px; align-items:flex-start; transition:border .15s; }
+  .ai-card.p-critical{border-left-color:var(--red)} .ai-card.p-high{border-left-color:var(--gold)}
+  .ai-card.p-medium{border-left-color:var(--blue)} .ai-card.p-low{border-left-color:var(--muted)}
+  .ai-card.done { opacity:.45; }
+  .ai-card.done .ai-title { text-decoration:line-through; }
+  .ai-icon { font-size:1.25rem; flex-shrink:0; line-height:1.3; }
+  .ai-body { flex:1; min-width:0; }
+  .ai-title { font-size:.9rem; font-weight:600; margin-bottom:4px; }
+  .ai-desc { font-size:.81rem; color:var(--muted); line-height:1.55; }
+  .ai-meta { font-size:.73rem; color:var(--muted); margin-top:7px; display:flex; gap:13px; flex-wrap:wrap; }
+  .ai-due { font-weight:700; font-family:monospace; }
+  .ai-due.soon{color:var(--red)} .ai-due.ok{color:var(--muted)}
+  .ai-actions { display:flex; flex-direction:column; gap:6px; flex-shrink:0; }
+  .btn-sm { padding:6px 12px; border-radius:7px; font-size:.74rem; cursor:pointer; font-family:var(--font);
+    border:1px solid var(--border); background:var(--surface2); color:var(--text); transition:all .15s; white-space:nowrap; }
+  .btn-sm:hover { border-color:var(--orange); color:var(--gold); }
+  .btn-sm.primary { background:linear-gradient(135deg,var(--gold),var(--orange)); color:#1a0e00; border:none; font-weight:700; }
+  .btn-sm.primary:hover { filter:brightness(1.08); color:#1a0e00; }
+  .btn-sm.green { border-color:rgba(31,212,122,.4); color:var(--green); }
+  .btn-sm.green:hover { background:rgba(31,212,122,.1); }
+  .btn-sm.ai { border-color:rgba(176,107,255,.4); color:var(--purple); }
+  .btn-sm.ai:hover { background:rgba(176,107,255,.1); }
 
-  /* ── TABLE ── */
-  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; overflow-x: auto; margin-bottom: 32px; }
-  table { width: 100%; border-collapse: collapse; }
-  th { padding: 13px 18px; text-align: left; font-size: 0.7rem; color: var(--muted); text-transform: uppercase;
-    letter-spacing: 0.06em; border-bottom: 1px solid var(--border); background: var(--surface2); white-space: nowrap; }
-  td { padding: 15px 18px; font-size: 0.87rem; border-bottom: 1px solid var(--border); vertical-align: top; }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(255,255,255,0.015); }
-  .client-name { font-weight: 600; }
-  .client-sub { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
-  .points-list { display: flex; flex-direction: column; gap: 3px; }
-  .points-item { font-size: 0.78rem; color: var(--muted); }
-  .points-item strong { color: var(--text); }
-  .trip-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .trip-chip { font-size: 0.72rem; padding: 4px 10px; border-radius: 20px; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); }
-  .trip-chip.urgent { background: rgba(255,179,71,0.1); border-color: rgba(255,179,71,0.3); color: var(--gold); }
+  /* TABLE */
+  .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:13px; overflow:hidden; overflow-x:auto; margin-bottom:28px; }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:12px 16px; text-align:left; font-size:.68rem; color:var(--muted); text-transform:uppercase;
+    letter-spacing:.06em; border-bottom:1px solid var(--border); background:var(--surface2); white-space:nowrap; }
+  td { padding:14px 16px; font-size:.86rem; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:rgba(255,255,255,.015); }
+  .client-name { font-weight:600; }
+  .client-sub { font-size:.73rem; color:var(--muted); margin-top:2px; }
+  .trip-chips { display:flex; flex-wrap:wrap; gap:5px; }
+  .trip-chip { font-size:.7rem; padding:3px 9px; border-radius:20px; background:var(--surface2); border:1px solid var(--border); color:var(--muted); }
 
-  /* ── TRIPS ── */
-  .trips-list { display: grid; gap: 16px; }
-  .trip-row { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px 26px;
-    display: grid; grid-template-columns: 1.1fr 1.2fr 1fr auto; gap: 24px; align-items: start; }
-  .trip-row.has-action { border-left: 3px solid var(--gold); }
-  .tr-dest { font-size: 1.02rem; font-weight: 700; margin-bottom: 4px; }
-  .tr-client { font-size: 0.8rem; color: var(--muted); }
-  .tr-dates { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
-  .tr-col-label { font-size: 0.68rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
-  .tr-item { font-size: 0.81rem; margin-bottom: 4px; }
-  .tr-item-note { font-size: 0.75rem; color: var(--muted); }
-  .tr-status-col { display: flex; flex-direction: column; gap: 8px; align-items: stretch; }
+  /* EMPTY STATE */
+  .empty-state { background:var(--surface); border:1px dashed var(--border2); border-radius:13px; padding:44px; text-align:center; color:var(--muted); }
+  .em-ico { font-size:2rem; margin-bottom:12px; }
 
-  /* ── FEES ── */
-  .fees-summary { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 26px 30px;
-    margin-bottom: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; }
-  .fee-col-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-  .fee-col-val { font-size: 1.9rem; font-weight: 800; }
-  .fee-col-sub { font-size: 0.76rem; color: var(--muted); margin-top: 4px; }
+  /* INTAKE */
+  .intake-list { display:grid; gap:10px; }
+  .intake-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px;
+    display:grid; grid-template-columns:1.2fr 1.5fr auto; gap:16px; align-items:center; }
+  .intake-name { font-weight:600; margin-bottom:3px; }
+  .intake-email { font-size:.78rem; color:var(--muted); }
+  .intake-details { font-size:.79rem; color:var(--muted); line-height:1.55; }
 
-  /* ── INTAKE ── */
-  .intake-list { display: grid; gap: 12px; }
-  .intake-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 22px;
-    display: grid; grid-template-columns: 1.2fr 1.5fr auto; gap: 18px; align-items: center; }
-  .intake-name { font-weight: 600; margin-bottom: 3px; }
-  .intake-email { font-size: 0.78rem; color: var(--muted); }
-  .intake-details { font-size: 0.8rem; color: var(--muted); line-height: 1.55; }
-  .empty-state { background: var(--surface); border: 1px dashed var(--border2); border-radius: 14px; padding: 48px; text-align: center; color: var(--muted); }
-  .empty-state .em-ico { font-size: 2rem; margin-bottom: 14px; }
+  /* SETTINGS */
+  .settings-section { background:var(--surface); border:1px solid var(--border); border-radius:13px; padding:24px 28px; margin-bottom:18px; }
+  .settings-title { font-size:.95rem; font-weight:700; margin-bottom:16px; }
+  .setting-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--border); }
+  .setting-row:last-child { border-bottom:none; }
+  .setting-label { font-size:.88rem; }
+  .setting-sub { font-size:.74rem; color:var(--muted); margin-top:2px; }
+  .setting-val { font-size:.86rem; color:var(--muted); }
+  .toggle { width:42px; height:23px; background:var(--border); border-radius:12px; position:relative; cursor:pointer; transition:background .2s; flex-shrink:0; }
+  .toggle.on { background:var(--green); }
+  .toggle::after { content:''; position:absolute; width:17px; height:17px; background:#fff; border-radius:50%; top:3px; left:3px; transition:left .2s; }
+  .toggle.on::after { left:22px; }
 
-  /* ── SETTINGS ── */
-  .settings-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 26px 30px; margin-bottom: 20px; }
-  .settings-title { font-size: 1rem; font-weight: 700; margin-bottom: 18px; }
-  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; border-bottom: 1px solid var(--border); }
-  .setting-row:last-child { border-bottom: none; }
-  .setting-label { font-size: 0.9rem; }
-  .setting-sub { font-size: 0.76rem; color: var(--muted); margin-top: 2px; }
-  .setting-val { font-size: 0.88rem; color: var(--muted); }
-  .toggle { width: 42px; height: 23px; background: var(--border); border-radius: 12px; position: relative; cursor: pointer; transition: background 0.2s; flex-shrink: 0; }
-  .toggle.on { background: var(--green); }
-  .toggle::after { content: ''; position: absolute; width: 17px; height: 17px; background: #fff; border-radius: 50%; top: 3px; left: 3px; transition: left 0.2s; }
-  .toggle.on::after { left: 22px; }
+  /* MODAL */
+  .overlay { display:none; position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.76);
+    backdrop-filter:blur(5px); justify-content:center; align-items:flex-start; overflow:auto; padding:44px 20px; }
+  .overlay.open { display:flex; }
+  .modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; width:100%;
+    max-width:600px; padding:28px 30px; box-shadow:var(--shadow); }
+  .modal.wide { max-width:760px; }
+  .modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+  .modal-head h2 { font-size:1.2rem; }
+  .modal-close { background:none; border:none; color:var(--muted); font-size:1.7rem; cursor:pointer; line-height:1; }
+  .modal-sub { color:var(--muted); font-size:.83rem; margin-bottom:20px; line-height:1.5; }
 
-  /* ── MODAL ── */
-  .overlay { display: none; position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,0.74); backdrop-filter: blur(4px);
-    justify-content: center; align-items: flex-start; overflow: auto; padding: 48px 20px; }
-  .overlay.open { display: flex; }
-  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; width: 100%; max-width: 560px; padding: 30px; box-shadow: var(--shadow); }
-  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .modal-head h2 { font-size: 1.25rem; }
-  .modal-close { background: none; border: none; color: var(--muted); font-size: 1.7rem; cursor: pointer; line-height: 1; }
-  .modal-sub { color: var(--muted); font-size: 0.84rem; margin-bottom: 22px; }
-  .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface3);
-    border: 1px solid var(--border2); color: var(--text); padding: 13px 22px; border-radius: 10px; font-size: 0.88rem;
-    z-index: 800; box-shadow: var(--shadow); opacity: 0; transition: all 0.3s; pointer-events: none; }
-  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  /* AI PARSE RESULT */
+  .parse-result { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:16px 18px; margin-bottom:16px; display:none; }
+  .parse-field { display:grid; grid-template-columns:120px 1fr; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); font-size:.84rem; }
+  .parse-field:last-child { border-bottom:none; }
+  .parse-key { color:var(--muted); font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; align-self:center; }
+  .parse-val input { width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text);
+    padding:6px 10px; border-radius:6px; font-size:.83rem; font-family:var(--font); outline:none; }
+  .parse-val input:focus { border-color:var(--orange); }
+  .ai-badge { display:inline-flex; align-items:center; gap:5px; font-size:.7rem; padding:3px 9px;
+    border-radius:20px; background:rgba(176,107,255,.15); color:var(--purple); margin-bottom:12px; }
 
-  @media (max-width: 1100px) {
-    .metrics-grid { grid-template-columns: repeat(3, 1fr); }
-    .trip-row { grid-template-columns: 1fr 1fr; }
-    .trip-row .tr-status-col { grid-column: 1/-1; flex-direction: row; }
-  }
-  @media (max-width: 800px) {
-    .sidebar { display: none; }
-    .content { padding: 18px; }
-    .page-header { padding: 18px; }
-    .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-    .ai-card { flex-direction: column; }
-    .ai-actions { flex-direction: row; flex-wrap: wrap; width: 100%; }
-    .intake-card { grid-template-columns: 1fr; }
-  }
+  /* TOAST */
+  .toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(70px);
+    background:var(--surface3); border:1px solid var(--border2); color:var(--text); padding:12px 20px;
+    border-radius:10px; font-size:.87rem; z-index:800; box-shadow:var(--shadow); opacity:0; transition:all .28s; pointer-events:none; }
+  .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+  @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,1fr)} }
+  @media(max-width:800px){ .sidebar{display:none} .content{padding:16px} .page-header{padding:16px}
+    .metrics-grid{grid-template-columns:repeat(2,1fr)} .intake-card{grid-template-columns:1fr} }
 </style>
 </head>
 <body>
 
-<!-- ── LOGIN ── -->
+<!-- LOGIN -->
 <div id="login-screen">
   <div class="login-box">
     <img src="assets/dat-logo.svg" alt="District Award Travel" class="login-logo">
     <h2>Advisor Portal</h2>
-    <div class="sub">Restricted access · Authorized personnel only</div>
-    <div class="form-group">
-      <label>Email</label>
-      <input type="text" id="admin-user" placeholder="admin@districtawardtravel.com" onkeydown="if(event.key==='Enter')doAdminLogin()">
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()">
-    </div>
+    <div class="sub">District Award Travel · Restricted access</div>
+    <div class="form-group"><label>Email</label>
+      <input type="text" id="admin-user" placeholder="admin@districtawardtravel.com" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
+    <div class="form-group"><label>Password</label>
+      <input type="password" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
     <button class="btn-primary" onclick="doAdminLogin()">Sign In</button>
     <div class="login-error" id="admin-error">Invalid credentials.</div>
   </div>
 </div>
 
-<!-- ── ADMIN ── -->
+<!-- ADMIN -->
 <div id="admin">
   <div class="admin-layout">
     <div class="sidebar">
       <div class="sidebar-logo">
         <img src="assets/dat-logo.svg" alt="DAT">
-        <div>
-          <div class="lt">District<br><span>Award Travel</span></div>
-          <div class="lb">Advisor Console</div>
-        </div>
+        <div><div class="lt">District<br><span>Award Travel</span></div><div class="lb">Advisor Console</div></div>
       </div>
       <nav class="sidebar-nav">
         <button class="nav-item active" onclick="switchPanel('overview',this)"><span class="nav-icon">◉</span> Overview</button>
         <button class="nav-item" onclick="switchPanel('urgent',this)"><span class="nav-icon">⚡</span> Action Items <span class="nav-badge" id="nav-ai-count">0</span></button>
-        <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients</button>
-        <button class="nav-item" onclick="switchPanel('trips',this)"><span class="nav-icon">✈</span> All Trips</button>
-        <button class="nav-item" onclick="switchPanel('fees',this)"><span class="nav-icon">$</span> Savings &amp; Fees</button>
+        <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('intake',this)"><span class="nav-icon">📋</span> Intake Queue <span class="nav-badge muted" id="nav-intake-count">0</span></button>
+        <button class="nav-item" onclick="switchPanel('fees',this)"><span class="nav-icon">$</span> Savings &amp; Fees</button>
         <button class="nav-item" onclick="switchPanel('settings',this)"><span class="nav-icon">⚙</span> Settings</button>
       </nav>
       <div class="sidebar-user">
@@ -282,53 +253,38 @@
     </div>
 
     <div class="main">
+
       <!-- OVERVIEW -->
       <div class="panel active" id="panel-overview">
         <div class="page-header">
           <div><h1>Overview</h1><p>District Award Travel — Advisory Operations</p></div>
           <div class="header-actions">
+            <button class="btn-action ai" onclick="openImportEmail()">✨ Import from Email</button>
             <button class="btn-action" onclick="openCompose()">✉ Message Client</button>
             <button class="btn-action solid" onclick="openAddClient()">+ Add Client</button>
           </div>
         </div>
         <div class="content">
           <div class="metrics-grid">
-            <div class="metric-card"><div class="metric-label">Active Clients</div><div class="metric-val blue">2</div><div class="metric-delta">Tammy J. · Darren F.</div></div>
-            <div class="metric-card"><div class="metric-label">Trips Advised</div><div class="metric-val">4</div><div class="metric-delta">Across 2 clients</div></div>
-            <div class="metric-card"><div class="metric-label">Savings Identified</div><div class="metric-val green">$1,685+</div><div class="metric-delta">Options presented</div></div>
-            <div class="metric-card"><div class="metric-label">Advisory Fees</div><div class="metric-val gold">$169</div><div class="metric-delta">10% of savings</div></div>
+            <div class="metric-card"><div class="metric-label">Active Clients</div><div class="metric-val blue" id="ov-client-count">—</div><div class="metric-delta" id="ov-client-names">loading…</div></div>
+            <div class="metric-card"><div class="metric-label">Intake Queue</div><div class="metric-val" id="ov-intake-count">—</div><div class="metric-delta">New applications</div></div>
             <div class="metric-card"><div class="metric-label">Open Action Items</div><div class="metric-val red" id="ov-ai-count">0</div><div class="metric-delta" id="ov-ai-next">—</div></div>
+            <div class="metric-card"><div class="metric-label">Advisory Fees</div><div class="metric-val gold">10%</div><div class="metric-delta">of savings identified</div></div>
+            <div class="metric-card"><div class="metric-label">Service Model</div><div class="metric-val" style="font-size:1rem;padding-top:4px">Advisory</div><div class="metric-delta">You advise · client books</div></div>
           </div>
 
           <div class="section-header">
-            <div class="section-title">⚡ Needs Your Attention <span class="badge badge-red" id="ov-ai-badge">0 open</span></div>
+            <div class="section-title">⚡ Action Items <span class="badge badge-red" id="ov-ai-badge">0 open</span></div>
             <button class="btn-action" onclick="switchPanel('urgent',document.querySelectorAll('.nav-item')[1])">View all →</button>
           </div>
           <div class="ai-list" id="ov-ai-list"></div>
 
-          <div class="section-header"><div class="section-title">Active Clients</div></div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Client</th><th>Points Arsenal</th><th>Trips Advised</th><th>Status</th><th>Savings</th><th></th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><div class="client-name">Tammy Jennissen</div><div class="client-sub">Director, Carne Group · Cayman Islands</div><div class="client-sub">tammy@carnegroup.com</div></td>
-                  <td><div class="points-list"><div class="points-item"><strong>1M+</strong> Amex MR</div><div class="points-item"><strong>1.6M</strong> AA miles</div><div class="points-item"><strong>500K+</strong> Marriott Bonvoy</div></div></td>
-                  <td><div class="trip-chips"><span class="trip-chip urgent">Italy Jul–Aug ⚡</span><span class="trip-chip">Iceland Oct</span><span class="trip-chip">Japan Dec</span></div></td>
-                  <td><span class="badge badge-gold">Action Required</span></td>
-                  <td style="color:var(--green);font-weight:600">$1,685+</td>
-                  <td><button class="btn-sm" onclick="composeTo('Tammy Jennissen','tammy@carnegroup.com')">Message</button></td>
-                </tr>
-                <tr>
-                  <td><div class="client-name">Darren Fernandez</div><div class="client-sub">Group Travel (6 pax) · Washington, DC</div><div class="client-sub">darren@email.com</div></td>
-                  <td><div class="points-list"><div class="points-item"><strong>TBD</strong> United MileagePlus</div><div class="points-item"><strong>TBD</strong> Amex MR</div></div></td>
-                  <td><div class="trip-chips"><span class="trip-chip">S. Africa Dec–Jan</span></div></td>
-                  <td><span class="badge badge-blue">In Progress</span></td>
-                  <td style="color:var(--muted)">Calculating</td>
-                  <td><button class="btn-sm" onclick="composeTo('Darren Fernandez','darren@email.com')">Message</button></td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="section-header">
+            <div class="section-title">Clients</div>
+            <button class="btn-action solid" onclick="openAddClient()">+ Add Client</button>
+          </div>
+          <div class="table-wrap" id="ov-clients-table">
+            <div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">Loading clients…</div>
           </div>
         </div>
       </div>
@@ -336,112 +292,27 @@
       <!-- ACTION ITEMS -->
       <div class="panel" id="panel-urgent">
         <div class="page-header">
-          <div><h1>Action Items</h1><p>What to advise, send, or follow up on — soonest first</p></div>
+          <div><h1>Action Items</h1><p>What to advise, send, or follow up on — sorted by urgency</p></div>
           <div class="header-actions">
             <button class="btn-action" id="toggle-done-btn" onclick="toggleShowDone()">Show completed</button>
             <button class="btn-action solid" onclick="openAddTask()">+ New Item</button>
           </div>
         </div>
-        <div class="content">
-          <div class="ai-list" id="ai-full-list"></div>
-        </div>
+        <div class="content"><div class="ai-list" id="ai-full-list"></div></div>
       </div>
 
       <!-- CLIENTS -->
       <div class="panel" id="panel-clients">
         <div class="page-header">
-          <div><h1>Clients</h1><p>All active and prospective clients</p></div>
-          <div class="header-actions"><button class="btn-action solid" onclick="openAddClient()">+ Add Client</button></div>
-        </div>
-        <div class="content">
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Client</th><th>Contact</th><th>Status</th><th>Loyalty Programs</th><th>Elite Status</th><th>Trips</th><th>Savings</th><th></th></tr></thead>
-              <tbody>
-                <tr>
-                  <td><div class="client-name">Tammy Jennissen</div><div class="client-sub">Director, Carne Group</div></td>
-                  <td><div style="font-size:0.82rem">tammy@carnegroup.com</div><div class="client-sub">Cayman Islands</div></td>
-                  <td><span class="badge badge-green">Active</span></td>
-                  <td><div class="points-list"><div class="points-item"><strong>1M+</strong> Amex MR</div><div class="points-item"><strong>1.6M</strong> AA miles</div><div class="points-item"><strong>500K+</strong> Marriott</div></div></td>
-                  <td><div style="font-size:0.82rem;color:var(--gold)">AA Executive Platinum</div></td>
-                  <td><span class="badge badge-blue">3 trips</span></td>
-                  <td style="color:var(--green);font-weight:600">$1,685+</td>
-                  <td><button class="btn-sm" onclick="composeTo('Tammy Jennissen','tammy@carnegroup.com')">Message</button></td>
-                </tr>
-                <tr>
-                  <td><div class="client-name">Darren Fernandez</div><div class="client-sub">Group Travel (6 pax)</div></td>
-                  <td><div style="font-size:0.82rem">darren@email.com</div><div class="client-sub">Washington, DC</div></td>
-                  <td><span class="badge badge-blue">In Progress</span></td>
-                  <td><div class="points-list"><div class="points-item"><strong>TBD</strong> United MP</div><div class="points-item"><strong>TBD</strong> Amex MR</div></div></td>
-                  <td><div class="client-sub">—</div></td>
-                  <td><span class="badge badge-blue">1 trip</span></td>
-                  <td style="color:var(--muted)">TBD</td>
-                  <td><button class="btn-sm" onclick="composeTo('Darren Fernandez','darren@email.com')">Message</button></td>
-                </tr>
-              </tbody>
-            </table>
+          <div><h1>Clients</h1><p>All portal accounts — click to message</p></div>
+          <div class="header-actions">
+            <button class="btn-action ai" onclick="openImportEmail()">✨ Import from Email</button>
+            <button class="btn-action solid" onclick="openAddClient()">+ Add Client</button>
           </div>
         </div>
-      </div>
-
-      <!-- ALL TRIPS -->
-      <div class="panel" id="panel-trips">
-        <div class="page-header"><div><h1>All Trips</h1><p>Every itinerary you're advising on</p></div></div>
         <div class="content">
-          <div class="trips-list">
-            <div class="trip-row has-action">
-              <div><div class="tr-dest">Italy — Franciacorta, Piedmont, Milan</div><div class="tr-client">👤 Tammy Jennissen</div><div class="tr-dates">Jul 29 – Aug 13, 2026</div><div style="margin-top:8px"><span class="badge badge-gold">Action Required</span></div></div>
-              <div><div class="tr-col-label">Itinerary</div>
-                <div class="tr-item">✅ MXP arrival — Employer covered</div>
-                <div class="tr-item">✅ L'Albereta Franciacorta — Wedding party</div>
-                <div class="tr-item" style="color:var(--red)">⚠️ Casa di Langa — advise booking by Jun 30</div>
-                <div class="tr-item" style="color:var(--gold)">⏳ Laqua Orta — option sent</div>
-                <div class="tr-item" style="color:var(--gold)">⏳ Milan Marriott — recommended, awaiting client</div>
-              </div>
-              <div><div class="tr-col-label">Recommended Strategy</div><div class="tr-item">120K Marriott pts (Milan)</div><div class="tr-item-note">Amex FHR rate (Piedmont)</div><div class="tr-item-note">Amex Hotel Collection (Orta)</div></div>
-              <div class="tr-status-col"><button class="btn-sm primary" onclick="composeTo('Tammy Jennissen','tammy@carnegroup.com')">Send Recommendation</button><button class="btn-sm" onclick="toast('Full plan view coming soon')">View Full Plan</button></div>
-            </div>
-            <div class="trip-row">
-              <div><div class="tr-dest">Iceland</div><div class="tr-client">👤 Tammy Jennissen</div><div class="tr-dates">Oct 17–24, 2026</div><div style="margin-top:8px"><span class="badge badge-muted">Planning</span></div></div>
-              <div><div class="tr-col-label">Status</div><div class="tr-item" style="color:var(--muted)">Award space research in progress</div><div class="tr-item-note">Routing TBD — Icelandair or transatlantic</div></div>
-              <div><div class="tr-col-label">Points Strategy</div><div class="tr-item-note">Amex MR or AA miles — TBD</div></div>
-              <div class="tr-status-col"><button class="btn-sm" onclick="toast('Logged: research Iceland availability')">Research Availability</button></div>
-            </div>
-            <div class="trip-row">
-              <div><div class="tr-dest">Japan — Tokyo</div><div class="tr-client">👤 Tammy Jennissen</div><div class="tr-dates">December 2026 (TBD)</div><div style="margin-top:8px"><span class="badge badge-blue">Mapped</span></div></div>
-              <div><div class="tr-col-label">Recommended Redemption</div><div class="tr-item">JAL AA167 JFK→HND nonstop</div><div class="tr-item">35,000 AA miles + $5.60 taxes</div><div class="tr-item-note">Business class. Cash: $913–983.</div></div>
-              <div><div class="tr-col-label">Award Space</div><div class="tr-item-note">Opens ~March 8, 2026</div><div class="tr-item-note">Set ExpertFlyer alert</div></div>
-              <div class="tr-status-col"><button class="btn-sm" onclick="toast('Reminder set: monitor JAL space')">Set Space Alert</button></div>
-            </div>
-            <div class="trip-row">
-              <div><div class="tr-dest">South Africa — Cape Town &amp; Joburg</div><div class="tr-client">👤 Darren Fernandez (6 pax)</div><div class="tr-dates">Dec 16, 2026 – Jan 1, 2027</div><div style="margin-top:8px"><span class="badge badge-blue">In Progress</span></div></div>
-              <div><div class="tr-col-label">Challenge</div><div class="tr-item" style="color:var(--gold)">Peak season + 6 passengers</div><div class="tr-item-note">Award space near impossible</div><div class="tr-item-note">Turkish (IST), Ethiopian (ADD), Qatar (DOH) alternatives</div></div>
-              <div><div class="tr-col-label">Points Needed</div><div class="tr-item-note">United MP balance: TBD</div><div class="tr-item-note">Amex MR balance: TBD</div></div>
-              <div class="tr-status-col"><button class="btn-sm primary" onclick="composeTo('Darren Fernandez','darren@email.com')">Request Balances</button><button class="btn-sm" onclick="toast('Logged: research routing')">Research Routing</button></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- FEES -->
-      <div class="panel" id="panel-fees">
-        <div class="page-header"><div><h1>Savings &amp; Fees</h1><p>Savings you identified · Advisory fees · Pipeline</p></div></div>
-        <div class="content">
-          <div class="fees-summary">
-            <div><div class="fee-col-label">Total Savings Identified</div><div class="fee-col-val" style="color:var(--green)">$1,685+</div><div class="fee-col-sub">Options presented to clients</div></div>
-            <div><div class="fee-col-label">Advisory Fees (10%)</div><div class="fee-col-val" style="color:var(--gold)">$169</div><div class="fee-col-sub">On accepted recommendations</div></div>
-            <div><div class="fee-col-label">Pipeline (Unconfirmed)</div><div class="fee-col-val" style="color:var(--blue)">TBD</div><div class="fee-col-sub">Darren S. Africa + Tammy remaining</div></div>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Client</th><th>Trip</th><th>Recommendation</th><th>Cash Value</th><th>Points Cost</th><th>Savings</th><th>Fee (10%)</th><th>Status</th></tr></thead>
-              <tbody>
-                <tr><td><div class="client-name">Tammy J.</div></td><td>Tokyo — JAL Business</td><td style="font-size:0.8rem">35K AA miles + $5.60</td><td>$943</td><td style="color:var(--muted)">$166</td><td style="color:var(--green);font-weight:600">$777</td><td style="color:var(--gold);font-weight:600">$78</td><td><span class="badge badge-muted">Awaiting Client</span></td></tr>
-                <tr><td><div class="client-name">Tammy J.</div></td><td>Milan Marriott (2 nights)</td><td style="font-size:0.8rem">120K Marriott pts</td><td>$580</td><td style="color:var(--muted)">$72</td><td style="color:var(--green);font-weight:600">$508</td><td style="color:var(--gold);font-weight:600">$51</td><td><span class="badge badge-gold">Recommended</span></td></tr>
-                <tr><td><div class="client-name">Tammy J.</div></td><td>Italy — FHR + Hotel Collection</td><td style="font-size:0.8rem">Amex FHR 15% + credits</td><td>$1,200</td><td style="color:var(--muted)">$800</td><td style="color:var(--green);font-weight:600">$400</td><td style="color:var(--gold);font-weight:600">$40</td><td><span class="badge badge-red">Advise by Jun 30</span></td></tr>
-                <tr><td><div class="client-name">Darren F.</div></td><td>South Africa (6 pax)</td><td style="font-size:0.8rem">TBD</td><td style="color:var(--muted)">TBD</td><td style="color:var(--muted)">TBD</td><td style="color:var(--muted)">TBD</td><td style="color:var(--muted)">TBD</td><td><span class="badge badge-blue">Researching</span></td></tr>
-              </tbody>
-            </table>
+          <div id="clients-table-wrap">
+            <div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div>
           </div>
         </div>
       </div>
@@ -449,39 +320,67 @@
       <!-- INTAKE -->
       <div class="panel" id="panel-intake">
         <div class="page-header">
-          <div><h1>Intake Queue</h1><p>New client applications from the intake form</p></div>
-          <div class="header-actions"><a href="intake.html" target="_blank"><button class="btn-action">View Intake Form ↗</button></a></div>
+          <div><h1>Intake Queue</h1><p>Applications from the website form</p></div>
+          <div class="header-actions"><a href="intake.html" target="_blank"><button class="btn-action">View Form ↗</button></a></div>
         </div>
         <div class="content" id="intake-content">
-          <div class="empty-state">
-            <div class="em-ico">📋</div>
-            <div style="font-size:1rem;margin-bottom:8px;color:var(--text)">No pending intake submissions</div>
-            <div style="font-size:0.85rem">New applications submitted via the <a href="intake.html" target="_blank" style="color:var(--gold)">intake form</a> appear here automatically.</div>
+          <div class="empty-state"><div class="em-ico">📋</div>
+            <div style="font-size:.95rem;margin-bottom:8px;color:var(--text)">No pending applications</div>
+            <div style="font-size:.83rem">Submissions from <a href="intake.html" target="_blank" style="color:var(--gold)">the intake form</a> appear here.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FEES (manual tracker) -->
+      <div class="panel" id="panel-fees">
+        <div class="page-header">
+          <div><h1>Savings &amp; Fees</h1><p>Track savings you identified and the 10% advisory fee</p></div>
+          <div class="header-actions"><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
+        </div>
+        <div class="content">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px">
+            <div class="metric-card"><div class="metric-label">Total Savings Identified</div><div class="metric-val green" id="fees-total-savings">$0</div><div class="metric-delta">Options presented</div></div>
+            <div class="metric-card"><div class="metric-label">Advisory Fees (10%)</div><div class="metric-val gold" id="fees-total-fees">$0</div><div class="metric-delta">On accepted recommendations</div></div>
+            <div class="metric-card"><div class="metric-label">Entries Logged</div><div class="metric-val blue" id="fees-count">0</div><div class="metric-delta">Across all clients</div></div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Client</th><th>Trip / Recommendation</th><th>Strategy</th><th>Savings</th><th>Fee (10%)</th><th>Status</th><th></th></tr></thead>
+              <tbody id="fees-tbody">
+                <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" to add one.</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
       <!-- SETTINGS -->
       <div class="panel" id="panel-settings">
-        <div class="page-header"><div><h1>Settings</h1><p>Business configuration &amp; preferences</p></div></div>
+        <div class="page-header"><div><h1>Settings</h1><p>Business configuration &amp; integrations</p></div></div>
         <div class="content">
           <div class="settings-section">
             <div class="settings-title">Advisory Model</div>
-            <div class="setting-row"><div><div class="setting-label">Advisory Fee Rate</div><div class="setting-sub">Percentage of savings you identify for the client</div></div><div class="setting-val">10%</div></div>
-            <div class="setting-row"><div><div class="setting-label">Upfront Fee</div><div class="setting-sub">Charged before the redemption plan is delivered</div></div><div class="setting-val" style="color:var(--green)">$0.00</div></div>
+            <div class="setting-row"><div><div class="setting-label">Fee Rate</div><div class="setting-sub">% of savings you identify for the client</div></div><div class="setting-val">10%</div></div>
+            <div class="setting-row"><div><div class="setting-label">Upfront Fee</div><div class="setting-sub">Charged before the redemption plan is delivered</div></div><div class="setting-val" style="color:var(--green)">$0</div></div>
             <div class="setting-row"><div><div class="setting-label">Service Model</div><div class="setting-sub">DAT advises and presents options — clients book themselves</div></div><div class="setting-val" style="color:var(--gold)">Advisory only</div></div>
-            <div class="setting-row"><div><div class="setting-label">Minimum Savings Threshold</div><div class="setting-sub">No fee charged below this amount</div></div><div class="setting-val">None</div></div>
           </div>
           <div class="settings-section">
-            <div class="settings-title">Team</div>
-            <div class="setting-row"><div><div class="setting-label">Braden Salcetti</div><div class="setting-sub">Founder &amp; Lead Advisor</div></div><div><span class="badge badge-green">Active</span></div></div>
-            <div class="setting-row"><div><div class="setting-label">Add Team Member</div><div class="setting-sub">Invite an advisor when you're ready to hire</div></div><div><button class="btn-sm" onclick="toast('Team invites coming soon')">+ Invite</button></div></div>
+            <div class="settings-title">AI Integration</div>
+            <div class="setting-row"><div><div class="setting-label">Email Import (Groq/Llama)</div><div class="setting-sub">Paste a forwarded email → AI extracts client info instantly</div></div><div id="ai-status-badge"><span class="badge badge-muted">checking…</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">Gemini Fallback</div><div class="setting-sub">Used if Groq is unavailable</div></div><div><span class="badge badge-muted" id="gemini-badge">checking…</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">GROQ_API_KEY</div><div class="setting-sub">Set in Render → Environment</div></div><div><span class="badge badge-muted">Render env var</span></div></div>
           </div>
           <div class="settings-section">
             <div class="settings-title">Tools</div>
             <div class="setting-row"><div><div class="setting-label">Amex Fine Hotels &amp; Resorts</div><div class="setting-sub">Reference portal for FHR rate options</div></div><div><a href="https://www.amextravel.com/fine-hotels-resorts" target="_blank"><button class="btn-sm">Open ↗</button></a></div></div>
             <div class="setting-row"><div><div class="setting-label">ExpertFlyer</div><div class="setting-sub">Award space monitoring</div></div><div><a href="https://www.expertflyer.com" target="_blank"><button class="btn-sm">Open ↗</button></a></div></div>
-            <div class="setting-row"><div><div class="setting-label">Daily Ops Briefing</div><div class="setting-sub">Morning email of upcoming deadlines</div></div><div><span class="badge badge-muted">Paused</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">Award Hacker</div><div class="setting-sub">Points redemption research</div></div><div><a href="https://www.awardhacker.com" target="_blank"><button class="btn-sm">Open ↗</button></a></div></div>
+            <div class="setting-row"><div><div class="setting-label">Points.com</div><div class="setting-sub">Transfer partner chart</div></div><div><a href="https://www.points.com" target="_blank"><button class="btn-sm">Open ↗</button></a></div></div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">Team</div>
+            <div class="setting-row"><div><div class="setting-label">Braden Salcetti</div><div class="setting-sub">Founder &amp; Lead Advisor</div></div><div><span class="badge badge-green">Active</span></div></div>
+            <div class="setting-row"><div><div class="setting-label">Invite Team Member</div><div class="setting-sub">Add an advisor when you're ready to hire</div></div><div><button class="btn-sm" onclick="toast('Team invites coming soon')">+ Invite</button></div></div>
           </div>
         </div>
       </div>
@@ -489,35 +388,34 @@
   </div>
 </div>
 
-<!-- ── ADD CLIENT MODAL ── -->
+<!-- ADD CLIENT MODAL -->
 <div id="addclient-overlay" class="overlay">
   <div class="modal">
     <div class="modal-head"><h2>Register New Client</h2><button class="modal-close" onclick="closeAddClient()">&times;</button></div>
-    <p class="modal-sub">Creates portal login credentials. Share the email + access code with your client so they can sign in to their portal.</p>
+    <p class="modal-sub">Creates a portal login. Share the email + access code so your client can sign in.</p>
     <div id="addclient-form">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="form-group"><label>First Name</label><input type="text" id="ac-first" placeholder="Tammy"></div>
-        <div class="form-group"><label>Last Name</label><input type="text" id="ac-last" placeholder="Jennissen"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>First Name</label><input type="text" id="ac-first" placeholder="Jane"></div>
+        <div class="form-group"><label>Last Name</label><input type="text" id="ac-last" placeholder="Smith"></div>
       </div>
-      <div class="form-group"><label>Email (login username)</label><input type="email" id="ac-email" placeholder="client@email.com"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="ac-email" placeholder="client@email.com"></div>
       <div class="form-group"><label>Access Code</label>
-        <div style="display:flex;gap:8px"><input type="text" id="ac-pass" placeholder="Set one or click Generate"><button class="btn-sm" type="button" onclick="genCode()">Generate</button></div>
+        <div style="display:flex;gap:8px"><input type="text" id="ac-pass" placeholder="Set or generate"><button class="btn-sm" type="button" onclick="genCode()">Generate</button></div>
       </div>
-      <div class="form-group"><label>Status / Tier Label</label><input type="text" id="ac-tier" placeholder="e.g. Executive Platinum, Group Travel Client"></div>
-      <button class="btn-primary" style="margin-top:8px" onclick="generateClient()">Create Client</button>
+      <div class="form-group"><label>Tier / Label</label><input type="text" id="ac-tier" placeholder="e.g. Executive Platinum, Group Travel"></div>
+      <button class="btn-primary" style="margin-top:6px" onclick="generateClient()">Create Client</button>
     </div>
     <div id="addclient-result" style="display:none">
-      <div style="background:rgba(31,212,122,0.08);border:1px solid rgba(31,212,122,0.3);border-radius:10px;padding:20px;margin-bottom:16px">
-        <div style="font-weight:700;color:var(--green);margin-bottom:10px" id="res-title">&#10003; Client created</div>
-        <div style="font-size:0.85rem;line-height:1.8">
+      <div style="background:rgba(31,212,122,.08);border:1px solid rgba(31,212,122,.3);border-radius:10px;padding:18px;margin-bottom:14px">
+        <div style="font-weight:700;color:var(--green);margin-bottom:8px" id="res-title">✓ Client created</div>
+        <div style="font-size:.84rem;line-height:1.8">
           <div><span style="color:var(--muted)">Email:</span> <strong id="res-email"></strong></div>
           <div><span style="color:var(--muted)">Access Code:</span> <strong id="res-pass"></strong></div>
         </div>
       </div>
-      <div id="res-explain" style="font-size:0.82rem;color:var(--muted);margin-bottom:8px"></div>
-      <textarea id="res-snippet" readonly style="display:none;width:100%;height:130px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:12px;font-family:monospace;font-size:0.76rem;resize:vertical"></textarea>
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn-sm primary" id="res-copy-btn" onclick="copySnippet(this)" style="display:none">Copy Code Block</button>
+      <div id="res-explain" style="font-size:.81rem;color:var(--muted);margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn-sm primary" onclick="quickComposeCreds()">✉ Email Credentials</button>
         <button class="btn-sm" onclick="resetAddClient()">Add Another</button>
         <button class="btn-sm" onclick="closeAddClient()">Done</button>
       </div>
@@ -525,411 +423,646 @@
   </div>
 </div>
 
-<!-- ── COMPOSE MESSAGE MODAL ── -->
+<!-- IMPORT FROM EMAIL MODAL -->
+<div id="import-overlay" class="overlay">
+  <div class="modal wide">
+    <div class="modal-head"><h2>✨ Import Client from Email</h2><button class="modal-close" onclick="closeImportEmail()">&times;</button></div>
+    <p class="modal-sub">Forward or paste a client's email below. AI (Groq/Llama) reads it and extracts their info — you review, edit, and create the account in one click. No manual entry.</p>
+    <div id="import-step1">
+      <div class="form-group"><label>Paste the forwarded email here</label>
+        <textarea id="import-raw" rows="9" placeholder="Paste the full email — including the sender's email address, name, any travel goals, points balances, destinations they mentioned, etc."></textarea>
+      </div>
+      <button class="btn-primary" onclick="runAIParse()" id="parse-btn">✨ Parse with AI</button>
+    </div>
+    <div id="import-step2" style="display:none">
+      <div class="ai-badge">✨ Parsed by <span id="parse-source-label">AI</span> · Review and edit below</div>
+      <div class="parse-result" id="parse-result-box" style="display:block">
+        <div class="parse-field"><div class="parse-key">First Name</div><div class="parse-val"><input type="text" id="pr-first"></div></div>
+        <div class="parse-field"><div class="parse-key">Last Name</div><div class="parse-val"><input type="text" id="pr-last"></div></div>
+        <div class="parse-field"><div class="parse-key">Email</div><div class="parse-val"><input type="email" id="pr-email"></div></div>
+        <div class="parse-field"><div class="parse-key">Phone</div><div class="parse-val"><input type="text" id="pr-phone"></div></div>
+        <div class="parse-field"><div class="parse-key">Home Airport</div><div class="parse-val"><input type="text" id="pr-airport"></div></div>
+        <div class="parse-field"><div class="parse-key">Travel Goals</div><div class="parse-val"><input type="text" id="pr-goals"></div></div>
+        <div class="parse-field"><div class="parse-key">Notes</div><div class="parse-val"><input type="text" id="pr-notes"></div></div>
+      </div>
+      <div class="form-group"><label>Access Code (for portal login)</label>
+        <div style="display:flex;gap:8px"><input type="text" id="pr-pass" placeholder="Set or generate"><button class="btn-sm" type="button" onclick="document.getElementById('pr-pass').value=genRandCode()">Generate</button></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="btn-primary" onclick="createFromParsed()">Create Client Account</button>
+        <button class="btn-sm" onclick="backToImport()" style="align-self:center">← Re-paste</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPOSE MODAL -->
 <div id="compose-overlay" class="overlay">
   <div class="modal">
     <div class="modal-head"><h2>Message Client</h2><button class="modal-close" onclick="closeCompose()">&times;</button></div>
-    <p class="modal-sub">Opens a pre-filled email from your default mail app (districtawardtravel@gmail.com). Pick a template to start fast.</p>
+    <p class="modal-sub">Opens a pre-filled email in your mail app. Pick a template to write fast.</p>
     <div class="form-group"><label>To</label>
       <select id="cm-client" onchange="cmSyncEmail()">
-        <option value="Tammy Jennissen|tammy@carnegroup.com">Tammy Jennissen — tammy@carnegroup.com</option>
-        <option value="Darren Fernandez|darren@email.com">Darren Fernandez — darren@email.com</option>
-        <option value="|">Other / type manually…</option>
+        <option value="|">Select a client…</option>
       </select>
     </div>
-    <div class="form-group"><label>Email Address</label><input type="email" id="cm-email" placeholder="client@email.com"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="cm-email" placeholder="client@email.com"></div>
     <div class="form-group"><label>Template</label>
       <select id="cm-template" onchange="cmApplyTemplate()">
         <option value="blank">Blank message</option>
         <option value="recommend">Recommendation ready</option>
         <option value="balances">Request points balances</option>
-        <option value="deadline">Time-sensitive deadline reminder</option>
+        <option value="deadline">Time-sensitive deadline</option>
         <option value="checkin">Friendly check-in</option>
+        <option value="creds">Portal login credentials</option>
       </select>
     </div>
-    <div class="form-group"><label>Subject</label><input type="text" id="cm-subject" placeholder="Subject"></div>
-    <div class="form-group"><label>Message</label><textarea id="cm-body" rows="7" placeholder="Write your message…"></textarea></div>
-    <button class="btn-primary" onclick="sendCompose()">✉ Open in Email</button>
+    <div class="form-group"><label>Subject</label><input type="text" id="cm-subject"></div>
+    <div class="form-group"><label>Message</label><textarea id="cm-body" rows="7"></textarea></div>
+    <button class="btn-primary" onclick="sendCompose()">✉ Open in Email App</button>
   </div>
 </div>
 
-<!-- ── ADD TASK MODAL ── -->
+<!-- ADD TASK MODAL -->
 <div id="addtask-overlay" class="overlay">
   <div class="modal">
     <div class="modal-head"><h2>New Action Item</h2><button class="modal-close" onclick="closeAddTask()">&times;</button></div>
-    <p class="modal-sub">Add a to-do with a deadline. It shows up here, sorted by urgency, until you mark it done.</p>
-    <div class="form-group"><label>Title</label><input type="text" id="at-title" placeholder="e.g. Advise Tammy on Iceland routing options"></div>
-    <div class="form-group"><label>Client</label><input type="text" id="at-client" placeholder="e.g. Tammy Jennissen"></div>
-    <div class="form-group"><label>Details</label><textarea id="at-desc" rows="3" placeholder="Any notes or context…"></textarea></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <p class="modal-sub">Add a to-do with a deadline. Sorted by urgency automatically.</p>
+    <div class="form-group"><label>Title</label><input type="text" id="at-title" placeholder="e.g. Send Iceland routing options to client"></div>
+    <div class="form-group"><label>Client</label><input type="text" id="at-client" placeholder="Client name"></div>
+    <div class="form-group"><label>Client Email (for Message button)</label><input type="email" id="at-email" placeholder="client@email.com"></div>
+    <div class="form-group"><label>Details / Notes</label><textarea id="at-desc" rows="3"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group"><label>Due Date</label><input type="date" id="at-due"></div>
       <div class="form-group"><label>Priority</label>
         <select id="at-priority"><option value="critical">Critical</option><option value="high" selected>High</option><option value="medium">Medium</option><option value="low">Low</option></select>
       </div>
     </div>
-    <button class="btn-primary" style="margin-top:6px" onclick="saveTask()">Add Item</button>
+    <button class="btn-primary" style="margin-top:4px" onclick="saveTask()">Add Item</button>
+  </div>
+</div>
+
+<!-- LOG SAVING MODAL -->
+<div id="addsaving-overlay" class="overlay">
+  <div class="modal">
+    <div class="modal-head"><h2>Log a Saving</h2><button class="modal-close" onclick="closeAddSaving()">&times;</button></div>
+    <p class="modal-sub">Record a savings option you identified. The advisory fee (10%) is calculated automatically.</p>
+    <div class="form-group"><label>Client Name</label><input type="text" id="sv-client" placeholder="Client name"></div>
+    <div class="form-group"><label>Trip / Recommendation</label><input type="text" id="sv-trip" placeholder="e.g. Tokyo — JAL Business"></div>
+    <div class="form-group"><label>Strategy</label><input type="text" id="sv-strategy" placeholder="e.g. 35K AA miles + $5.60"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Savings Amount ($)</label><input type="number" id="sv-savings" placeholder="777" min="0"></div>
+      <div class="form-group"><label>Status</label>
+        <select id="sv-status"><option value="Recommended">Recommended</option><option value="Accepted">Accepted</option><option value="Pending">Pending</option><option value="Researching">Researching</option></select>
+      </div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;font-size:.83rem;color:var(--muted)">
+      Advisory fee: <strong style="color:var(--gold)" id="sv-fee-preview">$0</strong> (10% of savings)
+    </div>
+    <button class="btn-primary" onclick="saveSaving()">Log Entry</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
+'use strict';
 let ADMIN_TOKEN = null;
+let CLIENTS = [];
 
-/* ──────────────────────────────────────────────
-   ACTION ITEMS  (persisted in localStorage)
-   ────────────────────────────────────────────── */
-const SEED_ITEMS = [
-  { id: 'casa', icon: '🏨', priority: 'critical', client: 'Tammy Jennissen', email: 'tammy@carnegroup.com',
-    title: 'Advise Tammy to book Casa di Langa via Amex FHR by Jun 30',
-    desc: "Casa di Langa (Piedmont, Aug 5–9) should be booked on her Amex Platinum through the Fine Hotels & Resorts portal to lock the 15% rate + $100 F&B credit, room upgrade and late checkout. Send her the recommendation and the FHR link so she can book before the rate expires.",
-    due: '2026-06-30' },
-  { id: 'darren-bal', icon: '📊', priority: 'high', client: 'Darren Fernandez', email: 'darren@email.com',
-    title: "Request Darren's United & Amex MR balances",
-    desc: 'Need current United MileagePlus and Amex MR balances to map South Africa (Dec 16 – Jan 1) for 6 passengers. Peak season — Turkish/Ethiopian/Qatar as cash alternatives.',
-    due: '2026-06-20' },
-  { id: 'jal', icon: '✈️', priority: 'high', client: 'Tammy Jennissen', email: 'tammy@carnegroup.com',
-    title: 'Recommend Tokyo JAL AA167 — award space now open',
-    desc: 'JFK→HND nonstop, 35,000 AA miles + $5.60, business class. Cash value $913–983. Advise Tammy to lock it before December demand spikes.',
-    due: '2026-07-01' },
-  { id: 'milan', icon: '🏨', priority: 'medium', client: 'Tammy Jennissen', email: 'tammy@carnegroup.com',
-    title: 'Confirm Milan Marriott recommendation with Tammy',
-    desc: 'Milan Marriott is the best value of the options reviewed: 120,000 Bonvoy points, Aug 11–13. Awaiting her go-ahead.',
-    due: '2026-07-15' },
-  { id: 'orta', icon: '🏨', priority: 'medium', client: 'Tammy Jennissen', email: 'tammy@carnegroup.com',
-    title: 'Send Laqua by the Lake (Orta) option',
-    desc: 'Aug 9–11 via Amex Hotel Collection. Present as the Orta-area recommendation.',
-    due: '2026-07-15' },
-  { id: 'iceland', icon: '🧭', priority: 'low', client: 'Tammy Jennissen', email: 'tammy@carnegroup.com',
-    title: 'Research Iceland award routing',
-    desc: 'Oct 17–24 trip. Routing TBD — Icelandair or transatlantic via Amex MR / AA miles.',
-    due: '2026-09-01' },
-];
+/* ════════════════════════════════════════════
+   ACTION ITEMS — localStorage persistence
+   ════════════════════════════════════════════ */
+function loadState(){ try{ return JSON.parse(localStorage.getItem('dat_ai_state')||'{}'); }catch(e){return {};} }
+function saveState(s){ localStorage.setItem('dat_ai_state', JSON.stringify(s)); }
+function loadCustom(){ try{ return JSON.parse(localStorage.getItem('dat_ai_custom')||'[]'); }catch(e){return [];} }
+function saveCustom(a){ localStorage.setItem('dat_ai_custom', JSON.stringify(a)); }
 
-let showDone = false;
+// Seed items are the default to-dos — empty until client-specific ones are added
+const SEED_ITEMS = [];
 
-function loadState() {
-  try { return JSON.parse(localStorage.getItem('dat_ai_state') || '{}'); } catch (e) { return {}; }
-}
-function saveState(s) { localStorage.setItem('dat_ai_state', JSON.stringify(s)); }
-function loadCustom() {
-  try { return JSON.parse(localStorage.getItem('dat_ai_custom') || '[]'); } catch (e) { return []; }
-}
-function saveCustom(a) { localStorage.setItem('dat_ai_custom', JSON.stringify(a)); }
-
-function allItems() {
+function allItems(){
   const state = loadState();
-  const items = SEED_ITEMS.concat(loadCustom());
-  return items.map(function(it) {
-    const st = state[it.id] || {};
-    return Object.assign({}, it, { done: !!st.done, due: st.dueOverride || it.due });
+  return SEED_ITEMS.concat(loadCustom()).map(function(it){
+    const st = state[it.id]||{};
+    return Object.assign({}, it, { done: !!st.done, due: st.dueOverride||it.due });
   });
 }
 
-const PRANK = { critical: 0, high: 1, medium: 2, low: 3 };
-function daysUntil(due) {
-  if (!due) return null;
-  const d = new Date(due + 'T00:00:00');
-  const now = new Date(); now.setHours(0,0,0,0);
-  return Math.round((d - now) / 86400000);
+const PRANK = { critical:0, high:1, medium:2, low:3 };
+function daysUntil(due){
+  if(!due) return null;
+  const d = new Date(due+'T00:00:00'), now = new Date();
+  now.setHours(0,0,0,0);
+  return Math.round((d-now)/86400000);
 }
-function dueLabel(due) {
+function dueLabel(due){
   const d = daysUntil(due);
-  if (d === null) return { text: 'No date', soon: false };
-  if (d < 0) return { text: 'OVERDUE ' + Math.abs(d) + 'd', soon: true };
-  if (d === 0) return { text: 'DUE TODAY', soon: true };
-  if (d === 1) return { text: 'Due tomorrow', soon: true };
-  return { text: 'Due in ' + d + 'd', soon: d <= 10 };
+  if(d===null) return {text:'No date',soon:false};
+  if(d<0) return {text:'OVERDUE '+Math.abs(d)+'d',soon:true};
+  if(d===0) return {text:'DUE TODAY',soon:true};
+  if(d===1) return {text:'Due tomorrow',soon:true};
+  return {text:'Due in '+d+'d',soon:d<=10};
 }
-
-function sortedItems(includeDone) {
+let showDone = false;
+function sortedItems(inclDone){
   let items = allItems();
-  if (!includeDone) items = items.filter(function(i) { return !i.done; });
-  return items.sort(function(a, b) {
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    const da = daysUntil(a.due), db = daysUntil(b.due);
-    const ka = da === null ? 9999 : da, kb = db === null ? 9999 : db;
-    if (ka !== kb) return ka - kb;
-    return PRANK[a.priority] - PRANK[b.priority];
+  if(!inclDone) items = items.filter(function(i){return !i.done;});
+  return items.sort(function(a,b){
+    if(a.done!==b.done) return a.done?1:-1;
+    const da=daysUntil(a.due)??9999, db=daysUntil(b.due)??9999;
+    if(da!==db) return da-db;
+    return (PRANK[a.priority]||9)-(PRANK[b.priority]||9);
   });
 }
-
-function cardHTML(it, compact) {
+function cardHTML(it, compact){
   const dl = dueLabel(it.due);
-  const meta = '<span class="ai-due ' + (dl.soon ? 'soon' : 'ok') + '">⏰ ' + dl.text + '</span>' +
-               '<span>👤 ' + it.client + '</span>' +
-               (it.due ? '<span>📅 ' + it.due + '</span>' : '');
-  let actions = '';
-  if (it.done) {
-    actions = '<button class="btn-sm" onclick="setDone(\'' + it.id + '\',false)">Reopen</button>';
+  const PCOL = {critical:'red',high:'gold',medium:'blue',low:'muted'};
+  const meta = '<span class="ai-due '+(dl.soon?'soon':'ok')+'">⏰ '+dl.text+'</span>'+
+    '<span>👤 '+esc(it.client)+'</span>'+(it.due?'<span>📅 '+it.due+'</span>':'')+
+    '<span class="badge badge-'+(PCOL[it.priority]||'muted')+'">'+it.priority+'</span>';
+  let acts = '';
+  if(it.done){
+    acts = '<button class="btn-sm" onclick="setDone(\''+eid(it.id)+'\',false)">Reopen</button>';
   } else {
-    actions = '<button class="btn-sm green" onclick="setDone(\'' + it.id + '\',true)">✓ Mark Done</button>';
-    if (it.email) actions += '<button class="btn-sm primary" onclick="composeTo(\'' + it.client.replace(/'/g,"\\'") + '\',\'' + it.email + '\')">✉ Message</button>';
-    actions += '<button class="btn-sm" onclick="snooze(\'' + it.id + '\')">Snooze 3d</button>';
+    acts = '<button class="btn-sm green" onclick="setDone(\''+eid(it.id)+'\',true)">✓ Done</button>';
+    if(it.email) acts += '<button class="btn-sm primary" onclick="composeTo(\''+esc(it.client)+'\',\''+esc(it.email)+'\')">✉ Message</button>';
+    acts += '<button class="btn-sm" onclick="snooze(\''+eid(it.id)+'\')">Snooze 3d</button>';
   }
-  return '<div class="ai-card p-' + it.priority + (it.done ? ' done' : '') + '">' +
-    '<div class="ai-icon">' + it.icon + '</div>' +
-    '<div class="ai-body"><div class="ai-title">' + it.title + '</div>' +
-    (compact ? '' : '<div class="ai-desc">' + it.desc + '</div>') +
-    '<div class="ai-meta">' + meta + '<span class="badge badge-' + ({critical:'red',high:'gold',medium:'blue',low:'muted'})[it.priority] + '">' + it.priority + '</span></div></div>' +
-    '<div class="ai-actions">' + actions + '</div></div>';
+  return '<div class="ai-card p-'+it.priority+(it.done?' done':'')+'">'
+    +'<div class="ai-icon">'+it.icon+'</div>'
+    +'<div class="ai-body"><div class="ai-title">'+esc(it.title)+'</div>'
+    +(compact?'':'<div class="ai-desc">'+esc(it.desc)+'</div>')
+    +'<div class="ai-meta">'+meta+'</div></div>'
+    +'<div class="ai-actions">'+acts+'</div></div>';
 }
-
-function renderActionItems() {
+function renderActionItems(){
   const open = sortedItems(false);
-  // sidebar + overview counts
-  document.getElementById('nav-ai-count').textContent = open.length;
-  document.getElementById('ov-ai-count').textContent = open.length;
-  document.getElementById('ov-ai-badge').textContent = open.length + ' open';
-  document.getElementById('ov-ai-next').textContent = open.length ? (dueLabel(open[0].due).text + ' · ' + open[0].client) : 'All clear ✈';
-
-  // overview: top 3 compact
-  document.getElementById('ov-ai-list').innerHTML = open.length
-    ? open.slice(0, 3).map(function(i) { return cardHTML(i, true); }).join('')
-    : '<div class="empty-state"><div class="em-ico">✅</div><div style="color:var(--text)">Nothing urgent. Enjoy the clear runway.</div></div>';
-
-  // full list
-  const full = sortedItems(showDone);
-  document.getElementById('ai-full-list').innerHTML = full.length
-    ? full.map(function(i) { return cardHTML(i, false); }).join('')
-    : '<div class="empty-state"><div class="em-ico">✅</div><div style="color:var(--text)">No action items. Add one with “+ New Item”.</div></div>';
+  const countEl = document.getElementById('nav-ai-count');
+  if(countEl) countEl.textContent = open.length;
+  const ovCount = document.getElementById('ov-ai-count');
+  if(ovCount) ovCount.textContent = open.length;
+  const ovBadge = document.getElementById('ov-ai-badge');
+  if(ovBadge) ovBadge.textContent = open.length+' open';
+  const ovNext = document.getElementById('ov-ai-next');
+  if(ovNext) ovNext.textContent = open.length?(dueLabel(open[0].due).text+' · '+open[0].client):'All clear ✈';
+  const ovList = document.getElementById('ov-ai-list');
+  if(ovList) ovList.innerHTML = open.length
+    ? open.slice(0,3).map(function(i){return cardHTML(i,true);}).join('')
+    : '<div class="empty-state"><div class="em-ico">✅</div><div style="color:var(--text)">No open action items.</div></div>';
+  const fullList = document.getElementById('ai-full-list');
+  if(fullList){
+    const items = sortedItems(showDone);
+    fullList.innerHTML = items.length
+      ? items.map(function(i){return cardHTML(i,false);}).join('')
+      : '<div class="empty-state"><div class="em-ico">✅</div><div style="color:var(--text)">No action items. Use "+ New Item" to add one.</div></div>';
+  }
 }
-
-function setDone(id, val) {
-  const s = loadState(); s[id] = Object.assign({}, s[id], { done: val }); saveState(s);
-  renderActionItems(); toast(val ? 'Marked done ✓' : 'Reopened');
+function setDone(id,val){
+  const s=loadState(); s[id]=Object.assign({},s[id],{done:val}); saveState(s);
+  renderActionItems(); toast(val?'Marked done ✓':'Reopened');
 }
-function snooze(id) {
-  const items = allItems(); const it = items.find(function(x){ return x.id === id; });
-  if (!it) return;
-  const dn = daysUntil(it.due);
-  const base = (dn === null || dn < 0) ? new Date() : new Date(it.due + 'T00:00:00');
-  base.setDate(base.getDate() + 3);
-  const newDue = base.toISOString().slice(0, 10);
-  const s = loadState(); s[id] = Object.assign({}, s[id], { dueOverride: newDue }); saveState(s);
+function snooze(id){
+  const it=allItems().find(function(x){return x.id===id;});
+  if(!it) return;
+  const dn=daysUntil(it.due);
+  const base=(dn===null||dn<0)?new Date():new Date(it.due+'T00:00:00');
+  base.setDate(base.getDate()+3);
+  const s=loadState(); s[id]=Object.assign({},s[id],{dueOverride:base.toISOString().slice(0,10)}); saveState(s);
   renderActionItems(); toast('Snoozed 3 days');
 }
-function toggleShowDone() {
-  showDone = !showDone;
-  document.getElementById('toggle-done-btn').textContent = showDone ? 'Hide completed' : 'Show completed';
+function toggleShowDone(){
+  showDone=!showDone;
+  document.getElementById('toggle-done-btn').textContent=showDone?'Hide completed':'Show completed';
   renderActionItems();
 }
-
-/* ── Add Task ── */
-function openAddTask() { document.getElementById('addtask-overlay').classList.add('open'); }
-function closeAddTask() { document.getElementById('addtask-overlay').classList.remove('open'); }
-function saveTask() {
-  const title = document.getElementById('at-title').value.trim();
-  if (!title) { alert('A title is required.'); return; }
-  const item = {
-    id: 'c' + Date.now(), icon: '📌',
-    priority: document.getElementById('at-priority').value,
-    client: document.getElementById('at-client').value.trim() || 'General',
-    email: '',
-    title: title,
-    desc: document.getElementById('at-desc').value.trim(),
-    due: document.getElementById('at-due').value || ''
-  };
-  const custom = loadCustom(); custom.push(item); saveCustom(custom);
+function openAddTask(){ document.getElementById('addtask-overlay').classList.add('open'); }
+function closeAddTask(){ document.getElementById('addtask-overlay').classList.remove('open'); }
+function saveTask(){
+  const title=document.getElementById('at-title').value.trim();
+  if(!title){alert('Title required');return;}
+  const item={id:'c'+Date.now(),icon:'📌',priority:document.getElementById('at-priority').value,
+    client:document.getElementById('at-client').value.trim()||'General',
+    email:document.getElementById('at-email').value.trim(),
+    title:title, desc:document.getElementById('at-desc').value.trim(),
+    due:document.getElementById('at-due').value||''};
+  const c=loadCustom(); c.push(item); saveCustom(c);
   closeAddTask(); renderActionItems(); toast('Action item added');
-  ['at-title','at-client','at-desc','at-due'].forEach(function(i){ document.getElementById(i).value=''; });
+  ['at-title','at-client','at-email','at-desc','at-due'].forEach(function(i){document.getElementById(i).value='';});
 }
 
-/* ──────────────────────────────────────────────
-   COMPOSE MESSAGE  (mailto)
-   ────────────────────────────────────────────── */
-const TEMPLATES = {
-  blank: { s: '', b: '' },
-  recommend: { s: 'Your award travel recommendation is ready',
-    b: "Hi {first},\n\nGood news — I've finished mapping the best options for your upcoming trip and put together a recommendation. Here's the short version:\n\n• [Flight / hotel option]\n• [Points cost vs. cash value — your savings]\n\nWhenever you're ready, you can book it directly and I'll walk you through any step. Let me know if you'd like me to look at alternatives.\n\nBest,\nBraden\nDistrict Award Travel" },
-  balances: { s: 'Quick favor — your points balances',
-    b: "Hi {first},\n\nTo map the best routing for your trip, could you send me your current points/miles balances for:\n\n• [Program 1]\n• [Program 2]\n\nA screenshot works perfectly. Once I have these I can lock in a plan.\n\nThanks,\nBraden\nDistrict Award Travel" },
-  deadline: { s: 'Time-sensitive: a deadline on your trip',
-    b: "Hi {first},\n\nA quick heads-up — there's a time-sensitive window on one of your options:\n\n• [What] — needs to be booked by [date]\n• Why it matters: [rate/availability]\n\nI'd recommend acting before then to lock the value. Happy to hop on a quick call if that's easier.\n\nBest,\nBraden\nDistrict Award Travel" },
-  checkin: { s: 'Checking in on your travel plans',
-    b: "Hi {first},\n\nJust checking in! I'm keeping an eye on award space and rates for your trips. Nothing urgent — but if anything's changed on your end or you'd like me to start on another destination, just say the word.\n\nBest,\nBraden\nDistrict Award Travel" },
-};
+/* ════════════════════════════════════════════
+   SAVINGS / FEES  (localStorage)
+   ════════════════════════════════════════════ */
+function loadSavings(){ try{return JSON.parse(localStorage.getItem('dat_savings')||'[]');}catch(e){return[];} }
+function saveSavingsData(a){ localStorage.setItem('dat_savings',JSON.stringify(a)); }
 
-function openCompose() { document.getElementById('compose-overlay').classList.add('open'); cmSyncEmail(); }
-function closeCompose() { document.getElementById('compose-overlay').classList.remove('open'); }
-function composeTo(name, email) {
+document.getElementById('sv-savings').addEventListener('input', function(){
+  const v=parseFloat(this.value)||0;
+  document.getElementById('sv-fee-preview').textContent='$'+(v*0.1).toFixed(2);
+});
+
+function openAddSaving(){ document.getElementById('addsaving-overlay').classList.add('open'); }
+function closeAddSaving(){ document.getElementById('addsaving-overlay').classList.remove('open'); }
+function saveSaving(){
+  const savings=parseFloat(document.getElementById('sv-savings').value)||0;
+  const entry={id:'s'+Date.now(),client:document.getElementById('sv-client').value.trim()||'Unknown',
+    trip:document.getElementById('sv-trip').value.trim(),strategy:document.getElementById('sv-strategy').value.trim(),
+    savings:savings,fee:+(savings*0.1).toFixed(2),status:document.getElementById('sv-status').value};
+  const all=loadSavings(); all.push(entry); saveSavingsData(all);
+  closeAddSaving(); renderFees(); toast('Saving logged ✓');
+  ['sv-client','sv-trip','sv-strategy','sv-savings'].forEach(function(i){document.getElementById(i).value='';});
+}
+function deleteSaving(id){
+  saveSavingsData(loadSavings().filter(function(x){return x.id!==id;}));
+  renderFees(); toast('Entry removed');
+}
+function renderFees(){
+  const entries=loadSavings();
+  const total=entries.reduce(function(a,b){return a+b.savings;},0);
+  const fees=entries.reduce(function(a,b){return a+b.fee;},0);
+  document.getElementById('fees-total-savings').textContent='$'+total.toLocaleString();
+  document.getElementById('fees-total-fees').textContent='$'+fees.toFixed(2);
+  document.getElementById('fees-count').textContent=entries.length;
+  const STATUS_BADGE={Recommended:'gold',Accepted:'green',Pending:'blue',Researching:'muted'};
+  document.getElementById('fees-tbody').innerHTML = entries.length
+    ? entries.map(function(e){
+        return '<tr><td><div class="client-name">'+esc(e.client)+'</div></td><td>'+esc(e.trip)+'</td><td style="font-size:.79rem;color:var(--muted)">'+esc(e.strategy)+'</td>'
+          +'<td style="color:var(--green);font-weight:600">$'+e.savings.toLocaleString()+'</td>'
+          +'<td style="color:var(--gold);font-weight:600">$'+e.fee.toFixed(2)+'</td>'
+          +'<td><span class="badge badge-'+(STATUS_BADGE[e.status]||'muted')+'">'+esc(e.status)+'</span></td>'
+          +'<td><button class="btn-sm" onclick="deleteSaving(\''+eid(e.id)+'\')">Remove</button></td></tr>';
+      }).join('')
+    : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
+}
+
+/* ════════════════════════════════════════════
+   CLIENTS — dynamic from backend
+   ════════════════════════════════════════════ */
+async function loadClients(){
+  if(!ADMIN_TOKEN) return;
+  try{
+    const res=await fetch('/api/admin/clients',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok) return;
+    CLIENTS=await res.json();
+    renderClientsTable();
+    updateClientMetrics();
+    populateComposeClients();
+  }catch(e){}
+}
+function updateClientMetrics(){
+  const el=document.getElementById('ov-client-count');
+  if(el) el.textContent=CLIENTS.length;
+  const names=document.getElementById('ov-client-names');
+  if(names) names.textContent=CLIENTS.length?CLIENTS.slice(0,3).map(function(c){return c.name;}).join(' · '):'No clients yet';
+  const nb=document.getElementById('nav-client-count');
+  if(nb) nb.textContent=CLIENTS.length;
+}
+function renderClientsTable(){
+  const html = CLIENTS.length
+    ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Added</th><th></th></tr></thead><tbody>'
+      + CLIENTS.map(function(c){
+          return '<tr><td><div class="client-name">'+esc(c.name)+'</div></td>'
+            +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
+            +'<td><span class="badge badge-blue">'+esc(c.tier)+'</span></td>'
+            +'<td><div class="client-sub">'+(c.created_at||'').slice(0,10)+'</div></td>'
+            +'<td><button class="btn-sm" onclick="composeTo(\''+esc(c.name)+'\',\''+esc(c.email)+'\')">✉ Message</button></td></tr>';
+        }).join('')
+      + '</tbody></table>'
+    : '<div style="padding:40px;text-align:center;color:var(--muted)">'
+      +'<div style="font-size:1.5rem;margin-bottom:10px">👤</div>'
+      +'<div style="color:var(--text);margin-bottom:6px">No clients yet</div>'
+      +'<div style="font-size:.83rem">Add a client manually or use <strong style="color:var(--purple)">✨ Import from Email</strong> to create one from a forwarded email.</div></div>';
+  const wrap1=document.getElementById('ov-clients-table');
+  const wrap2=document.getElementById('clients-table-wrap');
+  const tableWrap='<div class="table-wrap">'+html+'</div>';
+  if(wrap1) wrap1.innerHTML=tableWrap;
+  if(wrap2) wrap2.innerHTML=tableWrap;
+}
+function populateComposeClients(){
+  const sel=document.getElementById('cm-client');
+  while(sel.options.length>1) sel.remove(1);
+  CLIENTS.forEach(function(c){
+    const o=document.createElement('option');
+    o.value=c.name+'|'+c.email; o.textContent=c.name+' — '+c.email;
+    sel.appendChild(o);
+  });
+}
+
+/* ════════════════════════════════════════════
+   AI EMAIL IMPORT
+   ════════════════════════════════════════════ */
+function openImportEmail(){ document.getElementById('import-overlay').classList.add('open'); backToImport(); }
+function closeImportEmail(){ document.getElementById('import-overlay').classList.remove('open'); }
+function backToImport(){
+  document.getElementById('import-step1').style.display='block';
+  document.getElementById('import-step2').style.display='none';
+}
+async function runAIParse(){
+  const raw=document.getElementById('import-raw').value.trim();
+  if(!raw){alert('Paste an email first');return;}
+  const btn=document.getElementById('parse-btn');
+  btn.disabled=true; btn.textContent='✨ Parsing…';
+  try{
+    const res=await fetch('/api/ai/parse-email',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify({raw_email:raw})});
+    if(!res.ok) throw new Error(res.status);
+    const {data, source}=await res.json();
+    document.getElementById('parse-source-label').textContent=
+      source==='groq'?'Groq / Llama 3.1':source==='gemini'?'Gemini Flash':'manual (no AI key)';
+    document.getElementById('pr-first').value=data.first_name||'';
+    document.getElementById('pr-last').value=data.last_name||'';
+    document.getElementById('pr-email').value=data.email||'';
+    document.getElementById('pr-phone').value=data.phone||'';
+    document.getElementById('pr-airport').value=data.home_airport||'';
+    document.getElementById('pr-goals').value=data.travel_goals||'';
+    document.getElementById('pr-notes').value=data.notes||'';
+    document.getElementById('pr-pass').value=genRandCode();
+    document.getElementById('import-step1').style.display='none';
+    document.getElementById('import-step2').style.display='block';
+  }catch(e){
+    toast('Parse failed — check backend logs');
+  } finally {
+    btn.disabled=false; btn.textContent='✨ Parse with AI';
+  }
+}
+async function createFromParsed(){
+  const first=document.getElementById('pr-first').value.trim();
+  const last=document.getElementById('pr-last').value.trim();
+  const email=document.getElementById('pr-email').value.trim().toLowerCase();
+  const pass=document.getElementById('pr-pass').value.trim();
+  if(!first||!email||!pass){alert('First name, email, and access code are required');return;}
+  const name=(first+' '+last).trim();
+  const notes=document.getElementById('pr-notes').value.trim();
+  const goals=document.getElementById('pr-goals').value.trim();
+  const data={stats:{trips:0,savings:'$0',fee:'$0',points:'—'},urgency:null,trips:[],savings:[],
+    totalSavings:'$0',totalFee:'$0',points:[],
+    messages:[{from:'Braden — DAT',time:'Today',text:'Welcome to District Award Travel, '+first+"! Your portal is ready. I'll start mapping your points and trips shortly.",unread:true}],
+    home_airport:document.getElementById('pr-airport').value.trim(),
+    travel_goals:goals, notes:notes};
+  if(ADMIN_TOKEN){
+    try{
+      const res=await fetch('/api/admin/clients',{method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+        body:JSON.stringify({email,password:pass,name,tier:'Client',data})});
+      if(res.ok){
+        closeImportEmail();
+        await loadClients();
+        toast('✓ '+name+' added! Access code: '+pass);
+        // pre-fill compose to send them their creds
+        setTimeout(function(){composeTo(name,email,'creds',pass);},400);
+        return;
+      } else if(res.status===409){alert('A client with that email already exists');return;}
+    }catch(e){}
+  }
+  alert('Not connected to backend. Sign in with admin credentials first.');
+}
+
+/* ════════════════════════════════════════════
+   COMPOSE (mailto)
+   ════════════════════════════════════════════ */
+const TEMPLATES={
+  blank:{s:'',b:''},
+  recommend:{s:'Your award travel recommendation is ready',
+    b:"Hi {first},\n\nI've finished mapping the best options for your upcoming trip. Here's what I recommend:\n\n• [Flight or hotel option]\n• [Points cost vs. cash value — your estimated savings]\n\nYou can book directly — I'm happy to walk you through each step. Let me know if you'd like to explore alternatives too.\n\nBest,\nBraden\nDistrict Award Travel"},
+  balances:{s:'Quick favor — your current points balances',
+    b:"Hi {first},\n\nTo map the best award strategy for your trip, I need your current balances for:\n\n• [Program 1]\n• [Program 2]\n\nA screenshot works great. Once I have those I can build out your full plan.\n\nThanks,\nBraden\nDistrict Award Travel"},
+  deadline:{s:'⏰ Time-sensitive on your trip — please read',
+    b:"Hi {first},\n\nHeads-up — there's a time-sensitive window I want to make sure you don't miss:\n\n• [What] — this rate/space closes by [date]\n• Why it matters: [explanation]\n\nI'd recommend acting before then to lock the value. Happy to answer any questions.\n\nBest,\nBraden\nDistrict Award Travel"},
+  checkin:{s:'Checking in on your travel plans',
+    b:"Hi {first},\n\nJust checking in! I'm monitoring award space and rates for your trips. Nothing urgent right now, but if anything has changed or you'd like me to start on a new destination, just say the word.\n\nBest,\nBraden\nDistrict Award Travel"},
+  creds:{s:'Your District Award Travel portal access',
+    b:"Hi {first},\n\nYour District Award Travel client portal is ready. Here are your login details:\n\nURL: {portal_url}\nEmail: {email}\nAccess Code: {pass}\n\nLog in any time to see your trip recommendations, points summary, and messages.\n\nLooking forward to working together!\n\nBraden\nDistrict Award Travel"},
+};
+let _lastCredsPass='';
+let _lastCredsEmail='';
+function openCompose(){ document.getElementById('compose-overlay').classList.add('open'); cmApplyTemplate(); }
+function closeCompose(){ document.getElementById('compose-overlay').classList.remove('open'); }
+function composeTo(name,email,tpl,pass){
   openCompose();
-  const sel = document.getElementById('cm-client');
-  let matched = false;
-  for (const opt of sel.options) { if (opt.value === name + '|' + email) { sel.value = opt.value; matched = true; break; } }
-  if (!matched) sel.value = '|';
-  document.getElementById('cm-email').value = email || '';
+  const sel=document.getElementById('cm-client');
+  let matched=false;
+  for(const o of sel.options){if(o.value===name+'|'+email){sel.value=o.value;matched=true;break;}}
+  if(!matched){sel.value='|';}
+  document.getElementById('cm-email').value=email||'';
+  _lastCredsPass=pass||'';
+  _lastCredsEmail=email||'';
+  if(tpl) document.getElementById('cm-template').value=tpl;
   cmApplyTemplate();
 }
-function cmSyncEmail() {
-  const v = document.getElementById('cm-client').value.split('|');
-  if (v[1]) document.getElementById('cm-email').value = v[1];
+function cmSyncEmail(){
+  const v=document.getElementById('cm-client').value.split('|');
+  if(v[1]) document.getElementById('cm-email').value=v[1];
+  cmApplyTemplate();
 }
-function cmFirstName() {
-  const v = document.getElementById('cm-client').value.split('|');
-  return (v[0] || 'there').split(' ')[0];
+function cmFirstName(){
+  const v=document.getElementById('cm-client').value.split('|');
+  return (v[0]||'there').split(' ')[0];
 }
-function cmApplyTemplate() {
-  const t = TEMPLATES[document.getElementById('cm-template').value] || TEMPLATES.blank;
-  document.getElementById('cm-subject').value = t.s;
-  document.getElementById('cm-body').value = t.b.replace(/\{first\}/g, cmFirstName());
+function cmApplyTemplate(){
+  const t=TEMPLATES[document.getElementById('cm-template').value]||TEMPLATES.blank;
+  document.getElementById('cm-subject').value=t.s;
+  const portal=window.location.origin+'/client.html';
+  document.getElementById('cm-body').value=t.b
+    .replace(/\{first\}/g,cmFirstName())
+    .replace(/\{portal_url\}/g,portal)
+    .replace(/\{email\}/g,_lastCredsEmail||document.getElementById('cm-email').value)
+    .replace(/\{pass\}/g,_lastCredsPass||'[your access code]');
 }
-function sendCompose() {
-  const email = document.getElementById('cm-email').value.trim();
-  if (!email) { alert('Enter an email address.'); return; }
-  const subject = encodeURIComponent(document.getElementById('cm-subject').value);
-  const body = encodeURIComponent(document.getElementById('cm-body').value);
-  window.location.href = 'mailto:' + email + '?subject=' + subject + '&body=' + body;
-  closeCompose(); toast('Opening your email app…');
+function sendCompose(){
+  const email=document.getElementById('cm-email').value.trim();
+  if(!email){alert('Enter an email');return;}
+  window.location.href='mailto:'+email+'?subject='+encodeURIComponent(document.getElementById('cm-subject').value)+'&body='+encodeURIComponent(document.getElementById('cm-body').value);
+  closeCompose(); toast('Opening mail app…');
+}
+function quickComposeCreds(){
+  const email=document.getElementById('res-email').textContent;
+  const pass=document.getElementById('res-pass').textContent;
+  _lastCredsPass=pass; _lastCredsEmail=email;
+  closeAddClient();
+  setTimeout(function(){composeTo('',email,'creds',pass);},200);
 }
 
-/* ──────────────────────────────────────────────
-   TOAST
-   ────────────────────────────────────────────── */
-let toastTimer = null;
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2400);
+/* ════════════════════════════════════════════
+   ADD CLIENT
+   ════════════════════════════════════════════ */
+function openAddClient(){ document.getElementById('addclient-overlay').classList.add('open'); resetAddClient(); }
+function closeAddClient(){ document.getElementById('addclient-overlay').classList.remove('open'); }
+function resetAddClient(){
+  document.getElementById('addclient-form').style.display='block';
+  document.getElementById('addclient-result').style.display='none';
+  ['ac-first','ac-last','ac-email','ac-pass','ac-tier'].forEach(function(id){document.getElementById(id).value='';});
+}
+function genCode(){ document.getElementById('ac-pass').value=genRandCode(); }
+function genRandCode(){
+  const w=['alpha','bravo','delta','miles','points','jet','award','first','cabin','lounge'];
+  return w[Math.floor(Math.random()*w.length)]+Math.floor(1000+Math.random()*9000);
+}
+async function generateClient(){
+  const first=document.getElementById('ac-first').value.trim();
+  const last=document.getElementById('ac-last').value.trim();
+  const email=document.getElementById('ac-email').value.trim().toLowerCase();
+  const pass=document.getElementById('ac-pass').value.trim();
+  const tier=document.getElementById('ac-tier').value.trim()||'Client';
+  if(!first||!email||!pass){alert('First name, email, and access code are required');return;}
+  const name=(first+' '+last).trim();
+  const data={stats:{trips:0,savings:'$0',fee:'$0',points:'—'},urgency:null,trips:[],savings:[],
+    totalSavings:'$0',totalFee:'$0',points:[],
+    messages:[{from:'Braden — DAT',time:'Today',text:'Welcome to District Award Travel, '+first+'! Your portal is set up. I\'ll begin mapping your points and trips shortly.',unread:true}]};
+  document.getElementById('res-email').textContent=email;
+  document.getElementById('res-pass').textContent=pass;
+  _lastCredsPass=pass; _lastCredsEmail=email;
+  if(ADMIN_TOKEN){
+    try{
+      const res=await fetch('/api/admin/clients',{method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+        body:JSON.stringify({email,password:pass,name,tier,data})});
+      if(res.ok){
+        document.getElementById('res-title').innerHTML='✓ Client saved to database';
+        document.getElementById('res-explain').innerHTML='<strong>'+name+'</strong> can now log in from any device using the email and access code above.';
+        document.getElementById('addclient-form').style.display='none';
+        document.getElementById('addclient-result').style.display='block';
+        loadClients(); return;
+      } else if(res.status===409){alert('A client with that email already exists');return;}
+    }catch(e){}
+  }
+  document.getElementById('res-title').innerHTML='✓ Client created (offline only)';
+  document.getElementById('res-explain').innerHTML='Not connected to backend. Sign in with admin credentials to save permanently.';
+  document.getElementById('addclient-form').style.display='none';
+  document.getElementById('addclient-result').style.display='block';
 }
 
-/* ──────────────────────────────────────────────
+/* ════════════════════════════════════════════
+   INTAKE
+   ════════════════════════════════════════════ */
+async function loadIntakes(){
+  if(!ADMIN_TOKEN) return;
+  try{
+    const res=await fetch('/api/admin/intakes',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok) return;
+    renderIntakes(await res.json());
+  }catch(e){}
+}
+function renderIntakes(intakes){
+  const nb=document.getElementById('nav-intake-count');
+  if(nb) nb.textContent=intakes.length;
+  const ovIntake=document.getElementById('ov-intake-count');
+  if(ovIntake) ovIntake.textContent=intakes.length;
+  if(!intakes.length) return;
+  const panel=document.getElementById('intake-content');
+  if(!panel) return;
+  panel.innerHTML='<div class="intake-list">'+intakes.map(function(i){
+    const goals=(i.payload&&i.payload.travel_goals)?i.payload.travel_goals:'(no goals stated)';
+    const email_btn=i.email?'<button class="btn-sm primary" onclick="composeTo(\''+esc(i.name||'')+'\',\''+esc(i.email)+'\')">✉ Reply</button>':'';
+    const import_btn='<button class="btn-sm ai" onclick="prefillImportFromIntake('+JSON.stringify(i).replace(/'/g,'&#39;')+')">✨ Create Account</button>';
+    return '<div class="intake-card">'
+      +'<div><div class="intake-name">'+esc(i.name||'Unknown')+'</div><div class="intake-email">'+esc(i.email||'')+(i.phone?' · '+esc(i.phone):'')+'</div></div>'
+      +'<div class="intake-details">'+esc(goals)+'</div>'
+      +'<div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">'
+      +'<span style="font-size:.7rem;color:var(--muted)">'+(i.created_at||'').slice(0,10)+'</span>'
+      +import_btn+email_btn+'</div></div>';
+  }).join('')+'</div>';
+}
+function prefillImportFromIntake(intake){
+  closeImportEmail();
+  openAddClient();
+  const p=intake.payload||{};
+  setTimeout(function(){
+    document.getElementById('ac-first').value=p.first_name||'';
+    document.getElementById('ac-last').value=p.last_name||'';
+    document.getElementById('ac-email').value=intake.email||p.email||'';
+    document.getElementById('ac-tier').value='Client';
+    genCode();
+  },100);
+}
+
+/* ════════════════════════════════════════════
    AUTH
-   ────────────────────────────────────────────── */
-function adminError(msg) {
-  const err = document.getElementById('admin-error');
-  if (msg) err.textContent = msg;
-  err.style.display = 'block';
-  setTimeout(function(){ err.style.display = 'none'; }, 3500);
+   ════════════════════════════════════════════ */
+function adminError(msg){
+  const el=document.getElementById('admin-error');
+  el.textContent=msg||'Invalid credentials.'; el.style.display='block';
+  setTimeout(function(){el.style.display='none';},3500);
 }
-function enterAdmin() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('admin').style.display = 'block';
-  renderActionItems();
+function enterAdmin(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('admin').style.display='block';
+  loadClients();
   loadIntakes();
+  renderActionItems();
+  renderFees();
+  checkAIStatus();
 }
-async function doAdminLogin() {
-  const u = document.getElementById('admin-user').value.trim();
-  const p = document.getElementById('admin-pass').value.trim();
-  const btn = document.querySelector('#login-screen .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
-  try {
-    const res = await fetch('/api/admin/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: u, password: p }) });
-    if (res.ok) { const d = await res.json(); ADMIN_TOKEN = d.token; sessionStorage.setItem('dat_admin_token', d.token);
-      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; } return enterAdmin(); }
-    else if (res.status === 401) { if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; } return adminError('Invalid credentials.'); }
-  } catch (e) {}
-  if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-  if ((u === 'braden' || u === 'admin' || u === 'admin@districtawardtravel.com') && p === 'dat2026') enterAdmin();
+async function doAdminLogin(){
+  const u=document.getElementById('admin-user').value.trim();
+  const p=document.getElementById('admin-pass').value.trim();
+  const btn=document.querySelector('#login-screen .btn-primary');
+  if(btn){btn.disabled=true;btn.textContent='Signing in…';}
+  try{
+    const res=await fetch('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:u,password:p})});
+    if(res.ok){const d=await res.json();ADMIN_TOKEN=d.token;sessionStorage.setItem('dat_admin_token',d.token);
+      if(btn){btn.disabled=false;btn.textContent='Sign In';} return enterAdmin();}
+    else if(res.status===401){if(btn){btn.disabled=false;btn.textContent='Sign In';} return adminError('Invalid credentials.');}
+  }catch(e){}
+  if(btn){btn.disabled=false;btn.textContent='Sign In';}
+  if((u==='braden'||u==='admin'||u==='admin@districtawardtravel.com')&&p==='dat2026') enterAdmin();
   else adminError('Invalid credentials.');
 }
-function doAdminLogout() {
-  document.getElementById('admin').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('admin-user').value = '';
-  document.getElementById('admin-pass').value = '';
-  ADMIN_TOKEN = null; sessionStorage.removeItem('dat_admin_token');
+function doAdminLogout(){
+  document.getElementById('admin').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('admin-user').value='';
+  document.getElementById('admin-pass').value='';
+  ADMIN_TOKEN=null; sessionStorage.removeItem('dat_admin_token'); CLIENTS=[];
 }
 
-async function loadIntakes() {
-  if (!ADMIN_TOKEN) return;
-  try {
-    const res = await fetch('/api/admin/intakes', { headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN } });
-    if (!res.ok) return;
-    renderIntakes(await res.json());
-  } catch (e) {}
-}
-function renderIntakes(intakes) {
-  document.getElementById('nav-intake-count').textContent = intakes.length;
-  const panel = document.getElementById('intake-content');
-  if (!panel || !intakes.length) return;
-  panel.innerHTML = '<div class="intake-list">' + intakes.map(function(i) {
-    const goals = (i.payload && i.payload.travel_goals) ? i.payload.travel_goals : '(no goals provided)';
-    return '<div class="intake-card">' +
-      '<div><div class="intake-name">' + (i.name || 'Unknown') + '</div>' +
-      '<div class="intake-email">' + (i.email || '') + ' · ' + (i.phone || 'no phone') + '</div></div>' +
-      '<div class="intake-details">' + goals + '</div>' +
-      '<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">' +
-      '<span style="font-size:0.72rem;color:var(--muted)">' + (i.created_at || '').slice(0,10) + '</span>' +
-      (i.email ? '<button class="btn-sm primary" onclick="composeTo(\'' + (i.name||'').replace(/'/g,"\\'") + '\',\'' + i.email + '\')">✉ Reply</button>' : '') +
-      '</div></div>';
-  }).join('') + '</div>';
-}
-
-/* ──────────────────────────────────────────────
-   ADD CLIENT
-   ────────────────────────────────────────────── */
-function openAddClient() { document.getElementById('addclient-overlay').classList.add('open'); resetAddClient(); }
-function closeAddClient() { document.getElementById('addclient-overlay').classList.remove('open'); }
-function resetAddClient() {
-  document.getElementById('addclient-form').style.display = 'block';
-  document.getElementById('addclient-result').style.display = 'none';
-  ['ac-first','ac-last','ac-email','ac-pass','ac-tier'].forEach(function(id){ document.getElementById(id).value = ''; });
-}
-function genCode() {
-  const w = ['alpha','bravo','delta','miles','points','jet','award','first','cabin','lounge'];
-  document.getElementById('ac-pass').value = w[Math.floor(Math.random()*w.length)] + Math.floor(1000 + Math.random()*9000);
-}
-async function generateClient() {
-  const first = document.getElementById('ac-first').value.trim();
-  const last  = document.getElementById('ac-last').value.trim();
-  const email = document.getElementById('ac-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('ac-pass').value.trim();
-  const tier  = document.getElementById('ac-tier').value.trim() || 'Client';
-  if (!first || !email || !pass) { alert('First name, email, and access code are required.'); return; }
-  const name = (first + ' ' + last).trim();
-  const data = { stats: { trips: 0, savings: '$0', fee: '$0', points: '—' }, urgency: null, trips: [], savings: [],
-    totalSavings: '$0', totalFee: '$0', points: [],
-    messages: [{ from: 'Braden — DAT', time: 'Today', text: 'Welcome to District Award Travel, ' + first + "! Your portal is set up. I'll begin mapping your points and trips shortly.", unread: true }] };
-  document.getElementById('res-email').textContent = email;
-  document.getElementById('res-pass').textContent = pass;
-  if (ADMIN_TOKEN) {
-    try {
-      const res = await fetch('/api/admin/clients', { method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ADMIN_TOKEN },
-        body: JSON.stringify({ email: email, password: pass, name: name, tier: tier, data: data }) });
-      if (res.ok) {
-        document.getElementById('res-title').innerHTML = '&#10003; Client saved to your live database';
-        document.getElementById('res-explain').innerHTML = 'Done. <strong>' + name + '</strong> can now log in from any device using the email and access code above. Share those with them.';
-        document.getElementById('res-snippet').style.display = 'none';
-        document.getElementById('res-copy-btn').style.display = 'none';
-        document.getElementById('addclient-form').style.display = 'none';
-        document.getElementById('addclient-result').style.display = 'block';
-        return;
-      } else if (res.status === 409) { alert('A client with that email already exists.'); return; }
-    } catch (e) {}
+/* ════════════════════════════════════════════
+   AI STATUS CHECK
+   ════════════════════════════════════════════ */
+async function checkAIStatus(){
+  const badge=document.getElementById('ai-status-badge');
+  const gBadge=document.getElementById('gemini-badge');
+  if(!ADMIN_TOKEN||!badge) return;
+  try{
+    const res=await fetch('/api/ai/parse-email',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify({raw_email:'test'})});
+    if(res.ok){
+      const d=await res.json();
+      const src=d.source;
+      badge.innerHTML=src==='groq'?'<span class="badge badge-green">✓ Groq / Llama 3.1 active</span>'
+        :src==='gemini'?'<span class="badge badge-blue">Groq down · Gemini active</span>'
+        :'<span class="badge badge-muted">No AI key — add GROQ_API_KEY to Render</span>';
+      if(gBadge) gBadge.className='badge '+(src==='gemini'?'badge-green':'badge-muted');
+      if(gBadge) gBadge.textContent=src==='gemini'?'✓ Active':'Standby';
+    }
+  }catch(e){
+    if(badge) badge.innerHTML='<span class="badge badge-muted">unavailable</span>';
   }
-  const client = Object.assign({ pass: pass, name: name, tier: tier }, data);
-  const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
-  store[email] = client; localStorage.setItem('dat_clients', JSON.stringify(store));
-  const snippet = '  "' + email + '": ' + JSON.stringify(client, null, 2).split('\n').join('\n  ') + ',';
-  document.getElementById('res-title').innerHTML = '&#10003; Client created (offline preview)';
-  document.getElementById('res-explain').innerHTML = 'Not connected to the live backend, so this client only works on this device. Sign in to the live admin to make it permanent.';
-  document.getElementById('res-snippet').value = snippet;
-  document.getElementById('res-snippet').style.display = 'block';
-  document.getElementById('res-copy-btn').style.display = 'inline-flex';
-  document.getElementById('addclient-form').style.display = 'none';
-  document.getElementById('addclient-result').style.display = 'block';
-}
-function copySnippet(btn) {
-  const t = document.getElementById('res-snippet'); t.select();
-  try { document.execCommand('copy'); } catch (e) {}
-  if (navigator.clipboard) navigator.clipboard.writeText(t.value);
-  if (btn) { const o = btn.textContent; btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent = o; }, 1800); }
 }
 
-function switchPanel(id, btn) {
-  document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.remove('active'); });
-  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  const el = document.getElementById('panel-' + id);
-  if (el) el.classList.add('active');
+/* ════════════════════════════════════════════
+   NAV / UTILS
+   ════════════════════════════════════════════ */
+function switchPanel(id,btn){
+  document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+  if(btn) btn.classList.add('active');
+  const el=document.getElementById('panel-'+id);
+  if(el) el.classList.add('active');
 }
-
-// close overlays on backdrop click
+let toastTimer=null;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){t.classList.remove('show');},2600);
+}
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function eid(s){ return String(s||'').replace(/'/g,"\\'"); }
 document.querySelectorAll('.overlay').forEach(function(o){
-  o.addEventListener('click', function(e){ if (e.target === o) o.classList.remove('open'); });
+  o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('open');});
 });
 </script>
 </body>

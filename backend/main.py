@@ -55,6 +55,9 @@ GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
 NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", GMAIL_USER or "districtawardtravel@gmail.com")
 
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+
 # Render gives a postgres:// URL; SQLAlchemy needs postgresql://
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 if DATABASE_URL.startswith("postgres://"):
@@ -304,6 +307,99 @@ def admin_diag(db: Session = Depends(get_db)):
             verify_pw(ADMIN_PASSWORD, admin.password_hash) if admin else None
         ),
     }
+
+
+# ── AI: parse a raw email into structured client data ──
+class ParseEmailIn(BaseModel):
+    raw_email: str
+
+EMAIL_PARSE_PROMPT = """You are an assistant for District Award Travel, a points-and-miles advisory firm.
+Extract client information from the raw email below and return ONLY valid JSON — no markdown, no extra text.
+
+JSON schema (use null for missing fields):
+{
+  "first_name": string|null,
+  "last_name": string|null,
+  "email": string|null,
+  "phone": string|null,
+  "home_airport": string|null,
+  "travel_goals": string|null,
+  "trips": [{"destination": string, "dates": string}],
+  "points": [{"program": string, "balance": string}],
+  "cabin_pref": string|null,
+  "notes": string|null
+}
+
+Rules:
+- Extract names, email addresses, phone numbers exactly as written.
+- Infer home airport from city mentions if obvious (e.g. "DC" → DCA/IAD).
+- Capture any mentioned points/miles programs and balances.
+- Put travel goals, destinations, and any other context in the relevant fields.
+- Return ONLY the JSON object, nothing else.
+
+Raw email:
+"""
+
+@app.post("/api/ai/parse-email")
+async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
+    """Use Groq (llama-3.1-8b-instant) to parse a raw forwarded email into
+    structured client intake data. Falls back to a minimal stub if no key."""
+    raw = body.raw_email.strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="raw_email is required")
+
+    if GROQ_API_KEY:
+        try:
+            import httpx
+            resp = httpx.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "messages": [{"role": "user", "content": EMAIL_PARSE_PROMPT + raw}],
+                    "temperature": 0.1,
+                    "max_tokens": 600,
+                },
+                timeout=20,
+            )
+            resp.raise_for_status()
+            content = resp.json()["choices"][0]["message"]["content"].strip()
+            # strip accidental markdown fences
+            if content.startswith("```"):
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+            parsed = json.loads(content)
+            return {"ok": True, "source": "groq", "data": parsed}
+        except Exception as e:
+            print(f"[groq] parse failed: {e}")
+            # fall through to Gemini
+
+    if GEMINI_API_KEY:
+        try:
+            import httpx
+            resp = httpx.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+                json={"contents": [{"parts": [{"text": EMAIL_PARSE_PROMPT + raw}]}]},
+                timeout=20,
+            )
+            resp.raise_for_status()
+            content = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+            if content.startswith("```"):
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+            parsed = json.loads(content)
+            return {"ok": True, "source": "gemini", "data": parsed}
+        except Exception as e:
+            print(f"[gemini] parse failed: {e}")
+
+    # No AI key configured — return empty stub so UI still works
+    return {"ok": True, "source": "none", "data": {
+        "first_name": None, "last_name": None, "email": None, "phone": None,
+        "home_airport": None, "travel_goals": None, "trips": [], "points": [],
+        "cabin_pref": None, "notes": raw[:300],
+    }}
 
 
 # ── Intake ──
