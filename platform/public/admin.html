@@ -571,25 +571,6 @@
   </div>
 </div>
 
-<!-- ADD TASK MODAL -->
-<div id="addtask-overlay" class="overlay">
-  <div class="modal">
-    <div class="modal-head"><h2>New Action Item</h2><button class="modal-close" onclick="closeAddTask()">&times;</button></div>
-    <p class="modal-sub">Add a to-do with a deadline. Sorted by urgency automatically.</p>
-    <div class="form-group"><label>Title</label><input type="text" id="at-title" placeholder="e.g. Send Iceland routing options to client"></div>
-    <div class="form-group"><label>Client</label><input type="text" id="at-client" placeholder="Client name"></div>
-    <div class="form-group"><label>Client Email (for Message button)</label><input type="email" id="at-email" placeholder="client@email.com"></div>
-    <div class="form-group"><label>Details / Notes</label><textarea id="at-desc" rows="3"></textarea></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group"><label>Due Date</label><input type="date" id="at-due"></div>
-      <div class="form-group"><label>Priority</label>
-        <select id="at-priority"><option value="critical">Critical</option><option value="high" selected>High</option><option value="medium">Medium</option><option value="low">Low</option></select>
-      </div>
-    </div>
-    <button class="btn-primary" style="margin-top:4px" onclick="saveTask()">Add Item</button>
-  </div>
-</div>
-
 <!-- LOG SAVING MODAL -->
 <div id="addsaving-overlay" class="overlay">
   <div class="modal">
@@ -749,127 +730,6 @@ let ADMIN_TOKEN = null;
 let CLIENTS = [];
 
 /* ════════════════════════════════════════════
-   ACTION ITEMS — localStorage persistence
-   ════════════════════════════════════════════ */
-function loadState(){ try{ return JSON.parse(localStorage.getItem('dat_ai_state')||'{}'); }catch(e){return {};} }
-function saveState(s){ localStorage.setItem('dat_ai_state', JSON.stringify(s)); }
-function loadCustom(){ try{ return JSON.parse(localStorage.getItem('dat_ai_custom')||'[]'); }catch(e){return [];} }
-function saveCustom(a){ localStorage.setItem('dat_ai_custom', JSON.stringify(a)); }
-
-// Seed items are the default to-dos — empty until client-specific ones are added
-const SEED_ITEMS = [];
-
-function allItems(){
-  const state = loadState();
-  return SEED_ITEMS.concat(loadCustom()).map(function(it){
-    const st = state[it.id]||{};
-    return Object.assign({}, it, { done: !!st.done, due: st.dueOverride||it.due });
-  });
-}
-
-const PRANK = { critical:0, high:1, medium:2, low:3 };
-function daysUntil(due){
-  if(!due) return null;
-  const d = new Date(due+'T00:00:00'), now = new Date();
-  now.setHours(0,0,0,0);
-  return Math.round((d-now)/86400000);
-}
-function dueLabel(due){
-  const d = daysUntil(due);
-  if(d===null) return {text:'No date',soon:false};
-  if(d<0) return {text:'OVERDUE '+Math.abs(d)+'d',soon:true};
-  if(d===0) return {text:'DUE TODAY',soon:true};
-  if(d===1) return {text:'Due tomorrow',soon:true};
-  return {text:'Due in '+d+'d',soon:d<=10};
-}
-let showDone = false;
-function sortedItems(inclDone){
-  let items = allItems();
-  if(!inclDone) items = items.filter(function(i){return !i.done;});
-  return items.sort(function(a,b){
-    if(a.done!==b.done) return a.done?1:-1;
-    const da=daysUntil(a.due)??9999, db=daysUntil(b.due)??9999;
-    if(da!==db) return da-db;
-    return (PRANK[a.priority]||9)-(PRANK[b.priority]||9);
-  });
-}
-function cardHTML(it, compact){
-  const dl = dueLabel(it.due);
-  const PCOL = {critical:'red',high:'gold',medium:'blue',low:'muted'};
-  const meta = '<span class="ai-due '+(dl.soon?'soon':'ok')+'">⏰ '+dl.text+'</span>'+
-    '<span>👤 '+esc(it.client)+'</span>'+(it.due?'<span>📅 '+it.due+'</span>':'')+
-    '<span class="badge badge-'+(PCOL[it.priority]||'muted')+'">'+it.priority+'</span>';
-  let acts = '';
-  if(it.done){
-    acts = '<button class="btn-sm" onclick="setDone(\''+eid(it.id)+'\',false)">Reopen</button>';
-  } else {
-    acts = '<button class="btn-sm green" onclick="setDone(\''+eid(it.id)+'\',true)">✓ Done</button>';
-    if(it.email) acts += '<button class="btn-sm primary" onclick="composeTo(\''+esc(it.client)+'\',\''+esc(it.email)+'\')">✉ Message</button>';
-    acts += '<button class="btn-sm" onclick="snooze(\''+eid(it.id)+'\')">Snooze 3d</button>';
-  }
-  return '<div class="ai-card p-'+it.priority+(it.done?' done':'')+'">'
-    +'<div class="ai-icon">'+it.icon+'</div>'
-    +'<div class="ai-body"><div class="ai-title">'+esc(it.title)+'</div>'
-    +(compact?'':'<div class="ai-desc">'+esc(it.desc)+'</div>')
-    +'<div class="ai-meta">'+meta+'</div></div>'
-    +'<div class="ai-actions">'+acts+'</div></div>';
-}
-function renderActionItems(){
-  const open = sortedItems(false);
-  const countEl = document.getElementById('nav-ai-count');
-  if(countEl) countEl.textContent = open.length;
-  const ovCount = document.getElementById('ov-ai-count');
-  if(ovCount) ovCount.textContent = open.length;
-  const ovBadge = document.getElementById('ov-ai-badge');
-  if(ovBadge) ovBadge.textContent = open.length+' open';
-  const ovNext = document.getElementById('ov-ai-next');
-  if(ovNext) ovNext.textContent = open.length?(dueLabel(open[0].due).text+' · '+open[0].client):'All clear ✈';
-  const ovList = document.getElementById('ov-ai-list');
-  if(ovList) ovList.innerHTML = open.length
-    ? open.slice(0,3).map(function(i){return cardHTML(i,true);}).join('')
-    : '<div class="empty-state"><div class="em-ico">✅</div><div style="color:var(--text)">No open action items.</div></div>';
-  const fullList = document.getElementById('ai-full-list');
-  if(fullList){
-    const items = sortedItems(showDone);
-    fullList.innerHTML = items.length
-      ? items.map(function(i){return cardHTML(i,false);}).join('')
-      : '<div class="empty-state"><div class="em-ico">✅</div><div style="color:var(--text)">No action items. Use "+ New Item" to add one.</div></div>';
-  }
-}
-function setDone(id,val){
-  const s=loadState(); s[id]=Object.assign({},s[id],{done:val}); saveState(s);
-  renderActionItems(); toast(val?'Marked done ✓':'Reopened');
-}
-function snooze(id){
-  const it=allItems().find(function(x){return x.id===id;});
-  if(!it) return;
-  const dn=daysUntil(it.due);
-  const base=(dn===null||dn<0)?new Date():new Date(it.due+'T00:00:00');
-  base.setDate(base.getDate()+3);
-  const s=loadState(); s[id]=Object.assign({},s[id],{dueOverride:base.toISOString().slice(0,10)}); saveState(s);
-  renderActionItems(); toast('Snoozed 3 days');
-}
-function toggleShowDone(){
-  showDone=!showDone;
-  document.getElementById('toggle-done-btn').textContent=showDone?'Hide completed':'Show completed';
-  renderActionItems();
-}
-function openAddTask(){ document.getElementById('addtask-overlay').classList.add('open'); }
-function closeAddTask(){ document.getElementById('addtask-overlay').classList.remove('open'); }
-function saveTask(){
-  const title=document.getElementById('at-title').value.trim();
-  if(!title){alert('Title required');return;}
-  const item={id:'c'+Date.now(),icon:'📌',priority:document.getElementById('at-priority').value,
-    client:document.getElementById('at-client').value.trim()||'General',
-    email:document.getElementById('at-email').value.trim(),
-    title:title, desc:document.getElementById('at-desc').value.trim(),
-    due:document.getElementById('at-due').value||''};
-  const c=loadCustom(); c.push(item); saveCustom(c);
-  closeAddTask(); renderActionItems(); toast('Action item added');
-  ['at-title','at-client','at-email','at-desc','at-due'].forEach(function(i){document.getElementById(i).value='';});
-}
-
-/* ════════════════════════════════════════════
    SAVINGS / FEES  (localStorage)
    ════════════════════════════════════════════ */
 function loadSavings(){ try{return JSON.parse(localStorage.getItem('dat_savings')||'[]');}catch(e){return[];} }
@@ -940,7 +800,7 @@ function renderClientsTable(){
   const html = CLIENTS.length
     ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Added</th><th></th></tr></thead><tbody>'
       + CLIENTS.map(function(c){
-          return '<tr><td><div class="client-name">'+esc(c.name)+'</div></td>'
+          return '<tr style="cursor:pointer" onclick="openProfile(\''+esc(c.email)+'\')"><td><div class="client-name">'+esc(c.name)+'</div></td>'
             +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
             +'<td><span class="badge badge-blue">'+esc(c.tier)+'</span></td>'
             +'<td><div class="client-sub">'+(c.created_at||'').slice(0,10)+'</div></td>'
@@ -999,6 +859,75 @@ function populateComposeClients(){
       planSel.appendChild(o);
     });
   }
+}
+
+/* ════════════════════════════════════════════
+   CLIENT PROFILE DRAWER
+   ════════════════════════════════════════════ */
+let _currentProfileEmail = '';
+function openProfile(email) {
+  _currentProfileEmail = email;
+  document.getElementById('profile-overlay').classList.add('open');
+  document.getElementById('prof-name').textContent = 'Loading…';
+  document.getElementById('prof-meta').textContent = '';
+  // reset tabs
+  ['messages','trips','points','savings'].forEach(function(t){
+    const el = document.getElementById('prof-tab-'+t);
+    if(el){ el.style.display = t==='messages'?'block':'none'; el.innerHTML='<div class="prof-empty">Loading…</div>'; }
+  });
+  document.querySelectorAll('#profile-overlay .modal-tab').forEach(function(b,i){ b.classList.toggle('active', i===0); });
+  loadProfile(email);
+}
+function closeProfile(){ document.getElementById('profile-overlay').classList.remove('open'); }
+
+function switchProfileTab(name, btn){
+  ['messages','trips','points','savings'].forEach(function(t){
+    document.getElementById('prof-tab-'+t).style.display = t===name?'block':'none';
+  });
+  document.querySelectorAll('#profile-overlay .modal-tab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+async function loadProfile(email){
+  if(!ADMIN_TOKEN) return;
+  try{
+    const res = await fetch('/api/admin/clients/'+encodeURIComponent(email), {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok) return;
+    const c = await res.json();
+    renderProfile(c);
+  }catch(e){ document.getElementById('prof-name').textContent = email; }
+}
+
+function renderProfile(c){
+  document.getElementById('prof-name').textContent = c.name || c.email;
+  document.getElementById('prof-meta').textContent = (c.tier||'Client') + ' · ' + c.email + (c.created_at?' · Joined '+c.created_at.split('T')[0]:'');
+  // wire quick action buttons
+  document.getElementById('prof-plan-btn').onclick = function(){ closeProfile(); setTimeout(function(){ openPlan(); document.getElementById('plan-client').value = (c.name||'')+'|'+c.email; }, 200); };
+  document.getElementById('prof-msg-btn').onclick = function(){ closeProfile(); setTimeout(function(){ composeTo(c.name||'',c.email); }, 200); };
+
+  // Messages
+  const msgs = c.messages || [];
+  document.getElementById('prof-tab-messages').innerHTML = msgs.length
+    ? msgs.slice().reverse().map(function(m){ return '<div class="prof-msg '+(m.unread?'unread':'')+'"><div class="prof-msg-from">'+esc(m.from||'Braden — DAT')+(m.subject?' · '+esc(m.subject):'')+'</div><div class="prof-msg-text">'+esc(m.text||'')+'</div><div class="prof-msg-time">'+esc(m.time||'')+'</div></div>'; }).join('')
+    : '<div class="prof-empty">No messages sent yet.</div>';
+
+  // Trips
+  const trips = c.trips || [];
+  document.getElementById('prof-tab-trips').innerHTML = trips.length
+    ? trips.map(function(t){ return '<div class="prof-trip"><div class="prof-trip-dest">'+esc(t.dest||t.destination||'')+'</div><div class="prof-trip-dates">'+esc(t.dates||t.period||'')+'</div></div>'; }).join('')
+    : '<div class="prof-empty">No trips on file. Send a plan to add trips.</div>';
+
+  // Points
+  const pts = c.points || [];
+  document.getElementById('prof-tab-points').innerHTML = pts.length
+    ? '<div class="prof-points-grid">'+pts.map(function(p){ return '<div class="prof-points-card"><div class="prof-points-prog">'+esc(p.program||'')+'</div><div class="prof-points-bal">'+esc(p.balance||'—')+'</div>'+(p.est?'<div style="font-size:.73rem;color:var(--muted);margin-top:3px">'+esc(p.est)+'</div>':'')+'</div>'; }).join('')+'</div>'
+    : '<div class="prof-empty">No points on file. Use 📄 Scan to add loyalty documents.</div>';
+
+  // Savings
+  const savings = c.savings || [];
+  document.getElementById('prof-tab-savings').innerHTML = savings.length
+    ? savings.map(function(s){ return '<div class="prof-msg"><div class="prof-msg-from">'+esc(s.label||s.trip||'')+'</div><div class="prof-msg-text">'+esc(s.sub||s.strategy||'')+'</div><div style="margin-top:6px;display:flex;gap:14px;font-size:.8rem"><span style="color:var(--green)">Save '+esc(s.save||('$'+(s.savings||0)))+'</span><span style="color:var(--muted)">Fee: '+esc(s.fee||'')+'</span></div></div>'; }).join('')
+    : '<div class="prof-empty">No savings logged for this client yet.</div>';
 }
 
 /* ════════════════════════════════════════════
@@ -1232,21 +1161,9 @@ async function createFromThread(){
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
       body:JSON.stringify({email,password:pass,name,tier:'Client',data})});
     if(!res.ok){ if(res.status===409){alert('A client with that email already exists');} return; }
-    // add auto-generated action items to localStorage
-    if(_threadActionItems.length){
-      const today=new Date();
-      const newItems=_threadActionItems.map(function(ai){
-        let due='';
-        if(ai.due_days){ const d=new Date(today); d.setDate(d.getDate()+ai.due_days); due=d.toISOString().slice(0,10); }
-        return {id:'t'+Date.now()+Math.random().toString(36).slice(2),icon:'✉',priority:ai.priority||'medium',
-          client:name,email:email,title:ai.title,desc:'Auto-generated from email thread',due:due};
-      });
-      const c=loadCustom(); saveCustom(c.concat(newItems));
-      renderActionItems();
-    }
     closeImportEmail();
     await loadClients();
-    toast('✓ '+name+' added with '+_threadActionItems.length+' action items!');
+    toast('✓ '+name+' added!');
     setTimeout(function(){composeTo(name,email,'creds',pass);},400);
   }catch(e){ toast('Error creating client'); }
 }
@@ -1561,7 +1478,6 @@ function enterAdmin(){
   loadClients();
   loadIntakes();
   loadExpiringPoints();
-  renderActionItems();
   renderFees();
   checkAIStatus();
 }
