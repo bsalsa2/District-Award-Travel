@@ -267,6 +267,7 @@
       <button class="tab-btn" onclick="switchTab('savings',this)">Savings &amp; Fees</button>
       <button class="tab-btn" onclick="switchTab('points',this)">My Points</button>
       <button class="tab-btn" onclick="switchTab('messages',this)">Messages</button>
+      <button class="tab-btn" onclick="switchTab('profile',this)" id="tab-btn-profile" style="display:none">My Profile</button>
     </div>
   </div>
 
@@ -323,6 +324,12 @@
     <div class="tab-panel" id="tab-messages">
       <div class="section-title">Messages from Your Advisor</div>
       <div class="messages-list" id="messages-container"></div>
+    </div>
+
+    <!-- PROFILE TAB (shown when preferences exist from intake) -->
+    <div class="tab-panel" id="tab-profile">
+      <div class="section-title">Your Travel Profile</div>
+      <div id="profile-container"></div>
     </div>
   </div>
 </div>
@@ -523,34 +530,60 @@ function renderPortal(c) {
   renderSavings({ savings, totalSavings: data.totalSavings || c.totalSavings, totalFee: data.totalFee || c.totalFee });
   renderPoints({ points });
   renderMessages({ messages });
+
+  const prefs = data.preferences || null;
+  if (prefs && Object.values(prefs).some(v => v)) {
+    document.getElementById('tab-btn-profile').style.display = '';
+    renderProfile(prefs);
+  }
 }
 
 function renderTrip(t) {
   const statusBadge = {active:'badge-active',urgent:'badge-urgent',pending:'badge-pending',planned:'badge-planned'}[t.status] || 'badge-planned';
   const statusLabel = {active:'Active',urgent:'Urgent',pending:'Pending',planned:'Planning'}[t.status] || 'Planning';
-  const segs = t.segments.map(s => `
-    <div class="segment">
-      <div><div class="seg-label">From</div><div class="seg-val">${s.from}</div></div>
-      <div class="seg-arrow">→</div>
-      <div><div class="seg-label">To</div><div class="seg-val">${s.to}</div></div>
-      <div class="seg-status">
-        <div class="seg-label">${s.date}</div>
-        <div class="seg-status-text ${s.status}">${s.method}</div>
-        ${s.notes ? '<div class="seg-notes">' + s.notes + '</div>' : ''}
-      </div>
-    </div>`).join('');
+
+  // Handle both detailed (segments) and simple (intake-sourced) trip shapes
+  let bodyHtml = '';
+  if (t.segments && t.segments.length) {
+    const segs = t.segments.map(s => `
+      <div class="segment">
+        <div><div class="seg-label">From</div><div class="seg-val">${s.from}</div></div>
+        <div class="seg-arrow">→</div>
+        <div><div class="seg-label">To</div><div class="seg-val">${s.to}</div></div>
+        <div class="seg-status">
+          <div class="seg-label">${s.date}</div>
+          <div class="seg-status-text ${s.status}">${s.method}</div>
+          ${s.notes ? '<div class="seg-notes">' + s.notes + '</div>' : ''}
+        </div>
+      </div>`).join('');
+    bodyHtml = `<div class="trip-segments">${segs}</div>`;
+  } else {
+    // Simple intake trip — show the details we have
+    const details = [
+      t.passengers ? t.passengers + ' passenger' + (t.passengers != '1' ? 's' : '') : null,
+      t.cabin || null,
+      t.flexibility || null,
+    ].filter(Boolean).join(' · ');
+    bodyHtml = `<div style="color:var(--muted);font-size:.87rem;padding:4px 0">
+      ${details ? '<span style="color:var(--text)">' + details + '</span>' : ''}
+      <div style="margin-top:8px;font-size:.8rem;color:var(--dim)">Your advisor is building the plan for this trip — full details will appear here soon.</div>
+    </div>`;
+  }
+
   const actionHtml = t.action && t.action.show ? `<div class="action-box"><div class="action-icon">⚡</div><div class="action-text">${t.action.text}</div></div>` : '';
+  const tripTitle = t.dest || t.destination || 'Trip';
+  const tripDates = t.dates || '';
   return `
     <div class="trip-card ${t.status === 'urgent' ? 'urgent' : ''}">
       <div class="trip-header">
         <div>
-          <div class="trip-dest">${t.dest}</div>
-          <div class="trip-dates">${t.dates}</div>
+          <div class="trip-dest">${tripTitle}</div>
+          <div class="trip-dates">${tripDates}</div>
         </div>
         <div class="trip-status-col"><span class="badge ${statusBadge}">${statusLabel}</span></div>
       </div>
       <div class="trip-body">
-        <div class="trip-segments">${segs}</div>
+        ${bodyHtml}
         ${actionHtml}
       </div>
     </div>`;
@@ -617,6 +650,42 @@ function switchTab(id, btn) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('tab-' + id).classList.add('active');
+}
+
+function renderProfile(p) {
+  const row = (label, val) => val ? `<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+    <div style="color:var(--muted);font-size:.83rem;min-width:160px">${label}</div>
+    <div style="font-size:.9rem">${val}</div>
+  </div>` : '';
+
+  const html = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px">
+      <div style="font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em">Travel Preferences</div>
+      ${row('Home Airport', p.home_airport)}
+      ${row('Cabin Preference', p.cabin_pref)}
+      ${row('Hotel Preference', p.hotel_pref)}
+      ${row('Travels With', p.travel_with)}
+      ${row('Experience Level', p.experience_level)}
+      ${row('Max Stops', p.max_stops)}
+      ${row('Trip Type', p.trip_type)}
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px">
+      <div style="font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em">Points & Status</div>
+      ${row('Amex Card', p.amex_card)}
+      ${row('Chase Card', p.chase_card)}
+      ${row('Airline Elite Status', p.airline_status !== 'None' ? p.airline_status : '')}
+      ${row('Hotel Elite Status', p.hotel_status !== 'None' ? p.hotel_status : '')}
+    </div>
+    ${p.travel_goals || p.dream_destinations || p.frustrations || p.notes ? `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
+      <div style="font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em">Goals & Notes</div>
+      ${row('Travel Goals', p.travel_goals)}
+      ${row('Dream Destinations', p.dream_destinations)}
+      ${row('Pain Points', p.frustrations)}
+      ${row('Additional Notes', p.notes)}
+    </div>` : ''}
+  `;
+  document.getElementById('profile-container').innerHTML = html;
 }
 </script>
 </body>

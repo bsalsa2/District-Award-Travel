@@ -1390,7 +1390,7 @@ function quickComposeCreds(){
 /* ════════════════════════════════════════════
    ADD CLIENT
    ════════════════════════════════════════════ */
-function openAddClient(){ document.getElementById('addclient-overlay').classList.add('open'); resetAddClient(); }
+function openAddClient(){ _intakeImportData=null; document.getElementById('addclient-overlay').classList.add('open'); resetAddClient(); }
 function closeAddClient(){ document.getElementById('addclient-overlay').classList.remove('open'); }
 function resetAddClient(){
   document.getElementById('addclient-form').style.display='block';
@@ -1410,9 +1410,13 @@ async function generateClient(){
   const tier=document.getElementById('ac-tier').value.trim()||'Client';
   if(!first||!email||!pass){alert('First name, email, and access code are required');return;}
   const name=(first+' '+last).trim();
-  const data={stats:{trips:0,savings:'$0',fee:'$0',points:'—'},urgency:null,trips:[],savings:[],
+  // Use intake-mapped data if creating from intake form, otherwise blank profile
+  const data = _intakeImportData || {
+    stats:{trips:0,savings:'$0',fee:'$0',points:'—'},urgency:null,trips:[],savings:[],
     totalSavings:'$0',totalFee:'$0',points:[],
-    messages:[{from:'Braden — DAT',time:'Today',text:'Welcome to District Award Travel, '+first+'! Your portal is set up. I\'ll begin mapping your points and trips shortly.',unread:true}]};
+    messages:[{from:'Braden — DAT',time:'Today',text:'Welcome to District Award Travel, '+first+'! Your portal is set up. I\'ll begin mapping your points and trips shortly.',unread:true}]
+  };
+  _intakeImportData = null; // clear after use
   document.getElementById('res-email').textContent=email;
   document.getElementById('res-pass').textContent=pass;
   _lastCredsPass=pass; _lastCredsEmail=email;
@@ -1448,6 +1452,76 @@ async function loadIntakes(){
   }catch(e){}
 }
 const _intakeMap={};
+let _intakeImportData = null; // holds mapped client data when creating from intake
+
+function mapIntakeToClientData(p, firstName) {
+  // Build trips array from dynamic trip fields
+  const trips = [];
+  for (let i = 1; i <= 10; i++) {
+    const dest = p['trip'+i+'_dest'];
+    if (!dest) break;
+    trips.push({
+      destination: dest,
+      dates: p['trip'+i+'_dates'] || '',
+      passengers: p['trip'+i+'_pax'] || '1',
+      flexibility: p['trip'+i+'_flex'] || '',
+      cabin: p.cabin_pref || '',
+    });
+  }
+
+  // Build points array from pts_* fields
+  const points = [];
+  Object.keys(p).forEach(function(k) {
+    if (k.startsWith('pts_') && p[k] && p[k].trim()) {
+      const program = k.replace('pts_','').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+      points.push({ program, balance: p[k], expiration_date: null, tier: null });
+    }
+  });
+
+  // Elite status as points entries if provided
+  if (p.airline_status && p.airline_status !== 'None') {
+    points.push({ program: 'Airline Elite Status', balance: p.airline_status, expiration_date: null, tier: p.airline_status });
+  }
+  if (p.hotel_status && p.hotel_status !== 'None') {
+    points.push({ program: 'Hotel Elite Status', balance: p.hotel_status, expiration_date: null, tier: p.hotel_status });
+  }
+
+  return {
+    stats: { trips: trips.length, savings: '$0', fee: '$0', points: points.length > 0 ? points[0].balance : '—' },
+    urgency: null,
+    trips,
+    savings: [],
+    totalSavings: '$0',
+    totalFee: '$0',
+    points,
+    messages: [{
+      from: 'Braden — DAT',
+      time: 'Today',
+      text: 'Welcome to District Award Travel, ' + firstName + '! Your portal is set up with all the info from your intake form. I\'ll be in touch shortly with travel plan options.',
+      unread: true
+    }],
+    preferences: {
+      home_airport: p.home_airport || '',
+      cabin_pref: p.cabin_pref || '',
+      hotel_pref: p.hotel_pref || '',
+      travel_goals: p.travel_goals || '',
+      dream_destinations: p.dream_destinations || '',
+      max_stops: p.max_stops || '',
+      trip_type: p.trip_type || '',
+      comm_pref: p.comm_pref || '',
+      travel_with: p.travel_with || '',
+      frustrations: p.frustrations || '',
+      experience_level: p.pts_experience || '',
+      current_booking_method: p.current_booking_method || '',
+      notes: p.notes || '',
+      amex_card: p.amex_card || '',
+      chase_card: p.chase_card || '',
+      airline_status: p.airline_status || '',
+      hotel_status: p.hotel_status || '',
+    },
+  };
+}
+
 function renderIntakes(intakes){
   const nb=document.getElementById('nav-intake-count');
   if(nb) nb.textContent=intakes.length;
@@ -1476,8 +1550,11 @@ function prefillImportFromIntake(id){
   closeImportEmail();
   openAddClient();
   const p=intake.payload||{};
+  const firstName=p.first_name||intake.name&&intake.name.split(' ')[0]||'';
+  // Store mapped client data for use in generateClient()
+  _intakeImportData = mapIntakeToClientData(p, firstName);
   setTimeout(function(){
-    document.getElementById('ac-first').value=p.first_name||intake.name&&intake.name.split(' ')[0]||'';
+    document.getElementById('ac-first').value=firstName;
     document.getElementById('ac-last').value=p.last_name||intake.name&&intake.name.split(' ').slice(1).join(' ')||'';
     document.getElementById('ac-email').value=intake.email||p.email||'';
     document.getElementById('ac-tier').value='Client';
