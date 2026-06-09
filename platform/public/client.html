@@ -100,6 +100,10 @@
   <div class="portal-head">
     <h1 id="portal-name">Welcome</h1>
     <p id="portal-tier">District Award Travel Client</p>
+    <div id="savings-counter" style="display:none;margin-top:14px;text-align:center">
+      <div style="font-size:.78rem;color:var(--muted,#9ca3af);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">You've saved with District</div>
+      <div id="savings-amount" style="font-size:2.2rem;font-weight:800;color:#d97706;font-variant-numeric:tabular-nums">$0</div>
+    </div>
   </div>
 
   <!-- MESSAGES FROM ADVISOR -->
@@ -156,6 +160,27 @@ function showPortal(c) {
   document.getElementById('nav-name').textContent = firstName;
   document.getElementById('portal-name').textContent = `Welcome back, ${firstName}`;
   document.getElementById('portal-tier').textContent = (c.tier || 'Client') + ' — District Award Travel';
+  // savings counter
+  const lifetimeCents = c.lifetime_savings_cents || 0;
+  if (lifetimeCents > 0) {
+    const counterEl = document.getElementById('savings-counter');
+    const amountEl = document.getElementById('savings-amount');
+    counterEl.style.display = 'block';
+    const target = lifetimeCents / 100;
+    const duration = 1000;
+    const start = performance.now();
+    function animateCounter(ts) {
+      const elapsed = ts - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      const val = target * ease;
+      amountEl.textContent = '$' + val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      if (progress < 1) requestAnimationFrame(animateCounter);
+    }
+    requestAnimationFrame(animateCounter);
+  } else {
+    document.getElementById('savings-counter').style.display = 'none';
+  }
   renderPortal(c);
   startAutoRefresh();
 }
