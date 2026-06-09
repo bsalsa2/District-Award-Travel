@@ -5,430 +5,302 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Portal — District Award Travel</title>
 <style>
-  :root {
-    --bg: #0a0805;
-    --surface: #12100d;
-    --surface2: #1a1814;
-    --border: #2a2620;
-    --orange: #ff8a1e;
-    --gold: #ffb347;
-    --orange-dark: #e85d04;
-    --red: #ff6b6b;
-    --text: #faf8f3;
-    --muted: #a89a8f;
-    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#f5f1ed; color:#2a2a2a; font-family:system-ui,-apple-system,sans-serif; min-height:100vh; }
 
   /* NAV */
-  nav {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(5,8,13,0.95); backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 32px; height: 60px;
-  }
-  .nav-logo { font-size: 1rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); text-decoration: none; }
-  .nav-logo span { color: var(--orange); }
-  .nav-right { display: flex; align-items: center; gap: 20px; }
-  .nav-user { font-size: 0.8rem; color: var(--muted); }
-  .nav-user strong { color: var(--text); }
-  .btn-logout {
-    background: none; border: 1px solid var(--border);
-    color: var(--muted); padding: 6px 14px; border-radius: 6px;
-    font-size: 0.78rem; cursor: pointer; transition: all 0.2s;
-  }
-  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+  nav { background:#ff8a1e; padding:18px 32px; display:flex; align-items:center; justify-content:space-between; }
+  .logo { font-size:1.2rem; font-weight:800; color:#fff; }
+  .nav-info { display:flex; gap:20px; align-items:center; font-size:.9rem; }
+  .nav-info span { color:rgba(255,255,255,0.8); }
+  .nav-info strong { color:#fff; }
+  .btn-logout { background:rgba(255,255,255,.2); color:#fff; border:none; padding:7px 16px; border-radius:6px; cursor:pointer; font-size:.85rem; transition:all .2s; }
+  .btn-logout:hover { background:rgba(255,255,255,.3); }
 
-  /* LOGIN GATE */
-  #login-screen {
-    display: flex; align-items: center; justify-content: center;
-    min-height: calc(100vh - 60px); padding: 40px 20px;
-  }
-  .login-box {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 48px 40px; width: 100%; max-width: 420px;
-  }
-  .login-box h2 { font-size: 1.6rem; margin-bottom: 8px; }
-  .login-box p { color: var(--muted); font-size: 0.9rem; margin-bottom: 32px; }
-  .form-group { margin-bottom: 20px; }
-  .form-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
-  .form-group input {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); padding: 12px 16px; border-radius: 8px; font-size: 0.95rem;
-    outline: none; transition: border 0.2s;
-  }
-  .form-group input:focus { border-color: var(--orange); }
-  .btn-primary {
-    width: 100%; background: var(--orange); color: #000;
-    border: none; padding: 14px; border-radius: 8px;
-    font-size: 0.95rem; font-weight: 700; cursor: pointer;
-    transition: opacity 0.2s; letter-spacing: 0.02em;
-  }
-  .btn-primary:hover { opacity: 0.9; }
-  .login-error { color: var(--red); font-size: 0.85rem; margin-top: 12px; display: none; text-align: center; }
+  /* LOGIN */
+  #login-screen { display:flex; align-items:center; justify-content:center; min-height:calc(100vh - 60px); padding:40px 20px; }
+  .login-box { background:#fff; border:2px solid #ff8a1e; border-radius:12px; padding:40px; width:100%; max-width:380px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
+  .login-box h2 { font-size:1.4rem; color:#ff8a1e; margin-bottom:6px; }
+  .login-box p { color:#888; font-size:.9rem; margin-bottom:24px; }
+  .form-group { margin-bottom:16px; }
+  .form-group label { display:block; font-size:.8rem; color:#666; margin-bottom:5px; font-weight:600; }
+  .form-group input { width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:6px; font-size:.9rem; }
+  .form-group input:focus { outline:none; border-color:#ff8a1e; box-shadow:0 0 0 3px rgba(255,138,30,.1); }
+  .btn-primary { width:100%; background:#ff8a1e; color:#fff; border:none; padding:12px; border-radius:6px; font-weight:700; cursor:pointer; font-size:.95rem; }
+  .btn-primary:hover { background:#e85d04; }
+  .login-error { color:#ef4444; font-size:.85rem; margin-top:10px; display:none; text-align:center; }
 
   /* PORTAL */
-  #portal { display: none; }
-  .portal-header {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 32px 48px 0;
-  }
-  .portal-header h1 { font-size: 1.6rem; margin-bottom: 4px; }
-  .portal-header p { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
-  .portal-tabs { display: flex; gap: 0; }
-  .tab-btn {
-    background: none; border: none; color: var(--muted);
-    padding: 12px 24px; font-size: 0.88rem; cursor: pointer;
-    border-bottom: 2px solid transparent; transition: all 0.2s;
-    font-family: var(--font);
-  }
-  .tab-btn.active { color: var(--orange); border-bottom-color: var(--orange); }
-  .tab-btn:hover:not(.active) { color: var(--text); }
+  #portal { display:none; padding:40px 32px; max-width:1000px; margin:0 auto; }
+  .portal-head { margin-bottom:40px; }
+  .portal-head h1 { font-size:2rem; color:#2a2a2a; margin-bottom:4px; font-weight:800; }
+  .portal-head p { color:#888; font-size:.95rem; }
 
-  .portal-body { padding: 40px 48px; max-width: 1200px; }
-
-  /* STATS ROW */
-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 40px; }
-  .stat-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px;
-  }
-  .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-  .stat-value { font-size: 1.8rem; font-weight: 700; }
-  .stat-value.green { color: var(--orange); }
-  .stat-value.gold { color: var(--gold); }
-  .stat-value.blue { color: var(--gold); }
-  .stat-sub { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+  /* MESSAGES SECTION */
+  .section { margin-bottom:40px; }
+  .section-title { font-size:1rem; font-weight:800; color:#ff8a1e; margin-bottom:16px; text-transform:uppercase; letter-spacing:.05em; }
+  .message-card { background:#fff; border-left:4px solid #ff8a1e; padding:20px; margin-bottom:12px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.04); }
+  .message-card.unread { background:rgba(255,138,30,.05); }
+  .msg-from { font-weight:700; color:#2a2a2a; margin-bottom:4px; font-size:.95rem; }
+  .msg-subject { color:#ff8a1e; font-weight:600; margin-bottom:8px; font-size:.9rem; }
+  .msg-body { color:#555; line-height:1.6; margin-bottom:12px; white-space:pre-wrap; word-wrap:break-word; }
+  .msg-time { font-size:.75rem; color:#aaa; }
+  .msg-options { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .msg-option { display:inline-block; padding:6px 12px; background:#f5f1ed; color:#666; border-radius:4px; font-size:.8rem; border-left:2px solid #ff8a1e; }
 
   /* TRIPS */
-  .section-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-  .badge {
-    font-size: 0.7rem; padding: 3px 10px; border-radius: 20px;
-    font-weight: 600; letter-spacing: 0.04em;
-  }
-  .badge-active { background: rgba(255,138,30,0.15); color: var(--orange); }
-  .badge-urgent { background: rgba(245,200,66,0.15); color: var(--gold); }
-  .badge-pending { background: rgba(255,179,71,0.15); color: var(--gold); }
-  .badge-planned { background: rgba(107,122,141,0.2); color: var(--muted); }
-
-  .trips-grid { display: grid; gap: 20px; margin-bottom: 48px; }
-  .trip-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; overflow: hidden; transition: border-color 0.2s;
-  }
-  .trip-card:hover { border-color: #2a3a50; }
-  .trip-card.urgent { border-color: rgba(245,200,66,0.4); }
-  .trip-header {
-    padding: 24px 28px 20px;
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-    border-bottom: 1px solid var(--border);
-  }
-  .trip-dest { font-size: 1.25rem; font-weight: 700; margin-bottom: 4px; }
-  .trip-dates { font-size: 0.85rem; color: var(--muted); }
-  .trip-status-col { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
-  .trip-body { padding: 24px 28px; }
-  .trip-segments { display: grid; gap: 12px; }
-  .segment {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px 20px;
-    display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: center; gap: 16px;
-  }
-  .seg-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
-  .seg-val { font-size: 0.95rem; font-weight: 600; }
-  .seg-arrow { color: var(--muted); font-size: 1.2rem; }
-  .seg-status { text-align: right; }
-  .seg-status-text { font-size: 0.75rem; }
-  .seg-status-text.confirmed { color: var(--orange); }
-  .seg-status-text.pending { color: var(--gold); }
-  .seg-status-text.action { color: var(--red); }
-  .seg-notes { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
-
-  .action-box {
-    background: rgba(245,200,66,0.07); border: 1px solid rgba(245,200,66,0.3);
-    border-radius: 10px; padding: 16px 20px; margin-top: 16px;
-    display: flex; align-items: flex-start; gap: 12px;
-  }
-  .action-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
-  .action-text { font-size: 0.85rem; line-height: 1.5; }
-  .action-text strong { color: var(--gold); display: block; margin-bottom: 2px; }
-
-  /* SAVINGS */
-  .savings-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 28px; margin-bottom: 48px;
-  }
-  .savings-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
-  .savings-row:last-child { border-bottom: none; }
-  .savings-row-label { font-size: 0.9rem; color: var(--text); }
-  .savings-row-sub { font-size: 0.78rem; color: var(--muted); }
-  .savings-row-val { font-size: 1rem; font-weight: 600; text-align: right; }
-  .savings-total {
-    background: rgba(255,138,30,0.06); border: 1px solid rgba(255,138,30,0.25);
-    border-radius: 12px; padding: 20px 24px; margin-top: 20px;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .savings-total-label { font-size: 1rem; font-weight: 600; }
-  .savings-total-sub { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
-  .savings-total-val { font-size: 2rem; font-weight: 800; color: var(--orange); }
+  .trip-card { background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.04); margin-bottom:12px; }
+  .trip-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+  .trip-dest { font-size:1.3rem; font-weight:800; color:#2a2a2a; }
+  .trip-dates { color:#888; font-size:.9rem; margin-top:2px; }
+  .trip-meta { font-size:.85rem; color:#888; line-height:1.8; }
 
   /* POINTS */
-  .points-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 48px; }
-  .points-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px;
-  }
-  .points-program { font-size: 0.8rem; color: var(--muted); margin-bottom: 6px; }
-  .points-balance { font-size: 1.4rem; font-weight: 700; color: var(--gold); }
-  .points-est { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .points-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+  .point-card { background:#fff; padding:18px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.04); border-top:3px solid #ff8a1e; }
+  .point-name { font-weight:700; color:#2a2a2a; font-size:.95rem; margin-bottom:8px; }
+  .point-balance { font-size:1.5rem; color:#ff8a1e; font-weight:800; }
 
-  /* MESSAGES */
-  .messages-list { display: grid; gap: 12px; }
-  .message-item {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px 24px;
-    display: flex; gap: 16px; align-items: flex-start;
-  }
-  .message-item.unread { border-left: 3px solid var(--orange); }
-  .msg-avatar {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, #ff8a1e22, #ffb34722);
-    border: 1px solid var(--border); flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.8rem; color: var(--orange);
-  }
-  .msg-content { flex: 1; }
-  .msg-from { font-size: 0.85rem; font-weight: 600; margin-bottom: 2px; }
-  .msg-text { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
-  .msg-time { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+  /* EMPTY STATE */
+  .empty-state { text-align:center; padding:40px 20px; color:#888; }
+  .empty-icon { font-size:3rem; margin-bottom:12px; }
+  .empty-text { font-size:.95rem; }
 
-  /* TABS */
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
-
-  /* URGENCY BANNER */
-  .urgency-banner {
-    background: rgba(245,200,66,0.08); border: 1px solid rgba(245,200,66,0.3);
-    border-radius: 12px; padding: 16px 24px; margin-bottom: 32px;
-    display: flex; align-items: center; gap: 16px;
-  }
-  .urgency-icon { font-size: 1.4rem; flex-shrink: 0; }
-  .urgency-text { font-size: 0.88rem; line-height: 1.5; }
-  .urgency-text strong { color: var(--gold); }
-
-  @media (max-width: 900px) {
-    .portal-body { padding: 24px 20px; }
-    .portal-header { padding: 24px 20px 0; }
-    .stats-row { grid-template-columns: repeat(2, 1fr); }
-    .points-grid { grid-template-columns: repeat(2, 1fr); }
-    .segment { grid-template-columns: 1fr 1fr; }
-  }
+  .hidden { display:none; }
 </style>
 </head>
 <body>
 
 <nav>
-  <a href="index.html" class="nav-logo">DAT <span>●</span></a>
-  <div class="nav-right">
-    <span class="nav-user">Welcome, <strong id="nav-name">—</strong></span>
+  <div class="logo">District Award Travel</div>
+  <div class="nav-info">
+    <div><span>Welcome,</span> <strong id="nav-name">Client</strong></div>
     <button class="btn-logout" onclick="logout()">Sign Out</button>
   </div>
 </nav>
 
-<!-- LOGIN -->
 <div id="login-screen">
   <div class="login-box">
-    <h2>Client Portal</h2>
-    <p>Sign in to view your trips, savings plan, and account details.</p>
+    <h2>Sign In</h2>
+    <p>Access your travel portal</p>
     <div class="form-group">
-      <label>Email Address</label>
-      <input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="your@email.com">
     </div>
     <div class="form-group">
       <label>Access Code</label>
-      <input type="password" id="login-pass" placeholder="Provided by your advisor" onkeydown="if(event.key==='Enter')doLogin()">
+      <input type="password" id="login-pass" placeholder="••••••••">
     </div>
     <button class="btn-primary" onclick="doLogin()">Sign In</button>
-    <div class="login-error" id="login-error">Invalid credentials. Contact your advisor.</div>
-    <p style="margin-top:20px;font-size:0.78rem;color:var(--muted);text-align:center;">
-      New client? <a href="intake.html" style="color:var(--orange);text-decoration:none;">Start your intake →</a>
-    </p>
+    <div class="login-error" id="login-error"></div>
   </div>
 </div>
 
-<!-- PORTAL -->
 <div id="portal">
-  <div class="portal-header">
-    <h1 id="portal-greeting">My Dashboard</h1>
-    <p id="portal-subtitle">District Award Travel — Client Portal</p>
-    <div class="portal-tabs">
-      <button class="tab-btn active" onclick="switchTab('trips',this)">My Trips</button>
-      <button class="tab-btn" onclick="switchTab('savings',this)">Savings &amp; Fees</button>
-      <button class="tab-btn" onclick="switchTab('points',this)">My Points</button>
-      <button class="tab-btn" onclick="switchTab('messages',this)">Messages</button>
-      <button class="tab-btn" onclick="switchTab('profile',this)" id="tab-btn-profile" style="display:none">My Profile</button>
+  <div class="portal-head">
+    <h1 id="portal-name">Welcome</h1>
+    <p id="portal-tier">District Award Travel Client</p>
+  </div>
+
+  <!-- MESSAGES FROM ADVISOR -->
+  <div class="section">
+    <div class="section-title">💬 Messages from Braden</div>
+    <div id="messages-container">
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">No messages yet. Your advisor will reach out soon.</div>
+      </div>
     </div>
   </div>
 
-  <div class="portal-body">
-    <!-- STATS -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Active Trips</div>
-        <div class="stat-value blue" id="stat-trips">—</div>
-        <div class="stat-sub" id="stat-trips-sub">in planning</div>
+  <!-- TRIPS -->
+  <div class="section">
+    <div class="section-title">✈️ Your Trips</div>
+    <div id="trips-container">
+      <div class="empty-state">
+        <div class="empty-icon">🗺️</div>
+        <div class="empty-text">No trips on file yet.</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Total Savings</div>
-        <div class="stat-value green" id="stat-savings">—</div>
-        <div class="stat-sub">cash vs. points cost</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Fee Owed</div>
-        <div class="stat-value gold" id="stat-fee">—</div>
-        <div class="stat-sub">10% of savings</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Points Deployed</div>
-        <div class="stat-value" id="stat-points">—</div>
-        <div class="stat-sub">across all trips</div>
-      </div>
-    </div>
-
-    <!-- URGENCY BANNER -->
-    <div class="urgency-banner" id="urgency-banner" style="display:none">
-      <div class="urgency-icon">⚠️</div>
-      <div class="urgency-text" id="urgency-text"></div>
-    </div>
-
-    <!-- TRIPS TAB -->
-    <div class="tab-panel active" id="tab-trips">
-      <div class="section-title">Upcoming Travel <span class="badge badge-active" id="trips-count-badge">0 trips</span></div>
-      <div class="trips-grid" id="trips-container"></div>
-    </div>
-
-    <!-- SAVINGS TAB -->
-    <div class="tab-panel" id="tab-savings">
-      <div class="section-title">Savings Breakdown</div>
-      <div class="savings-card" id="savings-container"></div>
-    </div>
-
-    <!-- POINTS TAB -->
-    <div class="tab-panel" id="tab-points">
-      <div class="section-title">Your Points Balances</div>
-      <div class="points-grid" id="points-container"></div>
-    </div>
-
-    <!-- MESSAGES TAB -->
-    <div class="tab-panel" id="tab-messages">
-      <div class="section-title">Messages from Your Advisor</div>
-      <div class="messages-list" id="messages-container"></div>
-    </div>
-
-    <!-- PROFILE TAB (shown when preferences exist from intake) -->
-    <div class="tab-panel" id="tab-profile">
-      <div class="section-title">Your Travel Profile</div>
-      <div id="profile-container"></div>
     </div>
   </div>
+
+  <!-- POINTS -->
+  <div class="section">
+    <div class="section-title">⭐ Your Points & Miles</div>
+    <div id="points-container" class="points-grid">
+      <div class="empty-state">
+        <div class="empty-icon">💰</div>
+        <div class="empty-text">No points recorded yet.</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
+// Demo clients
 const CLIENTS = {
   "tammy@carnegroup.com": {
     pass: "tammy2026",
     name: "Tammy Jennissen",
     tier: "Executive Platinum",
-    stats: { trips: 3, savings: "$9,420", fee: "$942", points: "2.8M" },
-    urgency: "<strong>Action Required by June 30, 2026:</strong> Casa di Langa (Piedmont, Italy) must be booked through Amex Fine Hotels & Resorts to receive the 15% Amex discount. Your advisor is ready to book — please confirm dates Aug 5–9.",
-    trips: [
-      {
-        dest: "Italy — Franciacorta & Piedmont & Milan",
-        dates: "July 29 – August 13, 2026",
-        status: "active",
-        segments: [
-          { from: "Washington, DC", to: "Milan (MXP)", date: "Jul 29", method: "Employer Covered", status: "confirmed", notes: "Arrival flight covered by employer" },
-          { from: "Milan", to: "L'Albereta, Franciacorta", date: "Jul 30–Aug 5", method: "Wedding Party Covers", status: "confirmed", notes: "6 nights, Franciacorta wine country" },
-          { from: "Franciacorta", to: "Casa di Langa, Piedmont", date: "Aug 5–9", method: "Amex FHR — Cash", status: "action", notes: "⚠️ BOOK BY JUNE 30 — Amex FHR 15% discount" },
-          { from: "Piedmont", to: "Laqua by the Lake, Orta", date: "Aug 9–11", method: "Amex Hotel Collection", status: "pending", notes: "2 nights, Orta San Giulio" },
-          { from: "Orta", to: "Milan Marriott Hotel", date: "Aug 11–13", method: "120,000 Marriott Points", status: "pending", notes: "Best value option confirmed by advisor" },
-          { from: "Milan (MXP)", to: "Washington, DC", date: "Aug 13", method: "TBD", status: "pending", notes: "Return flight TBD" }
-        ],
-        action: { show: true, text: "<strong>Urgent: Casa di Langa booking deadline June 30, 2026</strong>\nYour advisor has confirmed availability Aug 5–9 through Amex Fine Hotels & Resorts. The 15% FHR discount applies only through the Amex portal and expires June 30. Confirm to lock in your rate." }
-      },
-      {
-        dest: "Iceland",
-        dates: "October 17–24, 2026",
-        status: "planned",
-        segments: [
-          { from: "Washington, DC", to: "Reykjavik (KEF)", date: "Oct 17", method: "Miles — TBD", status: "pending", notes: "Award space research in progress" },
-          { from: "Reykjavik", to: "Washington, DC", date: "Oct 24", method: "Miles — TBD", status: "pending", notes: "" }
-        ],
-        action: { show: false, text: "" }
-      },
-      {
-        dest: "Japan — Tokyo",
-        dates: "December 2026 (dates TBD)",
-        status: "planned",
-        segments: [
-          { from: "New York (JFK)", to: "Tokyo (HND)", date: "Dec TBD", method: "35,000 AA Miles + $5.60", status: "pending", notes: "JAL AA167 nonstop — Business Class. Cash value: $913–983. Award space opens ~Mar 8, 2026." },
-          { from: "Tokyo (HND)", to: "New York (JFK)", date: "Dec TBD", method: "Miles — TBD", status: "pending", notes: "Return routing TBD" }
-        ],
-        action: { show: false, text: "" }
-      }
-    ],
-    savings: [
-      { label: "Japan — JAL Business JFK→HND", sub: "35K AA miles vs $943 cash", cash: "$943", points: "$166", save: "$777", fee: "$78" },
-      { label: "Milan — Marriott Hotel (2 nights)", sub: "120K Marriott points vs $580 cash", cash: "$580", points: "$72", save: "$508", fee: "$51" },
-      { label: "Italy — Additional hotel savings", sub: "Amex FHR 15% discount + Hotel Collection credits", cash: "$1,200", points: "$800", save: "$400", fee: "$40" }
-    ],
-    totalSavings: "$1,685", totalFee: "$169",
-    points: [
-      { program: "Amex Membership Rewards", balance: "1,000,000+", est: "~$20,000 value at 2¢/pt" },
-      { program: "American Airlines AAdvantage", balance: "1,600,000", est: "~$24,000 value at 1.5¢/pt" },
-      { program: "Marriott Bonvoy", balance: "500,000+", est: "~$3,500 value at 0.7¢/pt" }
-    ],
-    messages: [
-      { from: "Jordan Mills — DAT", time: "Jun 5, 2026", text: "Tammy — Casa di Langa availability confirmed for Aug 5–9. I need your go-ahead by June 30 to lock in the Amex FHR 15% discount rate. This is the best property in the entire Piedmont itinerary. Please reply ASAP.", unread: true },
-      { from: "Jordan Mills — DAT", time: "May 28, 2026", text: "Milan hotel confirmed: Milan Marriott at 120,000 Bonvoy points for 2 nights (Aug 11–13). Best value of the four options we reviewed. Laqua by the Lake also confirmed with Amex Hotel Collection perks.", unread: false },
-      { from: "Jordan Mills — DAT", time: "May 10, 2026", text: "Full Italy itinerary mapped. Your employer is covering MXP arrival, wedding party covers Franciacorta. Remaining cost: Casa di Langa (cash + FHR discount), Orta (Amex Hotel Collection), Milan (Marriott points).", unread: false }
-    ]
-  },
-  "darren@email.com": {
-    pass: "darren2026",
-    name: "Darren Fernandez",
-    tier: "Group Travel Client",
-    stats: { trips: 1, savings: "Calculating", fee: "TBD", points: "Confirming" },
-    urgency: null,
-    trips: [
-      {
-        dest: "South Africa — Cape Town & Johannesburg",
-        dates: "December 16, 2026 – January 1, 2027",
-        status: "active",
-        segments: [
-          { from: "Washington, DC", to: "South Africa", date: "Dec 16", method: "TBD — Research in Progress", status: "pending", notes: "6 passengers. Peak season. Award space extremely limited." },
-          { from: "South Africa", to: "Washington, DC", date: "Jan 1", method: "TBD", status: "pending", notes: "Return routing TBD" }
-        ],
-        action: { show: true, text: "<strong>Points balance confirmation needed</strong>\nYour advisor needs your current United MileagePlus and Amex Membership Rewards balances to finalize the redemption strategy. Peak December travel for 6 passengers is challenging — Turkish (via Istanbul), Ethiopian (via Addis Ababa), and Qatar (via Doha) are the primary cash alternatives being evaluated." }
-      }
-    ],
-    savings: [],
-    totalSavings: "Pending", totalFee: "Pending",
-    points: [
-      { program: "United MileagePlus", balance: "Balance TBD", est: "Please confirm with advisor" },
-      { program: "Amex Membership Rewards", balance: "Balance TBD", est: "Please confirm with advisor" }
-    ],
-    messages: [
-      { from: "Jordan Mills — DAT", time: "Jun 1, 2026", text: "Darren — welcome aboard! Referred by your contact, and excited to work on the South Africa group trip. I need your current United MileagePlus and Amex MR balances to start mapping options. Peak December for 6 pax is a puzzle but we'll crack it.", unread: true }
-    ]
+    data: {
+      messages: [
+        { from: "Braden", time: "Today", subject: "Japan Trip Options", text: "Hi Tammy!\n\nI've found 3 great options for your March Japan trip...", unread: true }
+      ],
+      trips: [
+        { destination: "Tokyo, Japan", dates: "March 10-20, 2026", passengers: "2", cabin: "Business Class" }
+      ],
+      points: [
+        { program: "United MileagePlus", balance: "180,000 miles" },
+        { program: "Chase Ultimate Rewards", balance: "245,000 points" }
+      ]
+    }
   }
 };
 
 let currentClient = null;
 let autoRefreshInterval = null;
 
-// Auto-refresh client data every 10 seconds to stay in sync with admin updates
+function getRegisteredClient(email) {
+  try {
+    const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
+    return store[email] || null;
+  } catch (e) { return null; }
+}
+
+function showPortal(c) {
+  currentClient = c;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('portal').style.display = 'block';
+  const firstName = (c.name || 'Client').split(' ')[0];
+  document.getElementById('nav-name').textContent = firstName;
+  document.getElementById('portal-name').textContent = `Welcome back, ${firstName}`;
+  document.getElementById('portal-tier').textContent = (c.tier || 'Client') + ' — District Award Travel';
+  renderPortal(c);
+  startAutoRefresh();
+}
+
+function loginError(msg) {
+  const err = document.getElementById('login-error');
+  if (msg) err.textContent = msg;
+  err.style.display = 'block';
+  setTimeout(() => err.style.display = 'none', 4000);
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass = document.getElementById('login-pass').value.trim();
+  const btn = document.querySelector('#login-screen .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass }),
+    });
+    if (res.ok) {
+      const { token } = await res.json();
+      sessionStorage.setItem('dat_client_token', token);
+      const me = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (me.ok) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+        return showPortal(await me.json());
+      }
+    }
+  } catch (e) {
+    // Backend unreachable — fall through to demo
+  }
+
+  const client = CLIENTS[email] || getRegisteredClient(email);
+  if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+  if (client && client.pass === pass) {
+    showPortal(client);
+  } else {
+    loginError('Invalid credentials.');
+  }
+}
+
+function logout() {
+  currentClient = null;
+  stopAutoRefresh();
+  sessionStorage.removeItem('dat_client_token');
+  document.getElementById('portal').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+function renderPortal(c) {
+  const data = c.data ? (typeof c.data === 'string' ? JSON.parse(c.data) : c.data) : c;
+  const messages = data.messages || c.messages || [];
+  const trips = data.trips || c.trips || [];
+  const points = data.points || c.points || [];
+
+  renderMessages(messages);
+  renderTrips(trips);
+  renderPoints(points);
+}
+
+function renderMessages(msgs) {
+  const mc = document.getElementById('messages-container');
+  if (!msgs || msgs.length === 0) {
+    mc.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No messages yet.</div></div>';
+    return;
+  }
+  mc.innerHTML = msgs.map(m => `
+    <div class="message-card ${m.unread ? 'unread' : ''}">
+      <div class="msg-from">${m.from || 'Braden'}</div>
+      ${m.subject ? `<div class="msg-subject">${m.subject}</div>` : ''}
+      <div class="msg-body">${(m.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      ${m.plan && m.plan.options ? `
+        <div class="msg-options">
+          ${m.plan.options.map((opt, i) => `<div class="msg-option">OPTION ${i+1}: ${opt.desc ? opt.desc.substring(0, 30) + '...' : ''}</div>`).join('')}
+        </div>
+      ` : ''}
+      <div class="msg-time">${m.time ? new Date(m.time).toLocaleDateString() : ''}</div>
+    </div>
+  `).join('');
+}
+
+function renderTrips(trips) {
+  const tc = document.getElementById('trips-container');
+  if (!trips || trips.length === 0) {
+    tc.innerHTML = '<div class="empty-state"><div class="empty-icon">🗺️</div><div class="empty-text">No trips on file yet.</div></div>';
+    return;
+  }
+  tc.innerHTML = trips.map(t => `
+    <div class="trip-card">
+      <div class="trip-header">
+        <div>
+          <div class="trip-dest">${t.destination || t.dest || 'Trip'}</div>
+          <div class="trip-dates">${t.dates || ''}</div>
+        </div>
+      </div>
+      <div class="trip-meta">
+        ${t.passengers ? `${t.passengers} passenger${t.passengers != '1' ? 's' : ''}` : ''}
+        ${t.cabin ? `• ${t.cabin}` : ''}
+        ${t.flexibility ? `• ${t.flexibility}` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderPoints(points) {
+  const pc = document.getElementById('points-container');
+  if (!points || points.length === 0) {
+    pc.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">💰</div><div class="empty-text">No points recorded yet.</div></div>';
+    return;
+  }
+  pc.innerHTML = points.map(p => `
+    <div class="point-card">
+      <div class="point-name">${p.program || 'Points'}</div>
+      <div class="point-balance">${p.balance || '—'}</div>
+    </div>
+  `).join('');
+}
+
 function startAutoRefresh() {
   stopAutoRefresh();
   autoRefreshInterval = setInterval(async function() {
@@ -447,9 +319,9 @@ function startAutoRefresh() {
         }
       }
     } catch (e) {
-      // Silent fail on refresh
+      // Silent fail
     }
-  }, 10000); // 10 seconds
+  }, 10000);
 }
 
 function stopAutoRefresh() {
@@ -458,315 +330,7 @@ function stopAutoRefresh() {
     autoRefreshInterval = null;
   }
 }
-
-// Demo fallback: clients saved in this browser (used only if the backend
-// isn't reachable, e.g. when previewing the file directly off the server).
-function getRegisteredClient(email) {
-  try {
-    const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
-    return store[email] || null;
-  } catch (e) { return null; }
-}
-
-function showPortal(client) {
-  currentClient = client;
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('portal').style.display = 'block';
-  document.getElementById('nav-name').textContent = (client.name || 'Client').split(' ')[0];
-  renderPortal(client);
-  startAutoRefresh();
-}
-
-function loginError(msg) {
-  const err = document.getElementById('login-error');
-  if (msg) err.textContent = msg;
-  err.style.display = 'block';
-  setTimeout(() => err.style.display = 'none', 4000);
-}
-
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pass = document.getElementById('login-pass').value.trim();
-  const btn = document.querySelector('#login-screen .btn-primary');
-  if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
-
-  // 1) Try the live backend
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass }),
-    });
-    if (res.ok) {
-      const { token } = await res.json();
-      sessionStorage.setItem('dat_client_token', token);
-      const me = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
-      if (me.ok) {
-        if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-        return showPortal(await me.json());
-      }
-    } else if (res.status === 401) {
-      if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-      return loginError('Invalid credentials. Contact your advisor.');
-    }
-  } catch (e) {
-    // Backend unreachable — fall through to demo data
-  }
-
-  // 2) Fallback to built-in / locally-registered demo clients
-  const client = CLIENTS[email] || getRegisteredClient(email);
-  if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-  if (client && client.pass === pass) {
-    showPortal(client);
-  } else {
-    loginError('Invalid credentials. Contact your advisor.');
-  }
-}
-
-function logout() {
-  currentClient = null;
-  stopAutoRefresh();
-  sessionStorage.removeItem('dat_client_token');
-  document.getElementById('portal').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-pass').value = '';
-}
-
-function renderPortal(c) {
-  const data = c.data ? (typeof c.data === 'string' ? JSON.parse(c.data) : c.data) : c;
-  const name = c.name || data.name || 'Client';
-  const tier = c.tier || data.tier || 'Client';
-  document.getElementById('portal-greeting').textContent = 'Welcome back, ' + name.split(' ')[0];
-  document.getElementById('portal-subtitle').textContent = tier + ' — District Award Travel';
-
-  const stats = data.stats || c.stats || {};
-  const trips = data.trips || c.trips || [];
-  const savings = data.savings || c.savings || [];
-  const points = data.points || c.points || [];
-  const messages = data.messages || c.messages || [];
-  const urgency = data.urgency || c.urgency || null;
-
-  document.getElementById('stat-trips').textContent = stats.trips !== undefined ? stats.trips : trips.length;
-  document.getElementById('stat-savings').textContent = stats.savings || data.totalSavings || (savings.length ? 'See breakdown' : '—');
-  document.getElementById('stat-fee').textContent = stats.fee || data.totalFee || (savings.length ? 'See breakdown' : '—');
-  document.getElementById('stat-points').textContent = stats.points || (points.length ? points.length + ' programs' : '—');
-
-  if (urgency) {
-    const b = document.getElementById('urgency-banner');
-    b.style.display = 'flex';
-    document.getElementById('urgency-text').innerHTML = urgency;
-  }
-
-  document.getElementById('trips-count-badge').textContent = trips.length + ' trip' + (trips.length !== 1 ? 's' : '');
-  document.getElementById('trips-container').innerHTML = trips.map(t => renderTrip(t)).join('') || '<p style="color:var(--muted);padding:20px 0">No trips on file yet — your advisor will add these once your plan is ready.</p>';
-
-  renderSavings({ savings, totalSavings: data.totalSavings || c.totalSavings, totalFee: data.totalFee || c.totalFee });
-  renderPoints({ points });
-  renderMessages({ messages });
-
-  const prefs = data.preferences || null;
-  if (prefs && Object.values(prefs).some(v => v)) {
-    document.getElementById('tab-btn-profile').style.display = '';
-    renderProfile(prefs);
-  }
-}
-
-function renderTrip(t) {
-  const statusBadge = {active:'badge-active',urgent:'badge-urgent',pending:'badge-pending',planned:'badge-planned'}[t.status] || 'badge-planned';
-  const statusLabel = {active:'Active',urgent:'Urgent',pending:'Pending',planned:'Planning'}[t.status] || 'Planning';
-
-  // Handle both detailed (segments) and simple (intake-sourced) trip shapes
-  let bodyHtml = '';
-  if (t.segments && t.segments.length) {
-    const segs = t.segments.map(s => `
-      <div class="segment">
-        <div><div class="seg-label">From</div><div class="seg-val">${s.from}</div></div>
-        <div class="seg-arrow">→</div>
-        <div><div class="seg-label">To</div><div class="seg-val">${s.to}</div></div>
-        <div class="seg-status">
-          <div class="seg-label">${s.date}</div>
-          <div class="seg-status-text ${s.status}">${s.method}</div>
-          ${s.notes ? '<div class="seg-notes">' + s.notes + '</div>' : ''}
-        </div>
-      </div>`).join('');
-    bodyHtml = `<div class="trip-segments">${segs}</div>`;
-  } else {
-    // Simple intake trip — show the details we have
-    const details = [
-      t.passengers ? t.passengers + ' passenger' + (t.passengers != '1' ? 's' : '') : null,
-      t.cabin || null,
-      t.flexibility || null,
-    ].filter(Boolean).join(' · ');
-    bodyHtml = `<div style="color:var(--muted);font-size:.87rem;padding:4px 0">
-      ${details ? '<span style="color:var(--text)">' + details + '</span>' : ''}
-      <div style="margin-top:8px;font-size:.8rem;color:var(--dim)">Your advisor is building the plan for this trip — full details will appear here soon.</div>
-    </div>`;
-  }
-
-  const actionHtml = t.action && t.action.show ? `<div class="action-box"><div class="action-icon">⚡</div><div class="action-text">${t.action.text}</div></div>` : '';
-  const tripTitle = t.dest || t.destination || 'Trip';
-  const tripDates = t.dates || '';
-  return `
-    <div class="trip-card ${t.status === 'urgent' ? 'urgent' : ''}">
-      <div class="trip-header">
-        <div>
-          <div class="trip-dest">${tripTitle}</div>
-          <div class="trip-dates">${tripDates}</div>
-        </div>
-        <div class="trip-status-col"><span class="badge ${statusBadge}">${statusLabel}</span></div>
-      </div>
-      <div class="trip-body">
-        ${bodyHtml}
-        ${actionHtml}
-      </div>
-    </div>`;
-}
-
-function renderSavings(c) {
-  const sc = document.getElementById('savings-container');
-  if (!c.savings || c.savings.length === 0) {
-    sc.innerHTML = '<p style="color:var(--muted);padding:20px 0">Savings analysis in progress. Your advisor will update this section once your redemption plan is finalized.</p>';
-    return;
-  }
-  const rows = c.savings.map(s => `
-    <div class="savings-row">
-      <div><div class="savings-row-label">${s.label}</div><div class="savings-row-sub">${s.sub}</div></div>
-      <div class="savings-row-val">
-        <div style="color:var(--muted);font-size:0.8rem">Cash: ${s.cash}</div>
-        <div style="color:var(--muted);font-size:0.8rem">Points Cost: ${s.points}</div>
-        <div style="color:var(--orange)">Save ${s.save}</div>
-        <div style="color:var(--gold);font-size:0.8rem">Fee: ${s.fee}</div>
-      </div>
-    </div>`).join('');
-  sc.innerHTML = rows + `
-    <div class="savings-total">
-      <div><div class="savings-total-label">Total Savings Generated</div><div class="savings-total-sub">Your DAT fee is 10% of this figure</div></div>
-      <div class="savings-total-val">${c.totalSavings}</div>
-    </div>
-    <div style="margin-top:12px;padding:16px 20px;background:rgba(245,200,66,0.06);border:1px solid rgba(245,200,66,0.2);border-radius:10px;display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:0.9rem;font-weight:600">Advisory Fee Owed (10%)</div>
-      <div style="font-size:1.4rem;font-weight:700;color:var(--gold)">${c.totalFee}</div>
-    </div>`;
-}
-
-function renderPoints(c) {
-  const pc = document.getElementById('points-container');
-  pc.innerHTML = c.points.map(p => `
-    <div class="points-card">
-      <div class="points-program">${p.program}</div>
-      <div class="points-balance">${p.balance}</div>
-      <div class="points-est">${p.est}</div>
-    </div>`).join('');
-}
-
-function renderMessages(c) {
-  const mc = document.getElementById('messages-container');
-  const msgs = c.messages || [];
-  if (!msgs.length) {
-    mc.innerHTML = '<p style="color:var(--muted);padding:20px 0">No messages yet. Your advisor will reach out once your plan is in progress.</p>';
-    return;
-  }
-  mc.innerHTML = msgs.slice().reverse().map(m => `
-    <div class="message-item ${m.unread ? 'unread' : ''}">
-      <div class="msg-avatar">B</div>
-      <div class="msg-content">
-        <div class="msg-from">Braden — District Award Travel ${m.unread ? '<span style="color:var(--orange);font-size:0.7rem;margin-left:6px">● NEW</span>' : ''}</div>
-        ${m.subject ? '<div style="font-size:0.82rem;font-weight:700;color:var(--text);margin-bottom:3px">' + m.subject + '</div>' : ''}
-        <div class="msg-text">${m.text || ''}</div>
-      </div>
-      <div class="msg-time">${m.time ? new Date(m.time).toLocaleDateString() : ''}</div>
-    </div>`).join('');
-}
-
-function switchTab(id, btn) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('tab-' + id).classList.add('active');
-}
-
-async function savePreference(fieldId, value) {
-  const token = localStorage.getItem('client_token');
-  if (!token) return;
-
-  const fieldMap = {
-    'pref-home-airport': 'home_airport', 'pref-cabin': 'cabin_pref', 'pref-hotel': 'hotel_pref',
-    'pref-travels-with': 'travel_with', 'pref-experience': 'experience_level', 'pref-max-stops': 'max_stops',
-    'pref-trip-type': 'trip_type', 'pref-amex': 'amex_card', 'pref-chase': 'chase_card',
-    'pref-airline-status': 'airline_status', 'pref-hotel-status': 'hotel_status',
-    'pref-goals': 'travel_goals', 'pref-dreams': 'dream_destinations', 'pref-frustrations': 'frustrations',
-    'pref-notes': 'notes'
-  };
-  const key = fieldMap[fieldId];
-  if (!key) return;
-
-  try {
-    await fetch('/api/client/me', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ data: { preferences: { [key]: value } } })
-    });
-  } catch (e) {
-    console.error('Failed to save preference:', e);
-  }
-}
-
-function renderProfile(p) {
-  const editField = (id, label, val) => `
-    <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center">
-      <div style="color:var(--muted);font-size:.83rem;min-width:160px">${label}</div>
-      <input type="text" id="${id}" value="${val || ''}" placeholder="—"
-        style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-size:.9rem"
-        onchange="savePreference('${id}', this.value)">
-    </div>`;
-
-  const html = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px">
-      <div style="font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em">Travel Preferences</div>
-      ${editField('pref-home-airport', 'Home Airport', p.home_airport)}
-      ${editField('pref-cabin', 'Cabin Preference', p.cabin_pref)}
-      ${editField('pref-hotel', 'Hotel Preference', p.hotel_pref)}
-      ${editField('pref-travels-with', 'Travels With', p.travel_with)}
-      ${editField('pref-experience', 'Experience Level', p.experience_level)}
-      ${editField('pref-max-stops', 'Max Stops', p.max_stops)}
-      ${editField('pref-trip-type', 'Trip Type', p.trip_type)}
-    </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px">
-      <div style="font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em">Points & Status</div>
-      ${editField('pref-amex', 'Amex Card', p.amex_card)}
-      ${editField('pref-chase', 'Chase Card', p.chase_card)}
-      ${editField('pref-airline-status', 'Airline Elite Status', p.airline_status && p.airline_status !== 'None' ? p.airline_status : '')}
-      ${editField('pref-hotel-status', 'Hotel Elite Status', p.hotel_status && p.hotel_status !== 'None' ? p.hotel_status : '')}
-    </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
-      <div style="font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em">Goals & Notes</div>
-      <div style="margin-bottom:12px">
-        <div style="color:var(--muted);font-size:.83rem;margin-bottom:6px">Travel Goals</div>
-        <textarea id="pref-goals" placeholder="—" onchange="savePreference('pref-goals', this.value)"
-          style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:4px;font-size:.9rem;resize:vertical;min-height:60px;font-family:inherit">${p.travel_goals || ''}</textarea>
-      </div>
-      <div style="margin-bottom:12px">
-        <div style="color:var(--muted);font-size:.83rem;margin-bottom:6px">Dream Destinations</div>
-        <input type="text" id="pref-dreams" value="${p.dream_destinations || ''}" placeholder="—"
-          style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-size:.9rem"
-          onchange="savePreference('pref-dreams', this.value)">
-      </div>
-      <div style="margin-bottom:12px">
-        <div style="color:var(--muted);font-size:.83rem;margin-bottom:6px">Pain Points / Frustrations</div>
-        <input type="text" id="pref-frustrations" value="${p.frustrations || ''}" placeholder="—"
-          style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-size:.9rem"
-          onchange="savePreference('pref-frustrations', this.value)">
-      </div>
-      <div>
-        <div style="color:var(--muted);font-size:.83rem;margin-bottom:6px">Additional Notes</div>
-        <textarea id="pref-notes" placeholder="—" onchange="savePreference('pref-notes', this.value)"
-          style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:4px;font-size:.9rem;resize:vertical;min-height:60px;font-family:inherit">${p.notes || ''}</textarea>
-      </div>
-    </div>
-  `;
-  document.getElementById('profile-container').innerHTML = html;
-}
 </script>
+
 </body>
 </html>
