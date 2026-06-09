@@ -982,31 +982,6 @@ document.getElementById('intakeForm').addEventListener('submit', function(e) {
   document.querySelector('.page-header').style.display = 'none';
   document.getElementById('success').style.display = 'block';
 
-  // Auto-create client account from intake
-  var createdCredentials = null;
-  fetch('/api/intake-create-client', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(data)
-  }).then(r => r.json()).then(result => {
-    if (result.ok && result.email && result.password) {
-      createdCredentials = result;
-      var successDiv = document.getElementById('success');
-      var html = successDiv.innerHTML;
-      html += '<div style="margin-top:20px;padding:20px;background:rgba(255,138,30,0.1);border:1px solid var(--orange);border-radius:8px;border-left:3px solid var(--orange)">'
-        + '<div style="font-size:0.9rem;color:var(--gold);font-weight:700;margin-bottom:12px">✓ Your Account is Live</div>'
-        + '<div style="font-size:0.85rem;color:var(--text);margin-bottom:12px">You can now log into your portal with:</div>'
-        + '<div style="background:var(--bg);padding:12px;border-radius:6px;font-family:monospace;font-size:0.8rem;margin-bottom:12px;border:1px solid var(--border)">'
-        + '<div style="margin-bottom:6px"><span style="color:var(--muted)">Email:</span> <span style="color:var(--orange)">' + result.email + '</span></div>'
-        + '<div><span style="color:var(--muted)">Access Code:</span> <span style="color:var(--orange)">' + result.password + '</span></div>'
-        + '</div>'
-        + '<button onclick="window.location.href=\'client.html\'" style="background:var(--orange);color:#000;border:none;padding:10px 20px;border-radius:6px;font-weight:700;cursor:pointer">→ Go to Portal</button>'
-        + '</div>';
-      successDiv.innerHTML = html;
-    }
-  }).catch(function(){});
-  // Also record in intake queue
-
 
   var pts_programs = Object.keys(data).filter(function(k){return k.startsWith('pts_')&&data[k];}).map(function(k){return k.replace('pts_','').replace(/_/g,' ').toUpperCase()+': '+data[k];}).join('\n');
 
