@@ -24,6 +24,7 @@ Environment variables (set these in Render → Environment):
 
 import os
 import json
+import secrets
 import smtplib
 import datetime as dt
 from email.mime.text import MIMEText
@@ -38,7 +39,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -130,6 +131,33 @@ class Intake(Base):
     created_at = Column(DateTime, default=dt.datetime.utcnow)
 
 
+class SavingsRecord(Base):
+    __tablename__ = "savings_records"
+    id                        = Column(Integer, primary_key=True)
+    client_id                 = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    trip_label                = Column(String, default="")
+    cash_benchmark_cents      = Column(Integer, nullable=False)
+    benchmark_source          = Column(String, default="")
+    benchmark_captured_at     = Column(DateTime, nullable=True)
+    benchmark_screenshot      = Column(Text, default="")
+    benchmark_assumptions     = Column(Text, default="")
+    option_booked             = Column(Text, default="")
+    points_used               = Column(Integer, default=0)
+    points_program            = Column(String, default="")
+    award_taxes_fees_cents    = Column(Integer, default=0)
+    other_out_of_pocket_cents = Column(Integer, default=0)
+    fee_rate_bps              = Column(Integer, default=1000)
+    status                    = Column(String, default="draft", index=True)
+    invoice_number            = Column(String, default="")
+    invoiced_at               = Column(DateTime, nullable=True)
+    paid_at                   = Column(DateTime, nullable=True)
+    payment_method            = Column(String, default="")
+    notes                     = Column(Text, default="")
+    report_token              = Column(String, default="", index=True)
+    created_at                = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at                = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+
+
 Base.metadata.create_all(bind=engine)
 
 
@@ -180,6 +208,76 @@ def require_admin(identity: dict = Depends(current_identity)) -> dict:
     if identity.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return identity
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Savings formulas — integer math only, no floats
+# ──────────────────────────────────────────────────────────────────────────
+VALID_STATUS_TRANSITIONS = {
+    "draft":     {"presented", "void"},
+    "presented": {"booked", "draft", "void"},
+    "booked":    {"invoiced", "void"},
+    "invoiced":  {"paid", "void"},
+    "paid":      {"void"},
+    "void":      set(),
+}
+VALID_STATUSES = set(VALID_STATUS_TRANSITIONS.keys())
+
+
+def calc_gross_savings(cash_benchmark_cents: int, award_taxes_fees_cents: int, other_out_of_pocket_cents: int) -> int:
+    return cash_benchmark_cents - award_taxes_fees_cents - other_out_of_pocket_cents
+
+
+def calc_fee(gross_savings_cents: int, fee_rate_bps: int) -> int:
+    """Round half-up via +5000 before integer division by 10000."""
+    if gross_savings_cents <= 0:
+        return 0
+    return (gross_savings_cents * fee_rate_bps + 5000) // 10000
+
+
+def calc_cpp_tenths(gross_savings_cents: int, points_used: int) -> int:
+    """Cents-per-point * 10, integer. Returns 0 if points_used == 0."""
+    if points_used <= 0:
+        return 0
+    return (gross_savings_cents * 1000) // points_used
+
+
+def is_valid_transition(current_status: str, new_status: str) -> bool:
+    return new_status in VALID_STATUS_TRANSITIONS.get(current_status, set())
+
+
+def _savings_row(rec: SavingsRecord) -> dict:
+    gross = calc_gross_savings(rec.cash_benchmark_cents, rec.award_taxes_fees_cents, rec.other_out_of_pocket_cents)
+    fee = calc_fee(gross, rec.fee_rate_bps)
+    cpp = calc_cpp_tenths(gross, rec.points_used)
+    return {
+        "id": rec.id,
+        "client_id": rec.client_id,
+        "trip_label": rec.trip_label,
+        "cash_benchmark_cents": rec.cash_benchmark_cents,
+        "benchmark_source": rec.benchmark_source,
+        "benchmark_captured_at": rec.benchmark_captured_at.isoformat() if rec.benchmark_captured_at else None,
+        "benchmark_assumptions": rec.benchmark_assumptions,
+        "benchmark_screenshot": rec.benchmark_screenshot,
+        "option_booked": rec.option_booked,
+        "points_used": rec.points_used,
+        "points_program": rec.points_program,
+        "award_taxes_fees_cents": rec.award_taxes_fees_cents,
+        "other_out_of_pocket_cents": rec.other_out_of_pocket_cents,
+        "fee_rate_bps": rec.fee_rate_bps,
+        "gross_savings_cents": gross,
+        "fee_cents": fee,
+        "cpp_tenths": cpp,
+        "status": rec.status,
+        "invoice_number": rec.invoice_number,
+        "invoiced_at": rec.invoiced_at.isoformat() if rec.invoiced_at else None,
+        "paid_at": rec.paid_at.isoformat() if rec.paid_at else None,
+        "payment_method": rec.payment_method,
+        "notes": rec.notes,
+        "report_token": rec.report_token,
+        "created_at": rec.created_at.isoformat() if rec.created_at else None,
+        "updated_at": rec.updated_at.isoformat() if rec.updated_at else None,
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -325,6 +423,43 @@ class ClientIn(BaseModel):
     name: str
     tier: str = "Client"
     data: dict = {}
+
+
+class SavingsCreateIn(BaseModel):
+    client_email: str
+    trip_label: str = ""
+    cash_benchmark_cents: int = Field(..., ge=0)
+    benchmark_source: str = ""
+    benchmark_captured_at: Optional[str] = None  # ISO datetime string
+    benchmark_assumptions: str = ""
+    benchmark_screenshot: str = ""   # base64, validated <= 1.5MB
+    option_booked: str = ""
+    points_used: int = Field(0, ge=0)
+    points_program: str = ""
+    award_taxes_fees_cents: int = Field(0, ge=0)
+    other_out_of_pocket_cents: int = Field(0, ge=0)
+    fee_rate_bps: int = Field(1000, ge=0, le=10000)
+    notes: str = ""
+
+class SavingsPatchIn(BaseModel):
+    trip_label: Optional[str] = None
+    cash_benchmark_cents: Optional[int] = Field(None, ge=0)
+    benchmark_source: Optional[str] = None
+    benchmark_captured_at: Optional[str] = None
+    benchmark_assumptions: Optional[str] = None
+    benchmark_screenshot: Optional[str] = None
+    option_booked: Optional[str] = None
+    points_used: Optional[int] = Field(None, ge=0)
+    points_program: Optional[str] = None
+    award_taxes_fees_cents: Optional[int] = Field(None, ge=0)
+    other_out_of_pocket_cents: Optional[int] = Field(None, ge=0)
+    fee_rate_bps: Optional[int] = Field(None, ge=0, le=10000)
+    notes: Optional[str] = None
+    payment_method: Optional[str] = None
+
+class StatusAdvanceIn(BaseModel):
+    new_status: str
+    payment_method: Optional[str] = None  # recorded when transitioning to paid
 
 
 # ── Health ──
@@ -530,6 +665,17 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
         raise HTTPException(status_code=404, detail="Client not found")
     payload = json.loads(client.data or "{}")
     payload.update({"name": client.name, "tier": client.tier, "email": client.email})
+    # compute lifetime savings for this client (booked, invoiced, paid — not void/draft/presented)
+    EARNED_STATUSES = {"booked", "invoiced", "paid"}
+    savings_recs = db.query(SavingsRecord).filter(
+        SavingsRecord.client_id == client.id,
+        SavingsRecord.status.in_(list(EARNED_STATUSES))
+    ).all()
+    lifetime_savings_cents = sum(
+        calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        for r in savings_recs
+    )
+    payload["lifetime_savings_cents"] = lifetime_savings_cents
     return payload
 
 
@@ -1027,6 +1173,217 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
         "conversation_summary": "AI not available — review manually.",
         "action_items": [],
     }}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Savings Ledger endpoints
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.post("/api/admin/savings")
+def create_savings(body: SavingsCreateIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
+    if not client:
+        raise HTTPException(404, "Client not found")
+    if len(body.benchmark_screenshot) > 2_000_000:  # ~1.5MB base64
+        raise HTTPException(422, "Screenshot too large (max ~1.5 MB)")
+    captured_at = None
+    if body.benchmark_captured_at:
+        try:
+            captured_at = dt.datetime.fromisoformat(body.benchmark_captured_at)
+        except ValueError:
+            raise HTTPException(422, "benchmark_captured_at must be ISO datetime")
+    rec = SavingsRecord(
+        client_id=client.id,
+        trip_label=body.trip_label,
+        cash_benchmark_cents=body.cash_benchmark_cents,
+        benchmark_source=body.benchmark_source,
+        benchmark_captured_at=captured_at or dt.datetime.utcnow(),
+        benchmark_assumptions=body.benchmark_assumptions,
+        benchmark_screenshot=body.benchmark_screenshot,
+        option_booked=body.option_booked,
+        points_used=body.points_used,
+        points_program=body.points_program,
+        award_taxes_fees_cents=body.award_taxes_fees_cents,
+        other_out_of_pocket_cents=body.other_out_of_pocket_cents,
+        fee_rate_bps=body.fee_rate_bps,
+        report_token=secrets.token_urlsafe(32),
+    )
+    db.add(rec)
+    db.commit()
+    db.refresh(rec)
+    return _savings_row(rec)
+
+
+@app.get("/api/admin/savings/summary")
+def savings_summary(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    recs = db.query(SavingsRecord).filter(SavingsRecord.status != "void").all()
+    totals = {"draft": 0, "presented": 0, "booked": 0, "invoiced": 0, "paid": 0}
+    fees   = {"draft": 0, "presented": 0, "booked": 0, "invoiced": 0, "paid": 0}
+    for r in recs:
+        gross = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee   = calc_fee(gross, r.fee_rate_bps)
+        if r.status in totals:
+            totals[r.status] += gross
+            fees[r.status]   += fee
+    return {
+        "gross_savings_by_status": totals,
+        "fees_by_status": fees,
+        "owed_cents":      fees["booked"],
+        "invoiced_cents":  fees["invoiced"],
+        "collected_cents": fees["paid"],
+    }
+
+
+@app.get("/api/admin/savings")
+def list_savings(client_email: Optional[str] = None, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    q = db.query(SavingsRecord)
+    if client_email:
+        client = db.query(Client).filter(Client.email == client_email.lower()).first()
+        if not client:
+            return []
+        q = q.filter(SavingsRecord.client_id == client.id)
+    recs = q.order_by(SavingsRecord.created_at.desc()).all()
+    return [_savings_row(r) for r in recs]
+
+
+@app.patch("/api/admin/savings/{record_id}")
+def update_savings(record_id: int, body: SavingsPatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+    if rec.status in ("invoiced", "paid"):
+        raise HTTPException(400, "Cannot edit a record in invoiced or paid status")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        if field == "benchmark_screenshot" and val and len(val) > 2_000_000:
+            raise HTTPException(422, "Screenshot too large (max ~1.5 MB)")
+        if field == "benchmark_captured_at":
+            if val:
+                try:
+                    val = dt.datetime.fromisoformat(val)
+                except ValueError:
+                    raise HTTPException(422, "benchmark_captured_at must be ISO datetime")
+            setattr(rec, "benchmark_captured_at", val)
+            continue
+        setattr(rec, field, val)
+    rec.updated_at = dt.datetime.utcnow()
+    db.commit()
+    db.refresh(rec)
+    return _savings_row(rec)
+
+
+@app.patch("/api/admin/savings/{record_id}/status")
+def advance_status(record_id: int, body: StatusAdvanceIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+    if not is_valid_transition(rec.status, body.new_status):
+        raise HTTPException(400, f"Cannot transition from '{rec.status}' to '{body.new_status}'")
+    if body.new_status == "invoiced" and not rec.invoice_number:
+        year = dt.datetime.utcnow().year
+        existing = db.query(SavingsRecord).filter(
+            SavingsRecord.invoice_number.like(f"DAT-{year}-%")
+        ).all()
+        nums = []
+        for r in existing:
+            try:
+                nums.append(int(r.invoice_number.split("-")[-1]))
+            except (ValueError, IndexError):
+                pass
+        next_num = max(nums, default=0) + 1
+        rec.invoice_number = f"DAT-{year}-{next_num:04d}"
+        rec.invoiced_at = dt.datetime.utcnow()
+    if body.new_status == "paid":
+        rec.paid_at = dt.datetime.utcnow()
+        if body.payment_method:
+            rec.payment_method = body.payment_method
+    rec.status = body.new_status
+    rec.updated_at = dt.datetime.utcnow()
+    db.commit()
+    db.refresh(rec)
+    return _savings_row(rec)
+
+
+@app.delete("/api/admin/savings/{record_id}")
+def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+    if rec.status in ("invoiced", "paid"):
+        raise HTTPException(400, "Cannot delete an invoiced or paid record; void it instead")
+    db.delete(rec)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/report/{token}")
+def savings_report(token: str, db: Session = Depends(get_db)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.report_token == token).first()
+    if not rec:
+        raise HTTPException(404, "Report not found")
+    client = db.query(Client).filter(Client.id == rec.client_id).first()
+    client_name = client.name if client else "Client"
+    gross = calc_gross_savings(rec.cash_benchmark_cents, rec.award_taxes_fees_cents, rec.other_out_of_pocket_cents)
+    fee   = calc_fee(gross, rec.fee_rate_bps)
+    cpp   = calc_cpp_tenths(gross, rec.points_used)
+
+    def fmt_usd(cents: int) -> str:
+        sign = "-" if cents < 0 else ""
+        cents = abs(cents)
+        return f"{sign}${cents // 100:,}.{cents % 100:02d}"
+
+    cpp_display = f"{cpp // 10}.{cpp % 10}¢/pt" if rec.points_used else "N/A"
+
+    screenshot_html = ""
+    if rec.benchmark_screenshot:
+        screenshot_html = f'<img src="{rec.benchmark_screenshot}" alt="Benchmark screenshot" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px;margin-top:8px;">'
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Savings Report — {rec.trip_label or "Trip"}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; color: #111827; margin: 0; padding: 24px; }}
+  .card {{ background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 700px; margin: 0 auto; padding: 32px; }}
+  .logo {{ font-size: 1.1rem; font-weight: 700; color: #d97706; letter-spacing: .02em; margin-bottom: 4px; }}
+  h1 {{ font-size: 1.4rem; font-weight: 700; margin: 0 0 4px; }}
+  .sub {{ color: #6b7280; font-size: .9rem; margin-bottom: 24px; }}
+  table {{ width: 100%; border-collapse: collapse; }}
+  td {{ padding: 8px 0; border-bottom: 1px solid #f3f4f6; }}
+  td:first-child {{ color: #6b7280; width: 200px; }}
+  td:last-child {{ font-weight: 500; text-align: right; }}
+  .savings-row td {{ font-size: 1.15rem; font-weight: 700; color: #059669; }}
+  .fee-row td {{ color: #d97706; }}
+  .footer {{ margin-top: 24px; font-size: .8rem; color: #9ca3af; text-align: center; }}
+  @media print {{ body {{ background: #fff; padding: 0; }} }}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">District Award Travel</div>
+  <h1>{rec.trip_label or "Savings Report"}</h1>
+  <div class="sub">Prepared for {client_name} &middot; {rec.benchmark_captured_at.strftime('%B %d, %Y') if rec.benchmark_captured_at else ''}</div>
+  <table>
+    <tr><td>Cash Benchmark</td><td>{fmt_usd(rec.cash_benchmark_cents)}</td></tr>
+    {'<tr><td>Benchmark Source</td><td>' + rec.benchmark_source + '</td></tr>' if rec.benchmark_source else ''}
+    {'<tr><td>Assumptions</td><td style="font-size:.85rem;text-align:right;white-space:pre-wrap;">' + rec.benchmark_assumptions + '</td></tr>' if rec.benchmark_assumptions else ''}
+    <tr><td>Option Booked</td><td style="text-align:right;white-space:pre-wrap;">{rec.option_booked or '—'}</td></tr>
+    {'<tr><td>Points Used</td><td>' + f"{rec.points_used:,} {rec.points_program}".strip() + '</td></tr>' if rec.points_used else ''}
+    {'<tr><td>Award Taxes + Fees</td><td>' + fmt_usd(rec.award_taxes_fees_cents) + '</td></tr>' if rec.award_taxes_fees_cents else ''}
+    {'<tr><td>Other Out-of-Pocket</td><td>' + fmt_usd(rec.other_out_of_pocket_cents) + '</td></tr>' if rec.other_out_of_pocket_cents else ''}
+    {'<tr><td>Cents per Point</td><td>' + cpp_display + '</td></tr>' if rec.points_used else ''}
+    <tr class="savings-row"><td>Gross Savings</td><td>{fmt_usd(gross)}</td></tr>
+    <tr class="fee-row"><td>District Fee (10%)</td><td>{fmt_usd(fee)}</td></tr>
+    {'<tr><td>Invoice</td><td>' + rec.invoice_number + '</td></tr>' if rec.invoice_number else ''}
+  </table>
+  {screenshot_html}
+  <div class="footer">District Award Travel &mdash; districtawardtravel@gmail.com</div>
+</div>
+</body>
+</html>"""
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(html)
 
 
 @app.get("/api/admin/intakes")
