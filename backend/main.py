@@ -791,11 +791,25 @@ def send_message(msg_in: SendMessageIn, _: dict = Depends(require_admin), db: Se
     client.data = json.dumps(data)
     db.commit()
 
-    # Also send email notification
+    # Send email notification (with nicer formatting for plans)
+    if msg_in.is_plan and msg_in.plan_details:
+        # Format plan as email with options
+        options = msg_in.plan_details.get("options", [])
+        plan_text = f"I've put together {len(options)} option{'s' for you' if len(options) != 1 else ' for you'} for your {msg_in.subject}.\n\n"
+
+        for i, opt in enumerate(options, 1):
+            plan_text += f"OPTION {i}:\n{opt.get('desc', '')}\n\n"
+
+        plan_text += "Log in to your portal to view full details and attached screenshots.\n\nLet me know which option works best, and I'll help you book!\n\nBest,\nBraden\nDistrict Award Travel"
+        email_subject = f"Your {msg_in.subject} — 3 options ready"
+    else:
+        plan_text = msg_in.body
+        email_subject = f"New message: {msg_in.subject}"
+
     send_email_to(
         client.email,
-        f"New message: {msg_in.subject}",
-        f"Hi {client.name.split()[0]},\n\n{msg_in.body}\n\nLog in to your portal to view this message.\n\nBest,\nBraden\nDistrict Award Travel"
+        email_subject,
+        f"Hi {client.name.split()[0] if ' ' in client.name else client.name},\n\n{plan_text}"
     )
 
     return {"ok": True, "message_id": len(messages) - 1}
