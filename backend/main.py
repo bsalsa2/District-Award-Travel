@@ -795,7 +795,8 @@ def send_message(msg_in: SendMessageIn, _: dict = Depends(require_admin), db: Se
     if msg_in.is_plan and msg_in.plan_details:
         # Format plan as email with options
         options = msg_in.plan_details.get("options", [])
-        plan_text = f"I've put together {len(options)} option{'s' for you' if len(options) != 1 else ' for you'} for your {msg_in.subject}.\n\n"
+        s = "s" if len(options) != 1 else ""
+        plan_text = f"I've put together {len(options)} option{s} for you for your {msg_in.subject}.\n\n"
 
         for i, opt in enumerate(options, 1):
             plan_text += f"OPTION {i}:\n{opt.get('desc', '')}\n\n"
