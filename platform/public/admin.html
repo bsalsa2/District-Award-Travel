@@ -287,15 +287,7 @@
     <div class="form-group"><label>Password</label>
       <input type="password" id="admin-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAdminLogin()"></div>
     <button class="btn-primary" onclick="doAdminLogin()">Sign In</button>
-    <button class="btn-ghost" style="margin-top:8px;width:100%" onclick="toggleSetupForm()">Create Admin Account</button>
-    <button class="btn-ghost" style="margin-top:4px;width:100%;font-size:11px" onclick="syncAdminPassword()">↻ Sync with Render Password</button>
     <div class="login-error" id="admin-error">Invalid credentials.</div>
-    <div id="setup-form" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">First time? Create your admin account below (only works if no admin exists):</div>
-      <div class="form-group"><label>Admin Email</label><input type="email" id="setup-email" placeholder="admin@districtawardtravel.com"></div>
-      <div class="form-group"><label>Password</label><input type="password" id="setup-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doSetupAdmin()"></div>
-      <button class="btn-primary" style="width:100%" onclick="doSetupAdmin()">Create Account</button>
-    </div>
   </div>
 </div>
 
@@ -1013,7 +1005,6 @@ async function saveScanResult(){
       })});
     if(res.ok){
       closeScanDoc();
-      await loadExpiringPoints();
       toast('✓ Points saved to '+email);
     } else { toast('Save failed'); }
   }catch(e){ toast('Save failed'); }
@@ -1667,49 +1658,9 @@ function enterAdmin(){
   document.getElementById('admin').style.display='block';
   loadClients();
   loadIntakes();
-  loadExpiringPoints();
   renderFees();
   checkAIStatus();
   startAdminAutoRefresh();
-}
-function toggleSetupForm(){
-  const form=document.getElementById('setup-form');
-  form.style.display=form.style.display==='none'?'block':'none';
-}
-async function syncAdminPassword(){
-  if(!confirm('This will update the admin password to match your Render ADMIN_PASSWORD env var. Continue?')) return;
-  try{
-    const res=await fetch('/api/setup/sync-password',{method:'POST'});
-    if(res.ok){
-      alert('Password synced! Try signing in now with your Render ADMIN_PASSWORD.');
-      document.getElementById('admin-pass').focus();
-    } else {
-      const err=await res.json();
-      alert('Sync failed: '+(err.detail||'Check that ADMIN_PASSWORD is set in Render'));
-    }
-  }catch(e){
-    alert('Error: Backend is not reachable.');
-  }
-}
-async function doSetupAdmin(){
-  const email=document.getElementById('setup-email').value.trim();
-  const pass=document.getElementById('setup-pass').value.trim();
-  if(!email||!pass){alert('Email and password required');return;}
-  try{
-    const res=await fetch('/api/setup/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
-    if(res.ok){
-      alert('Admin account created! Now sign in below.');
-      document.getElementById('setup-form').style.display='none';
-      document.getElementById('setup-email').value='';
-      document.getElementById('setup-pass').value='';
-    } else if(res.status===403){
-      alert('Admin account already exists. Use the Sign In form above.');
-    } else {
-      alert('Setup failed. Make sure your backend is running.');
-    }
-  }catch(e){
-    alert('Error: Backend is not reachable. Make sure you\'re connected to the internet and the app is deployed.');
-  }
 }
 async function doAdminLogin(){
   const u=document.getElementById('admin-user').value.trim();

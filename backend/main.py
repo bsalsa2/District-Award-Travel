@@ -37,19 +37,45 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 # ──────────────────────────────────────────────────────────────────────────
 # Configuration
 # ──────────────────────────────────────────────────────────────────────────
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+# Render gives a postgres:// URL; SQLAlchemy needs postgresql://
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+IS_PRODUCTION = bool(DATABASE_URL)
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./dat.db"
+
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@districtawardtravel.com").lower()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+
+# In production (real database), secrets MUST come from the environment.
+# Refusing to start beats running with forgeable tokens or a guessable admin password.
+if IS_PRODUCTION:
+    _missing = [n for n, v in (("SECRET_KEY", SECRET_KEY), ("ADMIN_PASSWORD", ADMIN_PASSWORD)) if not v]
+    if _missing:
+        raise RuntimeError(
+            f"Refusing to start: missing required env vars in production: {', '.join(_missing)}. "
+            "Set them in the Render dashboard (Environment tab)."
+        )
+else:
+    # Local dev: ephemeral key (tokens won't survive restarts — fine for dev) and a dev password.
+    import secrets as _secrets
+    SECRET_KEY = SECRET_KEY or _secrets.token_hex(32)
+    ADMIN_PASSWORD = ADMIN_PASSWORD or "dev-only-password"
+
 ALGORITHM = "HS256"
 TOKEN_TTL_HOURS = 24 * 7  # one week
-
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@districtawardtravel.com").lower()
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "dat2026")
 
 GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
@@ -58,13 +84,6 @@ NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", GMAIL_USER or "districtawardtravel
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SEATS_AERO_API_KEY = os.environ.get("SEATS_AERO_API_KEY", "")
-
-# Render gives a postgres:// URL; SQLAlchemy needs postgresql://
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./dat.db"
 
 # Path to the static website files
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -242,13 +261,30 @@ def format_intake_email(data: dict) -> str:
 # ──────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="District Award Travel API", version="2.0.0")
 
+# Frontends are served from this same origin, so cross-origin access is only
+# needed for explicitly listed extra origins (ALLOWED_ORIGINS, comma-separated).
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "https://district-award-travel.onrender.com,https://districtawardtravel.com,https://www.districtawardtravel.com",
+    ).split(",") if o.strip()
+]
+if not IS_PRODUCTION:
+    ALLOWED_ORIGINS += ["http://localhost:8000", "http://127.0.0.1:8000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+# Rate limiting: protects login endpoints from brute force and the intake
+# form from spam floods (each intake also triggers outbound emails).
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.on_event("startup")
@@ -295,24 +331,6 @@ class ClientIn(BaseModel):
 @app.get("/api/health")
 def health():
     return {"status": "ok", "time": dt.datetime.utcnow().isoformat()}
-
-
-# ── Diagnostics (safe: never reveals the password itself) ──
-@app.get("/api/admin/diag")
-def admin_diag(db: Session = Depends(get_db)):
-    """Tells us whether the admin exists and whether the env-var password
-    actually matches the stored hash — so we can pinpoint a login failure
-    without leaking any secret. Reports the password LENGTH only."""
-    admin = db.query(Admin).filter(Admin.email == ADMIN_EMAIL).first()
-    return {
-        "expected_login_email": ADMIN_EMAIL,
-        "admin_exists": admin is not None,
-        "db_type": "postgres" if DATABASE_URL.startswith("postgresql") else "sqlite",
-        "env_password_length": len(ADMIN_PASSWORD),
-        "env_password_matches_stored": (
-            verify_pw(ADMIN_PASSWORD, admin.password_hash) if admin else None
-        ),
-    }
 
 
 # ── AI: parse a raw email into structured client data ──
@@ -409,14 +427,44 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
 
 
 # ── Intake ──
+# The form posts a flat dict with a fixed core plus dynamic trip{N}_* / pts_*
+# keys, so validation happens on the parsed dict: required well-formed email,
+# every value length-capped, total payload bounded.
+INTAKE_MAX_FIELD_LEN = 5000
+INTAKE_MAX_KEYS = 120
+_EMAIL_RE = __import__("re").compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def validate_intake(data: dict) -> dict:
+    if not isinstance(data, dict) or len(data) > INTAKE_MAX_KEYS:
+        raise HTTPException(status_code=422, detail="Invalid submission")
+    email = str(data.get("email", "")).strip().lower()
+    if not _EMAIL_RE.match(email) or len(email) > 254 or "\n" in email or "\r" in email:
+        raise HTTPException(status_code=422, detail="A valid email address is required")
+    clean = {}
+    for k, v in data.items():
+        key = str(k)[:60]
+        val = str(v) if v is not None else ""
+        if len(val) > INTAKE_MAX_FIELD_LEN:
+            raise HTTPException(status_code=422, detail=f"Field '{key}' is too long")
+        clean[key] = val
+    clean["email"] = email
+    return clean
+
+
 @app.post("/api/intake")
+@limiter.limit("10/hour")
 async def submit_intake(request: Request, db: Session = Depends(get_db)):
-    data = await request.json()
+    try:
+        raw = await request.json()
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid JSON")
+    data = validate_intake(raw)
     rec = Intake(
-        first_name=data.get("first_name", ""),
-        last_name=data.get("last_name", ""),
+        first_name=data.get("first_name", "")[:100],
+        last_name=data.get("last_name", "")[:100],
         email=data.get("email", ""),
-        phone=data.get("phone", ""),
+        phone=data.get("phone", "")[:40],
         payload=json.dumps(data),
     )
     db.add(rec)
@@ -453,162 +501,10 @@ districtawardtravel@gmail.com
     return {"ok": True, "id": rec.id}
 
 
-@app.post("/api/intake-create-client")
-async def intake_create_client(request: Request, db: Session = Depends(get_db)):
-    """
-    Auto-create a client account directly from intake form submission.
-    Returns login credentials so client can immediately access their portal.
-    """
-    data = await request.json()
-    email = data.get("email", "").lower()
-    if not email:
-        raise HTTPException(status_code=400, detail="Email required")
-
-    # Check if client already exists
-    if db.query(Client).filter(Client.email == email).first():
-        raise HTTPException(status_code=409, detail="Client already exists")
-
-    first_name = data.get("first_name", "")
-    last_name = data.get("last_name", "")
-    name = f"{first_name} {last_name}".strip() or "Client"
-
-    # Generate a readable password (8 chars: 4 random hex + 4 random digits)
-    import secrets
-    password = secrets.token_hex(2) + str(secrets.randbelow(10000)).zfill(4)
-
-    # Map intake data to client profile structure (same as admin.html's mapIntakeToClientData)
-    trips = []
-    for i in range(1, 11):
-        dest = data.get(f"trip{i}_dest")
-        if not dest:
-            break
-        trips.append({
-            "destination": dest,
-            "dates": data.get(f"trip{i}_dates", ""),
-            "passengers": data.get(f"trip{i}_pax", "1"),
-            "flexibility": data.get(f"trip{i}_flex", ""),
-            "cabin": data.get("cabin_pref", ""),
-        })
-
-    points = []
-    for key, val in data.items():
-        if key.startswith("pts_") and val and val.strip():
-            program = key.replace("pts_","").replace("_"," ").title()
-            points.append({"program": program, "balance": val, "expiration_date": None, "tier": None})
-
-    if data.get("airline_status") and data.get("airline_status") != "None":
-        points.append({"program": "Airline Elite Status", "balance": data["airline_status"], "expiration_date": None, "tier": data["airline_status"]})
-    if data.get("hotel_status") and data.get("hotel_status") != "None":
-        points.append({"program": "Hotel Elite Status", "balance": data["hotel_status"], "expiration_date": None, "tier": data["hotel_status"]})
-
-    client_data = {
-        "stats": {"trips": len(trips), "savings": "$0", "fee": "$0", "points": points[0]["balance"] if points else "—"},
-        "urgency": None,
-        "trips": trips,
-        "savings": [],
-        "totalSavings": "$0",
-        "totalFee": "$0",
-        "points": points,
-        "messages": [{
-            "from": "Braden — DAT",
-            "time": "Today",
-            "text": f"Welcome to District Award Travel, {first_name}! Your portal is live with all your intake data. Start exploring your trips and preferences, and I'll be in touch shortly with options.",
-            "unread": True
-        }],
-        "preferences": {
-            "home_airport": data.get("home_airport", ""),
-            "cabin_pref": data.get("cabin_pref", ""),
-            "hotel_pref": data.get("hotel_pref", ""),
-            "travel_goals": data.get("travel_goals", ""),
-            "dream_destinations": data.get("dream_destinations", ""),
-            "max_stops": data.get("max_stops", ""),
-            "trip_type": data.get("trip_type", ""),
-            "comm_pref": data.get("comm_pref", ""),
-            "travel_with": data.get("travel_with", ""),
-            "frustrations": data.get("frustrations", ""),
-            "experience_level": data.get("pts_experience", ""),
-            "current_booking_method": data.get("current_booking_method", ""),
-            "notes": data.get("notes", ""),
-            "amex_card": data.get("amex_card", ""),
-            "chase_card": data.get("chase_card", ""),
-            "airline_status": data.get("airline_status", ""),
-            "hotel_status": data.get("hotel_status", ""),
-        }
-    }
-
-    client = Client(
-        email=email,
-        password_hash=hash_pw(password),
-        name=name,
-        tier="Client",
-        data=json.dumps(client_data),
-    )
-    db.add(client)
-    db.commit()
-
-    # Send welcome email
-    send_email_to(
-        to=email,
-        subject="Your District Award Travel Portal is Ready",
-        body=f"""Hi {first_name},
-
-Welcome to District Award Travel! Your advisor portal is now live and ready to explore.
-
-**Your Login Credentials:**
-Email: {email}
-Access Code: {password}
-
-You can log in anytime at: [Your portal URL]
-
-Here's what we have on file from your intake:
-• {len(trips)} trip{'s' if len(trips) != 1 else ''} planned
-• {len(points)} points/status accounts identified
-• Your preferences and goals are saved
-
-Start editing your travel profile to add more details, and Braden will reach out shortly with personalized award options based on your data.
-
-— The District Award Travel Team
-districtawardtravel@gmail.com
-"""
-    )
-
-    return {"ok": True, "email": email, "password": password, "name": name}
-
-
-@app.post("/api/setup/admin")
-def setup_admin(body: LoginIn, db: Session = Depends(get_db)):
-    """Create the first admin account. Only works if no admins exist yet."""
-    existing = db.query(Admin).first()
-    if existing:
-        raise HTTPException(status_code=403, detail="Admin already exists. Use normal login.")
-    admin = Admin(
-        email=body.email.lower(),
-        password_hash=hash_pw(body.password),
-        name=body.email.split("@")[0].title(),
-    )
-    db.add(admin)
-    db.commit()
-    return {"ok": True, "message": "Admin account created. You can now log in normally."}
-
-
-@app.post("/api/setup/sync-password")
-def sync_admin_password(db: Session = Depends(get_db)):
-    """Sync admin password with ADMIN_PASSWORD env var. Use if stuck on login."""
-    admin_password = os.environ.get("ADMIN_PASSWORD", "")
-    if not admin_password:
-        raise HTTPException(status_code=400, detail="ADMIN_PASSWORD env var not set")
-    admin = db.query(Admin).filter(Admin.email == "admin@districtawardtravel.com").first()
-    if not admin:
-        raise HTTPException(status_code=404, detail="Admin account not found")
-    admin.password_hash = hash_pw(admin_password)
-    db.commit()
-    return {"ok": True, "message": "Admin password synced with env var. Try signing in again."}
-
-
-
 # ── Auth ──
 @app.post("/api/admin/login")
-def admin_login(body: LoginIn, db: Session = Depends(get_db)):
+@limiter.limit("5/15minutes")
+def admin_login(request: Request, body: LoginIn, db: Session = Depends(get_db)):
     admin = db.query(Admin).filter(Admin.email == body.email.lower()).first()
     if not admin or not verify_pw(body.password, admin.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -616,7 +512,8 @@ def admin_login(body: LoginIn, db: Session = Depends(get_db)):
 
 
 @app.post("/api/auth/login")
-def client_login(body: LoginIn, db: Session = Depends(get_db)):
+@limiter.limit("5/15minutes")
+def client_login(request: Request, body: LoginIn, db: Session = Depends(get_db)):
     client = db.query(Client).filter(Client.email == body.email.lower()).first()
     if not client or not verify_pw(body.password, client.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")

@@ -138,35 +138,14 @@
 </div>
 
 <script>
-// Demo clients
-const CLIENTS = {
-  "tammy@carnegroup.com": {
-    pass: "tammy2026",
-    name: "Tammy Jennissen",
-    tier: "Executive Platinum",
-    data: {
-      messages: [
-        { from: "Braden", time: "Today", subject: "Japan Trip Options", text: "Hi Tammy!\n\nI've found 3 great options for your March Japan trip...", unread: true }
-      ],
-      trips: [
-        { destination: "Tokyo, Japan", dates: "March 10-20, 2026", passengers: "2", cabin: "Business Class" }
-      ],
-      points: [
-        { program: "United MileagePlus", balance: "180,000 miles" },
-        { program: "Chase Ultimate Rewards", balance: "245,000 points" }
-      ]
-    }
-  }
-};
-
 let currentClient = null;
 let autoRefreshInterval = null;
 
-function getRegisteredClient(email) {
-  try {
-    const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
-    return store[email] || null;
-  } catch (e) { return null; }
+// Escape user/admin-supplied strings before HTML interpolation
+function esc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function showPortal(c) {
@@ -209,16 +188,15 @@ async function doLogin() {
         return showPortal(await me.json());
       }
     }
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+    if (res.status === 429) {
+      loginError('Too many attempts. Please wait a few minutes and try again.');
+    } else {
+      loginError('Invalid credentials.');
+    }
   } catch (e) {
-    // Backend unreachable — fall through to demo
-  }
-
-  const client = CLIENTS[email] || getRegisteredClient(email);
-  if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-  if (client && client.pass === pass) {
-    showPortal(client);
-  } else {
-    loginError('Invalid credentials.');
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+    loginError('Cannot reach the server. Please try again in a minute.');
   }
 }
 
@@ -251,15 +229,15 @@ function renderMessages(msgs) {
   }
   mc.innerHTML = msgs.map(m => `
     <div class="message-card ${m.unread ? 'unread' : ''}">
-      <div class="msg-from">${m.from || 'Braden'}</div>
-      ${m.subject ? `<div class="msg-subject">${m.subject}</div>` : ''}
-      <div class="msg-body">${(m.text || '').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+      <div class="msg-from">${esc(m.from || 'Braden')}</div>
+      ${m.subject ? `<div class="msg-subject">${esc(m.subject)}</div>` : ''}
+      <div class="msg-body">${esc(m.text)}</div>
       ${m.plan && m.plan.options ? `
         <div class="msg-options">
-          ${m.plan.options.map((opt, i) => `<div class="msg-option">OPTION ${i+1}: ${opt.desc ? opt.desc.substring(0, 30) + '...' : ''}</div>`).join('')}
+          ${m.plan.options.map((opt, i) => `<div class="msg-option">OPTION ${i+1}: ${opt.desc ? esc(opt.desc.substring(0, 30)) + '...' : ''}</div>`).join('')}
         </div>
       ` : ''}
-      <div class="msg-time">${m.time ? new Date(m.time).toLocaleDateString() : ''}</div>
+      <div class="msg-time">${m.time ? esc(new Date(m.time).toLocaleDateString()) : ''}</div>
     </div>
   `).join('');
 }
@@ -274,14 +252,14 @@ function renderTrips(trips) {
     <div class="trip-card">
       <div class="trip-header">
         <div>
-          <div class="trip-dest">${t.destination || t.dest || 'Trip'}</div>
-          <div class="trip-dates">${t.dates || ''}</div>
+          <div class="trip-dest">${esc(t.destination || t.dest || 'Trip')}</div>
+          <div class="trip-dates">${esc(t.dates)}</div>
         </div>
       </div>
       <div class="trip-meta">
-        ${t.passengers ? `${t.passengers} passenger${t.passengers != '1' ? 's' : ''}` : ''}
-        ${t.cabin ? `• ${t.cabin}` : ''}
-        ${t.flexibility ? `• ${t.flexibility}` : ''}
+        ${t.passengers ? `${esc(t.passengers)} passenger${t.passengers != '1' ? 's' : ''}` : ''}
+        ${t.cabin ? `• ${esc(t.cabin)}` : ''}
+        ${t.flexibility ? `• ${esc(t.flexibility)}` : ''}
       </div>
     </div>
   `).join('');
@@ -295,8 +273,8 @@ function renderPoints(points) {
   }
   pc.innerHTML = points.map(p => `
     <div class="point-card">
-      <div class="point-name">${p.program || 'Points'}</div>
-      <div class="point-balance">${p.balance || '—'}</div>
+      <div class="point-name">${esc(p.program || 'Points')}</div>
+      <div class="point-balance">${esc(p.balance || '—')}</div>
     </div>
   `).join('');
 }

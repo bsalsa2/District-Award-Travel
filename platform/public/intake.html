@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apply — District Award Travel</title>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -983,66 +982,8 @@ document.getElementById('intakeForm').addEventListener('submit', function(e) {
   document.getElementById('success').style.display = 'block';
 
 
-  var pts_programs = Object.keys(data).filter(function(k){return k.startsWith('pts_')&&data[k];}).map(function(k){return k.replace('pts_','').replace(/_/g,' ').toUpperCase()+': '+data[k];}).join('\n');
-
-  var tripLines = [];
-  for (var i = 1; i <= 5; i++) {
-    if (data['trip'+i+'_dest']) tripLines.push('Trip '+i+': '+data['trip'+i+'_dest']+' — '+(data['trip'+i+'_dates']||'?')+' · '+data['trip'+i+'_pax']+' pax · '+(data['trip'+i+'_flex']||''));
-  }
-
-  var emailBody = [
-    '=== NEW INTAKE SUBMISSION ===',
-    'Date: '+data.submitted_at,
-    '',
-    '-- CONTACT --',
-    'Name: '+(data.first_name||'')+' '+(data.last_name||''),
-    'Email: '+(data.email||''),
-    'Phone: '+(data.phone||''),
-    'Home Airport: '+(data.home_airport||''),
-    'Referral: '+(data.referral_source||'')+' / '+(data.referral_name||''),
-    '',
-    '-- TRAVEL PROFILE --',
-    'Travels with: '+(data.travel_with||''),
-    'Experience level: '+(data.pts_experience||''),
-    'Frustrations: '+(data.frustrations||''),
-    'Dream destinations: '+(data.dream_destinations||''),
-    '',
-    '-- POINTS BALANCES --',
-    pts_programs || '(none entered)',
-    '',
-    '-- ELITE STATUS --',
-    'Airline: '+data.airline_status,
-    'Hotel: '+data.hotel_status,
-    'Amex Card: '+(data.amex_card||'None'),
-    'Chase Card: '+(data.chase_card||'None'),
-    '',
-    '-- TRIPS --',
-    'Goals: '+(data.travel_goals||''),
-    tripLines.join('\n'),
-    'Cabin: '+(data.cabin_pref||''),
-    'Hotel Tier: '+(data.hotel_pref||''),
-    '',
-    '-- PREFERENCES --',
-    'Comm Pref: '+(data.comm_pref||''),
-    'Max Stops: '+(data.max_stops||''),
-    'Trip Type: '+(data.trip_type||''),
-    'Books via: '+(data.current_booking_method||''),
-    'Notes: '+(data.notes||''),
-  ].join('\n');
-
-  var EMAILJS_SERVICE  = 'service_407s8wc';
-  var EMAILJS_TEMPLATE = 'template_4525djv';
-  var EMAILJS_PUBLIC   = 'd3KBln2jHflM1AYo5';
-  if (typeof emailjs !== 'undefined') emailjs.init({ publicKey: EMAILJS_PUBLIC });
-  if (typeof emailjs !== 'undefined' && EMAILJS_SERVICE !== 'YOUR_SERVICE_ID') {
-    emailjs.send(EMAILJS_SERVICE, EMAILJS_TEMPLATE, {
-      to_email: 'districtawardtravel@gmail.com',
-      from_name: (data.first_name||'')+' '+(data.last_name||''),
-      reply_to: data.email||'',
-      subject: 'New DAT Intake: '+(data.first_name||'Someone')+' '+(data.last_name||''),
-      message: emailBody,
-    }).catch(function(){});
-  }
+  // Backend stores the submission and emails both the admin notification
+  // and the client confirmation — no third-party mailer needed here.
   fetch('/api/intake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(function(){});
 });
 </script>
