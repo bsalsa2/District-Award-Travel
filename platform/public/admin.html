@@ -368,20 +368,24 @@
       <!-- FEES (manual tracker) -->
       <div class="panel" id="panel-fees">
         <div class="page-header">
-          <div><h1>Savings &amp; Fees</h1><p>Track savings you identified and the 10% advisory fee</p></div>
-          <div class="header-actions"><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
+          <div><h1>Money</h1><p>Savings ledger — pipeline, invoicing &amp; collections</p></div>
+          <div class="header-actions">
+            <input type="email" id="money-filter-email" placeholder="Filter by client email…" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-size:.83rem;width:220px;" oninput="loadMoneyRecords()">
+            <button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button>
+          </div>
         </div>
         <div class="content">
+          <!-- Pipeline strip -->
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px">
-            <div class="metric-card"><div class="metric-label">Total Savings Identified</div><div class="metric-val green" id="fees-total-savings">$0</div><div class="metric-delta">Options presented</div></div>
-            <div class="metric-card"><div class="metric-label">Advisory Fees (10%)</div><div class="metric-val gold" id="fees-total-fees">$0</div><div class="metric-delta">On accepted recommendations</div></div>
-            <div class="metric-card"><div class="metric-label">Entries Logged</div><div class="metric-val blue" id="fees-count">0</div><div class="metric-delta">Across all clients</div></div>
+            <div class="metric-card"><div class="metric-label">Owed (Booked)</div><div class="metric-val gold" id="money-owed">$0</div><div class="metric-delta">Fee on booked savings</div></div>
+            <div class="metric-card"><div class="metric-label">Invoiced</div><div class="metric-val blue" id="money-invoiced">$0</div><div class="metric-delta">Sent, awaiting payment</div></div>
+            <div class="metric-card"><div class="metric-label">Collected</div><div class="metric-val green" id="money-collected">$0</div><div class="metric-delta">Paid to date</div></div>
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Client</th><th>Trip / Recommendation</th><th>Strategy</th><th>Savings</th><th>Fee (10%)</th><th>Status</th><th></th></tr></thead>
+              <thead><tr><th>Client</th><th>Trip</th><th>Gross Savings</th><th>Fee</th><th>Status</th><th>Invoice #</th><th></th></tr></thead>
               <tbody id="fees-tbody">
-                <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" to add one.</td></tr>
+                <tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">Loading…</td></tr>
               </tbody>
             </table>
           </div>
@@ -566,22 +570,55 @@
 
 <!-- LOG SAVING MODAL -->
 <div id="addsaving-overlay" class="overlay">
-  <div class="modal">
-    <div class="modal-head"><h2>Log a Saving</h2><button class="modal-close" onclick="closeAddSaving()">&times;</button></div>
-    <p class="modal-sub">Record a savings option you identified. The advisory fee (10%) is calculated automatically.</p>
-    <div class="form-group"><label>Client Name</label><input type="text" id="sv-client" placeholder="Client name"></div>
-    <div class="form-group"><label>Trip / Recommendation</label><input type="text" id="sv-trip" placeholder="e.g. Tokyo — JAL Business"></div>
-    <div class="form-group"><label>Strategy</label><input type="text" id="sv-strategy" placeholder="e.g. 35K AA miles + $5.60"></div>
+  <div class="modal wide">
+    <div class="modal-head"><h2 id="sv-modal-title">Log a Saving</h2><button class="modal-close" onclick="closeAddSaving()">&times;</button></div>
+    <p class="modal-sub">Record a savings option you identified. Fee is calculated automatically.</p>
+    <!-- hidden edit id -->
+    <input type="hidden" id="sv-edit-id" value="">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group"><label>Savings Amount ($)</label><input type="number" id="sv-savings" placeholder="777" min="0"></div>
-      <div class="form-group"><label>Status</label>
-        <select id="sv-status"><option value="Recommended">Recommended</option><option value="Accepted">Accepted</option><option value="Pending">Pending</option><option value="Researching">Researching</option></select>
-      </div>
+      <div class="form-group"><label>Client Email *</label><input type="email" id="sv-client-email" placeholder="client@example.com"></div>
+      <div class="form-group"><label>Trip Label</label><input type="text" id="sv-trip" placeholder="e.g. Tokyo — JAL Business"></div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Cash Benchmark ($) *</label><input type="number" id="sv-benchmark" placeholder="3000" min="0" step="0.01" oninput="svUpdatePreview()"></div>
+      <div class="form-group"><label>Benchmark Source</label><input type="text" id="sv-benchmark-source" placeholder="e.g. Google Flights"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Award Taxes &amp; Fees ($)</label><input type="number" id="sv-taxes" placeholder="0" min="0" step="0.01" oninput="svUpdatePreview()"></div>
+      <div class="form-group"><label>Other Out-of-Pocket ($)</label><input type="number" id="sv-oop" placeholder="0" min="0" step="0.01" oninput="svUpdatePreview()"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Points Used</label><input type="number" id="sv-points" placeholder="75000" min="0"></div>
+      <div class="form-group"><label>Points Program</label><input type="text" id="sv-program" placeholder="e.g. Chase UR"></div>
+    </div>
+    <div class="form-group"><label>Option Booked</label><textarea id="sv-option" rows="2" placeholder="e.g. JAL Business SFO→NRT 75K Chase UR via Hyatt transfer" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:var(--font);font-size:.84rem;resize:vertical"></textarea></div>
+    <div class="form-group"><label>Benchmark Assumptions</label><textarea id="sv-assumptions" rows="2" placeholder="Notes on how the cash price was captured…" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:var(--font);font-size:.84rem;resize:vertical"></textarea></div>
+    <div class="form-group"><label>Notes</label><input type="text" id="sv-notes" placeholder="Internal notes…"></div>
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;font-size:.83rem;color:var(--muted)">
-      Advisory fee: <strong style="color:var(--gold)" id="sv-fee-preview">$0</strong> (10% of savings)
+      Gross savings: <strong style="color:var(--green)" id="sv-gross-preview">$0</strong> &nbsp;|&nbsp; Advisory fee (10%): <strong style="color:var(--gold)" id="sv-fee-preview">$0</strong>
     </div>
-    <button class="btn-primary" onclick="saveSaving()">Log Entry</button>
+    <button class="btn-primary" onclick="submitSavingForm()">Save Entry</button>
+  </div>
+</div>
+
+<!-- ADVANCE STATUS MODAL -->
+<div id="advance-overlay" class="overlay">
+  <div class="modal">
+    <div class="modal-head"><h2>Advance Status</h2><button class="modal-close" onclick="closeAdvanceModal()">&times;</button></div>
+    <input type="hidden" id="adv-record-id">
+    <p class="modal-sub" id="adv-current-status-text"></p>
+    <div class="form-group"><label>New Status</label>
+      <select id="adv-new-status">
+        <option value="presented">presented</option>
+        <option value="booked">booked</option>
+        <option value="invoiced">invoiced</option>
+        <option value="paid">paid</option>
+        <option value="void">void</option>
+        <option value="draft">draft</option>
+      </select>
+    </div>
+    <div class="form-group" id="adv-payment-row" style="display:none"><label>Payment Method</label><input type="text" id="adv-payment-method" placeholder="e.g. Zelle, Venmo, Check"></div>
+    <button class="btn-primary" onclick="submitAdvanceStatus()">Update Status</button>
   </div>
 </div>
 
@@ -706,48 +743,194 @@ let ADMIN_TOKEN = null;
 let CLIENTS = [];
 
 /* ════════════════════════════════════════════
-   SAVINGS / FEES  (localStorage)
+   MONEY / SAVINGS LEDGER — API-backed
    ════════════════════════════════════════════ */
-function loadSavings(){ try{return JSON.parse(localStorage.getItem('dat_savings')||'[]');}catch(e){return[];} }
-function saveSavingsData(a){ localStorage.setItem('dat_savings',JSON.stringify(a)); }
+function fmtCents(cents){
+  const neg=cents<0;
+  const abs=Math.abs(cents);
+  return (neg?'-':'')+'$'+(abs/100).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
 
-document.getElementById('sv-savings').addEventListener('input', function(){
-  const v=parseFloat(this.value)||0;
-  document.getElementById('sv-fee-preview').textContent='$'+(v*0.1).toFixed(2);
-});
+const STATUS_COLOR={draft:'muted',presented:'blue',booked:'gold',invoiced:'gold',paid:'green',void:'muted'};
 
-function openAddSaving(){ document.getElementById('addsaving-overlay').classList.add('open'); }
+async function loadMoneyRecords(){
+  if(!ADMIN_TOKEN) return;
+  try{
+    const email=(document.getElementById('money-filter-email')||{}).value||'';
+    const url='/api/admin/savings'+(email?'?client_email='+encodeURIComponent(email):'');
+    const [recRes,sumRes]=await Promise.all([
+      fetch(url,{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}}),
+      fetch('/api/admin/savings/summary',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}}),
+    ]);
+    if(!recRes.ok||!sumRes.ok) return;
+    const recs=await recRes.json();
+    const sum=await sumRes.json();
+    // update pipeline strip
+    document.getElementById('money-owed').textContent=fmtCents(sum.owed_cents||0);
+    document.getElementById('money-invoiced').textContent=fmtCents(sum.invoiced_cents||0);
+    document.getElementById('money-collected').textContent=fmtCents(sum.collected_cents||0);
+    renderMoneyTable(recs);
+    // one-time localStorage migration
+    const old=localStorage.getItem('dat_savings');
+    if(old){
+      try{
+        const arr=JSON.parse(old);
+        for(const e of arr){
+          const cEmail=e.client_email||e.clientEmail||e.client||'';
+          if(!cEmail) continue;
+          await fetch('/api/admin/savings',{method:'POST',headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'Content-Type':'application/json'},
+            body:JSON.stringify({client_email:cEmail,trip_label:e.trip||'',cash_benchmark_cents:Math.round((parseFloat(e.savings)||0)*100),notes:e.strategy||''})});
+        }
+        localStorage.removeItem('dat_savings');
+        toast('Migrated '+arr.length+' legacy entries to the ledger');
+        loadMoneyRecords();
+      }catch(e2){ localStorage.removeItem('dat_savings'); }
+    }
+  }catch(e){}
+}
+
+function renderMoneyTable(recs){
+  const tbody=document.getElementById('fees-tbody');
+  if(!tbody) return;
+  if(!recs||!recs.length){
+    tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" to add one.</td></tr>';
+    return;
+  }
+  tbody.innerHTML=recs.map(function(r){
+    const clientLabel=r.client_email||('Client #'+r.client_id);
+    const gross=fmtCents(r.gross_savings_cents||0);
+    const fee=fmtCents(r.fee_cents||0);
+    const color=STATUS_COLOR[r.status]||'muted';
+    const actions=''
+      +'<button class="btn-sm" onclick="openEditSaving('+r.id+')">Edit</button> '
+      +'<button class="btn-sm" onclick="openAdvanceModal('+r.id+',\''+esc(r.status)+'\')">Advance</button> '
+      +(r.report_token?'<a class="btn-sm" href="/api/report/'+esc(r.report_token)+'" target="_blank">📄 Report</a> ':'')
+      +'<button class="btn-sm" style="border-color:rgba(239,68,68,.4);color:#f87171" onclick="deleteSavingRecord('+r.id+',\''+esc(r.status)+'\')">✕</button>';
+    return '<tr>'
+      +'<td><div class="client-name" style="font-size:.82rem">'+esc(clientLabel)+'</div></td>'
+      +'<td>'+esc(r.trip_label||'—')+'</td>'
+      +'<td style="color:var(--green);font-weight:600">'+gross+'</td>'
+      +'<td style="color:var(--gold);font-weight:600">'+fee+'</td>'
+      +'<td><span class="badge badge-'+color+'">'+esc(r.status)+'</span></td>'
+      +'<td style="font-size:.78rem;color:var(--muted)">'+esc(r.invoice_number||'—')+'</td>'
+      +'<td>'+actions+'</td>'
+      +'</tr>';
+  }).join('');
+}
+
+/* prefill client_email from CLIENTS list for the modal */
+function openAddSaving(){
+  document.getElementById('sv-modal-title').textContent='Log a Saving';
+  document.getElementById('sv-edit-id').value='';
+  ['sv-client-email','sv-trip','sv-benchmark','sv-benchmark-source','sv-taxes','sv-oop','sv-points','sv-program','sv-option','sv-assumptions','sv-notes'].forEach(function(i){
+    const el=document.getElementById(i); if(el) el.value='';
+  });
+  svUpdatePreview();
+  document.getElementById('addsaving-overlay').classList.add('open');
+}
 function closeAddSaving(){ document.getElementById('addsaving-overlay').classList.remove('open'); }
-function saveSaving(){
-  const savings=parseFloat(document.getElementById('sv-savings').value)||0;
-  const entry={id:'s'+Date.now(),client:document.getElementById('sv-client').value.trim()||'Unknown',
-    trip:document.getElementById('sv-trip').value.trim(),strategy:document.getElementById('sv-strategy').value.trim(),
-    savings:savings,fee:+(savings*0.1).toFixed(2),status:document.getElementById('sv-status').value};
-  const all=loadSavings(); all.push(entry); saveSavingsData(all);
-  closeAddSaving(); renderFees(); toast('Saving logged ✓');
-  ['sv-client','sv-trip','sv-strategy','sv-savings'].forEach(function(i){document.getElementById(i).value='';});
+
+async function openEditSaving(id){
+  if(!ADMIN_TOKEN) return;
+  try{
+    const res=await fetch('/api/admin/savings',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok) return;
+    const recs=await res.json();
+    const r=recs.find(function(x){return x.id===id;});
+    if(!r) return;
+    document.getElementById('sv-modal-title').textContent='Edit Saving';
+    document.getElementById('sv-edit-id').value=id;
+    // find client email from CLIENTS
+    const cl=CLIENTS.find(function(c){return c.id===r.client_id||c.email===r.client_email;});
+    document.getElementById('sv-client-email').value=r.client_email||(cl?cl.email:String(r.client_id));
+    document.getElementById('sv-trip').value=r.trip_label||'';
+    document.getElementById('sv-benchmark').value=r.cash_benchmark_cents/100||0;
+    document.getElementById('sv-benchmark-source').value=r.benchmark_source||'';
+    document.getElementById('sv-taxes').value=r.award_taxes_fees_cents/100||0;
+    document.getElementById('sv-oop').value=r.other_out_of_pocket_cents/100||0;
+    document.getElementById('sv-points').value=r.points_used||0;
+    document.getElementById('sv-program').value=r.points_program||'';
+    document.getElementById('sv-option').value=r.option_booked||'';
+    document.getElementById('sv-assumptions').value=r.benchmark_assumptions||'';
+    document.getElementById('sv-notes').value=r.notes||'';
+    svUpdatePreview();
+    document.getElementById('addsaving-overlay').classList.add('open');
+  }catch(e){}
 }
-function deleteSaving(id){
-  saveSavingsData(loadSavings().filter(function(x){return x.id!==id;}));
-  renderFees(); toast('Entry removed');
+
+function svUpdatePreview(){
+  const bench=Math.round((parseFloat(document.getElementById('sv-benchmark').value)||0)*100);
+  const taxes=Math.round((parseFloat(document.getElementById('sv-taxes').value)||0)*100);
+  const oop=Math.round((parseFloat(document.getElementById('sv-oop').value)||0)*100);
+  const gross=bench-taxes-oop;
+  const fee=gross>0?Math.floor((gross*1000+5000)/10000):0;
+  document.getElementById('sv-gross-preview').textContent=fmtCents(gross);
+  document.getElementById('sv-fee-preview').textContent=fmtCents(fee);
 }
-function renderFees(){
-  const entries=loadSavings();
-  const total=entries.reduce(function(a,b){return a+b.savings;},0);
-  const fees=entries.reduce(function(a,b){return a+b.fee;},0);
-  document.getElementById('fees-total-savings').textContent='$'+total.toLocaleString();
-  document.getElementById('fees-total-fees').textContent='$'+fees.toFixed(2);
-  document.getElementById('fees-count').textContent=entries.length;
-  const STATUS_BADGE={Recommended:'gold',Accepted:'green',Pending:'blue',Researching:'muted'};
-  document.getElementById('fees-tbody').innerHTML = entries.length
-    ? entries.map(function(e){
-        return '<tr><td><div class="client-name">'+esc(e.client)+'</div></td><td>'+esc(e.trip)+'</td><td style="font-size:.79rem;color:var(--muted)">'+esc(e.strategy)+'</td>'
-          +'<td style="color:var(--green);font-weight:600">$'+e.savings.toLocaleString()+'</td>'
-          +'<td style="color:var(--gold);font-weight:600">$'+e.fee.toFixed(2)+'</td>'
-          +'<td><span class="badge badge-'+(STATUS_BADGE[e.status]||'muted')+'">'+esc(e.status)+'</span></td>'
-          +'<td><button class="btn-sm" onclick="deleteSaving(\''+eid(e.id)+'\')">Remove</button></td></tr>';
-      }).join('')
-    : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
+
+async function submitSavingForm(){
+  if(!ADMIN_TOKEN){ toast('Not authenticated'); return; }
+  const editId=document.getElementById('sv-edit-id').value;
+  const clientEmail=(document.getElementById('sv-client-email').value||'').trim();
+  if(!clientEmail){ toast('Client email is required'); return; }
+  const benchCents=Math.round((parseFloat(document.getElementById('sv-benchmark').value)||0)*100);
+  const body={
+    client_email:clientEmail,
+    trip_label:document.getElementById('sv-trip').value.trim(),
+    cash_benchmark_cents:benchCents,
+    benchmark_source:document.getElementById('sv-benchmark-source').value.trim(),
+    benchmark_assumptions:document.getElementById('sv-assumptions').value.trim(),
+    option_booked:document.getElementById('sv-option').value.trim(),
+    points_used:parseInt(document.getElementById('sv-points').value)||0,
+    points_program:document.getElementById('sv-program').value.trim(),
+    award_taxes_fees_cents:Math.round((parseFloat(document.getElementById('sv-taxes').value)||0)*100),
+    other_out_of_pocket_cents:Math.round((parseFloat(document.getElementById('sv-oop').value)||0)*100),
+    notes:document.getElementById('sv-notes').value.trim(),
+  };
+  try{
+    let res;
+    if(editId){
+      // PATCH — remove client_email, not patchable
+      const {client_email,...patch}=body;
+      res=await fetch('/api/admin/savings/'+editId,{method:'PATCH',headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'Content-Type':'application/json'},body:JSON.stringify(patch)});
+    } else {
+      res=await fetch('/api/admin/savings',{method:'POST',headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    }
+    if(res.ok){ closeAddSaving(); loadMoneyRecords(); toast(editId?'Entry updated ✓':'Saving logged ✓'); }
+    else { const d=await res.json(); toast('Error: '+(d.detail||res.status)); }
+  }catch(e){ toast('Network error'); }
+}
+
+async function deleteSavingRecord(id, status){
+  if(status==='invoiced'||status==='paid'){ toast('Cannot delete invoiced/paid record — void it instead.'); return; }
+  if(!confirm('Delete this savings record?')) return;
+  try{
+    const res=await fetch('/api/admin/savings/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(res.ok){ loadMoneyRecords(); toast('Entry deleted'); }
+    else{ const d=await res.json(); toast('Error: '+(d.detail||res.status)); }
+  }catch(e){ toast('Network error'); }
+}
+
+/* Advance status modal */
+function openAdvanceModal(id, currentStatus){
+  document.getElementById('adv-record-id').value=id;
+  document.getElementById('adv-current-status-text').textContent='Current status: '+currentStatus;
+  document.getElementById('adv-payment-row').style.display='none';
+  document.getElementById('advance-overlay').classList.add('open');
+  document.getElementById('adv-new-status').addEventListener('change',function(){
+    document.getElementById('adv-payment-row').style.display=this.value==='paid'?'block':'none';
+  },{once:false});
+}
+function closeAdvanceModal(){ document.getElementById('advance-overlay').classList.remove('open'); }
+async function submitAdvanceStatus(){
+  const id=document.getElementById('adv-record-id').value;
+  const newStatus=document.getElementById('adv-new-status').value;
+  const payMethod=document.getElementById('adv-payment-method').value.trim();
+  try{
+    const res=await fetch('/api/admin/savings/'+id+'/status',{method:'PATCH',headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({new_status:newStatus,payment_method:payMethod||null})});
+    if(res.ok){ closeAdvanceModal(); loadMoneyRecords(); toast('Status updated ✓'); }
+    else{ const d=await res.json(); toast('Error: '+(d.detail||res.status)); }
+  }catch(e){ toast('Network error'); }
 }
 
 /* ════════════════════════════════════════════
@@ -1658,7 +1841,7 @@ function enterAdmin(){
   document.getElementById('admin').style.display='block';
   loadClients();
   loadIntakes();
-  renderFees();
+  loadMoneyRecords();
   checkAIStatus();
   startAdminAutoRefresh();
 }
@@ -1734,6 +1917,7 @@ function switchPanel(id,btn){
   if(btn) btn.classList.add('active');
   const el=document.getElementById('panel-'+id);
   if(el) el.classList.add('active');
+  if(id==='fees') loadMoneyRecords();
 }
 let toastTimer=null;
 function toast(msg){
