@@ -1582,6 +1582,31 @@ function adminError(msg){
   el.textContent=msg||'Invalid credentials.'; el.style.display='block';
   setTimeout(function(){el.style.display='none';},3500);
 }
+let adminAutoRefreshInterval = null;
+
+function startAdminAutoRefresh() {
+  if (adminAutoRefreshInterval) clearInterval(adminAutoRefreshInterval);
+  adminAutoRefreshInterval = setInterval(async function() {
+    if (!ADMIN_TOKEN) {
+      clearInterval(adminAutoRefreshInterval);
+      return;
+    }
+    try {
+      await loadClients();
+      await loadIntakes();
+    } catch (e) {
+      // Silent fail on auto-refresh
+    }
+  }, 8000); // 8 seconds
+}
+
+function stopAdminAutoRefresh() {
+  if (adminAutoRefreshInterval) {
+    clearInterval(adminAutoRefreshInterval);
+    adminAutoRefreshInterval = null;
+  }
+}
+
 function enterAdmin(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('admin').style.display='block';
@@ -1590,6 +1615,7 @@ function enterAdmin(){
   loadExpiringPoints();
   renderFees();
   checkAIStatus();
+  startAdminAutoRefresh();
 }
 function toggleSetupForm(){
   const form=document.getElementById('setup-form');
@@ -1648,6 +1674,7 @@ async function doAdminLogin(){
   } else adminError('Invalid credentials.');
 }
 function doAdminLogout(){
+  stopAdminAutoRefresh();
   document.getElementById('admin').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('admin-user').value='';

@@ -453,6 +453,128 @@ districtawardtravel@gmail.com
     return {"ok": True, "id": rec.id}
 
 
+@app.post("/api/intake-create-client")
+async def intake_create_client(request: Request, db: Session = Depends(get_db)):
+    """
+    Auto-create a client account directly from intake form submission.
+    Returns login credentials so client can immediately access their portal.
+    """
+    data = await request.json()
+    email = data.get("email", "").lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Email required")
+
+    # Check if client already exists
+    if db.query(Client).filter(Client.email == email).first():
+        raise HTTPException(status_code=409, detail="Client already exists")
+
+    first_name = data.get("first_name", "")
+    last_name = data.get("last_name", "")
+    name = f"{first_name} {last_name}".strip() or "Client"
+
+    # Generate a readable password (8 chars: 4 random hex + 4 random digits)
+    import secrets
+    password = secrets.token_hex(2) + str(secrets.randbelow(10000)).zfill(4)
+
+    # Map intake data to client profile structure (same as admin.html's mapIntakeToClientData)
+    trips = []
+    for i in range(1, 11):
+        dest = data.get(f"trip{i}_dest")
+        if not dest:
+            break
+        trips.append({
+            "destination": dest,
+            "dates": data.get(f"trip{i}_dates", ""),
+            "passengers": data.get(f"trip{i}_pax", "1"),
+            "flexibility": data.get(f"trip{i}_flex", ""),
+            "cabin": data.get("cabin_pref", ""),
+        })
+
+    points = []
+    for key, val in data.items():
+        if key.startswith("pts_") and val and val.strip():
+            program = key.replace("pts_","").replace("_"," ").title()
+            points.append({"program": program, "balance": val, "expiration_date": None, "tier": None})
+
+    if data.get("airline_status") and data.get("airline_status") != "None":
+        points.append({"program": "Airline Elite Status", "balance": data["airline_status"], "expiration_date": None, "tier": data["airline_status"]})
+    if data.get("hotel_status") and data.get("hotel_status") != "None":
+        points.append({"program": "Hotel Elite Status", "balance": data["hotel_status"], "expiration_date": None, "tier": data["hotel_status"]})
+
+    client_data = {
+        "stats": {"trips": len(trips), "savings": "$0", "fee": "$0", "points": points[0]["balance"] if points else "—"},
+        "urgency": None,
+        "trips": trips,
+        "savings": [],
+        "totalSavings": "$0",
+        "totalFee": "$0",
+        "points": points,
+        "messages": [{
+            "from": "Braden — DAT",
+            "time": "Today",
+            "text": f"Welcome to District Award Travel, {first_name}! Your portal is live with all your intake data. Start exploring your trips and preferences, and I'll be in touch shortly with options.",
+            "unread": True
+        }],
+        "preferences": {
+            "home_airport": data.get("home_airport", ""),
+            "cabin_pref": data.get("cabin_pref", ""),
+            "hotel_pref": data.get("hotel_pref", ""),
+            "travel_goals": data.get("travel_goals", ""),
+            "dream_destinations": data.get("dream_destinations", ""),
+            "max_stops": data.get("max_stops", ""),
+            "trip_type": data.get("trip_type", ""),
+            "comm_pref": data.get("comm_pref", ""),
+            "travel_with": data.get("travel_with", ""),
+            "frustrations": data.get("frustrations", ""),
+            "experience_level": data.get("pts_experience", ""),
+            "current_booking_method": data.get("current_booking_method", ""),
+            "notes": data.get("notes", ""),
+            "amex_card": data.get("amex_card", ""),
+            "chase_card": data.get("chase_card", ""),
+            "airline_status": data.get("airline_status", ""),
+            "hotel_status": data.get("hotel_status", ""),
+        }
+    }
+
+    client = Client(
+        email=email,
+        password_hash=hash_pw(password),
+        name=name,
+        tier="Client",
+        data=json.dumps(client_data),
+    )
+    db.add(client)
+    db.commit()
+
+    # Send welcome email
+    send_email_to(
+        to=email,
+        subject="Your District Award Travel Portal is Ready",
+        body=f"""Hi {first_name},
+
+Welcome to District Award Travel! Your advisor portal is now live and ready to explore.
+
+**Your Login Credentials:**
+Email: {email}
+Access Code: {password}
+
+You can log in anytime at: [Your portal URL]
+
+Here's what we have on file from your intake:
+• {len(trips)} trip{'s' if len(trips) != 1 else ''} planned
+• {len(points)} points/status accounts identified
+• Your preferences and goals are saved
+
+Start editing your travel profile to add more details, and Braden will reach out shortly with personalized award options based on your data.
+
+— The District Award Travel Team
+districtawardtravel@gmail.com
+"""
+    )
+
+    return {"ok": True, "email": email, "password": password, "name": name}
+
+
 @app.post("/api/setup/admin")
 def setup_admin(body: LoginIn, db: Session = Depends(get_db)):
     """Create the first admin account. Only works if no admins exist yet."""
@@ -512,6 +634,29 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
     payload = json.loads(client.data or "{}")
     payload.update({"name": client.name, "tier": client.tier, "email": client.email})
     return payload
+
+
+@app.put("/api/client/me")
+def update_client_me(body: UpdateClientDataIn, identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
+    """Client updates their own profile data (preferences, trips, etc.)."""
+    if identity.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    client = db.query(Client).filter(Client.email == identity["sub"]).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    existing = json.loads(client.data or "{}")
+    # Deep merge: if body.data["preferences"] exists, merge it; same for other top-level keys
+    for key, val in body.data.items():
+        if key in ["preferences", "trips", "points", "savings", "messages", "recommendations"]:
+            if isinstance(val, dict) and isinstance(existing.get(key), dict):
+                existing[key].update(val)
+            else:
+                existing[key] = val
+        else:
+            existing[key] = val
+    client.data = json.dumps(existing)
+    db.commit()
+    return {"ok": True}
 
 
 # ── Admin: client management ──

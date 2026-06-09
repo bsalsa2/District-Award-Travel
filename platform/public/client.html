@@ -426,6 +426,38 @@ const CLIENTS = {
 };
 
 let currentClient = null;
+let autoRefreshInterval = null;
+
+// Auto-refresh client data every 10 seconds to stay in sync with admin updates
+function startAutoRefresh() {
+  stopAutoRefresh();
+  autoRefreshInterval = setInterval(async function() {
+    const token = sessionStorage.getItem('dat_client_token');
+    if (!token) {
+      stopAutoRefresh();
+      return;
+    }
+    try {
+      const res = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (res.ok) {
+        const updated = await res.json();
+        if (currentClient) {
+          Object.assign(currentClient, updated);
+          renderPortal(currentClient);
+        }
+      }
+    } catch (e) {
+      // Silent fail on refresh
+    }
+  }, 10000); // 10 seconds
+}
+
+function stopAutoRefresh() {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
+}
 
 // Demo fallback: clients saved in this browser (used only if the backend
 // isn't reachable, e.g. when previewing the file directly off the server).
@@ -442,6 +474,7 @@ function showPortal(client) {
   document.getElementById('portal').style.display = 'block';
   document.getElementById('nav-name').textContent = (client.name || 'Client').split(' ')[0];
   renderPortal(client);
+  startAutoRefresh();
 }
 
 function loginError(msg) {
@@ -492,6 +525,7 @@ async function doLogin() {
 
 function logout() {
   currentClient = null;
+  stopAutoRefresh();
   sessionStorage.removeItem('dat_client_token');
   document.getElementById('portal').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -652,38 +686,84 @@ function switchTab(id, btn) {
   document.getElementById('tab-' + id).classList.add('active');
 }
 
+async function savePreference(fieldId, value) {
+  const token = localStorage.getItem('client_token');
+  if (!token) return;
+
+  const fieldMap = {
+    'pref-home-airport': 'home_airport', 'pref-cabin': 'cabin_pref', 'pref-hotel': 'hotel_pref',
+    'pref-travels-with': 'travel_with', 'pref-experience': 'experience_level', 'pref-max-stops': 'max_stops',
+    'pref-trip-type': 'trip_type', 'pref-amex': 'amex_card', 'pref-chase': 'chase_card',
+    'pref-airline-status': 'airline_status', 'pref-hotel-status': 'hotel_status',
+    'pref-goals': 'travel_goals', 'pref-dreams': 'dream_destinations', 'pref-frustrations': 'frustrations',
+    'pref-notes': 'notes'
+  };
+  const key = fieldMap[fieldId];
+  if (!key) return;
+
+  try {
+    await fetch('/api/client/me', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ data: { preferences: { [key]: value } } })
+    });
+  } catch (e) {
+    console.error('Failed to save preference:', e);
+  }
+}
+
 function renderProfile(p) {
-  const row = (label, val) => val ? `<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
-    <div style="color:var(--muted);font-size:.83rem;min-width:160px">${label}</div>
-    <div style="font-size:.9rem">${val}</div>
-  </div>` : '';
+  const editField = (id, label, val) => `
+    <div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);align-items:center">
+      <div style="color:var(--muted);font-size:.83rem;min-width:160px">${label}</div>
+      <input type="text" id="${id}" value="${val || ''}" placeholder="—"
+        style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-size:.9rem"
+        onchange="savePreference('${id}', this.value)">
+    </div>`;
 
   const html = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px">
       <div style="font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em">Travel Preferences</div>
-      ${row('Home Airport', p.home_airport)}
-      ${row('Cabin Preference', p.cabin_pref)}
-      ${row('Hotel Preference', p.hotel_pref)}
-      ${row('Travels With', p.travel_with)}
-      ${row('Experience Level', p.experience_level)}
-      ${row('Max Stops', p.max_stops)}
-      ${row('Trip Type', p.trip_type)}
+      ${editField('pref-home-airport', 'Home Airport', p.home_airport)}
+      ${editField('pref-cabin', 'Cabin Preference', p.cabin_pref)}
+      ${editField('pref-hotel', 'Hotel Preference', p.hotel_pref)}
+      ${editField('pref-travels-with', 'Travels With', p.travel_with)}
+      ${editField('pref-experience', 'Experience Level', p.experience_level)}
+      ${editField('pref-max-stops', 'Max Stops', p.max_stops)}
+      ${editField('pref-trip-type', 'Trip Type', p.trip_type)}
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:20px">
       <div style="font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em">Points & Status</div>
-      ${row('Amex Card', p.amex_card)}
-      ${row('Chase Card', p.chase_card)}
-      ${row('Airline Elite Status', p.airline_status !== 'None' ? p.airline_status : '')}
-      ${row('Hotel Elite Status', p.hotel_status !== 'None' ? p.hotel_status : '')}
+      ${editField('pref-amex', 'Amex Card', p.amex_card)}
+      ${editField('pref-chase', 'Chase Card', p.chase_card)}
+      ${editField('pref-airline-status', 'Airline Elite Status', p.airline_status && p.airline_status !== 'None' ? p.airline_status : '')}
+      ${editField('pref-hotel-status', 'Hotel Elite Status', p.hotel_status && p.hotel_status !== 'None' ? p.hotel_status : '')}
     </div>
-    ${p.travel_goals || p.dream_destinations || p.frustrations || p.notes ? `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px">
       <div style="font-size:.88rem;font-weight:700;color:var(--orange);margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em">Goals & Notes</div>
-      ${row('Travel Goals', p.travel_goals)}
-      ${row('Dream Destinations', p.dream_destinations)}
-      ${row('Pain Points', p.frustrations)}
-      ${row('Additional Notes', p.notes)}
-    </div>` : ''}
+      <div style="margin-bottom:12px">
+        <div style="color:var(--muted);font-size:.83rem;margin-bottom:6px">Travel Goals</div>
+        <textarea id="pref-goals" placeholder="—" onchange="savePreference('pref-goals', this.value)"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:4px;font-size:.9rem;resize:vertical;min-height:60px;font-family:inherit">${p.travel_goals || ''}</textarea>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="color:var(--muted);font-size:.83rem;margin-bottom:6px">Dream Destinations</div>
+        <input type="text" id="pref-dreams" value="${p.dream_destinations || ''}" placeholder="—"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-size:.9rem"
+          onchange="savePreference('pref-dreams', this.value)">
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="color:var(--muted);font-size:.83rem;margin-bottom:6px">Pain Points / Frustrations</div>
+        <input type="text" id="pref-frustrations" value="${p.frustrations || ''}" placeholder="—"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:4px;font-size:.9rem"
+          onchange="savePreference('pref-frustrations', this.value)">
+      </div>
+      <div>
+        <div style="color:var(--muted);font-size:.83rem;margin-bottom:6px">Additional Notes</div>
+        <textarea id="pref-notes" placeholder="—" onchange="savePreference('pref-notes', this.value)"
+          style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:4px;font-size:.9rem;resize:vertical;min-height:60px;font-family:inherit">${p.notes || ''}</textarea>
+      </div>
+    </div>
   `;
   document.getElementById('profile-container').innerHTML = html;
 }
