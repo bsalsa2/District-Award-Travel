@@ -636,6 +636,10 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
     return payload
 
 
+class UpdateClientDataIn(BaseModel):
+    data: dict
+
+
 @app.put("/api/client/me")
 def update_client_me(body: UpdateClientDataIn, identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
     """Client updates their own profile data (preferences, trips, etc.)."""
@@ -696,10 +700,6 @@ def create_client(body: ClientIn, _: dict = Depends(require_admin), db: Session 
     db.add(client)
     db.commit()
     return {"ok": True, "email": email}
-
-
-class UpdateClientDataIn(BaseModel):
-    data: dict
 
 
 @app.put("/api/admin/clients/{email}")
