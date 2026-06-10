@@ -74,3 +74,32 @@ intakes, fulfills faster, proves savings better, or protects client data.
 - **Plan-builder drafts autosave to localStorage** (`dat_plan_draft_{clientEmail}`,
   debounced 1s) and clear on successful send. Protects against accidental tab closes
   without server-side draft plumbing; one draft per client is enough for one operator.
+
+---
+
+## 2026-06-10 — Phase 3 (trust surface & conversion)
+
+- **Public proof stats threshold-gated** via env vars (defaults: $5k savings / 5 trips / 3 records for ¢/pt). Stats below thresholds are nulled in the JSON response; the hero proof strip degrades gracefully (1–2 stats, or hidden entirely). The page never looks small or unconvincing early on. As the business grows, more data auto-surfaces.
+
+- **Illustrative examples computed server-side with the real fee function.** 4 seeded rows (Tokyo business, Paris premium, Cancun family, Maui hotel) are computed exactly once at boot using `calc_fee`, so all numbers are internally consistent. Real ledger rows (booked+invoiced+paid records, no names/emails) are labeled `"real": true` and returned first. Server logic prevents a fake row ever rendering as real — label is part of the response schema, tested.
+
+- **First-party funnel beacon — no cookies, no consent banner.** Random session ID in sessionStorage (cleared on tab close); tracks page_view / form_start / step_complete / submit events. UTM params captured from URL. Stored in `funnel_events` table. No third-party trackers. No cookies means GDPR-compliant without a consent banner (which kills conversion).
+
+- **`consent_at` timestamp stored only when the checkbox is present.** Old cached form pages won't send the consent field — the backend won't 422 them (safe), but new form submissions include `consent: "true"` and the timestamp is recorded. Complies with "only if checkbox checked" requirement.
+
+- **Legal pages behind `LEGAL_DRAFT = true;` flag.** Both pages (terms.html, privacy.html) carry an amber "DRAFT — pending review" banner. User flips the flag in the page source after parent/legal review. No need for a config file or env var — just a boolean at the top of the script section.
+
+- **Proof endpoint returns zero client names or emails ever.** GET `/api/public/examples` strips names from real ledger rows (only route = trip_label, no client emails). GET `/api/public/proof` returns aggregate numbers only. Tested: assert no names/emails appear in the JSON response.
+
+- **Research-checklist check-state lives in localStorage** (`dat_checklist_{tripId}`),
+  not the DB. Single-operator tool; the checked boxes are a personal working aid, not
+  audit data. Avoids a new table + API round-trips for a cosmetic feature.
+
+- **Structured option fields are composed into the `desc` string client-side** before
+  sending. The existing message/plan pipeline (`POST /api/admin/send-message` with
+  `plan_details.options[{num,desc,img}]`) and the client portal renderer stay completely
+  unchanged — zero backend or portal migration for richer option cards.
+
+- **Plan-builder drafts autosave to localStorage** (`dat_plan_draft_{clientEmail}`,
+  debounced 1s) and clear on successful send. Protects against accidental tab closes
+  without server-side draft plumbing; one draft per client is enough for one operator.
