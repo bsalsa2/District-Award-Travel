@@ -267,6 +267,23 @@ try:
 except Exception:
     pass  # column already exists (or fresh DB where create_all included it)
 
+# Index migration: create_all skips existing tables entirely, so indexes added
+# after a table first shipped must be created explicitly. IF NOT EXISTS works
+# on both Postgres and SQLite. Rollback for each: DROP INDEX <name>.
+_INDEX_MIGRATIONS = [
+    "CREATE INDEX IF NOT EXISTS ix_intakes_created_at ON intakes (created_at)",
+    "CREATE INDEX IF NOT EXISTS ix_savings_records_invoice_number ON savings_records (invoice_number)",
+    "CREATE INDEX IF NOT EXISTS ix_workflow_events_created_at ON workflow_events (created_at)",
+    "CREATE INDEX IF NOT EXISTS ix_trip_requests_savings_record_id ON trip_requests (savings_record_id)",
+]
+try:
+    from sqlalchemy import text as _sql_text2
+    with engine.begin() as _conn:
+        for _stmt in _INDEX_MIGRATIONS:
+            _conn.execute(_sql_text2(_stmt))
+except Exception as _e:
+    print(f"[startup] index migration warning: {_e}")
+
 
 def get_db():
     db = SessionLocal()
@@ -1272,10 +1289,22 @@ def add_client_point(email: str, body: PointEntryIn, _: dict = Depends(require_a
 
 @app.delete("/api/admin/clients/{email}")
 def delete_client(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    """Permanently delete a client record. Use only for test/duplicate accounts."""
+    """Permanently delete a client record. Use only for test/duplicate accounts.
+
+    Refuses while savings records or trip requests reference the client —
+    deleting would orphan revenue/audit history. Void or reassign those first.
+    """
     client = db.query(Client).filter(Client.email == email.lower()).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+    savings_count = db.query(SavingsRecord).filter(SavingsRecord.client_id == client.id).count()
+    trips_count = db.query(TripRequest).filter(TripRequest.client_id == client.id).count()
+    if savings_count or trips_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Client has {savings_count} savings record(s) and {trips_count} trip(s). "
+                   "Delete/void those first — deleting the client would orphan ledger history.",
+        )
     db.delete(client)
     db.commit()
     return {"ok": True}
