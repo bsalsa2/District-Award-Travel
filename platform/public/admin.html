@@ -2341,22 +2341,34 @@ function adminError(msg){
   el.textContent=msg||'Invalid credentials.'; el.style.display='block';
   setTimeout(function(){el.style.display='none';},3500);
 }
+/* Adaptive refresh: 10s while actively used, backs off to 45s after 2 min
+   without interaction, fully paused while the tab is hidden. */
 let adminAutoRefreshInterval = null;
+let _lastAdminActivity = Date.now();
+['click','keydown','touchstart'].forEach(function(ev){
+  document.addEventListener(ev, function(){ _lastAdminActivity = Date.now(); }, {passive:true});
+});
 
 function startAdminAutoRefresh() {
   if (adminAutoRefreshInterval) clearInterval(adminAutoRefreshInterval);
+  let lastRun = 0;
   adminAutoRefreshInterval = setInterval(async function() {
     if (!ADMIN_TOKEN) {
       clearInterval(adminAutoRefreshInterval);
       return;
     }
+    if (document.hidden) return;
+    const idleMs = Date.now() - _lastAdminActivity;
+    const period = idleMs > 120000 ? 45000 : 10000;
+    if (Date.now() - lastRun < period) return;
+    lastRun = Date.now();
     try {
       await loadClients();
       await loadIntakes();
     } catch (e) {
       // Silent fail on auto-refresh
     }
-  }, 8000); // 8 seconds
+  }, 5000); // tick; actual cadence decided above
 }
 
 function stopAdminAutoRefresh() {
@@ -2365,6 +2377,12 @@ function stopAdminAutoRefresh() {
     adminAutoRefreshInterval = null;
   }
 }
+
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && ADMIN_TOKEN) {
+    try { loadClients(); loadIntakes(); } catch(e) {}
+  }
+});
 
 function enterAdmin(){
   document.getElementById('login-screen').style.display='none';

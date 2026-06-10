@@ -304,35 +304,104 @@ function renderPoints(points) {
   `).join('');
 }
 
-function startAutoRefresh() {
-  stopAutoRefresh();
-  autoRefreshInterval = setInterval(async function() {
-    const token = sessionStorage.getItem('dat_client_token');
-    if (!token) {
-      stopAutoRefresh();
-      return;
-    }
-    try {
-      const res = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
-      if (res.ok) {
-        const updated = await res.json();
-        if (currentClient) {
-          Object.assign(currentClient, updated);
-          renderPortal(currentClient);
-        }
+/* ── Live updates: SSE first, adaptive polling fallback, paused when hidden ──
+   The stream sends 'changed' only when the admin actually mutates this
+   client's data; we then refetch once. Heartbeats keep proxies open. The
+   server ends each stream after 5 min; we reconnect with backoff. After 3
+   consecutive stream failures we fall back to 60s polling and periodically
+   retry SSE. Everything stops while the tab is hidden. */
+let evtSource = null;
+let sseFailures = 0;
+let reconnectTimer = null;
+let reconnectDelay = 2000;   // 2s → 4s → 8s … max 60s
+
+async function refetchMe() {
+  const token = sessionStorage.getItem('dat_client_token');
+  if (!token) { stopAutoRefresh(); return; }
+  try {
+    const res = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (res.ok) {
+      const updated = await res.json();
+      if (currentClient) {
+        Object.assign(currentClient, updated);
+        renderPortal(currentClient);
       }
-    } catch (e) {
-      // Silent fail
     }
-  }, 10000);
+  } catch (e) { /* transient network error — next event/poll retries */ }
 }
 
-function stopAutoRefresh() {
+function connectStream() {
+  const token = sessionStorage.getItem('dat_client_token');
+  if (!token || document.hidden) return;
+  disconnectStream();
+  try {
+    evtSource = new EventSource('/api/client/stream?token=' + encodeURIComponent(token));
+    evtSource.addEventListener('hello', function() {
+      sseFailures = 0;
+      reconnectDelay = 2000;
+      stopPollingFallback();   // SSE is healthy — polling not needed
+    });
+    evtSource.addEventListener('changed', refetchMe);
+    evtSource.addEventListener('bye', function() {
+      disconnectStream();
+      scheduleReconnect();     // normal 5-min rotation, not a failure
+    });
+    evtSource.onerror = function() {
+      disconnectStream();
+      sseFailures++;
+      if (sseFailures >= 3) startPollingFallback();
+      scheduleReconnect();
+    };
+  } catch (e) {
+    startPollingFallback();    // EventSource unsupported
+  }
+}
+
+function disconnectStream() {
+  if (evtSource) { evtSource.close(); evtSource = null; }
+}
+
+function scheduleReconnect() {
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(function() {
+    reconnectDelay = Math.min(reconnectDelay * 2, 60000);
+    connectStream();
+  }, reconnectDelay);
+}
+
+function startPollingFallback() {
+  if (autoRefreshInterval) return;
+  autoRefreshInterval = setInterval(function() {
+    if (!document.hidden) refetchMe();
+  }, 60000);
+}
+
+function stopPollingFallback() {
   if (autoRefreshInterval) {
     clearInterval(autoRefreshInterval);
     autoRefreshInterval = null;
   }
 }
+
+function startAutoRefresh() {
+  connectStream();
+}
+
+function stopAutoRefresh() {
+  disconnectStream();
+  stopPollingFallback();
+  clearTimeout(reconnectTimer);
+}
+
+document.addEventListener('visibilitychange', function() {
+  if (!sessionStorage.getItem('dat_client_token')) return;
+  if (document.hidden) {
+    stopAutoRefresh();
+  } else {
+    refetchMe();        // catch up on anything missed while hidden
+    connectStream();
+  }
+});
 </script>
 
 </body>
