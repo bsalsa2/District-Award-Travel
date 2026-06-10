@@ -65,6 +65,12 @@ IS_PRODUCTION = bool(DATABASE_URL)
 if not DATABASE_URL:
     DATABASE_URL = "sqlite:///./dat.db"
 
+# Explicit environment name. Anything with a real DATABASE_URL defaults to
+# "production" — staging must OPT IN via ENV=staging. Safe-by-default: a
+# service that forgets the var gets production behavior (strict secrets,
+# seed scripts refuse to run).
+ENV = os.environ.get("ENV", "production" if IS_PRODUCTION else "development")
+
 SECRET_KEY = os.environ.get("SECRET_KEY", "")
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@districtawardtravel.com").lower()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")

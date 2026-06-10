@@ -15,10 +15,12 @@ services:
     rootDir: backend
     buildCommand: pip install --upgrade pip && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /api/health
+    healthCheckPath: /healthz        # real check: pings the DB, 503 when degraded
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.9"              # Render reads this to pick the Python runtime
+      - key: ENV
+        value: production
       - key: SECRET_KEY
         generateValue: true          # Render generates a strong random value
       - key: DATABASE_URL
@@ -35,6 +37,8 @@ services:
         sync: false                  # set this yourself in the dashboard
       - key: NOTIFY_EMAIL
         value: districtawardtravel@gmail.com
+      - key: CRON_SECRET
+        sync: false                  # set yourself; used by /api/cron/digest
       - key: GROQ_API_KEY
         sync: false                  # set in Render dashboard (from GitHub Secrets)
       - key: GEMINI_API_KEY
@@ -42,6 +46,39 @@ services:
       - key: SEATS_AERO_API_KEY
         sync: false                  # optional paid add-on — seats.aero Pro ($99.99/yr) for live award availability; everything works without it
 
+  # ── Staging: deploy a branch here before it touches clients. Create it in
+  # Render via "New + → Blueprint" pointing at this same file; Render will
+  # show both services — you can suspend staging when not in use to save
+  # free-tier hours. Test data only (seed script refuses to run in prod).
+  - type: web
+    name: district-award-travel-staging
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /healthz
+    branch: staging                  # deploys the 'staging' branch, not main
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ENV
+        value: staging
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dat-db-staging
+          property: connectionString
+      - key: ADMIN_EMAIL
+        value: admin@districtawardtravel.com
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Email/AI deliberately unset on staging: emails print to logs, AI
+      # endpoints degrade gracefully — that's the manual-path test for free.
+
 databases:
   - name: dat-db
+    plan: free
+  - name: dat-db-staging
     plan: free
