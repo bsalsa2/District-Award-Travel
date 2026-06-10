@@ -245,6 +245,18 @@ class MessageTemplate(Base):
     updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
 
 
+class EmailLog(Base):
+    __tablename__ = "email_log"
+    id         = Column(Integer, primary_key=True)
+    recipient  = Column(String, default="")
+    subject    = Column(String, default="")
+    status     = Column(String, default="pending", index=True)  # pending|sent|failed
+    attempts   = Column(Integer, default=0)
+    last_error = Column(Text, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+
+
 class ErrorLog(Base):
     __tablename__ = "error_log"
     id         = Column(Integer, primary_key=True)
@@ -496,33 +508,108 @@ def _savings_row(rec: SavingsRecord) -> dict:
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Email
+# Email — single interface, async with retry, logged to email_log.
+# A failed email must NEVER fail the request that triggered it. The
+# transport is swappable (EMAIL_PROVIDER env) so moving to a transactional
+# provider later is config + one function, not a refactor.
 # ──────────────────────────────────────────────────────────────────────────
+import threading as _threading
+
+EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "gmail")
+EMAIL_RETRY_DELAYS = [5, 25]  # seconds between attempts (3 attempts total)
+
+
+def _smtp_transport(to: str, subject: str, body: str, reply_to: str = "") -> None:
+    """Gmail SMTP transport. Raises on failure (retry logic lives above it)."""
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        raise RuntimeError("GMAIL_USER / GMAIL_APP_PASSWORD not set")
+    msg = MIMEMultipart()
+    msg["From"] = f"District Award Travel <{GMAIL_USER}>"
+    msg["To"] = to
+    msg["Subject"] = subject
+    if reply_to:
+        msg["Reply-To"] = reply_to
+    msg.attach(MIMEText(body, "plain"))
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as server:
+        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        server.sendmail(GMAIL_USER, [to], msg.as_string())
+
+
+_email_transport = _smtp_transport  # seam for tests / future providers
+
+
+def _send_with_retry(log_id: int, to: str, subject: str, body: str,
+                     reply_to: str = "", sleep_fn=None, session_factory=None) -> bool:
+    """Attempt delivery up to 3 times with backoff, recording every attempt
+    on the email_log row. Never raises."""
+    import time as _t
+    sleep_fn = sleep_fn or _t.sleep
+    session_factory = session_factory or SessionLocal
+
+    def _update(status: str, attempts: int, err: str):
+        try:
+            db = session_factory()
+            try:
+                row = db.query(EmailLog).filter(EmailLog.id == log_id).first()
+                if row:
+                    row.status = status
+                    row.attempts = attempts
+                    row.last_error = err[:1000]
+                    row.updated_at = dt.datetime.utcnow()
+                    db.commit()
+            finally:
+                db.close()
+        except Exception:
+            pass  # logging must never break sending
+
+    last_err = ""
+    for attempt in range(1, len(EMAIL_RETRY_DELAYS) + 2):
+        try:
+            _email_transport(to, subject, body, reply_to)
+            _update("sent", attempt, "")
+            return True
+        except Exception as e:
+            last_err = str(e)
+            if attempt <= len(EMAIL_RETRY_DELAYS):
+                _update("pending", attempt, last_err)
+                sleep_fn(EMAIL_RETRY_DELAYS[attempt - 1])
+    _update("failed", len(EMAIL_RETRY_DELAYS) + 1, last_err)
+    print(f"[email] giving up after {len(EMAIL_RETRY_DELAYS) + 1} attempts to {to}: {last_err}")
+    return False
+
+
+def queue_email(to: str, subject: str, body: str, reply_to: str = "") -> bool:
+    """The ONE way to send email. Creates an email_log row and delivers from
+    a daemon thread (with retries) so the calling request returns instantly.
+    Returns True = queued (delivery status lives in email_log)."""
+    if not to:
+        return False
+    try:
+        db = SessionLocal()
+        try:
+            row = EmailLog(recipient=to, subject=subject[:300], status="pending", attempts=0)
+            db.add(row)
+            db.commit()
+            log_id = row.id
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[email] could not create email_log row: {e}")
+        return False
+    _threading.Thread(
+        target=_send_with_retry, args=(log_id, to, subject, body, reply_to), daemon=True
+    ).start()
+    return True
+
+
 def send_email(subject: str, body: str, reply_to: str = "") -> bool:
-    """Send a plain-text email to the admin notify address."""
-    return send_email_to(NOTIFY_EMAIL, subject, body, reply_to=reply_to)
+    """Queue a plain-text email to the admin notify address."""
+    return queue_email(NOTIFY_EMAIL, subject, body, reply_to=reply_to)
 
 
 def send_email_to(to: str, subject: str, body: str, reply_to: str = "") -> bool:
-    """Send a plain-text email via Gmail SMTP to any address. Returns True on success."""
-    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
-        print("[email] GMAIL_USER / GMAIL_APP_PASSWORD not set — skipping send.")
-        return False
-    try:
-        msg = MIMEMultipart()
-        msg["From"] = f"District Award Travel <{GMAIL_USER}>"
-        msg["To"] = to
-        msg["Subject"] = subject
-        if reply_to:
-            msg["Reply-To"] = reply_to
-        msg.attach(MIMEText(body, "plain"))
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_USER, [to], msg.as_string())
-        return True
-    except Exception as e:
-        print(f"[email] send failed: {e}")
-        return False
+    """Queue a plain-text email to any address (kept for existing call sites)."""
+    return queue_email(to, subject, body, reply_to=reply_to)
 
 
 def format_intake_email(data: dict) -> str:
@@ -2489,6 +2576,19 @@ def render_message_template(tmpl_id: int, body: TemplateRenderIn, db: Session = 
 # ──────────────────────────────────────────────────────────────────────────
 # AI health
 # ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/admin/email-log")
+def email_log_list(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Last 100 outbound emails with delivery status — answers 'did the
+    client actually get it?' without grepping server logs."""
+    rows = db.query(EmailLog).order_by(EmailLog.created_at.desc()).limit(100).all()
+    return [{
+        "id": r.id, "recipient": r.recipient, "subject": r.subject,
+        "status": r.status, "attempts": r.attempts, "last_error": r.last_error,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+    } for r in rows]
+
 
 @app.get("/api/admin/ai-health")
 def ai_health(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
