@@ -61,3 +61,16 @@ intakes, fulfills faster, proves savings better, or protects client data.
 
 - **Message templates stored in DB** (not hardcoded in JS). Operator can edit them in the
   UI without a code deploy. Six defaults seeded at first boot when the table is empty.
+
+- **Research-checklist check-state lives in localStorage** (`dat_checklist_{tripId}`),
+  not the DB. Single-operator tool; the checked boxes are a personal working aid, not
+  audit data. Avoids a new table + API round-trips for a cosmetic feature.
+
+- **Structured option fields are composed into the `desc` string client-side** before
+  sending. The existing message/plan pipeline (`POST /api/admin/send-message` with
+  `plan_details.options[{num,desc,img}]`) and the client portal renderer stay completely
+  unchanged — zero backend or portal migration for richer option cards.
+
+- **Plan-builder drafts autosave to localStorage** (`dat_plan_draft_{clientEmail}`,
+  debounced 1s) and clear on successful send. Protects against accidental tab closes
+  without server-side draft plumbing; one draft per client is enough for one operator.

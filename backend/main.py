@@ -1599,7 +1599,11 @@ def advance_status(record_id: int, body: StatusAdvanceIn, db: Session = Depends(
     rec.updated_at = dt.datetime.utcnow()
     db.commit()
     db.refresh(rec)
-    return _savings_row(rec)
+    row = _savings_row(rec)
+    client = db.query(Client).filter(Client.id == rec.client_id).first()
+    if client:
+        row["client_email"] = client.email
+    return row
 
 
 @app.delete("/api/admin/savings/{record_id}")
