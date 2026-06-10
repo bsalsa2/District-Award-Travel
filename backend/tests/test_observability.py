@@ -39,10 +39,15 @@ def test_request_id_header_present():
 
 
 def test_unhandled_error_returns_clean_500_with_request_id():
-    # register a route that blows up, hit it, confirm the middleware shields it
-    @app.get("/api/_test_boom")
+    # register a route that blows up, hit it, confirm the middleware shields it.
+    # Insert at the front of the route table — the static-files catch-all
+    # mounted at "/" would otherwise swallow any route added after startup.
+    from fastapi.routing import APIRoute
+
     def _boom():
         raise RuntimeError("test explosion")
+
+    app.router.routes.insert(0, APIRoute("/api/_test_boom", _boom, methods=["GET"]))
 
     r = client.get("/api/_test_boom")
     assert r.status_code == 500
