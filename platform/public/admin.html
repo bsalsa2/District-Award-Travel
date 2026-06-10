@@ -808,6 +808,53 @@
   </div>
 </div>
 
+<!-- RESEARCH COCKPIT -->
+<div id="cockpit-overlay" class="overlay" onclick="if(event.target===this)closeCockpit()">
+  <div class="modal wide" style="max-width:920px;max-height:92vh;overflow-y:auto;padding:0">
+    <div style="padding:22px 28px;border-bottom:2px solid var(--orange);display:flex;align-items:flex-start;justify-content:space-between;gap:14px;position:sticky;top:0;background:#16140f;z-index:10;flex-wrap:wrap">
+      <div>
+        <div id="ck-client" style="font-size:1.25rem;font-weight:800;color:var(--gold)">—</div>
+        <div id="ck-route" style="font-size:.86rem;color:var(--text);margin-top:3px"></div>
+        <div id="ck-meta" style="font-size:.76rem;color:var(--muted);margin-top:2px"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="badge badge-orange" id="ck-status">—</span>
+        <span id="ck-advance-btns"></span>
+        <button class="btn-sm primary" onclick="cockpitBuildPlan()">📋 Build Plan</button>
+        <button class="modal-close" onclick="closeCockpit()">&times;</button>
+      </div>
+    </div>
+    <div style="padding:22px 28px">
+      <div id="ck-rate" style="display:none;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.4);border-radius:10px;padding:11px 16px;margin-bottom:16px;font-weight:700;color:var(--green)"></div>
+      <!-- POINTS -->
+      <div class="section-title" style="margin-bottom:10px">🏆 Point Balances &amp; Status</div>
+      <div class="prof-points-grid" id="ck-points" style="margin-bottom:22px"></div>
+      <!-- CHECKLIST + LINKS -->
+      <div class="section-title" style="margin-bottom:10px">🔎 Research Checklist</div>
+      <div id="ck-checklist" style="margin-bottom:14px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px">
+        <a id="ck-gflights" href="#" target="_blank" rel="noopener"><button class="btn-sm primary">✈ Google Flights benchmark ↗</button></a>
+      </div>
+      <!-- TIME -->
+      <div class="section-title" style="margin-bottom:10px">⏱ Time Tracking</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:22px">
+        <span id="ck-time-total" style="font-weight:700;color:var(--gold)">0m tracked</span>
+        <button class="btn-sm" id="ck-timer-btn" onclick="cockpitToggleTimer()">▶ Start timer</button>
+        <span id="ck-timer-live" style="font-size:.8rem;color:var(--muted)"></span>
+        <button class="btn-sm" onclick="cockpitAddTime(15)">+15 min</button>
+      </div>
+      <!-- NOTES -->
+      <div class="section-title" style="margin-bottom:10px">📝 Notes</div>
+      <div class="form-group"><textarea id="ck-note-input" rows="2" placeholder="Research scratchpad — found space on…"></textarea></div>
+      <button class="btn-sm primary" onclick="cockpitAddNote()" style="margin-bottom:12px">Add note</button>
+      <div id="ck-notes" style="margin-bottom:22px"></div>
+      <!-- EVENTS -->
+      <button class="btn-sm" onclick="cockpitToggleEvents()" id="ck-events-toggle">▼ Workflow history</button>
+      <div id="ck-events" style="display:none;margin-top:10px;font-size:.8rem;color:var(--muted)"></div>
+    </div>
+  </div>
+</div>
+
 <!-- NEW TRIP MODAL -->
 <div id="newtrip-overlay" class="overlay">
   <div class="modal">
@@ -2243,10 +2290,188 @@ async function updateAIHealthDot(){
   }catch(e){}
 }
 
-/* Trip detail (upgraded to full research cockpit in a later step) */
-function openCockpit(id){
-  const r=_tripMap[id]; if(!r) return;
-  alert((r.client_name||'?')+' — '+(r.origin?r.origin+' → ':'')+(r.destination||'')+'\nStatus: '+(WF_LABELS[r.workflow_status]||r.workflow_status)+'\nDates: '+(r.dates||'—')+'\nTime tracked: '+(r.time_tracked_minutes||0)+' min');
+/* ════════════════════════════════════════════
+   RESEARCH COCKPIT
+   ════════════════════════════════════════════ */
+let _ckTripId=null, _ckData=null, _ckTimerStart=null, _ckTimerInterval=null;
+
+async function openCockpit(id){
+  _ckTripId=id;
+  document.getElementById('cockpit-overlay').classList.add('open');
+  document.getElementById('ck-client').textContent='Loading…';
+  try{
+    const res=await apiFetch('/api/admin/trips/'+id+'/cockpit');
+    if(!res.ok){ toast('Failed to load cockpit'); return; }
+    _ckData=await res.json();
+    renderCockpit();
+  }catch(e){ toast('Network error'); }
+}
+function closeCockpit(){
+  if(_ckTimerStart && !confirm('Timer is running — close anyway? Elapsed time will be discarded.')) return;
+  cockpitStopTimerSilent();
+  document.getElementById('cockpit-overlay').classList.remove('open');
+}
+
+function fmtMinutes(m){
+  m=m||0;
+  return m>=60 ? Math.floor(m/60)+'h '+(m%60)+'m' : m+'m';
+}
+
+function renderCockpit(){
+  const d=_ckData, t=d.trip, c=d.client;
+  document.getElementById('ck-client').textContent=c.name||c.email;
+  document.getElementById('ck-route').textContent=(t.origin?t.origin+' → ':'')+(t.destination||'—');
+  document.getElementById('ck-meta').textContent=[t.dates,t.passengers?t.passengers+' pax':'',t.cabin].filter(Boolean).join(' · ');
+  document.getElementById('ck-status').textContent=WF_LABELS[t.workflow_status]||t.workflow_status;
+  // advance buttons (same logic as board)
+  const next=WF_NEXT[t.workflow_status];
+  document.getElementById('ck-advance-btns').innerHTML=
+    (next?'<button class="btn-sm primary" onclick="cockpitAdvance()">Advance → '+esc(WF_LABELS[next]||next)+'</button> ':'')
+    +(['booked','closed','declined','lost'].indexOf(t.workflow_status)<0?'<button class="btn-sm" style="border-color:rgba(255,107,107,.4);color:var(--red)" onclick="closeCockpit();openDeclineTrip('+t.id+')">✕ Decline</button>':'');
+  // effective rate
+  const rateEl=document.getElementById('ck-rate');
+  if(d.effective_hourly_rate_cents!=null){
+    rateEl.style.display='block';
+    rateEl.textContent='💰 Effective rate: '+fmtCents(d.effective_hourly_rate_cents)+'/hr';
+  } else rateEl.style.display='none';
+  // points
+  const pts=c.points||[];
+  document.getElementById('ck-points').innerHTML=pts.length
+    ? pts.map(function(p){
+        return '<div class="prof-points-card"><div class="prof-points-prog">'+esc(p.program||'')+(p.tier?' · <span style="color:var(--gold)">'+esc(p.tier)+'</span>':'')+'</div><div class="prof-points-bal">'+esc(p.balance||'—')+'</div></div>';
+      }).join('')
+    : '<div class="prof-empty" style="grid-column:1/-1">No points on file — scan a loyalty document from the Clients tab.</div>';
+  // checklist with localStorage state
+  const key='dat_checklist_'+t.id;
+  let state={};
+  try{ state=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
+  const cl=d.research_checklist||[];
+  document.getElementById('ck-checklist').innerHTML=cl.length
+    ? cl.map(function(item,i){
+        const ck=state[i]?' checked':'';
+        return '<label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;font-size:.85rem">'
+          +'<input type="checkbox"'+ck+' onchange="cockpitChecklistToggle('+i+',this.checked)">'
+          +'<span style="color:var(--gold);font-weight:600">'+esc(item.program)+'</span>'
+          +'<a href="'+esc(item.portal_url)+'" target="_blank" rel="noopener" style="color:var(--orange);text-decoration:underline">'+esc(item.portal_name)+' ↗</a>'
+          +'</label>';
+      }).join('')
+    : '<div style="font-size:.8rem;color:var(--dim);padding:6px 0">No matching research portals — add balances to this client or manage research templates.</div>';
+  document.getElementById('ck-gflights').href=d.google_flights_url||'#';
+  // time
+  document.getElementById('ck-time-total').textContent=fmtMinutes(t.time_tracked_minutes)+' tracked';
+  // notes (newest first)
+  const notes=(t.notes||[]).slice().reverse();
+  document.getElementById('ck-notes').innerHTML=notes.length
+    ? notes.map(function(n){
+        return '<div class="prof-msg"><div class="prof-msg-text">'+esc(n.text)+'</div><div class="prof-msg-time">'+esc((n.at||'').replace('T',' ').slice(0,16))+'</div></div>';
+      }).join('')
+    : '<div style="font-size:.8rem;color:var(--dim)">No notes yet.</div>';
+  // events
+  document.getElementById('ck-events').innerHTML=(d.events||[]).map(function(e){
+    return '<div style="padding:6px 0;border-bottom:1px solid var(--border)">'
+      +esc(e.from_status||'∅')+' → <strong style="color:var(--gold)">'+esc(e.to_status)+'</strong>'
+      +(e.note?' — '+esc(e.note):'')
+      +' <span style="color:var(--dim)">'+esc((e.created_at||'').replace('T',' ').slice(0,16))+'</span></div>';
+  }).join('')||'<div>No events.</div>';
+}
+
+function cockpitChecklistToggle(i,checked){
+  const key='dat_checklist_'+_ckTripId;
+  let state={};
+  try{ state=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
+  state[i]=checked;
+  localStorage.setItem(key,JSON.stringify(state));
+}
+
+async function cockpitAdvance(){
+  const t=_ckData&&_ckData.trip; if(!t) return;
+  const next=WF_NEXT[t.workflow_status]; if(!next) return;
+  if(!confirm('Move this trip to "'+(WF_LABELS[next]||next)+'"?')) return;
+  try{
+    const res=await apiFetch('/api/admin/trips/'+t.id+'/status',{method:'PATCH',body:JSON.stringify({new_status:next,note:''})});
+    if(!res.ok){ const d=await res.json(); toast('Error: '+(d.detail||res.status)); return; }
+    const updated=await res.json();
+    toast('Moved to '+(WF_LABELS[next]||next)+' ✓');
+    loadBoard();
+    if(updated.prompt_savings_record && confirm('Trip booked! Log the savings record now?')){
+      closeCockpit();
+      openAddSaving();
+      document.getElementById('sv-client-email').value=updated.client_email||'';
+      document.getElementById('sv-trip').value=((updated.destination||'')+(updated.dates?' — '+updated.dates:'')).trim();
+      switchPanelByName('fees');
+      return;
+    }
+    openCockpit(t.id);
+  }catch(e){ toast('Network error'); }
+}
+
+async function cockpitAddNote(){
+  const inp=document.getElementById('ck-note-input');
+  const text=inp.value.trim();
+  if(!text||!_ckTripId) return;
+  try{
+    const res=await apiFetch('/api/admin/trips/'+_ckTripId+'/notes',{method:'POST',body:JSON.stringify({text:text})});
+    if(res.ok){ inp.value=''; toast('Note added'); openCockpit(_ckTripId); }
+    else toast('Error adding note');
+  }catch(e){ toast('Network error'); }
+}
+
+async function cockpitAddTime(minutes){
+  if(!_ckTripId) return;
+  try{
+    const res=await apiFetch('/api/admin/trips/'+_ckTripId+'/time',{method:'POST',body:JSON.stringify({minutes:minutes})});
+    if(res.ok){
+      const d=await res.json();
+      document.getElementById('ck-time-total').textContent=fmtMinutes(d.time_tracked_minutes)+' tracked';
+      if(_ckData&&_ckData.trip) _ckData.trip.time_tracked_minutes=d.time_tracked_minutes;
+      toast('+'+minutes+' min logged');
+    }
+  }catch(e){ toast('Network error'); }
+}
+
+function cockpitToggleTimer(){
+  const btn=document.getElementById('ck-timer-btn');
+  if(_ckTimerStart){
+    const elapsedMin=Math.max(1,Math.round((Date.now()-_ckTimerStart)/60000));
+    cockpitStopTimerSilent();
+    cockpitAddTime(elapsedMin);
+  } else {
+    _ckTimerStart=Date.now();
+    btn.textContent='⏹ Stop timer';
+    _ckTimerInterval=setInterval(function(){
+      const s=Math.floor((Date.now()-_ckTimerStart)/1000);
+      document.getElementById('ck-timer-live').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+    },1000);
+  }
+}
+function cockpitStopTimerSilent(){
+  _ckTimerStart=null;
+  if(_ckTimerInterval){ clearInterval(_ckTimerInterval); _ckTimerInterval=null; }
+  const btn=document.getElementById('ck-timer-btn');
+  if(btn) btn.textContent='▶ Start timer';
+  const live=document.getElementById('ck-timer-live');
+  if(live) live.textContent='';
+}
+
+function cockpitToggleEvents(){
+  const el=document.getElementById('ck-events');
+  const open=el.style.display!=='none';
+  el.style.display=open?'none':'block';
+  document.getElementById('ck-events-toggle').textContent=(open?'▼':'▲')+' Workflow history';
+}
+
+function cockpitBuildPlan(){
+  const d=_ckData; if(!d) return;
+  const c=d.client, t=d.trip;
+  closeCockpit();
+  setTimeout(function(){
+    openPlan();
+    window._planTripId=t.id;
+    window._planTripStatus=t.workflow_status;
+    const sel=document.getElementById('plan-client');
+    for(const o of sel.options){ if(o.value.split('|')[1]===c.email){ sel.value=o.value; break; } }
+    document.getElementById('plan-title').value=((t.destination||'Trip')+(t.dates?' — '+t.dates:''));
+  },200);
 }
 
 /* ════════════════════════════════════════════
