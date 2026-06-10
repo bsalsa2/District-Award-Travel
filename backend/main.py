@@ -114,7 +114,13 @@ PUBLIC_DIR = os.path.normpath(os.path.join(HERE, "..", "platform", "public"))
 # Database
 # ──────────────────────────────────────────────────────────────────────────
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
+# Pool pinned for Render free Postgres (~95 usable connections, 1 web instance):
+# 5 persistent + 5 overflow = hard cap of 10 from this process. pool_recycle
+# beats Render's idle-connection reaping; pre_ping catches the stragglers.
+engine = create_engine(
+    DATABASE_URL, connect_args=connect_args, pool_pre_ping=True,
+    pool_size=5, max_overflow=5, pool_recycle=300, pool_timeout=10,
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
@@ -801,6 +807,26 @@ ALLOWED_ORIGINS = [
 if not IS_PRODUCTION:
     ALLOWED_ORIGINS += ["http://localhost:8000", "http://127.0.0.1:8000"]
 
+from fastapi.middleware.gzip import GZipMiddleware
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # admin.html alone is >150KB
+
+
+@app.middleware("http")
+async def cache_headers_middleware(request: Request, call_next):
+    """Immutable assets get a day of caching; HTML stays no-cache so deploys
+    are visible immediately; API responses are never cached."""
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/assets/") or path == "/favicon.svg":
+        response.headers.setdefault("Cache-Control", "public, max-age=86400")
+    elif path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-store")
+    elif path.endswith(".html") or path == "/":
+        response.headers.setdefault("Cache-Control", "no-cache")
+    return response
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -1259,7 +1285,8 @@ def _earned_records(db: Session):
 
 
 @app.get("/api/public/proof")
-def public_proof(db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+def public_proof(request: Request, db: Session = Depends(get_db)):
     """Aggregate stats only — never any client data, names, or emails."""
     recs = _earned_records(db)
     total = sum(
@@ -1310,7 +1337,8 @@ def _example_row(route, cash_cents, taxes_cents, other_cents, points_used, real)
 
 
 @app.get("/api/public/examples")
-def public_examples(db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+def public_examples(request: Request, db: Session = Depends(get_db)):
     """Up to 6 anonymized savings examples. NO names or emails, ever."""
     rows = []
     recs = db.query(SavingsRecord).filter(
@@ -2124,7 +2152,8 @@ def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depe
 
 
 @app.get("/api/report/{token}")
-def savings_report(token: str, db: Session = Depends(get_db)):
+@limiter.limit("30/minute")
+def savings_report(request: Request, token: str, db: Session = Depends(get_db)):
     rec = db.query(SavingsRecord).filter(SavingsRecord.report_token == token).first()
     if not rec:
         raise HTTPException(404, "Report not found")

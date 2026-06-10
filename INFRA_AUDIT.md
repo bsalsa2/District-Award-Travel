@@ -153,6 +153,23 @@ savings/trip rows (admin delete endpoint exists!). Needs explicit handling.
   paid upgrades (#1: Render Starter Postgres for daily backups, ~$7/mo —
   cheap insurance for the irreplaceable ledger).
 
+## LOAD TEST RESULTS (Phase 4 Step 6 — recorded 2026-06-10)
+
+Local run (SQLite, single uvicorn worker — Render Postgres will differ but
+the app code path is identical): **50 concurrent portal sessions + 1 admin
+session, 90s**, via `scripts/load_test.py` (sessions poll /api/client/me
+every 10s — the OLD worst-case pattern, so this is an upper bound; SSE
+cuts request volume by ~95%):
+
+```
+requests: 468   errors: 0 (0.00%)
+latency ms — p50: 23   p95: 243   p99: 271   max: 274
+```
+
+Verdict: zero errors at 5× expected concurrent load; p95 well under 300ms.
+Re-run the full 10-minute version against staging after the Render staging
+service exists: `python3 scripts/load_test.py --base https://<staging-url> --duration 600`.
+
 **Caveats I can't verify from inside the repo:** your actual Render dashboard
 plan/expiry dates, UptimeRobot signup, EmailJS rotation, and DNS/domain access
 for SPF/DKIM. Those four need your hands; everything else I can build and test.
