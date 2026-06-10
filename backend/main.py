@@ -48,6 +48,12 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
+try:
+    from backend import ai_client
+except ImportError:  # running as a flat module (uvicorn main:app)
+    import ai_client
+AIUnavailable = ai_client.AIUnavailable
+
 # ──────────────────────────────────────────────────────────────────────────
 # Configuration
 # ──────────────────────────────────────────────────────────────────────────
@@ -787,7 +793,7 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
         raise HTTPException(status_code=400, detail="raw_email is required")
 
     if GROQ_API_KEY:
-        try:
+        def _do_groq():
             import httpx
             resp = httpx.post(
                 "https://api.groq.com/openai/v1/chat/completions",
@@ -807,14 +813,16 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
                 content = content.split("```")[1]
                 if content.startswith("json"):
                     content = content[4:]
-            parsed = json.loads(content)
+            return json.loads(content)
+        try:
+            parsed = ai_client.call_ai("groq", "parse-email", _do_groq, db_session_factory=SessionLocal)
             return {"ok": True, "source": "groq", "data": parsed}
-        except Exception as e:
+        except (AIUnavailable, Exception) as e:
             print(f"[groq] parse failed: {e}")
             # fall through to Gemini
 
     if GEMINI_API_KEY:
-        try:
+        def _do_gemini():
             import httpx
             resp = httpx.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
@@ -827,9 +835,11 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
                 content = content.split("```")[1]
                 if content.startswith("json"):
                     content = content[4:]
-            parsed = json.loads(content)
+            return json.loads(content)
+        try:
+            parsed = ai_client.call_ai("gemini", "parse-email", _do_gemini, db_session_factory=SessionLocal)
             return {"ok": True, "source": "gemini", "data": parsed}
-        except Exception as e:
+        except (AIUnavailable, Exception) as e:
             print(f"[gemini] parse failed: {e}")
 
     # No AI key configured — return empty stub so UI still works
@@ -1163,9 +1173,9 @@ class ScanDocumentIn(BaseModel):
 async def scan_document(body: ScanDocumentIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Gemini Vision reads a loyalty document image and auto-fills client points data."""
     if not GEMINI_API_KEY:
-        raise HTTPException(status_code=400, detail="GEMINI_API_KEY not configured")
+        return {"ok": False, "error": "AI scanner unavailable — enter balances manually", "manual": True}
 
-    try:
+    def _do():
         import httpx
         resp = httpx.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
@@ -1181,10 +1191,13 @@ async def scan_document(body: ScanDocumentIn, _: dict = Depends(require_admin), 
             content = content.split("```")[1]
             if content.startswith("json"):
                 content = content[4:]
-        extracted = json.loads(content)
-    except Exception as e:
+        return json.loads(content)
+
+    try:
+        extracted = ai_client.call_ai("gemini", "scan-document", _do, db_session_factory=SessionLocal)
+    except (AIUnavailable, Exception) as e:
         print(f"[gemini-vision] scan failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Gemini Vision scan failed: {e}")
+        return {"ok": False, "error": "AI scanner unavailable — enter balances manually", "manual": True}
 
     saved = False
     if body.client_email:
@@ -1260,12 +1273,12 @@ class SweetSpotIn(BaseModel):
 @app.post("/api/ai/sweet-spots")
 async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Gemini generates 3 personalized award recommendations + seats.aero live availability."""
-    if not GEMINI_API_KEY:
-        raise HTTPException(status_code=400, detail="GEMINI_API_KEY not configured")
-
     client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+
+    if not GEMINI_API_KEY:
+        return {"ok": False, "error": "AI recommendations unavailable — no AI key configured", "manual": True}
 
     data = json.loads(client.data or "{}")
     points = data.get("points", [])
@@ -1284,7 +1297,7 @@ async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: S
               .replace("{home_airport}", home_airport)
               .replace("{client_name}", client.name))
 
-    try:
+    def _do():
         import httpx
         resp = httpx.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
@@ -1297,10 +1310,13 @@ async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: S
             content = content.split("```")[1]
             if content.startswith("json"):
                 content = content[4:]
-        recs = json.loads(content)
-    except Exception as e:
+        return json.loads(content)
+
+    try:
+        recs = ai_client.call_ai("gemini", "sweet-spots", _do, db_session_factory=SessionLocal)
+    except (AIUnavailable, Exception) as e:
         print(f"[gemini] sweet spots failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Gemini request failed: {e}")
+        return {"ok": False, "error": "AI recommendations unavailable — try again shortly", "manual": True}
 
     # Enrich with seats.aero live award availability
     if SEATS_AERO_API_KEY:
@@ -1410,7 +1426,7 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
         return s.strip()
 
     if GROQ_API_KEY:
-        try:
+        def _do_groq():
             import httpx
             resp = httpx.post(
                 "https://api.groq.com/openai/v1/chat/completions",
@@ -1425,13 +1441,15 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
             )
             resp.raise_for_status()
             content = strip_fences(resp.json()["choices"][0]["message"]["content"].strip())
-            parsed = json.loads(content)
+            return json.loads(content)
+        try:
+            parsed = ai_client.call_ai("groq", "parse-threads", _do_groq, db_session_factory=SessionLocal)
             return {"ok": True, "source": "groq", "data": parsed}
-        except Exception as e:
+        except (AIUnavailable, Exception) as e:
             print(f"[groq] thread parse failed: {e}")
 
     if GEMINI_API_KEY:
-        try:
+        def _do_gemini():
             import httpx
             resp = httpx.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
@@ -1440,9 +1458,11 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
             )
             resp.raise_for_status()
             content = strip_fences(resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip())
-            parsed = json.loads(content)
+            return json.loads(content)
+        try:
+            parsed = ai_client.call_ai("gemini", "parse-threads", _do_gemini, db_session_factory=SessionLocal)
             return {"ok": True, "source": "gemini", "data": parsed}
-        except Exception as e:
+        except (AIUnavailable, Exception) as e:
             print(f"[gemini] thread parse failed: {e}")
 
     return {"ok": True, "source": "none", "data": {
@@ -2077,7 +2097,7 @@ def ai_health(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
         "groq": bool(GROQ_API_KEY),
         "seats_aero": bool(SEATS_AERO_API_KEY),
     }
-    return {"providers_configured": providers_configured, "stats_24h": stats}
+    return {"providers_configured": providers_configured, "stats_24h": stats, "breakers": ai_client.get_health()}
 
 
 # ──────────────────────────────────────────────────────────────────────────
