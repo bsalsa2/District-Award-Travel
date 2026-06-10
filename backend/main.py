@@ -245,6 +245,17 @@ class MessageTemplate(Base):
     updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
 
 
+class ErrorLog(Base):
+    __tablename__ = "error_log"
+    id         = Column(Integer, primary_key=True)
+    request_id = Column(String, default="", index=True)
+    route      = Column(String, default="")
+    method     = Column(String, default="")
+    message    = Column(Text, default="")
+    traceback  = Column(Text, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+
 class AIUsage(Base):
     __tablename__ = "ai_usage"
     id                = Column(Integer, primary_key=True)
@@ -562,6 +573,129 @@ def format_intake_email(data: dict) -> str:
 # App
 # ──────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="District Award Travel API", version="2.0.0")
+APP_VERSION = os.environ.get("RENDER_GIT_COMMIT", "dev")[:12]
+
+# ──────────────────────────────────────────────────────────────────────────
+# Observability: structured JSON logs, request middleware, slow-query log,
+# error capture with email alert. Fail loudly to the operator, never to
+# the client beyond a clean 500.
+# ──────────────────────────────────────────────────────────────────────────
+import logging
+import time as _time
+import traceback as _traceback
+import threading as _threading
+import uuid as _uuid
+
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record):
+        entry = {
+            "ts": dt.datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+            "level": record.levelname,
+            "msg": record.getMessage(),
+        }
+        for key in ("request_id", "route", "method", "status", "latency_ms", "duration_ms", "query"):
+            if hasattr(record, key):
+                entry[key] = getattr(record, key)
+        return json.dumps(entry)
+
+
+logger = logging.getLogger("dat")
+if not logger.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(_JsonFormatter())
+    logger.addHandler(_h)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+SLOW_QUERY_MS = int(os.environ.get("SLOW_QUERY_MS", "200"))
+
+from sqlalchemy import event as _sa_event
+
+
+@_sa_event.listens_for(engine, "before_cursor_execute")
+def _before_cursor(conn, cursor, statement, parameters, context, executemany):
+    context._dat_query_start = _time.perf_counter()
+
+
+@_sa_event.listens_for(engine, "after_cursor_execute")
+def _after_cursor(conn, cursor, statement, parameters, context, executemany):
+    start = getattr(context, "_dat_query_start", None)
+    if start is None:
+        return
+    elapsed_ms = int((_time.perf_counter() - start) * 1000)
+    if elapsed_ms >= SLOW_QUERY_MS:
+        logger.warning("slow query", extra={"duration_ms": elapsed_ms, "query": statement[:300]})
+
+
+def _record_error(request_id: str, route: str, method: str, exc: BaseException):
+    """Persist the error and email the operator. Runs in a thread so the
+    (blocking, up-to-10s) SMTP send never delays the error response."""
+    tb = "".join(_traceback.format_exception(type(exc), exc, exc.__traceback__))[-8000:]
+
+    def _work():
+        try:
+            db = SessionLocal()
+            try:
+                db.add(ErrorLog(request_id=request_id, route=route, method=method,
+                                message=str(exc)[:500], traceback=tb))
+                db.commit()
+            finally:
+                db.close()
+        except Exception:
+            pass  # never let error-logging cause more errors
+        try:
+            send_email(
+                subject=f"[DAT 500] {method} {route}",
+                body=f"request_id: {request_id}\nroute: {method} {route}\n\n{str(exc)[:500]}\n\n{tb}",
+            )
+        except Exception:
+            pass
+
+    _threading.Thread(target=_work, daemon=True).start()
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = _uuid.uuid4().hex[:12]
+    start = _time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        latency_ms = int((_time.perf_counter() - start) * 1000)
+        logger.error("unhandled error", extra={
+            "request_id": request_id, "route": request.url.path,
+            "method": request.method, "status": 500, "latency_ms": latency_ms,
+        })
+        _record_error(request_id, request.url.path, request.method, exc)
+        return JSONResponse(status_code=500, content={
+            "detail": "Something went wrong on our side. We've been notified.",
+            "request_id": request_id,
+        })
+    latency_ms = int((_time.perf_counter() - start) * 1000)
+    if not request.url.path.startswith(("/assets", "/favicon")):
+        level = logging.WARNING if response.status_code >= 400 else logging.INFO
+        logger.log(level, "request", extra={
+            "request_id": request_id, "route": request.url.path,
+            "method": request.method, "status": response.status_code,
+            "latency_ms": latency_ms,
+        })
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+@app.get("/healthz")
+def healthz():
+    """Liveness + DB check for external uptime monitoring. A dead database
+    must report unhealthy — a monitor pinging a static 200 proves nothing."""
+    try:
+        from sqlalchemy import text as _t
+        with engine.connect() as conn:
+            conn.execute(_t("SELECT 1"))
+        return {"status": "ok", "version": APP_VERSION, "db": "ok"}
+    except Exception as e:
+        logger.error("healthz db failure", extra={"route": "/healthz"})
+        return JSONResponse(status_code=503, content={"status": "degraded", "version": APP_VERSION, "db": f"error: {str(e)[:200]}"})
 
 # Frontends are served from this same origin, so cross-origin access is only
 # needed for explicitly listed extra origins (ALLOWED_ORIGINS, comma-separated).
