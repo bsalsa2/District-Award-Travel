@@ -41,7 +41,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -91,6 +91,11 @@ GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
 NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", GMAIL_USER or "districtawardtravel@gmail.com")
 
+# Public proof thresholds — stats only shown once they clear these floors
+PROOF_MIN_SAVINGS_CENTS = int(os.environ.get("PROOF_MIN_SAVINGS_CENTS", "500000"))  # $5,000
+PROOF_MIN_TRIPS = int(os.environ.get("PROOF_MIN_TRIPS", "5"))
+PROOF_MIN_CPP_RECORDS = int(os.environ.get("PROOF_MIN_CPP_RECORDS", "3"))
+
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SEATS_AERO_API_KEY = os.environ.get("SEATS_AERO_API_KEY", "")
@@ -137,7 +142,20 @@ class Intake(Base):
     email = Column(String, default="", index=True)
     phone = Column(String, default="")
     payload = Column(Text, default="{}")  # complete raw submission
+    consent_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
+
+
+class FunnelEvent(Base):
+    __tablename__ = "funnel_events"
+    id         = Column(Integer, primary_key=True)
+    session_id = Column(String, default="", index=True)
+    event      = Column(String, nullable=False, index=True)   # page_view|form_start|step_1_complete|step_2_complete|step_3_complete|submit
+    page       = Column(String, default="")
+    utm_source = Column(String, default="")
+    utm_medium = Column(String, default="")
+    utm_campaign = Column(String, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
 
 
 class SavingsRecord(Base):
@@ -240,6 +258,14 @@ class AIUsage(Base):
 
 
 Base.metadata.create_all(bind=engine)
+
+# Additive migration: create_all doesn't add columns to existing tables.
+try:
+    from sqlalchemy import text as _sql_text
+    with engine.begin() as _conn:
+        _conn.execute(_sql_text("ALTER TABLE intakes ADD COLUMN consent_at TIMESTAMP"))
+except Exception:
+    pass  # column already exists (or fresh DB where create_all included it)
 
 
 def get_db():
@@ -747,6 +773,29 @@ class TemplateRenderIn(BaseModel):
     trip_id: Optional[int] = None
 
 
+ALLOWED_FUNNEL_EVENTS = {
+    "page_view", "form_start",
+    "step_1_complete", "step_2_complete", "step_3_complete",
+    "submit",
+}
+
+
+class TrackIn(BaseModel):
+    event: str
+    session_id: str = Field("", max_length=64)
+    page: str = Field("", max_length=200)
+    utm_source: str = Field("", max_length=100)
+    utm_medium: str = Field("", max_length=100)
+    utm_campaign: str = Field("", max_length=100)
+
+    @field_validator("event")
+    @classmethod
+    def _event_allowed(cls, v: str) -> str:
+        if v not in ALLOWED_FUNNEL_EVENTS:
+            raise ValueError("unknown event")
+        return v
+
+
 # ── Health ──
 @app.get("/api/health")
 def health():
@@ -884,14 +933,27 @@ async def submit_intake(request: Request, db: Session = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=422, detail="Invalid JSON")
     data = validate_intake(raw)
+    # Funnel: record a submit event if the form sent a session id (stripped from stored payload)
+    session_id = str(data.pop("_session_id", "") or "")[:64]
+    consent_at = dt.datetime.utcnow() if str(data.get("consent", "")).lower() in ("true", "1", "yes", "on") else None
     rec = Intake(
         first_name=data.get("first_name", "")[:100],
         last_name=data.get("last_name", "")[:100],
         email=data.get("email", ""),
         phone=data.get("phone", "")[:40],
         payload=json.dumps(data),
+        consent_at=consent_at,
     )
     db.add(rec)
+    if session_id:
+        db.add(FunnelEvent(
+            session_id=session_id,
+            event="submit",
+            page="intake",
+            utm_source=str(data.get("utm_source", ""))[:100],
+            utm_medium=str(data.get("utm_medium", ""))[:100],
+            utm_campaign=str(data.get("utm_campaign", ""))[:100],
+        ))
     db.commit()
     name = f"{data.get('first_name','')} {data.get('last_name','')}".strip() or "Someone"
     # Notify admin
@@ -923,6 +985,135 @@ districtawardtravel@gmail.com
             body=confirmation_body,
         )
     return {"ok": True, "id": rec.id}
+
+
+# ── Public trust surface: funnel tracking, proof stats, savings examples ──
+EARNED_PROOF_STATUSES = ("booked", "invoiced", "paid")
+
+
+@app.post("/api/track")
+@limiter.limit("120/hour")
+async def track_event(request: Request, body: TrackIn, db: Session = Depends(get_db)):
+    """First-party funnel beacon. Must never break page UX beyond validation."""
+    try:
+        db.add(FunnelEvent(
+            session_id=body.session_id,
+            event=body.event,
+            page=body.page,
+            utm_source=body.utm_source,
+            utm_medium=body.utm_medium,
+            utm_campaign=body.utm_campaign,
+        ))
+        db.commit()
+    except Exception as e:
+        print(f"[track] write failed: {e}")
+    return {"ok": True}
+
+
+def _earned_records(db: Session):
+    return db.query(SavingsRecord).filter(SavingsRecord.status.in_(EARNED_PROOF_STATUSES)).all()
+
+
+@app.get("/api/public/proof")
+def public_proof(db: Session = Depends(get_db)):
+    """Aggregate stats only — never any client data, names, or emails."""
+    recs = _earned_records(db)
+    total = sum(
+        calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        for r in recs
+    )
+    trips = len(recs)
+    cpp_recs = [r for r in recs if r.points_used and r.points_used > 0]
+    avg_cpp_tenths = None
+    if len(cpp_recs) >= PROOF_MIN_CPP_RECORDS:
+        gross_sum = sum(
+            calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+            for r in cpp_recs
+        )
+        pts_sum = sum(r.points_used for r in cpp_recs)
+        if pts_sum > 0:
+            avg_cpp_tenths = (gross_sum * 1000) // pts_sum
+    return {
+        "total_savings_cents": total if total >= PROOF_MIN_SAVINGS_CENTS else None,
+        "trips_planned": trips if trips >= PROOF_MIN_TRIPS else None,
+        "avg_cpp_tenths": avg_cpp_tenths,
+    }
+
+
+# Illustrative seeded examples — labeled real:false server-side so a fake can
+# never render as documented. (route, cash_cents, taxes_fees_cents, other_cents, points_used)
+ILLUSTRATIVE_EXAMPLES = [
+    ("IAD → Tokyo (HND) · Business",        428000, 11240,    0,  75000),
+    ("DCA → Paris (CDG) · Premium Economy", 168000,  9830,    0,  60000),
+    ("BWI → Cancún · Economy, family of 4", 152000, 22400,    0, 100000),
+    ("Maui · 5-night Hyatt hotel",          297500,     0,    0,  87500),
+]
+
+
+def _example_row(route, cash_cents, taxes_cents, other_cents, points_used, real):
+    gross = calc_gross_savings(cash_cents, taxes_cents, other_cents)
+    fee = calc_fee(gross, 1000)
+    return {
+        "route": route,
+        "cash_cents": cash_cents,
+        "out_of_pocket_cents": taxes_cents + other_cents,
+        "points_used": points_used,
+        "savings_cents": gross,
+        "fee_cents": fee,
+        "net_win_cents": gross - fee,
+        "real": real,
+    }
+
+
+@app.get("/api/public/examples")
+def public_examples(db: Session = Depends(get_db)):
+    """Up to 6 anonymized savings examples. NO names or emails, ever."""
+    rows = []
+    recs = db.query(SavingsRecord).filter(
+        SavingsRecord.status.in_(EARNED_PROOF_STATUSES)
+    ).order_by(SavingsRecord.created_at.desc()).all()
+    for r in recs:
+        gross = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        if not r.trip_label or not r.trip_label.strip() or not r.points_used or r.points_used <= 0 or gross <= 0:
+            continue
+        row = _example_row(
+            r.trip_label, r.cash_benchmark_cents,
+            r.award_taxes_fees_cents, r.other_out_of_pocket_cents,
+            r.points_used, True,
+        )
+        row["fee_cents"] = calc_fee(gross, r.fee_rate_bps)
+        row["net_win_cents"] = gross - row["fee_cents"]
+        rows.append(row)
+        if len(rows) >= 6:
+            break
+    if len(rows) < 4:
+        for ex in ILLUSTRATIVE_EXAMPLES:
+            if len(rows) >= 6:
+                break
+            rows.append(_example_row(*ex, real=False))
+    return rows
+
+
+@app.get("/api/admin/funnel")
+def admin_funnel(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Weekly funnel (last 8 ISO weeks): page_view / form_start / submit counts
+    plus a by-utm_source breakdown of submits."""
+    cutoff = dt.datetime.utcnow() - dt.timedelta(days=56)
+    events = db.query(FunnelEvent).filter(FunnelEvent.created_at >= cutoff).all()
+    weeks: dict = {}
+    for e in events:
+        iso = e.created_at.isocalendar()
+        key = f"{iso[0]}-W{iso[1]:02d}"
+        w = weeks.setdefault(key, {
+            "week": key, "page_view": 0, "form_start": 0, "submit": 0,
+            "submits_by_utm_source": {},
+        })
+        if e.event in ("page_view", "form_start", "submit"):
+            w[e.event] += 1
+        if e.event == "submit":
+            src = e.utm_source or "(direct)"
+            w["submits_by_utm_source"][src] = w["submits_by_utm_source"].get(src, 0) + 1
+    return {"weeks": sorted(weeks.values(), key=lambda w: w["week"])}
 
 
 # ── Auth ──
