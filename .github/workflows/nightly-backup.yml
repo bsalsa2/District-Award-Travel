@@ -1,0 +1,65 @@
+name: Nightly encrypted DB backup
+
+# Runs at 07:30 UTC = 2:30/3:30 AM ET, after the day's activity.
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   PROD_DATABASE_URL   the External Database URL from Render (postgres://...)
+#   BACKUP_PASSPHRASE   long random string (openssl rand -base64 32); store a
+#                       copy somewhere safe OUTSIDE GitHub — without it the
+#                       backups are unreadable, which is the point.
+on:
+  schedule:
+    - cron: "30 7 * * *"
+  workflow_dispatch: {}   # manual "Run workflow" button for on-demand backups
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check secrets are configured
+        run: |
+          if [ -z "${{ secrets.PROD_DATABASE_URL }}" ] || [ -z "${{ secrets.BACKUP_PASSPHRASE }}" ]; then
+            echo "::error::PROD_DATABASE_URL and BACKUP_PASSPHRASE repo secrets must be set."
+            exit 1
+          fi
+
+      - name: Dump database
+        env:
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        run: |
+          pg_dump "$DATABASE_URL" --no-owner --no-privileges --format=custom \
+            --file=backup.dump
+          ls -la backup.dump
+          # Fail loudly on a suspiciously tiny dump (empty DB or auth issue)
+          SIZE=$(stat -c%s backup.dump)
+          if [ "$SIZE" -lt 1024 ]; then
+            echo "::error::Dump is only ${SIZE} bytes — something is wrong."
+            exit 1
+          fi
+
+      - name: Encrypt (AES-256, passphrase from secret)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt \
+            -in backup.dump -out "dat-backup-$(date +%F).dump.enc" \
+            -pass env:BACKUP_PASSPHRASE
+          rm backup.dump   # never store plaintext PII outside the DB
+
+      - name: Verify decryptability (round-trip check)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+            -in dat-backup-*.dump.enc -out verify.dump -pass env:BACKUP_PASSPHRASE
+          pg_restore --list verify.dump > /dev/null
+          rm verify.dump
+          echo "Backup decrypts and parses as a valid pg_dump archive."
+
+      - name: Upload artifact (7-day retention)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dat-db-backup-${{ github.run_id }}
+          path: dat-backup-*.dump.enc
+          retention-days: 7
+          if-no-files-found: error
