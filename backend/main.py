@@ -1287,6 +1287,59 @@ def client_login(request: Request, body: LoginIn, db: Session = Depends(get_db))
 
 
 # ── Client self ──
+# In-process change counters drive the SSE stream: admin mutations bump the
+# client's version; the stream watches the dict (zero DB connections held per
+# stream — Postgres impact of N portal tabs is nil between events). Single
+# Render instance → in-process state is authoritative. Restart = clients
+# reconnect and refetch, which is the correct behavior anyway.
+_client_versions: dict = {}
+
+
+def bump_client_version(email: str):
+    if email:
+        _client_versions[email] = _client_versions.get(email, 0) + 1
+
+
+@app.get("/api/client/stream")
+async def client_stream(token: str = ""):
+    """SSE: emits 'changed' when the client's data is mutated, comment
+    heartbeats every 30s, and ends after 5 minutes (client auto-reconnects)
+    so Render spin-downs and dead connections can't accumulate.
+
+    EventSource can't set headers, so auth is the JWT in a query param. The
+    request-logging middleware logs only the path, never the query string.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if payload.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    email = payload["sub"]
+
+    async def gen():
+        import asyncio
+        last_version = _client_versions.get(email, 0)
+        started = _time.monotonic()
+        last_beat = started
+        yield f"event: hello\ndata: {{\"v\": {last_version}}}\n\n"
+        while _time.monotonic() - started < 300:  # 5 min, then reconnect
+            await asyncio.sleep(2)
+            v = _client_versions.get(email, 0)
+            now = _time.monotonic()
+            if v != last_version:
+                last_version = v
+                yield f"event: changed\ndata: {{\"v\": {v}}}\n\n"
+            elif now - last_beat >= 30:
+                last_beat = now
+                yield ": heartbeat\n\n"
+        yield "event: bye\ndata: {}\n\n"
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 @app.get("/api/client/me")
 def client_me(identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
     if identity.get("role") != "client":
@@ -1386,6 +1439,7 @@ def update_client_data(email: str, body: UpdateClientDataIn, _: dict = Depends(r
     existing.update(body.data)
     client.data = json.dumps(existing)
     db.commit()
+    bump_client_version(client.email)
     return {"ok": True}
 
 
@@ -1418,6 +1472,7 @@ def add_client_point(email: str, body: PointEntryIn, _: dict = Depends(require_a
     data["points"] = points
     client.data = json.dumps(data)
     db.commit()
+    bump_client_version(client.email)
     return {"ok": True}
 
 
@@ -1476,6 +1531,7 @@ def send_message(msg_in: SendMessageIn, _: dict = Depends(require_admin), db: Se
     data["messages"] = messages
     client.data = json.dumps(data)
     db.commit()
+    bump_client_version(client.email)
 
     # Send email notification (with nicer formatting for plans)
     if msg_in.is_plan and msg_in.plan_details:
@@ -1957,6 +2013,8 @@ def advance_status(record_id: int, body: StatusAdvanceIn, db: Session = Depends(
     client = db.query(Client).filter(Client.id == rec.client_id).first()
     if client:
         row["client_email"] = client.email
+        # status changes move the lifetime-savings counter — wake the stream
+        bump_client_version(client.email)
     return row
 
 
