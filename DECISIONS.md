@@ -103,3 +103,43 @@ intakes, fulfills faster, proves savings better, or protects client data.
 - **Plan-builder drafts autosave to localStorage** (`dat_plan_draft_{clientEmail}`,
   debounced 1s) and clear on successful send. Protects against accidental tab closes
   without server-side draft plumbing; one draft per client is enough for one operator.
+
+---
+
+## 2026-06-10 — Phase 4 (infrastructure hardening)
+
+- **Backups before observability (risk #1 outranks everything).** The free Render Postgres
+  has no automated backups and an expiry date. One `DROP TABLE` or expired instance loses
+  the entire revenue ledger and client book permanently. Nightly encrypted GitHub Actions
+  backup addresses this before anything else. Restore drill executed and documented with
+  exact timings in RUNBOOK.md.
+
+- **No keep-alive ping to prevent Render free-tier spin-down.** Keep-alive pings burn
+  the 750 free-hours/mo ceiling, which accelerates the transition to paid. The 5-minute
+  UptimeRobot health check serves as incidental keep-alive without a dedicated ping loop.
+  Cold starts (~50s) are acceptable for a portal with a handful of clients; documented
+  in RUNBOOK.md as expected behavior.
+
+- **SSE over adaptive polling for client portal.** Each SSE connection holds no DB
+  connection between events (session-per-event design). In-process `_client_versions`
+  dict bumped on any write to that client's data means the stream only pushes "changed"
+  events. Auto-reconnect with exponential backoff; fallback to 60s polling after 3
+  consecutive failures. Eliminates ~8,600 req/day from a single idle portal tab.
+
+- **Email via daemon thread + BackgroundTasks, not an async task queue.** No Redis,
+  no Celery, no external service. Sufficient for single-operator volume. The
+  `_email_transport` seam makes provider swapping config-only. Three-attempt retry
+  with 5s/25s backoff logged to `email_log` table.
+
+- **In-process circuit breaker state (not DB).** A dyno restart naturally resets
+  "is the provider down?" — the breaker protects within a session. DB storage would
+  add a write per AI call and TTL cleanup. Zero overhead, zero stale state.
+
+- **Connection pool pinned explicitly** (pool_size=5, max_overflow=5, pool_recycle=300,
+  pool_timeout=10). SQLAlchemy defaults are fine today but undocumented. Recycle=300
+  is cheaper than pool_pre_ping alone for long-idle Render connections.
+
+- **`ENV` defaults to production when `DATABASE_URL` is set.** If ENV is unset but
+  DATABASE_URL is present, we take the production-safe path. The seed script also
+  hard-exits on unknown ENV values (not just "production") — a typo like `prod` must
+  not silently allow seeding a production database. Tested in `test_seed_guard.py`.
