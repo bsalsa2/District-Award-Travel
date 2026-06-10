@@ -269,6 +269,41 @@
   .prof-points-bal { font-size:1.2rem; font-weight:700; color:var(--gold); }
   .prof-empty { padding:32px; text-align:center; color:var(--muted); font-size:.85rem; }
 
+  /* PIPELINE BOARD */
+  .today-strip { background:linear-gradient(135deg,rgba(255,138,30,.08),rgba(255,179,71,.04)); border:2px solid var(--orange); border-radius:13px; margin-bottom:20px; overflow:hidden; }
+  .today-head { display:flex; align-items:center; justify-content:space-between; padding:13px 18px; cursor:pointer; }
+  .today-head h3 { font-size:.92rem; color:var(--gold); font-weight:800; }
+  .today-body { display:flex; gap:12px; flex-wrap:wrap; padding:0 18px 16px; }
+  .today-stat { background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:10px 16px; min-width:120px; cursor:default; }
+  .today-stat.click { cursor:pointer; }
+  .today-stat.click:hover { border-color:var(--orange); }
+  .today-stat .ts-num { font-size:1.3rem; font-weight:800; color:var(--gold); }
+  .today-stat .ts-label { font-size:.68rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-top:2px; }
+  .attn-queue { display:flex; flex-direction:column; gap:8px; margin-bottom:22px; }
+  .attn-card { background:linear-gradient(135deg,rgba(22,20,15,0.8),rgba(26,24,20,0.7)); border:1px solid var(--border); border-left:4px solid var(--muted);
+    border-radius:10px; padding:11px 16px; display:flex; align-items:center; gap:14px; cursor:pointer; transition:all .15s; flex-wrap:wrap; }
+  .attn-card:hover { border-color:var(--orange); }
+  .attn-card.lvl-red { border-left-color:var(--red); }
+  .attn-card.lvl-amber { border-left-color:var(--gold); }
+  .kanban { display:flex; gap:12px; overflow-x:auto; padding-bottom:10px; align-items:flex-start; }
+  .kb-col { min-width:260px; width:260px; flex-shrink:0; background:rgba(255,138,30,.04); border:1px solid var(--border); border-radius:12px; padding:10px; }
+  .kb-col-head { display:flex; align-items:center; justify-content:space-between; padding:4px 6px 10px; font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--gold); }
+  .kb-count { background:rgba(255,138,30,.15); border-radius:12px; padding:2px 9px; font-size:.68rem; color:var(--orange); }
+  .kb-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:11px 13px; margin-bottom:8px; cursor:pointer; transition:all .15s; }
+  .kb-card:hover { border-color:var(--orange); }
+  .kb-card .kbc-name { font-weight:700; color:var(--gold); font-size:.86rem; }
+  .kb-card .kbc-route { font-size:.78rem; color:var(--text); margin-top:3px; }
+  .kb-card .kbc-meta { font-size:.71rem; color:var(--muted); margin-top:3px; }
+  .kb-stage { font-size:.7rem; font-weight:700; margin-top:6px; }
+  .kb-stage.lvl-ok { color:var(--muted); }
+  .kb-stage.lvl-amber { color:var(--gold); }
+  .kb-stage.lvl-red { color:var(--red); }
+  .kbc-actions { display:flex; gap:6px; margin-top:8px; }
+  .ai-dot { width:11px; height:11px; border-radius:50%; display:inline-block; background:var(--dim); flex-shrink:0; }
+  .ai-dot.up { background:#4ade80; box-shadow:0 0 6px rgba(74,222,128,.6); }
+  .ai-dot.down { background:var(--red); box-shadow:0 0 6px rgba(255,107,107,.6); }
+  @media(max-width:700px){ .kb-col{min-width:260px} .today-body{padding:0 12px 12px} }
+
   @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,1fr)} .deal-cards-grid{grid-template-columns:1fr 1fr} }
   @media(max-width:800px){ .sidebar{display:none} .content{padding:16px} .page-header{padding:16px}
     .metrics-grid{grid-template-columns:repeat(2,1fr)} .intake-card{grid-template-columns:1fr} .deal-cards-grid{grid-template-columns:1fr} }
@@ -300,7 +335,8 @@
         <div><div class="lt">District<br><span>Award Travel</span></div><div class="lb">Advisor Console</div></div>
       </div>
       <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="switchPanel('overview',this)"><span class="nav-icon">◉</span> Overview</button>
+        <button class="nav-item active" onclick="switchPanel('pipeline',this)"><span class="nav-icon">🗂</span> Pipeline</button>
+        <button class="nav-item" onclick="switchPanel('overview',this)"><span class="nav-icon">◉</span> Overview</button>
         <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('intake',this)"><span class="nav-icon">📋</span> Intake Queue <span class="nav-badge muted" id="nav-intake-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('fees',this)"><span class="nav-icon">$</span> Savings &amp; Fees</button>
@@ -315,8 +351,45 @@
 
     <div class="main">
 
+      <!-- PIPELINE -->
+      <div class="panel active" id="panel-pipeline">
+        <div class="page-header">
+          <div><h1>Pipeline <span class="ai-dot" id="ai-health-dot" title="AI health"></span></h1><p>Trip workflow — new → researching → options sent → decision → booked</p></div>
+          <div class="header-actions">
+            <button class="btn-action solid" onclick="openNewTrip()">+ New Trip</button>
+          </div>
+        </div>
+        <div class="content">
+          <!-- TODAY -->
+          <div class="today-strip">
+            <div class="today-head" onclick="toggleToday()"><h3>📅 Today</h3><span id="today-caret" style="color:var(--muted)">▲</span></div>
+            <div class="today-body" id="today-body">
+              <div class="today-stat click" onclick="switchPanelByName('intake')"><div class="ts-num" id="td-intakes">—</div><div class="ts-label">New intakes 24h</div></div>
+              <div class="today-stat"><div class="ts-num" id="td-stale">—</div><div class="ts-label">Stale trips</div></div>
+              <div class="today-stat"><div class="ts-num" id="td-awaiting">—</div><div class="ts-label">Awaiting decision</div></div>
+              <div class="today-stat click" onclick="switchPanelByName('fees')"><div class="ts-num" id="td-invoices">—</div><div class="ts-label">Outstanding invoices</div></div>
+              <div class="today-stat"><div class="ts-num" id="td-events">—</div><div class="ts-label">Events 24h</div></div>
+            </div>
+          </div>
+          <!-- NEEDS ATTENTION -->
+          <div id="attn-section" style="display:none">
+            <div class="section-header"><div class="section-title">🚨 Needs Attention</div></div>
+            <div class="attn-queue" id="attn-queue"></div>
+          </div>
+          <!-- BOARD -->
+          <div class="kanban" id="kanban-board">
+            <div style="padding:32px;color:var(--muted);font-size:.85rem">Loading board…</div>
+          </div>
+          <!-- ARCHIVE -->
+          <div style="margin-top:18px">
+            <button class="btn-sm" onclick="toggleArchive()" id="archive-toggle">▼ Archive (declined / lost)</button>
+            <div id="archive-section" style="display:none;margin-top:10px"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- OVERVIEW -->
-      <div class="panel active" id="panel-overview">
+      <div class="panel" id="panel-overview">
   <div class="page-header">
     <div><h1>Overview</h1><p>Advisory Operations</p></div>
     <div class="header-actions">
@@ -732,6 +805,41 @@
       <div id="prof-tab-points" style="display:none"></div>
       <div id="prof-tab-savings" style="display:none"></div>
     </div>
+  </div>
+</div>
+
+<!-- NEW TRIP MODAL -->
+<div id="newtrip-overlay" class="overlay">
+  <div class="modal">
+    <div class="modal-head"><h2>✈ New Trip</h2><button class="modal-close" onclick="closeNewTrip()">&times;</button></div>
+    <div class="form-group"><label>Client</label><select id="nt-client"><option value="">Select a client…</option></select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Origin</label><input type="text" id="nt-origin" placeholder="e.g. IAD"></div>
+      <div class="form-group"><label>Destination</label><input type="text" id="nt-dest" placeholder="e.g. Tokyo"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Dates</label><input type="text" id="nt-dates" placeholder="e.g. March 2026"></div>
+      <div class="form-group"><label>Passengers</label><input type="text" id="nt-pax" placeholder="2"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Cabin</label>
+        <select id="nt-cabin"><option value="">—</option><option>Economy</option><option>Premium Economy</option><option>Business</option><option>First</option></select></div>
+      <div class="form-group"><label>Flexibility</label><input type="text" id="nt-flex" placeholder="e.g. ±3 days"></div>
+    </div>
+    <button class="btn-primary" onclick="submitNewTrip()">Create Trip</button>
+  </div>
+</div>
+
+<!-- DECLINE / LOST REASON MODAL -->
+<div id="declinetrip-overlay" class="overlay">
+  <div class="modal">
+    <div class="modal-head"><h2 id="dt-title">Decline Trip</h2><button class="modal-close" onclick="closeDeclineTrip()">&times;</button></div>
+    <p class="modal-sub">A reason is required — it's stored in the trip's history.</p>
+    <input type="hidden" id="dt-trip-id"><input type="hidden" id="dt-status">
+    <div class="form-group"><label>Reason</label>
+      <textarea id="dt-reason" rows="3" placeholder="Why was this trip declined or lost?" oninput="document.getElementById('dt-submit').disabled=!this.value.trim()"></textarea>
+    </div>
+    <button class="btn-primary" id="dt-submit" disabled onclick="submitDeclineTrip()">Confirm</button>
   </div>
 </div>
 
@@ -1842,6 +1950,9 @@ function enterAdmin(){
   loadClients();
   loadIntakes();
   loadMoneyRecords();
+  loadBoard();
+  loadDigest();
+  updateAIHealthDot();
   checkAIStatus();
   startAdminAutoRefresh();
 }
@@ -1909,6 +2020,236 @@ async function checkAIStatus(){
 }
 
 /* ════════════════════════════════════════════
+   PIPELINE BOARD + TODAY PANEL
+   ════════════════════════════════════════════ */
+const WF_ORDER=['new','researching','options_sent','awaiting_decision','booked','closed'];
+const WF_LABELS={new:'New',researching:'Researching',options_sent:'Options Sent',awaiting_decision:'Awaiting Decision',booked:'Booked',closed:'Closed',declined:'Declined',lost:'Lost'};
+const WF_NEXT={new:'researching',researching:'options_sent',options_sent:'awaiting_decision',awaiting_decision:'booked',booked:'closed'};
+const _tripMap={};
+
+async function apiFetch(path,opts){
+  opts=opts||{};
+  opts.headers=Object.assign({'Authorization':'Bearer '+ADMIN_TOKEN},opts.headers||{});
+  if(opts.body && !opts.headers['Content-Type']) opts.headers['Content-Type']='application/json';
+  return fetch(path,opts);
+}
+
+function toggleToday(){
+  const b=document.getElementById('today-body');
+  const open=b.style.display!=='none';
+  b.style.display=open?'none':'flex';
+  document.getElementById('today-caret').textContent=open?'▼':'▲';
+}
+function toggleArchive(){
+  const s=document.getElementById('archive-section');
+  const open=s.style.display!=='none';
+  s.style.display=open?'none':'block';
+  document.getElementById('archive-toggle').textContent=(open?'▼':'▲')+' Archive (declined / lost)';
+}
+function switchPanelByName(id){
+  let btn=null;
+  document.querySelectorAll('.nav-item').forEach(function(b){
+    if((b.getAttribute('onclick')||'').indexOf("'"+id+"'")>=0) btn=b;
+  });
+  switchPanel(id,btn);
+}
+
+async function loadDigest(){
+  if(!ADMIN_TOKEN) return;
+  try{
+    const res=await apiFetch('/api/admin/digest');
+    if(!res.ok) return;
+    const d=await res.json();
+    document.getElementById('td-intakes').textContent=d.new_intakes_24h;
+    document.getElementById('td-stale').textContent=(d.stale_trips||[]).length;
+    document.getElementById('td-awaiting').textContent=(d.awaiting_decision_trips||[]).length;
+    const inv=d.outstanding_invoices||[];
+    const total=inv.reduce(function(s,i){return s+(i.fee_cents||0);},0);
+    document.getElementById('td-invoices').textContent=inv.length+(inv.length?' · '+fmtCents(total):'');
+    document.getElementById('td-events').textContent=d.workflow_events_24h;
+  }catch(e){}
+}
+
+async function loadBoard(){
+  if(!ADMIN_TOKEN) return;
+  // one-time legacy trip import
+  if(!localStorage.getItem('dat_trips_imported')){
+    localStorage.setItem('dat_trips_imported','1');
+    try{
+      const r=await apiFetch('/api/admin/trips/import-legacy',{method:'POST'});
+      if(r.ok){ const d=await r.json(); if(d.imported>0) toast('Imported '+d.imported+' trips from client profiles'); }
+    }catch(e){}
+  }
+  try{
+    const res=await apiFetch('/api/admin/board');
+    if(!res.ok) return;
+    renderBoard(await res.json());
+  }catch(e){}
+}
+
+function stageText(r){
+  const h=Math.round(r.hours_in_stage||0);
+  return h+'h in '+(WF_LABELS[r.workflow_status]||r.workflow_status).toLowerCase();
+}
+
+function renderBoard(data){
+  const cols=data.columns||{};
+  // needs attention
+  const attn=data.needs_attention||[];
+  document.getElementById('attn-section').style.display=attn.length?'block':'none';
+  document.getElementById('attn-queue').innerHTML=attn.map(function(r){
+    _tripMap[r.id]=r;
+    return '<div class="attn-card lvl-'+esc(r.level)+'" onclick="openCockpit('+r.id+')">'
+      +'<span style="font-weight:700;color:var(--gold)">'+esc(r.client_name||'?')+'</span>'
+      +'<span style="font-size:.82rem">'+esc(r.destination||'—')+'</span>'
+      +'<span class="badge badge-orange">'+esc(WF_LABELS[r.workflow_status]||r.workflow_status)+'</span>'
+      +'<span style="font-size:.76rem;color:'+(r.level==='red'?'var(--red)':r.level==='amber'?'var(--gold)':'var(--muted)')+'">'+esc(stageText(r))+'</span>'
+      +(r.follow_up?'<span class="badge badge-red">⏰ follow up</span>':'')
+      +'</div>';
+  }).join('');
+  // kanban columns
+  document.getElementById('kanban-board').innerHTML=WF_ORDER.map(function(st){
+    const cards=cols[st]||[];
+    return '<div class="kb-col"><div class="kb-col-head"><span>'+esc(WF_LABELS[st])+'</span><span class="kb-count">'+cards.length+'</span></div>'
+      +cards.map(tripCardHTML).join('')
+      +(cards.length?'':'<div style="padding:14px 6px;font-size:.74rem;color:var(--dim)">Empty</div>')
+      +'</div>';
+  }).join('');
+  // archive
+  const archived=(cols.declined||[]).concat(cols.lost||[]);
+  document.getElementById('archive-section').innerHTML=archived.length
+    ? archived.map(function(r){
+        _tripMap[r.id]=r;
+        return '<div class="attn-card" onclick="openCockpit('+r.id+')" style="opacity:.7">'
+          +'<span style="font-weight:700;color:var(--gold)">'+esc(r.client_name||'?')+'</span>'
+          +'<span style="font-size:.82rem">'+esc(r.destination||'—')+'</span>'
+          +'<span class="badge badge-muted">'+esc(WF_LABELS[r.workflow_status]||r.workflow_status)+'</span>'
+          +'</div>';
+      }).join('')
+    : '<div style="font-size:.8rem;color:var(--dim);padding:8px 0">No archived trips.</div>';
+}
+
+function tripCardHTML(r){
+  _tripMap[r.id]=r;
+  const route=(r.origin?esc(r.origin)+' → ':'')+esc(r.destination||'—');
+  const chips=(r.programs||[]).slice(0,3).map(function(p){return '<span class="trip-chip">'+esc(p)+'</span>';}).join('');
+  const next=WF_NEXT[r.workflow_status];
+  const actions='<div class="kbc-actions" onclick="event.stopPropagation()">'
+    +(next?'<button class="btn-sm primary" onclick="advanceTrip('+r.id+')">Advance →</button>':'')
+    +(['booked','closed','declined','lost'].indexOf(r.workflow_status)<0?'<button class="btn-sm" style="border-color:rgba(255,107,107,.4);color:var(--red)" onclick="openDeclineTrip('+r.id+')">✕</button>':'')
+    +'</div>';
+  return '<div class="kb-card" onclick="openCockpit('+r.id+')">'
+    +'<div class="kbc-name">'+esc(r.client_name||'?')+'</div>'
+    +'<div class="kbc-route">'+route+'</div>'
+    +'<div class="kbc-meta">'+esc(r.dates||'')+(r.passengers?' · '+esc(r.passengers)+' pax':'')+(r.cabin?' · '+esc(r.cabin):'')+'</div>'
+    +(chips?'<div class="trip-chips" style="margin-top:6px">'+chips+'</div>':'')
+    +'<div class="kb-stage lvl-'+esc(r.level||'ok')+'">'+esc(stageText(r))+(r.follow_up?' · ⏰ follow up':'')+'</div>'
+    +actions
+    +'</div>';
+}
+
+async function advanceTrip(id){
+  const r=_tripMap[id]; if(!r) return;
+  const next=WF_NEXT[r.workflow_status]; if(!next) return;
+  if(!confirm('Move '+(r.client_name||'trip')+' — '+(r.destination||'')+' to "'+(WF_LABELS[next]||next)+'"?')) return;
+  try{
+    const res=await apiFetch('/api/admin/trips/'+id+'/status',{method:'PATCH',body:JSON.stringify({new_status:next,note:''})});
+    if(!res.ok){ const d=await res.json(); toast('Error: '+(d.detail||res.status)); return; }
+    const updated=await res.json();
+    toast('Moved to '+(WF_LABELS[next]||next)+' ✓');
+    loadBoard();
+    if(updated.prompt_savings_record){
+      if(confirm('Trip booked! Log the savings record now?')){
+        openAddSaving();
+        document.getElementById('sv-client-email').value=updated.client_email||r.client_email||'';
+        document.getElementById('sv-trip').value=((updated.destination||r.destination||'')+(updated.dates||r.dates?' — '+(updated.dates||r.dates):'')).trim();
+        switchPanelByName('fees');
+      }
+    }
+  }catch(e){ toast('Network error'); }
+}
+
+function openDeclineTrip(id){
+  document.getElementById('dt-trip-id').value=id;
+  document.getElementById('dt-status').value='declined';
+  document.getElementById('dt-reason').value='';
+  document.getElementById('dt-submit').disabled=true;
+  document.getElementById('dt-title').textContent='Decline / Lose Trip';
+  document.getElementById('declinetrip-overlay').classList.add('open');
+}
+function closeDeclineTrip(){ document.getElementById('declinetrip-overlay').classList.remove('open'); }
+async function submitDeclineTrip(){
+  const id=document.getElementById('dt-trip-id').value;
+  const reason=document.getElementById('dt-reason').value.trim();
+  if(!reason) return;
+  try{
+    const res=await apiFetch('/api/admin/trips/'+id+'/status',{method:'PATCH',body:JSON.stringify({new_status:'declined',note:reason})});
+    if(res.ok){ closeDeclineTrip(); toast('Trip declined'); loadBoard(); }
+    else{ const d=await res.json(); toast('Error: '+(d.detail||res.status)); }
+  }catch(e){ toast('Network error'); }
+}
+
+/* New trip modal */
+function openNewTrip(){
+  const sel=document.getElementById('nt-client');
+  while(sel.options.length>1) sel.remove(1);
+  CLIENTS.forEach(function(c){
+    const o=document.createElement('option');
+    o.value=c.email; o.textContent=c.name+' — '+c.email;
+    sel.appendChild(o);
+  });
+  ['nt-origin','nt-dest','nt-dates','nt-pax','nt-flex'].forEach(function(i){document.getElementById(i).value='';});
+  document.getElementById('nt-cabin').value='';
+  document.getElementById('newtrip-overlay').classList.add('open');
+}
+function closeNewTrip(){ document.getElementById('newtrip-overlay').classList.remove('open'); }
+async function submitNewTrip(){
+  const email=document.getElementById('nt-client').value;
+  if(!email){ toast('Select a client'); return; }
+  const body={
+    client_email:email,
+    origin:document.getElementById('nt-origin').value.trim(),
+    destination:document.getElementById('nt-dest').value.trim(),
+    dates:document.getElementById('nt-dates').value.trim(),
+    passengers:document.getElementById('nt-pax').value.trim()||'1',
+    cabin:document.getElementById('nt-cabin').value,
+    flexibility:document.getElementById('nt-flex').value.trim(),
+  };
+  try{
+    const res=await apiFetch('/api/admin/trips',{method:'POST',body:JSON.stringify(body)});
+    if(res.ok){ closeNewTrip(); toast('Trip created ✓'); loadBoard(); }
+    else{ const d=await res.json(); toast('Error: '+(d.detail||res.status)); }
+  }catch(e){ toast('Network error'); }
+}
+
+/* AI health dot — polled lazily on tab switch */
+async function updateAIHealthDot(){
+  const dot=document.getElementById('ai-health-dot');
+  if(!dot||!ADMIN_TOKEN) return;
+  try{
+    const res=await apiFetch('/api/admin/ai-health');
+    if(!res.ok) return;
+    const d=await res.json();
+    const conf=d.providers_configured||{};
+    const anyConfigured=Object.keys(conf).some(function(k){return conf[k];});
+    const breakers=d.breakers||{};
+    const anyDown=Object.keys(breakers).some(function(k){return breakers[k]&&breakers[k].up===false;});
+    dot.className='ai-dot '+(anyConfigured?(anyDown?'down':'up'):'');
+    const stats=d.stats_24h||{};
+    dot.title='AI health\n'+(Object.keys(stats).length
+      ? Object.keys(stats).map(function(p){const s=stats[p];return p+': '+s.calls_24h+' calls, '+s.failures_24h+' failures, '+s.avg_latency_ms+'ms avg';}).join('\n')
+      : 'No AI calls in last 24h')
+      +(anyConfigured?'':'\nNo providers configured');
+  }catch(e){}
+}
+
+/* Trip detail (upgraded to full research cockpit in a later step) */
+function openCockpit(id){
+  const r=_tripMap[id]; if(!r) return;
+  alert((r.client_name||'?')+' — '+(r.origin?r.origin+' → ':'')+(r.destination||'')+'\nStatus: '+(WF_LABELS[r.workflow_status]||r.workflow_status)+'\nDates: '+(r.dates||'—')+'\nTime tracked: '+(r.time_tracked_minutes||0)+' min');
+}
+
+/* ════════════════════════════════════════════
    NAV / UTILS
    ════════════════════════════════════════════ */
 function switchPanel(id,btn){
@@ -1918,6 +2259,7 @@ function switchPanel(id,btn){
   const el=document.getElementById('panel-'+id);
   if(el) el.classList.add('active');
   if(id==='fees') loadMoneyRecords();
+  if(id==='pipeline'){ loadBoard(); loadDigest(); updateAIHealthDot(); }
 }
 let toastTimer=null;
 function toast(msg){
