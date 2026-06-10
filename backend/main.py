@@ -25,6 +25,9 @@ Environment variables (set these in Render → Environment):
 import os
 import json
 import secrets
+import hmac
+import urllib.parse
+from zoneinfo import ZoneInfo
 import smtplib
 import datetime as dt
 from email.mime.text import MIMEText
@@ -158,6 +161,78 @@ class SavingsRecord(Base):
     updated_at                = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
 
 
+class TripRequest(Base):
+    __tablename__ = "trip_requests"
+    id                   = Column(Integer, primary_key=True)
+    client_id            = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    destination          = Column(String, default="")
+    origin               = Column(String, default="")
+    dates                = Column(String, default="")
+    passengers           = Column(String, default="1")
+    cabin                = Column(String, default="")
+    flexibility          = Column(String, default="")
+    workflow_status      = Column(String, default="new", index=True)
+    stage_entered_at     = Column(DateTime, default=dt.datetime.utcnow)
+    last_activity_at     = Column(DateTime, default=dt.datetime.utcnow)
+    savings_record_id    = Column(Integer, ForeignKey("savings_records.id"), nullable=True)
+    time_tracked_minutes = Column(Integer, default=0)
+    notes                = Column(Text, default="[]")
+    created_at           = Column(DateTime, default=dt.datetime.utcnow)
+
+
+class WorkflowEvent(Base):
+    __tablename__ = "workflow_events"
+    id          = Column(Integer, primary_key=True)
+    trip_id     = Column(Integer, ForeignKey("trip_requests.id"), nullable=False, index=True)
+    from_status = Column(String, default="")
+    to_status   = Column(String, nullable=False)
+    note        = Column(Text, default="")
+    created_at  = Column(DateTime, default=dt.datetime.utcnow)
+
+
+class ResearchTemplate(Base):
+    __tablename__ = "research_templates"
+    id          = Column(Integer, primary_key=True)
+    program     = Column(String, nullable=False)
+    portal_name = Column(String, nullable=False)
+    portal_url  = Column(String, default="")
+    sort_order  = Column(Integer, default=0)
+    active      = Column(Integer, default=1)
+
+
+class Snippet(Base):
+    __tablename__ = "snippets"
+    id         = Column(Integer, primary_key=True)
+    title      = Column(String, nullable=False)
+    body       = Column(Text, default="")
+    category   = Column(String, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+
+
+class MessageTemplate(Base):
+    __tablename__ = "message_templates"
+    id         = Column(Integer, primary_key=True)
+    category   = Column(String, default="")
+    title      = Column(String, nullable=False)
+    subject    = Column(String, default="")
+    body       = Column(Text, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+
+
+class AIUsage(Base):
+    __tablename__ = "ai_usage"
+    id                = Column(Integer, primary_key=True)
+    provider          = Column(String, nullable=False, index=True)
+    operation         = Column(String, default="")
+    latency_ms        = Column(Integer, default=0)
+    success           = Column(Integer, default=1)
+    error             = Column(Text, default="")
+    est_cost_microusd = Column(Integer, default=0)
+    created_at        = Column(DateTime, default=dt.datetime.utcnow)
+
+
 Base.metadata.create_all(bind=engine)
 
 
@@ -244,6 +319,86 @@ def calc_cpp_tenths(gross_savings_cents: int, points_used: int) -> int:
 
 def is_valid_transition(current_status: str, new_status: str) -> bool:
     return new_status in VALID_STATUS_TRANSITIONS.get(current_status, set())
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Workflow logic
+# ──────────────────────────────────────────────────────────────────────────
+WORKFLOW_TRANSITIONS = {
+    "new":               {"researching", "declined", "lost"},
+    "researching":       {"options_sent", "new", "declined", "lost"},
+    "options_sent":      {"awaiting_decision", "researching", "declined", "lost"},
+    "awaiting_decision": {"booked", "researching", "declined", "lost"},
+    "booked":            {"closed"},
+    "closed":            set(),
+    "declined":          set(),
+    "lost":              set(),
+}
+WORKFLOW_STATUSES = set(WORKFLOW_TRANSITIONS.keys())
+REASON_REQUIRED_STATUSES = {"declined", "lost"}
+
+
+def is_valid_workflow_transition(current: str, new: str) -> bool:
+    return new in WORKFLOW_TRANSITIONS.get(current, set())
+
+
+def trip_attention_flags(workflow_status: str, stage_entered_at, last_activity_at, now=None) -> dict:
+    now = now or dt.datetime.utcnow()
+    hours = int((now - stage_entered_at).total_seconds() // 3600) if stage_entered_at else 0
+    level = "ok"
+    follow_up = False
+    if workflow_status == "new":
+        if hours > 48:
+            level = "red"
+        elif hours > 24:
+            level = "amber"
+    elif workflow_status == "researching":
+        if hours > 48:
+            level = "red"
+        elif hours > 24:
+            level = "amber"
+    elif workflow_status == "options_sent":
+        idle_hours = int((now - last_activity_at).total_seconds() // 3600) if last_activity_at else hours
+        if idle_hours > 72:
+            follow_up = True
+            level = "amber"
+    return {"level": level, "follow_up": follow_up, "hours_in_stage": hours}
+
+
+import re as _re
+def render_template(body: str, variables: dict) -> str:
+    def replacer(m):
+        key = m.group(1)
+        return str(variables[key]) if key in variables else m.group(0)
+    return _re.sub(r"\{(\w+)\}", replacer, body)
+
+
+def _trip_row(trip: TripRequest, client=None, now=None) -> dict:
+    flags = trip_attention_flags(trip.workflow_status, trip.stage_entered_at, trip.last_activity_at, now)
+    row = {
+        "id": trip.id,
+        "client_id": trip.client_id,
+        "destination": trip.destination,
+        "origin": trip.origin,
+        "dates": trip.dates,
+        "passengers": trip.passengers,
+        "cabin": trip.cabin,
+        "flexibility": trip.flexibility,
+        "workflow_status": trip.workflow_status,
+        "stage_entered_at": trip.stage_entered_at.isoformat() if trip.stage_entered_at else None,
+        "last_activity_at": trip.last_activity_at.isoformat() if trip.last_activity_at else None,
+        "savings_record_id": trip.savings_record_id,
+        "time_tracked_minutes": trip.time_tracked_minutes,
+        "notes": json.loads(trip.notes or "[]"),
+        "created_at": trip.created_at.isoformat() if trip.created_at else None,
+        **flags,
+    }
+    if client:
+        row["client_name"] = client.name
+        row["client_email"] = client.email
+        cdata = json.loads(client.data or "{}")
+        row["programs"] = [p.get("program", "") for p in cdata.get("points", [])]
+    return row
 
 
 def _savings_row(rec: SavingsRecord) -> dict:
@@ -386,6 +541,47 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.on_event("startup")
+def seed_phase2_defaults():
+    db = SessionLocal()
+    try:
+        if db.query(ResearchTemplate).count() == 0:
+            defaults = [
+                ("Chase Ultimate Rewards", "Hyatt (1:1 transfer)", "https://world.hyatt.com/content/gp/en/awards/award-search.html", 1),
+                ("Chase Ultimate Rewards", "United MileagePlus (1:1 transfer)", "https://www.united.com/en/us/book-flight/united-awards", 2),
+                ("Chase Ultimate Rewards", "Air Canada Aeroplan (1:1 transfer)", "https://www.aircanada.com/aeroplan/redeem/", 3),
+                ("Chase Ultimate Rewards", "Air France/KLM Flying Blue (1:1 transfer)", "https://wwws.airfrance.us/information/flying-blue", 4),
+                ("Amex Membership Rewards", "ANA Mileage Club (1:1 transfer)", "https://www.ana.co.jp/en/us/amc/", 1),
+                ("Amex Membership Rewards", "Air France/KLM Flying Blue (1:1 transfer)", "https://wwws.airfrance.us/information/flying-blue", 2),
+                ("Amex Membership Rewards", "Avianca LifeMiles (1:1 transfer)", "https://www.lifemiles.com/", 3),
+                ("Amex Membership Rewards", "Delta SkyMiles (1:1 transfer)", "https://www.delta.com/us/en/skymiles/redeem-miles/book-award-travel", 4),
+                ("Capital One Miles", "Turkish Miles&Smiles (1:1 transfer)", "https://www.turkishairlines.com/en-us/miles-and-smiles/", 1),
+                ("Capital One Miles", "Air Canada Aeroplan (1:1 transfer)", "https://www.aircanada.com/aeroplan/redeem/", 2),
+                ("United MileagePlus", "United Award Search", "https://www.united.com/en/us/book-flight/united-awards", 1),
+                ("American AAdvantage", "AA Award Search", "https://www.aa.com/homePage.do", 1),
+                ("Alaska Mileage Plan", "Alaska Award Search", "https://www.alaskaair.com/content/mileage-plan/use-miles/award-travel", 1),
+                ("World of Hyatt", "Hyatt Award Search", "https://world.hyatt.com/content/gp/en/awards/award-search.html", 1),
+                ("Delta SkyMiles", "Delta Award Search", "https://www.delta.com/us/en/skymiles/redeem-miles/book-award-travel", 1),
+            ]
+            for program, portal_name, portal_url, sort_order in defaults:
+                db.add(ResearchTemplate(program=program, portal_name=portal_name, portal_url=portal_url, sort_order=sort_order))
+            db.commit()
+        if db.query(MessageTemplate).count() == 0:
+            templates = [
+                ("welcome", "Welcome", "Welcome to District Award Travel!", "Hi {first_name},\n\nWelcome to District Award Travel! I'm Braden, and I'm excited to help you get the most out of your points and miles.\n\nI've reviewed your profile and I'm already thinking about some great options for your trips. I'll be in touch soon with personalized recommendations.\n\nIn the meantime, feel free to reply with any questions or updates to your travel plans.\n\nBest,\nBraden\nDistrict Award Travel"),
+                ("options_ready", "Options Ready", "Your travel options are ready — {route}", "Hi {first_name},\n\nGreat news — I've put together some award options for {route} that I think you'll love.\n\nPlease log in to your portal to review the detailed options with screenshots. Once you've had a chance to look them over, let me know which direction interests you most and I'll help you get it booked.\n\nRemember: award space can disappear quickly, so don't wait too long!\n\nBest,\nBraden\nDistrict Award Travel"),
+                ("nudge_72h", "72h Follow-Up Nudge", "Quick check-in on your options — {route}", "Hi {first_name},\n\nJust checking in on the options I sent over for {route}. Have you had a chance to look them over?\n\nIf you have any questions or want me to search for other options, just reply and I'll get right on it.\n\nBest,\nBraden\nDistrict Award Travel"),
+                ("booking_confirmed", "Booking Confirmed", "Booking confirmed — {route}", "Hi {first_name},\n\nFantastic news — your trip is booked! Here's a quick recap:\n\nRoute: {route}\n\nYou saved {savings_amount} compared to the cash price. My fee is {fee_amount}, which I'll invoice shortly.\n\nThank you for trusting District Award Travel. I can't wait to hear about your trip!\n\nBest,\nBraden\nDistrict Award Travel"),
+                ("invoice", "Invoice", "Invoice from District Award Travel — {route}", "Hi {first_name},\n\nThank you for working with District Award Travel! Please find your invoice details below:\n\nRoute: {route}\nTotal Savings: {savings_amount}\nDistrict Fee (10%): {fee_amount}\n\nPayment can be made via Venmo, Zelle, or check. Please reach out with any questions.\n\nThank you again!\n\nBraden\nDistrict Award Travel"),
+                ("referral_ask", "Referral Ask", "Quick favor?", "Hi {first_name},\n\nI hope you're enjoying the fruits of your savings — {savings_amount} is nothing to sneeze at!\n\nI'm growing District Award Travel mostly through word of mouth, and if you know anyone who travels and has points sitting around, I'd love an introduction. One name is all it takes.\n\nThank you for being such a great client.\n\nBraden\nDistrict Award Travel"),
+            ]
+            for category, title, subject, body in templates:
+                db.add(MessageTemplate(category=category, title=title, subject=subject, body=body))
+            db.commit()
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
 def seed_admin():
     """Ensure the admin account matches the current env vars.
 
@@ -460,6 +656,89 @@ class SavingsPatchIn(BaseModel):
 class StatusAdvanceIn(BaseModel):
     new_status: str
     payment_method: Optional[str] = None  # recorded when transitioning to paid
+
+
+class TripCreateIn(BaseModel):
+    client_email: str
+    destination: str = ""
+    origin: str = ""
+    dates: str = ""
+    passengers: str = "1"
+    cabin: str = ""
+    flexibility: str = ""
+
+
+class TripPatchIn(BaseModel):
+    destination: Optional[str] = None
+    origin: Optional[str] = None
+    dates: Optional[str] = None
+    passengers: Optional[str] = None
+    cabin: Optional[str] = None
+    flexibility: Optional[str] = None
+
+
+class WorkflowAdvanceIn(BaseModel):
+    new_status: str
+    note: str = ""
+
+
+class TripNoteIn(BaseModel):
+    text: str
+
+
+class TripTimeIn(BaseModel):
+    minutes: int = Field(..., ge=1, le=600)
+
+
+class LinkSavingsIn(BaseModel):
+    savings_record_id: int
+
+
+class SnippetIn(BaseModel):
+    title: str
+    body: str = ""
+    category: str = ""
+
+
+class SnippetPatchIn(BaseModel):
+    title: Optional[str] = None
+    body: Optional[str] = None
+    category: Optional[str] = None
+
+
+class ResearchTemplateIn(BaseModel):
+    program: str
+    portal_name: str
+    portal_url: str = ""
+    sort_order: int = 0
+    active: int = 1
+
+
+class ResearchTemplatePatchIn(BaseModel):
+    program: Optional[str] = None
+    portal_name: Optional[str] = None
+    portal_url: Optional[str] = None
+    sort_order: Optional[int] = None
+    active: Optional[int] = None
+
+
+class MessageTemplateIn(BaseModel):
+    category: str = ""
+    title: str
+    subject: str = ""
+    body: str = ""
+
+
+class MessageTemplatePatchIn(BaseModel):
+    category: Optional[str] = None
+    title: Optional[str] = None
+    subject: Optional[str] = None
+    body: Optional[str] = None
+
+
+class TemplateRenderIn(BaseModel):
+    client_email: str
+    trip_id: Optional[int] = None
 
 
 # ── Health ──
@@ -1411,6 +1690,485 @@ def delete_intake(intake_id: int, _: dict = Depends(require_admin), db: Session 
     db.delete(intake)
     db.commit()
     return {"ok": True}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 2 — Workflow / Trip Requests
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/admin/board")
+def get_board(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    now = dt.datetime.utcnow()
+    trips = db.query(TripRequest).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    columns = {s: [] for s in WORKFLOW_STATUSES}
+    needs_attention = []
+    for trip in trips:
+        client = client_map.get(trip.client_id)
+        row = _trip_row(trip, client, now)
+        columns.setdefault(trip.workflow_status, []).append(row)
+        if row["level"] in ("red", "amber") or row["follow_up"]:
+            needs_attention.append(row)
+        elif trip.workflow_status == "new":
+            needs_attention.append(row)
+    # sort needs_attention: reds first, then follow_up, then ambers, by hours desc
+    def urgency_key(r):
+        lvl = {"red": 0, "amber": 1, "ok": 2}.get(r["level"], 2)
+        fu = 0 if r["follow_up"] else 1
+        return (lvl, fu, -r["hours_in_stage"])
+    needs_attention.sort(key=urgency_key)
+    seen = set()
+    deduped = []
+    for r in needs_attention:
+        if r["id"] not in seen:
+            seen.add(r["id"])
+            deduped.append(r)
+    return {"columns": columns, "needs_attention": deduped}
+
+
+@app.get("/api/admin/trips")
+def list_trips(client_email: Optional[str] = None, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    now = dt.datetime.utcnow()
+    q = db.query(TripRequest)
+    if client_email:
+        client = db.query(Client).filter(Client.email == client_email.lower()).first()
+        if not client:
+            return []
+        q = q.filter(TripRequest.client_id == client.id)
+    trips = q.order_by(TripRequest.created_at.desc()).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    return [_trip_row(t, client_map.get(t.client_id), now) for t in trips]
+
+
+@app.post("/api/admin/trips")
+def create_trip(body: TripCreateIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
+    if not client:
+        raise HTTPException(404, "Client not found")
+    trip = TripRequest(
+        client_id=client.id,
+        destination=body.destination,
+        origin=body.origin,
+        dates=body.dates,
+        passengers=body.passengers,
+        cabin=body.cabin,
+        flexibility=body.flexibility,
+    )
+    db.add(trip)
+    db.flush()
+    db.add(WorkflowEvent(trip_id=trip.id, from_status="", to_status="new"))
+    db.commit()
+    db.refresh(trip)
+    return _trip_row(trip, client)
+
+
+@app.patch("/api/admin/trips/{trip_id}")
+def update_trip(trip_id: int, body: TripPatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(trip, field, val)
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    return _trip_row(trip, client)
+
+
+@app.patch("/api/admin/trips/{trip_id}/status")
+def advance_trip_status(trip_id: int, body: WorkflowAdvanceIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    if not is_valid_workflow_transition(trip.workflow_status, body.new_status):
+        raise HTTPException(400, f"Cannot transition from '{trip.workflow_status}' to '{body.new_status}'")
+    if body.new_status in REASON_REQUIRED_STATUSES and not body.note.strip():
+        raise HTTPException(422, "A reason is required when marking a trip declined or lost")
+    old_status = trip.workflow_status
+    trip.workflow_status = body.new_status
+    trip.stage_entered_at = dt.datetime.utcnow()
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.add(WorkflowEvent(trip_id=trip.id, from_status=old_status, to_status=body.new_status, note=body.note))
+    db.commit()
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    result = _trip_row(trip, client)
+    if body.new_status == "booked":
+        result["prompt_savings_record"] = True
+    return result
+
+
+@app.get("/api/admin/trips/{trip_id}/events")
+def trip_events(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    events = db.query(WorkflowEvent).filter(WorkflowEvent.trip_id == trip_id).order_by(WorkflowEvent.created_at.desc()).all()
+    return [{"id": e.id, "from_status": e.from_status, "to_status": e.to_status, "note": e.note, "created_at": e.created_at.isoformat()} for e in events]
+
+
+@app.post("/api/admin/trips/{trip_id}/notes")
+def add_trip_note(trip_id: int, body: TripNoteIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    notes = json.loads(trip.notes or "[]")
+    notes.append({"text": body.text, "at": dt.datetime.utcnow().isoformat()})
+    trip.notes = json.dumps(notes)
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True, "notes": notes}
+
+
+@app.post("/api/admin/trips/{trip_id}/time")
+def add_trip_time(trip_id: int, body: TripTimeIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    trip.time_tracked_minutes = (trip.time_tracked_minutes or 0) + body.minutes
+    db.commit()
+    return {"ok": True, "time_tracked_minutes": trip.time_tracked_minutes}
+
+
+@app.get("/api/admin/trips/{trip_id}/cockpit")
+def trip_cockpit(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    now = dt.datetime.utcnow()
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    if not client:
+        raise HTTPException(404, "Client not found")
+    cdata = json.loads(client.data or "{}")
+    points = cdata.get("points", [])
+    program_names = [p.get("program", "") for p in points]
+    templates = db.query(ResearchTemplate).filter(ResearchTemplate.active == 1).all()
+    checklist = []
+    for t in templates:
+        if any(t.program.lower() in pn.lower() or pn.lower() in t.program.lower() for pn in program_names):
+            checklist.append({"program": t.program, "portal_name": t.portal_name, "portal_url": t.portal_url})
+    events = db.query(WorkflowEvent).filter(WorkflowEvent.trip_id == trip_id).order_by(WorkflowEvent.created_at.desc()).all()
+    gf_query = urllib.parse.quote(f"flights from {trip.origin or 'origin'} to {trip.destination or 'destination'}")
+    google_flights_url = f"https://www.google.com/travel/flights?q={gf_query}"
+    effective_hourly_rate_cents = None
+    if trip.savings_record_id and trip.time_tracked_minutes and trip.time_tracked_minutes > 0:
+        sr = db.query(SavingsRecord).filter(SavingsRecord.id == trip.savings_record_id).first()
+        if sr and sr.status == "paid":
+            gross = calc_gross_savings(sr.cash_benchmark_cents, sr.award_taxes_fees_cents, sr.other_out_of_pocket_cents)
+            fee = calc_fee(gross, sr.fee_rate_bps)
+            effective_hourly_rate_cents = fee * 60 // trip.time_tracked_minutes
+    return {
+        "trip": _trip_row(trip, client, now),
+        "client": {
+            "name": client.name,
+            "email": client.email,
+            "points": points,
+            "preferences": cdata.get("preferences", {}),
+        },
+        "events": [{"from_status": e.from_status, "to_status": e.to_status, "note": e.note, "created_at": e.created_at.isoformat()} for e in events],
+        "research_checklist": checklist,
+        "google_flights_url": google_flights_url,
+        "effective_hourly_rate_cents": effective_hourly_rate_cents,
+    }
+
+
+@app.post("/api/admin/trips/{trip_id}/link-savings")
+def link_savings(trip_id: int, body: LinkSavingsIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    sr = db.query(SavingsRecord).filter(SavingsRecord.id == body.savings_record_id).first()
+    if not sr:
+        raise HTTPException(404, "Savings record not found")
+    if sr.client_id != trip.client_id:
+        raise HTTPException(400, "Savings record belongs to a different client")
+    trip.savings_record_id = body.savings_record_id
+    db.commit()
+    return {"ok": True}
+
+
+@app.post("/api/admin/trips/import-legacy")
+def import_legacy_trips(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    clients = db.query(Client).all()
+    imported = 0
+    for client in clients:
+        cdata = json.loads(client.data or "{}")
+        if cdata.get("_trips_imported"):
+            continue
+        for t in cdata.get("trips", []):
+            trip = TripRequest(
+                client_id=client.id,
+                destination=t.get("destination", ""),
+                dates=t.get("dates", ""),
+                passengers=str(t.get("passengers", "1")),
+                cabin=t.get("cabin", ""),
+                flexibility=t.get("flexibility", ""),
+                stage_entered_at=client.created_at,
+                last_activity_at=client.created_at,
+            )
+            db.add(trip)
+            db.flush()
+            db.add(WorkflowEvent(trip_id=trip.id, from_status="", to_status="new", note="imported from legacy client data"))
+            imported += 1
+        cdata["_trips_imported"] = True
+        client.data = json.dumps(cdata)
+    db.commit()
+    return {"ok": True, "imported": imported}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Research Templates / Snippets / Message Templates
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/admin/research-templates")
+def list_research_templates(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rows = db.query(ResearchTemplate).order_by(ResearchTemplate.sort_order, ResearchTemplate.id).all()
+    return [{"id": r.id, "program": r.program, "portal_name": r.portal_name, "portal_url": r.portal_url, "sort_order": r.sort_order, "active": r.active} for r in rows]
+
+
+@app.post("/api/admin/research-templates")
+def create_research_template(body: ResearchTemplateIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = ResearchTemplate(**body.model_dump())
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return {"id": t.id, **body.model_dump()}
+
+
+@app.patch("/api/admin/research-templates/{tmpl_id}")
+def update_research_template(tmpl_id: int, body: ResearchTemplatePatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(ResearchTemplate).filter(ResearchTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(t, field, val)
+    db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/admin/research-templates/{tmpl_id}")
+def delete_research_template(tmpl_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(ResearchTemplate).filter(ResearchTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    db.delete(t)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/admin/snippets")
+def list_snippets(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rows = db.query(Snippet).order_by(Snippet.category, Snippet.title).all()
+    return [{"id": r.id, "title": r.title, "body": r.body, "category": r.category} for r in rows]
+
+
+@app.post("/api/admin/snippets")
+def create_snippet(body: SnippetIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    s = Snippet(**body.model_dump())
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    return {"id": s.id, **body.model_dump()}
+
+
+@app.patch("/api/admin/snippets/{snippet_id}")
+def update_snippet(snippet_id: int, body: SnippetPatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    s = db.query(Snippet).filter(Snippet.id == snippet_id).first()
+    if not s:
+        raise HTTPException(404, "Snippet not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(s, field, val)
+    s.updated_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/admin/snippets/{snippet_id}")
+def delete_snippet(snippet_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    s = db.query(Snippet).filter(Snippet.id == snippet_id).first()
+    if not s:
+        raise HTTPException(404, "Snippet not found")
+    db.delete(s)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/admin/templates")
+def list_message_templates(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rows = db.query(MessageTemplate).order_by(MessageTemplate.category, MessageTemplate.title).all()
+    return [{"id": r.id, "category": r.category, "title": r.title, "subject": r.subject, "body": r.body} for r in rows]
+
+
+@app.post("/api/admin/templates")
+def create_message_template(body: MessageTemplateIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = MessageTemplate(**body.model_dump())
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return {"id": t.id, **body.model_dump()}
+
+
+@app.patch("/api/admin/templates/{tmpl_id}")
+def update_message_template(tmpl_id: int, body: MessageTemplatePatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(MessageTemplate).filter(MessageTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(t, field, val)
+    t.updated_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/admin/templates/{tmpl_id}")
+def delete_message_template(tmpl_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(MessageTemplate).filter(MessageTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    db.delete(t)
+    db.commit()
+    return {"ok": True}
+
+
+@app.post("/api/admin/templates/{tmpl_id}/render")
+def render_message_template(tmpl_id: int, body: TemplateRenderIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(MessageTemplate).filter(MessageTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
+    if not client:
+        raise HTTPException(404, "Client not found")
+    variables: dict = {"first_name": client.name.split()[0] if client.name else client.name}
+    if body.trip_id:
+        trip = db.query(TripRequest).filter(TripRequest.id == body.trip_id).first()
+        if trip:
+            variables["route"] = f"{trip.origin} → {trip.destination}" if trip.origin else trip.destination
+            if trip.savings_record_id:
+                sr = db.query(SavingsRecord).filter(SavingsRecord.id == trip.savings_record_id).first()
+                if sr:
+                    gross = calc_gross_savings(sr.cash_benchmark_cents, sr.award_taxes_fees_cents, sr.other_out_of_pocket_cents)
+                    fee = calc_fee(gross, sr.fee_rate_bps)
+                    def _fmt(c): return f"${abs(c) // 100:,}.{abs(c) % 100:02d}"
+                    variables["savings_amount"] = _fmt(gross)
+                    variables["fee_amount"] = _fmt(fee)
+    return {"subject": render_template(t.subject, variables), "body": render_template(t.body, variables)}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# AI health
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/admin/ai-health")
+def ai_health(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    cutoff = dt.datetime.utcnow() - dt.timedelta(hours=24)
+    rows = db.query(AIUsage).filter(AIUsage.created_at >= cutoff).all()
+    by_provider: dict = {}
+    for r in rows:
+        p = by_provider.setdefault(r.provider, {"calls": 0, "failures": 0, "total_latency_ms": 0})
+        p["calls"] += 1
+        if not r.success:
+            p["failures"] += 1
+        p["total_latency_ms"] += r.latency_ms
+    stats = {}
+    for prov, p in by_provider.items():
+        stats[prov] = {
+            "calls_24h": p["calls"],
+            "failures_24h": p["failures"],
+            "avg_latency_ms": p["total_latency_ms"] // p["calls"] if p["calls"] else 0,
+        }
+    providers_configured = {
+        "gemini": bool(GEMINI_API_KEY),
+        "groq": bool(GROQ_API_KEY),
+        "seats_aero": bool(SEATS_AERO_API_KEY),
+    }
+    return {"providers_configured": providers_configured, "stats_24h": stats}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Daily ops digest
+# ──────────────────────────────────────────────────────────────────────────
+
+def build_digest(db: Session, now=None) -> dict:
+    ET = ZoneInfo("America/New_York")
+    now = now or dt.datetime.utcnow()
+    since_24h = now - dt.timedelta(hours=24)
+    new_intakes = db.query(Intake).filter(Intake.created_at >= since_24h).count()
+    total_intakes = db.query(Intake).count()
+    trips = db.query(TripRequest).filter(TripRequest.workflow_status.notin_(["closed", "declined", "lost"])).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    stale_cards = []
+    awaiting = []
+    for trip in trips:
+        flags = trip_attention_flags(trip.workflow_status, trip.stage_entered_at, trip.last_activity_at, now)
+        if flags["level"] in ("red", "amber") or flags["follow_up"]:
+            client = client_map.get(trip.client_id)
+            stale_cards.append({
+                "client": client.name if client else "?",
+                "destination": trip.destination,
+                "status": trip.workflow_status,
+                "hours_in_stage": flags["hours_in_stage"],
+                "level": flags["level"],
+            })
+        if trip.workflow_status == "awaiting_decision":
+            client = client_map.get(trip.client_id)
+            awaiting.append({"client": client.name if client else "?", "destination": trip.destination})
+    invoiced = db.query(SavingsRecord).filter(SavingsRecord.status == "invoiced").all()
+    invoiced_list = []
+    for r in invoiced:
+        client = client_map.get(r.client_id)
+        gross = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee = calc_fee(gross, r.fee_rate_bps)
+        invoiced_list.append({"invoice_number": r.invoice_number, "client": client.name if client else "?", "fee_cents": fee})
+    events_24h = db.query(WorkflowEvent).filter(WorkflowEvent.created_at >= since_24h).count()
+    return {
+        "generated_at_et": now.astimezone(ET).isoformat(),
+        "new_intakes_24h": new_intakes,
+        "total_pending_intakes": total_intakes,
+        "stale_trips": stale_cards,
+        "awaiting_decision_trips": awaiting,
+        "outstanding_invoices": invoiced_list,
+        "workflow_events_24h": events_24h,
+    }
+
+
+@app.get("/api/admin/digest")
+def get_digest(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    return build_digest(db)
+
+
+CRON_SECRET = os.environ.get("CRON_SECRET", "")
+
+
+@app.post("/api/cron/digest")
+def cron_digest(key: str = "", db: Session = Depends(get_db)):
+    if not CRON_SECRET:
+        raise HTTPException(503, "Digest cron not configured — set CRON_SECRET env var")
+    if not hmac.compare_digest(key, CRON_SECRET):
+        raise HTTPException(403, "Invalid cron key")
+    digest = build_digest(db)
+    ET = ZoneInfo("America/New_York")
+    lines = [
+        f"District Award Travel — Daily Digest",
+        f"Generated: {digest['generated_at_et']}",
+        "",
+        f"NEW INTAKES: {digest['new_intakes_24h']} in last 24h ({digest['total_pending_intakes']} total pending)",
+        "",
+    ]
+    if digest["stale_trips"]:
+        lines.append("NEEDS ATTENTION:")
+        for t in digest["stale_trips"]:
+            lines.append(f"  [{t['level'].upper()}] {t['client']} — {t['destination']} ({t['status']}, {t['hours_in_stage']}h in stage)")
+        lines.append("")
+    if digest["awaiting_decision_trips"]:
+        lines.append("AWAITING DECISION:")
+        for t in digest["awaiting_decision_trips"]:
+            lines.append(f"  {t['client']} — {t['destination']}")
+        lines.append("")
+    if digest["outstanding_invoices"]:
+        lines.append("OUTSTANDING INVOICES:")
+        for inv in digest["outstanding_invoices"]:
+            fee_str = f"${inv['fee_cents'] // 100:,}.{inv['fee_cents'] % 100:02d}"
+            lines.append(f"  {inv['invoice_number']} — {inv['client']} — {fee_str}")
+        lines.append("")
+    lines.append(f"Workflow events in last 24h: {digest['workflow_events_24h']}")
+    sent = send_email("DAT Daily Digest", "\n".join(lines))
+    return {"ok": True, "sent": sent}
 
 
 # ──────────────────────────────────────────────────────────────────────────
