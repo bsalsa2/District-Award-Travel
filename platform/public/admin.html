@@ -109,6 +109,25 @@
   .metric-val.blue{color:var(--blue)} .metric-val.red{color:var(--red)}
   .metric-delta { font-size:.73rem; color:var(--dim); margin-top:4px; }
 
+  /* COMMAND PALETTE (Cmd/Ctrl+K) */
+  #cmdk{display:none;position:fixed;inset:0;z-index:900;background:rgba(28,25,23,.35);backdrop-filter:blur(2px);align-items:flex-start;justify-content:center;padding:14vh 16px 0}
+  #cmdk.open{display:flex}
+  .cmdk-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:540px;box-shadow:0 24px 64px rgba(0,0,0,.22);overflow:hidden;animation:cmdkIn .14s ease}
+  @keyframes cmdkIn{from{opacity:0;transform:scale(.98) translateY(-6px)}to{opacity:1;transform:none}}
+  .cmdk-input{width:100%;border:none;outline:none;padding:16px 18px;font-size:.98rem;font-family:var(--font);color:var(--text);background:var(--surface);border-bottom:1px solid var(--border)}
+  .cmdk-input::placeholder{color:var(--dim)}
+  .cmdk-list{max-height:46vh;overflow-y:auto;padding:6px}
+  .cmdk-group{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);padding:9px 12px 4px}
+  .cmdk-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;cursor:pointer;font-size:.87rem;color:var(--text)}
+  .cmdk-item .ico{width:20px;text-align:center;flex-shrink:0}
+  .cmdk-item .sub{margin-left:auto;font-size:.7rem;color:var(--dim)}
+  .cmdk-item.sel{background:var(--accent-dim);color:var(--accent)}
+  .cmdk-empty{padding:22px;text-align:center;color:var(--dim);font-size:.84rem}
+  .cmdk-foot{display:flex;gap:14px;padding:9px 14px;border-top:1px solid var(--border);font-size:.66rem;color:var(--dim);background:var(--off)}
+  .cmdk-foot kbd{background:var(--surface);border:1px solid var(--border2);border-radius:4px;padding:1px 5px;font-family:var(--font);font-size:.64rem}
+  .kbd-hint{font-size:.64rem;color:var(--dim);margin-top:8px}
+  .kbd-hint kbd{background:var(--off);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-family:var(--font)}
+
   /* CHAT (Messages panel) */
   .chat-layout { display:grid; grid-template-columns:300px 1fr; gap:0; background:var(--surface);
     border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow:var(--shadow);
@@ -336,6 +355,7 @@
       <div class="sidebar-user">
         <div class="sidebar-user-name">Braden Salcetti</div>
         <div class="sidebar-user-role">Founder &amp; Lead Advisor</div>
+        <div class="kbd-hint"><kbd>⌘K</kbd> quick actions</div>
         <button class="btn-logout-sm" onclick="doAdminLogout()">Sign Out</button>
       </div>
     </div>
@@ -785,6 +805,15 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- COMMAND PALETTE -->
+<div id="cmdk" onclick="if(event.target===this)closeCmdk()">
+  <div class="cmdk-box">
+    <input class="cmdk-input" id="cmdk-input" placeholder="Jump to a client or run an action…" autocomplete="off">
+    <div class="cmdk-list" id="cmdk-list"></div>
+    <div class="cmdk-foot"><span><kbd>↑↓</kbd> navigate</span><span><kbd>↵</kbd> select</span><span><kbd>esc</kbd> close</span></div>
+  </div>
+</div>
 
 <script>
 'use strict';
@@ -1837,6 +1866,80 @@ async function checkAIStatus(){
     }catch(e){vBadge.className='badge badge-muted';vBadge.textContent='unavailable';}
   }
 }
+
+/* ════════════════════════════════════════════
+   COMMAND PALETTE (Cmd/Ctrl+K)
+   ════════════════════════════════════════════ */
+function navBtnFor(panel){return document.querySelector('.nav-item[onclick*="\''+panel+'\'"]');}
+var CMDK_ACTIONS=[
+  {label:'Build Plan',ico:'📋',run:function(){openPlan();}},
+  {label:'Message a Client',ico:'✉',run:function(){openCompose();}},
+  {label:'Add Client',ico:'＋',run:function(){openAddClient();}},
+  {label:'Log Saving',ico:'$',run:function(){openAddSaving();}},
+  {label:'Import from Email',ico:'✨',run:function(){openImportEmail();}},
+  {label:'New Action Item',ico:'⚡',run:function(){openAddTask();}},
+  {label:'Go to Overview',ico:'◉',run:function(){switchPanel('overview',navBtnFor('overview'));}},
+  {label:'Go to Action Items',ico:'⚡',run:function(){switchPanel('urgent',navBtnFor('urgent'));}},
+  {label:'Go to Clients',ico:'👤',run:function(){switchPanel('clients',navBtnFor('clients'));}},
+  {label:'Go to Intake Queue',ico:'📋',run:function(){switchPanel('intake',navBtnFor('intake'));}},
+  {label:'Go to Messages',ico:'💬',run:function(){switchPanel('chat',navBtnFor('chat'));}},
+  {label:'Go to Savings & Fees',ico:'$',run:function(){switchPanel('fees',navBtnFor('fees'));}},
+  {label:'Go to Settings',ico:'⚙',run:function(){switchPanel('settings',navBtnFor('settings'));}}
+];
+var cmdkItems=[],cmdkSel=0;
+function openCmdk(){
+  document.getElementById('cmdk').classList.add('open');
+  var inp=document.getElementById('cmdk-input');
+  inp.value='';cmdkFilter('');inp.focus();
+}
+function closeCmdk(){document.getElementById('cmdk').classList.remove('open');}
+function cmdkFilter(q){
+  q=q.trim().toLowerCase();
+  var items=[];
+  (CLIENTS||[]).forEach(function(c){
+    if(!q||c.name.toLowerCase().indexOf(q)>=0||c.email.toLowerCase().indexOf(q)>=0)
+      items.push({group:'Clients',label:c.name,sub:c.email,ico:'👤',run:(function(email){return function(){
+        switchPanel('chat',navBtnFor('chat'));openThread(email);
+      };})(c.email)});
+  });
+  CMDK_ACTIONS.forEach(function(a){
+    if(!q||a.label.toLowerCase().indexOf(q)>=0)items.push({group:'Actions',label:a.label,ico:a.ico,run:a.run});
+  });
+  cmdkItems=items.slice(0,12);cmdkSel=0;renderCmdk();
+}
+function renderCmdk(){
+  var el=document.getElementById('cmdk-list');
+  if(!cmdkItems.length){el.innerHTML='<div class="cmdk-empty">Nothing matches — try a client name or "plan"</div>';return;}
+  var html='',lastGroup='';
+  cmdkItems.forEach(function(it,i){
+    if(it.group!==lastGroup){html+='<div class="cmdk-group">'+it.group+'</div>';lastGroup=it.group;}
+    html+='<div class="cmdk-item '+(i===cmdkSel?'sel':'')+'" data-i="'+i+'" onmousedown="event.preventDefault();cmdkRun('+i+')" onmousemove="cmdkSel='+i+';renderCmdk()">'
+      +'<span class="ico">'+it.ico+'</span>'+esc(it.label)+(it.sub?'<span class="sub">'+esc(it.sub)+'</span>':'')+'</div>';
+  });
+  el.innerHTML=html;
+  var sel=el.querySelector('.cmdk-item.sel');
+  if(sel)sel.scrollIntoView({block:'nearest'});
+}
+function cmdkRun(i){
+  var it=cmdkItems[i];if(!it)return;
+  closeCmdk();
+  try{it.run();}catch(e){}
+}
+document.getElementById('cmdk-input').addEventListener('input',function(){cmdkFilter(this.value);});
+document.getElementById('cmdk-input').addEventListener('keydown',function(e){
+  if(e.key==='ArrowDown'){e.preventDefault();cmdkSel=Math.min(cmdkSel+1,cmdkItems.length-1);renderCmdk();}
+  else if(e.key==='ArrowUp'){e.preventDefault();cmdkSel=Math.max(cmdkSel-1,0);renderCmdk();}
+  else if(e.key==='Enter'){e.preventDefault();cmdkRun(cmdkSel);}
+  else if(e.key==='Escape'){closeCmdk();}
+});
+document.addEventListener('keydown',function(e){
+  if((e.metaKey||e.ctrlKey)&&(e.key==='k'||e.key==='K')){
+    if(!ADMIN_TOKEN)return;
+    e.preventDefault();
+    var p=document.getElementById('cmdk');
+    if(p.classList.contains('open'))closeCmdk();else openCmdk();
+  }
+});
 
 /* ════════════════════════════════════════════
    NAV / UTILS
