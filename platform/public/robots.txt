@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /client.html
+Disallow: /api/
+
+Sitemap: https://district-award-travel.onrender.com/sitemap.xml
