@@ -12,7 +12,7 @@
   --text:#1c1917;--muted:#78716c;--dim:#a8a29e;
   --accent:#f97316;--accent-dim:rgba(249,115,22,.08);--accent-border:rgba(249,115,22,.2);
   --border:#e7e5e4;--border2:#d6d3d1;
-  --green:#16a34a;--red:#dc2626;
+  --green:#16a34a;--green-dim:rgba(22,163,74,.08);--blue:#2563eb;--red:#dc2626;
   --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
   --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
 }
@@ -21,7 +21,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 /* ── LOGIN ── */
 #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
 .login-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:var(--shadow)}
-.login-brand{font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px}
+.login-brand{font-size:18px;font-weight:800;margin-bottom:4px}
 .login-brand span{color:var(--accent)}
 .login-sub{font-size:13px;color:var(--muted);margin-bottom:32px}
 .field{margin-bottom:16px}
@@ -29,108 +29,132 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .field input{width:100%;border:1px solid var(--border2);border-radius:8px;padding:11px 14px;font-size:14px;font-family:var(--font);color:var(--text);background:var(--white);outline:none;transition:border-color .15s,box-shadow .15s}
 .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
 .btn-login{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s,transform .1s;margin-top:4px}
-.btn-login:hover{background:#ea6c0a}
-.btn-login:active{transform:scale(.99)}
-.btn-login:disabled{opacity:.55;cursor:not-allowed}
+.btn-login:hover{background:#ea6c0a}.btn-login:active{transform:scale(.99)}.btn-login:disabled{opacity:.55;cursor:not-allowed}
 .login-err{color:var(--red);font-size:13px;margin-top:12px;display:none;text-align:center}
 .login-foot{margin-top:20px;font-size:13px;color:var(--muted);text-align:center}
 .login-foot a{color:var(--accent);font-weight:500}
 
-/* ── PORTAL ── */
+/* ── PORTAL SHELL ── */
 #portal{display:none}
-.portal-nav{
-  position:sticky;top:0;z-index:100;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 32px;height:60px;
-  background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--border);
-}
-.portal-nav-brand{font-size:15px;font-weight:800;color:var(--text)}
-.portal-nav-brand span{color:var(--accent)}
-.portal-nav-right{display:flex;align-items:center;gap:16px}
-.portal-nav-email{font-size:13px;color:var(--muted)}
-.btn-logout{background:none;border:1px solid var(--border2);border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;font-family:var(--font);transition:.15s}
-.btn-logout:hover{color:var(--text);border-color:var(--border2)}
-.portal-body{max-width:900px;margin:0 auto;padding:40px 24px 80px}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:230px;flex-shrink:0;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.sb-head{padding:22px 20px;border-bottom:1px solid var(--border)}
+.sb-brand{font-size:14px;font-weight:800;line-height:1.3}
+.sb-brand span{color:var(--accent)}
+.sb-client{padding:16px 20px;border-bottom:1px solid var(--border)}
+.sb-client-name{font-size:14px;font-weight:700;margin-bottom:2px}
+.sb-client-tier{font-size:12px;color:var(--accent);font-weight:500}
+.sb-nav{padding:12px 10px;flex:1;display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font);font-weight:500;transition:.15s}
+.nav-item:hover{background:var(--card);color:var(--text)}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:600}
+.nav-ico{width:18px;text-align:center;flex-shrink:0;font-size:15px}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.sb-foot{padding:14px 10px;border-top:1px solid var(--border)}
+.btn-out{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font);font-weight:500;transition:.15s}
+.btn-out:hover{color:var(--red);background:rgba(220,38,38,.06)}
 
-/* ── GREETING ── */
-.greeting{margin-bottom:36px}
-.greeting h1{font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
-.greeting p{font-size:15px;color:var(--muted)}
+.main{flex:1;min-width:0;overflow-y:auto}
+.panel{display:none;padding:36px 44px;max-width:960px}
+.panel.active{display:block}
+.phead{margin-bottom:28px}
+.phead h1{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
+.phead p{font-size:14px;color:var(--muted)}
 
-/* ── SAVINGS HERO ── */
-.savings-hero{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:var(--shadow)}
-.savings-hero-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
-.savings-hero-val{font-size:36px;font-weight:800;color:var(--green);letter-spacing:-1px}
-.savings-hero-sub{font-size:13px;color:var(--muted);margin-top:4px}
-.savings-hero-icon{font-size:40px;opacity:.15}
+/* ── STAT CARDS ── */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+.stat{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 22px;box-shadow:var(--shadow)}
+.stat-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px}
+.stat-val{font-size:26px;font-weight:800;letter-spacing:-1px;line-height:1}
+.stat-val.green{color:var(--green)}.stat-val.orange{color:var(--accent)}.stat-val.blue{color:var(--blue)}
+.stat-sub{font-size:12px;color:var(--muted);margin-top:6px}
 
-/* ── STATUS CARD ── */
-.status-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px 28px;margin-bottom:24px;box-shadow:var(--shadow)}
-.status-card-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px}
-.status-steps{display:flex;align-items:center;gap:0;flex-wrap:wrap}
-.status-step{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500}
-.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
-.status-dot.done{background:var(--green)}
-.status-dot.active{background:var(--accent)}
-.status-dot.pending{background:var(--border2)}
-.status-sep{width:28px;height:2px;background:var(--border);margin:0 4px;flex-shrink:0}
+/* ── STATUS BAR ── */
+.status-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-bottom:28px;box-shadow:var(--shadow)}
+.status-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:16px}
+.status-steps{display:flex;align-items:center;flex-wrap:wrap;gap:0}
+.status-step{display:flex;align-items:center;gap:8px;font-size:13px}
+.status-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.status-dot.done{background:var(--green)}.status-dot.active{background:var(--accent);box-shadow:0 0 0 4px var(--accent-dim)}.status-dot.pending{background:var(--border2)}
+.status-sep{width:30px;height:2px;background:var(--border);margin:0 6px;flex-shrink:0}
 .status-step.active-step span{color:var(--accent);font-weight:700}
-.status-step.done-step span{color:var(--green)}
+.status-step.done-step span{color:var(--green);font-weight:500}
 .status-step.pending-step span{color:var(--dim)}
 
-/* ── SECTION HEADING ── */
-.section-head{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:36px 0 14px}
+.sec-head{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:28px 0 14px}
 
 /* ── MESSAGES ── */
 .msg-list{display:flex;flex-direction:column;gap:12px}
-.msg-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 24px;box-shadow:var(--shadow)}
+.msg-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 22px;box-shadow:var(--shadow)}
 .msg-card.unread{border-left:3px solid var(--accent)}
 .msg-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .msg-from{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
 .msg-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .msg-time{font-size:12px;color:var(--dim)}
-.msg-body{font-size:14px;color:var(--muted);line-height:1.6}
+.msg-body{font-size:14px;color:var(--text);line-height:1.6;white-space:pre-wrap}
 .msg-plan{margin-top:16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.msg-plan-header{background:var(--card);padding:12px 16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.plan-option{padding:16px;border-bottom:1px solid var(--border)}
-.plan-option:last-child{border-bottom:none}
-.plan-option-num{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:4px}
-.plan-option-desc{font-size:13px;color:var(--text);line-height:1.5}
-.plan-option-img{margin-top:10px;border-radius:6px;max-width:100%;max-height:240px;object-fit:contain}
+.msg-plan-hd{background:var(--card);padding:11px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.plan-opt{padding:16px;border-bottom:1px solid var(--border)}
+.plan-opt:last-child{border-bottom:none}
+.plan-opt-num{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:5px}
+.plan-opt-desc{font-size:13px;line-height:1.55;white-space:pre-wrap}
+.plan-opt-img{margin-top:10px;border-radius:6px;max-width:100%;max-height:280px;object-fit:contain;border:1px solid var(--border)}
 
 /* ── TRIPS ── */
-.trip-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow)}
-.trip-dest{font-size:17px;font-weight:700;margin-bottom:4px}
-.trip-meta{font-size:13px;color:var(--muted)}
-.trip-badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:8px}
+.trip-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 24px;margin-bottom:14px;box-shadow:var(--shadow)}
+.trip-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
+.trip-dest{font-size:18px;font-weight:700;margin-bottom:3px}
+.trip-route{font-size:13px;color:var(--muted)}
+.trip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;padding-top:14px;border-top:1px solid var(--border)}
+.trip-field-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:3px}
+.trip-field-val{font-size:14px;font-weight:600}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;white-space:nowrap}
 .badge-new{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)}
-.badge-researching{background:#fef9c3;color:#854d0e;border:1px solid #fef08a}
+.badge-researching{background:#fef9c3;color:#854d0e;border:1px solid #fde68a}
 .badge-options{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
 .badge-booked{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
 .badge-done{background:var(--card);color:var(--muted);border:1px solid var(--border)}
 
-/* ── POINTS ── */
-.points-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
-.point-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
-.point-prog{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
-.point-bal{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px}
+/* ── SAVINGS ── */
+.sv-row{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:12px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:16px}
+.sv-label{font-size:14px;font-weight:600;margin-bottom:3px}
+.sv-sub{font-size:12px;color:var(--muted)}
+.sv-amt{text-align:right;flex-shrink:0}
+.sv-save{font-size:16px;font-weight:800;color:var(--green)}
+.sv-fee{font-size:12px;color:var(--accent);margin-top:2px}
+.sv-total{background:var(--green-dim);border:1px solid rgba(22,163,74,.2);border-radius:12px;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.sv-total-label{font-size:14px;font-weight:600}
+.sv-total-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.sv-total-val{font-size:28px;font-weight:800;color:var(--green);letter-spacing:-1px}
+.sv-feebox{background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:12px;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;margin-top:12px}
+.sv-feebox-label{font-size:14px;font-weight:600}
+.sv-feebox-val{font-size:22px;font-weight:800;color:var(--accent);letter-spacing:-.5px}
 
-/* ── EMPTY STATE ── */
-.empty{text-align:center;padding:48px 24px;color:var(--muted)}
-.empty-icon{font-size:36px;margin-bottom:12px;opacity:.3}
-.empty p{font-size:14px}
+/* ── POINTS ── */
+.points-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.point-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 22px;box-shadow:var(--shadow)}
+.point-prog{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
+.point-bal{font-size:24px;font-weight:800;color:var(--blue);letter-spacing:-.5px}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:56px 24px;color:var(--muted)}
+.empty-ico{font-size:40px;margin-bottom:14px;opacity:.3}
+.empty p{font-size:14px;max-width:380px;margin:0 auto}
 
 /* ── MOBILE ── */
-@media(max-width:600px){
-  .portal-nav{padding:0 16px}
-  .portal-nav-email{display:none}
-  .portal-body{padding:24px 16px 60px}
-  .greeting h1{font-size:22px}
-  .savings-hero{flex-direction:column;align-items:flex-start}
-  .savings-hero-icon{display:none}
-  .status-steps{gap:4px}
-  .status-sep{width:16px}
+.mtabs{display:none}
+@media(max-width:768px){
+  .sidebar{display:none}
+  .layout{flex-direction:column}
+  .panel{padding:24px 18px 80px}
+  .stats{grid-template-columns:1fr 1fr;gap:10px}
+  .stat-val{font-size:22px}
+  .status-sep{width:14px;margin:0 3px}
+  .mtabs{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);z-index:100;height:62px;box-shadow:0 -2px 12px rgba(0,0,0,.05)}
+  .mtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;color:var(--muted);border:none;background:none;font-family:var(--font);font-weight:500;cursor:pointer;position:relative}
+  .mtab.active{color:var(--accent)}
+  .mtab-ico{font-size:17px}
+  .mtab-badge{position:absolute;top:8px;right:50%;margin-right:-18px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 }
 </style>
 </head>
@@ -157,63 +181,97 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 
 <!-- PORTAL -->
 <div id="portal">
-  <nav class="portal-nav">
-    <div class="portal-nav-brand">District <span>Award</span> Travel</div>
-    <div class="portal-nav-right">
-      <span class="portal-nav-email" id="nav-email"></span>
-      <button class="btn-logout" onclick="logout()">Sign Out</button>
-    </div>
-  </nav>
-  <div class="portal-body">
-    <div class="greeting">
-      <h1 id="greeting-name">Welcome back</h1>
-      <p id="greeting-sub">District Award Travel — Client Portal</p>
-    </div>
-
-    <div id="savings-hero" style="display:none" class="savings-hero">
-      <div>
-        <div class="savings-hero-label">Total Savings with District</div>
-        <div class="savings-hero-val" id="savings-val">$0</div>
-        <div class="savings-hero-sub">Documented and verified</div>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sb-head"><div class="sb-brand">District <span>Award</span> Travel</div></div>
+      <div class="sb-client">
+        <div class="sb-client-name" id="sb-name">—</div>
+        <div class="sb-client-tier" id="sb-tier">—</div>
       </div>
-      <div class="savings-hero-icon">✈</div>
-    </div>
+      <nav class="sb-nav">
+        <button class="nav-item active" data-tab="overview" onclick="switchTab('overview')"><span class="nav-ico">◈</span> Overview</button>
+        <button class="nav-item" data-tab="trips" onclick="switchTab('trips')"><span class="nav-ico">✈</span> My Trips</button>
+        <button class="nav-item" data-tab="savings" onclick="switchTab('savings')"><span class="nav-ico">◎</span> Savings &amp; Fees</button>
+        <button class="nav-item" data-tab="points" onclick="switchTab('points')"><span class="nav-ico">⬡</span> My Points</button>
+        <button class="nav-item" data-tab="messages" onclick="switchTab('messages')"><span class="nav-ico">✉</span> Messages <span class="nav-badge" id="nav-unread" style="display:none">0</span></button>
+      </nav>
+      <div class="sb-foot"><button class="btn-out" onclick="logout()"><span class="nav-ico">↩</span> Sign Out</button></div>
+    </aside>
 
-    <div id="status-card" style="display:none" class="status-card">
-      <div class="status-card-label">Your Trip Status</div>
-      <div class="status-steps" id="status-steps"></div>
-    </div>
+    <main class="main">
+      <!-- OVERVIEW -->
+      <div class="panel active" id="panel-overview">
+        <div class="phead"><h1 id="ov-greeting">Welcome back</h1><p id="ov-sub">District Award Travel — Client Portal</p></div>
+        <div class="stats">
+          <div class="stat"><div class="stat-label">Total Savings</div><div class="stat-val green" id="st-savings">$0</div><div class="stat-sub">documented & verified</div></div>
+          <div class="stat"><div class="stat-label">Advisory Fee</div><div class="stat-val orange" id="st-fee">$0</div><div class="stat-sub">10% of savings</div></div>
+          <div class="stat"><div class="stat-label">Active Trips</div><div class="stat-val blue" id="st-trips">0</div><div class="stat-sub">in your pipeline</div></div>
+        </div>
+        <div class="status-card" id="ov-status" style="display:none">
+          <div class="status-label">Latest Trip Status</div>
+          <div class="status-steps" id="ov-status-steps"></div>
+        </div>
+        <div class="sec-head">Recent Messages</div>
+        <div class="msg-list" id="ov-messages"></div>
+      </div>
 
-    <div class="section-head">Messages from Your Advisor</div>
-    <div class="msg-list" id="msg-list"><div class="empty"><div class="empty-icon">✉</div><p>No messages yet. Your advisor will be in touch soon.</p></div></div>
+      <!-- TRIPS -->
+      <div class="panel" id="panel-trips">
+        <div class="phead"><h1>My Trips</h1><p id="trips-sub">Your trips and where each one stands</p></div>
+        <div id="trips-container"></div>
+      </div>
 
-    <div class="section-head">Your Trips</div>
-    <div id="trips-list"><div class="empty"><div class="empty-icon">🗺</div><p>Your trip details will appear here once your advisor begins research.</p></div></div>
+      <!-- SAVINGS -->
+      <div class="panel" id="panel-savings">
+        <div class="phead"><h1>Savings &amp; Fees</h1><p>Every documented win, and what you owe</p></div>
+        <div id="savings-container"></div>
+      </div>
 
-    <div id="points-section" style="display:none">
-      <div class="section-head">Your Points</div>
-      <div class="points-grid" id="points-grid"></div>
-    </div>
+      <!-- POINTS -->
+      <div class="panel" id="panel-points">
+        <div class="phead"><h1>My Points</h1><p>Balances you've shared with us</p></div>
+        <div id="points-container"></div>
+      </div>
+
+      <!-- MESSAGES -->
+      <div class="panel" id="panel-messages">
+        <div class="phead"><h1>Messages</h1><p>Updates and options from your advisor</p></div>
+        <div class="msg-list" id="messages-container"></div>
+      </div>
+    </main>
+  </div>
+
+  <div class="mtabs">
+    <button class="mtab active" data-tab="overview" onclick="switchTab('overview')"><span class="mtab-ico">◈</span>Overview</button>
+    <button class="mtab" data-tab="trips" onclick="switchTab('trips')"><span class="mtab-ico">✈</span>Trips</button>
+    <button class="mtab" data-tab="savings" onclick="switchTab('savings')"><span class="mtab-ico">◎</span>Savings</button>
+    <button class="mtab" data-tab="points" onclick="switchTab('points')"><span class="mtab-ico">⬡</span>Points</button>
+    <button class="mtab" data-tab="messages" onclick="switchTab('messages')"><span class="mtab-ico">✉</span>Messages<span class="mtab-badge" id="mtab-unread" style="display:none">0</span></button>
   </div>
 </div>
 
 <script>
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-function fmtUsd(cents){return '$'+Math.round(cents/100).toLocaleString('en-US')}
-function fmtNum(n){return Number(n).toLocaleString('en-US')}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function fmtUsd(c){return '$'+Math.round((c||0)/100).toLocaleString('en-US')}
+function fmtNum(n){return Number(n||0).toLocaleString('en-US')}
 
-/* ── AUTH ── token lives in sessionStorage so it clears on tab close */
-const TOKEN_KEY = 'dat_client_token';
-function getToken(){return sessionStorage.getItem(TOKEN_KEY)}
-function setToken(t){sessionStorage.setItem(TOKEN_KEY,t)}
-function clearToken(){sessionStorage.removeItem(TOKEN_KEY)}
+const TOKEN_KEY='dat_client_token';
+const getToken=()=>sessionStorage.getItem(TOKEN_KEY);
+const setToken=t=>sessionStorage.setItem(TOKEN_KEY,t);
+const clearToken=()=>sessionStorage.removeItem(TOKEN_KEY);
 
-function loginErr(msg){
-  const el=document.getElementById('login-err');
-  el.textContent=msg||'Invalid credentials. Contact your advisor.';
-  el.style.display='block';
-  setTimeout(()=>el.style.display='none',4000);
-}
+const STATUS_STEPS=[
+  {key:'new',label:'Intake received'},
+  {key:'researching',label:'Researching'},
+  {key:'options_sent',label:'Options sent'},
+  {key:'awaiting_decision',label:'Your decision'},
+  {key:'booked',label:'Booked'},
+  {key:'invoiced',label:'Invoiced'},
+  {key:'closed',label:'Done'}
+];
+const BADGE={new:['badge-new','Intake Received'],researching:['badge-researching','Researching'],options_sent:['badge-options','Options Sent'],awaiting_decision:['badge-options','Awaiting Your Decision'],booked:['badge-booked','Booked'],invoiced:['badge-done','Invoiced'],closed:['badge-done','Closed']};
+
+function loginErr(msg){const el=document.getElementById('login-err');el.textContent=msg||'Invalid credentials. Contact your advisor.';el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
 
 async function doLogin(){
   const email=document.getElementById('login-email').value.trim().toLowerCase();
@@ -224,189 +282,166 @@ async function doLogin(){
   try{
     const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
     if(res.ok){
-      const {token}=await res.json();
-      setToken(token);
+      const {token}=await res.json();setToken(token);
       const me=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
       if(me.ok){btn.disabled=false;btn.textContent='Sign In';return showPortal(await me.json());}
-    }else if(res.status===429){
-      btn.disabled=false;btn.textContent='Sign In';
-      return loginErr('Too many attempts. Try again in a few minutes.');
-    }else{
-      btn.disabled=false;btn.textContent='Sign In';
-      return loginErr('Invalid credentials. Contact your advisor.');
-    }
-  }catch(e){
-    btn.disabled=false;btn.textContent='Sign In';
-    loginErr('Could not reach server. Check your connection.');
-  }
+    }else if(res.status===429){btn.disabled=false;btn.textContent='Sign In';return loginErr('Too many attempts. Try again in a few minutes.');}
+    btn.disabled=false;btn.textContent='Sign In';loginErr('Invalid credentials. Contact your advisor.');
+  }catch(e){btn.disabled=false;btn.textContent='Sign In';loginErr('Could not reach server. Check your connection.');}
 }
 
-function logout(){
-  clearToken();
-  disconnectStream();
-  document.getElementById('portal').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('login-email').value='';
-  document.getElementById('login-pass').value='';
+function logout(){clearToken();stopAutoRefresh();document.getElementById('portal').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('login-email').value='';document.getElementById('login-pass').value='';switchTab('overview');}
+
+function showPortal(c){document.getElementById('login-screen').style.display='none';document.getElementById('portal').style.display='block';renderPortal(c);startAutoRefresh();}
+
+function switchTab(id){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const t=document.getElementById('panel-'+id);if(t)t.classList.add('active');
+  document.querySelectorAll('.nav-item,.mtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
+  document.querySelector('.main').scrollTop=0;window.scrollTo(0,0);
 }
 
-/* ── RENDER ── */
-function showPortal(c){
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('portal').style.display='block';
-  renderPortal(c);
-  startAutoRefresh();
-}
-
-const STATUS_STEPS=[
-  {key:'new',label:'Intake received'},
-  {key:'researching',label:'Researching'},
-  {key:'options_sent',label:'Options sent'},
-  {key:'booked',label:'Booked'},
-  {key:'invoiced',label:'Invoiced'},
-  {key:'closed',label:'Done'}
-];
+let currentData=null;
 
 function renderPortal(c){
+  currentData=c;
   const name=(c.name||'').split(' ')[0]||'there';
-  document.getElementById('greeting-name').textContent='Hi, '+name+' 👋';
-  document.getElementById('greeting-sub').textContent=c.tier?c.tier+' — District Award Travel':'District Award Travel';
-  document.getElementById('nav-email').textContent=c.email||'';
+  document.getElementById('sb-name').textContent=c.name||'Client';
+  document.getElementById('sb-tier').textContent=c.tier||'Client';
+  document.getElementById('ov-greeting').textContent='Hi, '+name+' 👋';
+  document.getElementById('ov-sub').textContent=(c.tier?c.tier+' — ':'')+'District Award Travel';
 
-  // Savings hero
-  const savings=c.lifetime_savings_cents||0;
-  if(savings>0){
-    document.getElementById('savings-val').textContent=fmtUsd(savings);
-    document.getElementById('savings-hero').style.display='flex';
-  }
+  // Stats
+  document.getElementById('st-savings').textContent=fmtUsd(c.lifetime_savings_cents||0);
+  document.getElementById('st-fee').textContent=fmtUsd(c.total_fee_cents||0);
+  const trips=c.pipeline_trips||[];
+  document.getElementById('st-trips').textContent=trips.length;
 
-  // Messages — stored in client.data.messages
-  const msgs=c.messages||[];
-  const msgEl=document.getElementById('msg-list');
-  if(msgs.length){
-    msgEl.innerHTML=msgs.map(m=>{
-      let planHtml='';
-      if(m.plan_details&&m.plan_details.options&&m.plan_details.options.length){
-        const opts=m.plan_details.options.map(o=>`
-          <div class="plan-option">
-            <div class="plan-option-num">Option ${esc(o.num)}</div>
-            <div class="plan-option-desc">${esc(o.desc)}</div>
-            ${o.img?`<img class="plan-option-img" src="${esc(o.img)}" alt="Option ${esc(o.num)}">`: ''}
-          </div>`).join('');
-        planHtml=`<div class="msg-plan"><div class="msg-plan-header">Your Options</div>${opts}</div>`;
-      }
-      const unread=m.unread?'unread':'';
-      return `<div class="msg-card ${unread}">
-        <div class="msg-meta">
-          <div class="msg-from">${m.unread?'<span class="msg-dot"></span>':''}${esc(m.from||'District Award Travel')}</div>
-          <div class="msg-time">${esc(m.ts||m.time||'')}</div>
-        </div>
-        <div class="msg-body">${esc(m.text||m.body||'')}</div>
-        ${planHtml}
-      </div>`;
-    }).join('');
-  }
-
-  // Trips from data.trips array
-  const trips=c.trips||[];
-  const tripEl=document.getElementById('trips-list');
+  // Latest trip status bar
   if(trips.length){
-    // Find latest workflow status from trip data
-    const latestStatus=trips[0].workflow_status||trips[0].status||'new';
-    renderStatusBar(latestStatus);
+    renderStatusBar('ov-status-steps',trips[0].workflow_status);
+    document.getElementById('ov-status').style.display='block';
+  }else{document.getElementById('ov-status').style.display='none';}
 
-    tripEl.innerHTML=trips.map(t=>{
-      const ws=t.workflow_status||t.status||'new';
-      const badgeMap={new:'badge-new',researching:'badge-researching',options_sent:'badge-options',awaiting_decision:'badge-options',booked:'badge-booked',invoiced:'badge-done',closed:'badge-done'};
-      const labelMap={new:'Intake Received',researching:'Research in Progress',options_sent:'Options Sent',awaiting_decision:'Awaiting Your Decision',booked:'Booked',invoiced:'Invoiced',closed:'Closed'};
-      return `<div class="trip-card">
-        <div class="trip-dest">${esc(t.destination||t.dest||'Your trip')}</div>
-        <div class="trip-meta">${esc(t.origin?t.origin+' → ':'')}${esc(t.destination||'')}${t.dates?' · '+esc(t.dates):''}</div>
-        ${t.passengers?`<div class="trip-meta">${esc(t.passengers)} passenger${t.passengers!=1?'s':''}</div>`:''}
-        <span class="trip-badge ${badgeMap[ws]||'badge-new'}">${labelMap[ws]||ws}</span>
-      </div>`;
-    }).join('');
-  } else {
-    tripEl.innerHTML='<div class="empty"><div class="empty-icon">🗺</div><p>Your trip details will appear here once your advisor begins research.</p></div>';
-  }
+  // Messages (from data.messages JSON)
+  const msgs=(c.messages||[]).slice().reverse();
+  const unread=msgs.filter(m=>m.unread).length;
+  setUnread(unread);
+  renderMessages('ov-messages',msgs.slice(0,3),true);
+  renderMessages('messages-container',msgs,false);
 
-  // Points
-  const points=c.points||[];
-  if(points.length){
-    document.getElementById('points-section').style.display='block';
-    document.getElementById('points-grid').innerHTML=points.map(p=>`
-      <div class="point-card">
-        <div class="point-prog">${esc(p.program||p.name||'Program')}</div>
-        <div class="point-bal">${esc(fmtNum(p.balance||p.points||0))}</div>
-      </div>`).join('');
-  }
+  // Trips tab
+  document.getElementById('trips-sub').textContent=trips.length?(trips.length+' trip'+(trips.length!==1?'s':'')+' in your pipeline'):'No trips yet';
+  renderTrips(trips);
+
+  // Savings tab
+  renderSavings(c.savings_breakdown||[],c.lifetime_savings_cents||0,c.total_fee_cents||0);
+
+  // Points tab
+  renderPoints(c.points||[]);
 }
 
-function renderStatusBar(currentStatus){
-  const card=document.getElementById('status-card');
-  const container=document.getElementById('status-steps');
-  const idx=STATUS_STEPS.findIndex(s=>s.key===currentStatus);
-  if(idx<0)return;
-  card.style.display='block';
-  container.innerHTML=STATUS_STEPS.map((s,i)=>{
-    let cls,dotCls;
-    if(i<idx){cls='done-step';dotCls='done';}
-    else if(i===idx){cls='active-step';dotCls='active';}
-    else{cls='pending-step';dotCls='pending';}
+function setUnread(n){
+  ['nav-unread','mtab-unread'].forEach(id=>{const el=document.getElementById(id);if(!el)return;if(n>0){el.textContent=n;el.style.display='flex';}else{el.style.display='none';}});
+}
+
+function renderStatusBar(elId,status){
+  const c=document.getElementById(elId);
+  let idx=STATUS_STEPS.findIndex(s=>s.key===status);
+  if(idx<0)idx=0;
+  c.innerHTML=STATUS_STEPS.map((s,i)=>{
+    let cls,dot;
+    if(i<idx){cls='done-step';dot='done';}else if(i===idx){cls='active-step';dot='active';}else{cls='pending-step';dot='pending';}
     const sep=i<STATUS_STEPS.length-1?'<div class="status-sep"></div>':'';
-    return `<div class="status-step ${cls}"><div class="status-dot ${dotCls}"></div><span>${esc(s.label)}</span></div>${sep}`;
+    return `<div class="status-step ${cls}"><div class="status-dot ${dot}"></div><span>${esc(s.label)}</span></div>${sep}`;
   }).join('');
 }
 
-/* ── SSE + POLLING ── */
-let evtSource=null,pollTimer=null,reconnectTimer=null,reconnectDelay=2000,sseFailures=0;
-let currentData=null;
-
-async function refetchMe(){
-  const token=getToken();
-  if(!token||document.hidden)return;
-  try{
-    const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
-    if(res.ok){currentData=await res.json();renderPortal(currentData);}
-    else if(res.status===401){logout();}
-  }catch(e){}
+function renderMessages(elId,msgs,preview){
+  const el=document.getElementById(elId);
+  if(!msgs.length){el.innerHTML='<div class="empty"><div class="empty-ico">✉</div><p>No messages yet. Your advisor will reach out as soon as there\'s an update.</p></div>';return;}
+  el.innerHTML=msgs.map(m=>{
+    let plan='';
+    const pd=m.plan_details||m.plan;
+    if(pd&&pd.options&&pd.options.length){
+      plan='<div class="msg-plan"><div class="msg-plan-hd">Your Options</div>'+pd.options.map(o=>
+        `<div class="plan-opt"><div class="plan-opt-num">Option ${esc(o.num)}</div><div class="plan-opt-desc">${esc(o.desc)}</div>${o.img?`<img class="plan-opt-img" src="${esc(o.img)}" alt="Option">`:''}</div>`
+      ).join('')+'</div>';
+    }
+    const body=esc(m.text||m.body||'');
+    const shown=preview&&body.length>160?body.slice(0,160)+'…':body;
+    return `<div class="msg-card ${m.unread?'unread':''}">
+      <div class="msg-meta"><div class="msg-from">${m.unread?'<span class="msg-dot"></span>':''}${esc(m.from||'District Award Travel')}</div><div class="msg-time">${esc(m.ts||m.time||'')}</div></div>
+      <div class="msg-body">${shown}</div>${preview?'':plan}</div>`;
+  }).join('');
 }
 
+function renderTrips(trips){
+  const el=document.getElementById('trips-container');
+  if(!trips.length){el.innerHTML='<div class="empty"><div class="empty-ico">🗺</div><p>Your trips will appear here once your advisor logs them. If you just applied, hang tight — we\'re reviewing your intake.</p></div>';return;}
+  el.innerHTML=trips.map(t=>{
+    const b=BADGE[t.workflow_status]||BADGE.new;
+    const fields=[];
+    if(t.dates)fields.push(['Dates',esc(t.dates)]);
+    if(t.passengers)fields.push(['Passengers',esc(t.passengers)]);
+    if(t.cabin)fields.push(['Cabin',esc(t.cabin)]);
+    if(t.origin)fields.push(['From',esc(t.origin)]);
+    const grid=fields.length?`<div class="trip-grid">${fields.map(f=>`<div><div class="trip-field-label">${f[0]}</div><div class="trip-field-val">${f[1]}</div></div>`).join('')}</div>`:'';
+    return `<div class="trip-card">
+      <div class="trip-top">
+        <div><div class="trip-dest">${esc(t.destination||'Your trip')}</div><div class="trip-route">${t.origin?esc(t.origin)+' → ':''}${esc(t.destination||'')}</div></div>
+        <span class="badge ${b[0]}">${b[1]}</span>
+      </div>${grid}</div>`;
+  }).join('');
+}
+
+function renderSavings(rows,totalSave,totalFee){
+  const el=document.getElementById('savings-container');
+  if(!rows.length){el.innerHTML='<div class="empty"><div class="empty-ico">◎</div><p>No documented savings yet. Once you book an option we found and we verify the cash benchmark, your savings will show here.</p></div>';return;}
+  const list=rows.map(r=>`
+    <div class="sv-row">
+      <div><div class="sv-label">${esc(r.trip_label||'Trip')}</div><div class="sv-sub">${fmtNum(r.points_used)} ${esc(r.points_program||'points')} · cash ${fmtUsd(r.cash_benchmark_cents)}${r.invoice_number?' · '+esc(r.invoice_number):''}</div></div>
+      <div class="sv-amt"><div class="sv-save">${fmtUsd(r.gross_savings_cents)}</div><div class="sv-fee">fee ${fmtUsd(r.fee_cents)}</div></div>
+    </div>`).join('');
+  el.innerHTML=list+
+    `<div class="sv-total"><div><div class="sv-total-label">Total Savings Generated</div><div class="sv-total-sub">Our advisory fee is 10% of this</div></div><div class="sv-total-val">${fmtUsd(totalSave)}</div></div>
+     <div class="sv-feebox"><div class="sv-feebox-label">Advisory Fee (10%)</div><div class="sv-feebox-val">${fmtUsd(totalFee)}</div></div>`;
+}
+
+function renderPoints(points){
+  const el=document.getElementById('points-container');
+  if(!points.length){el.innerHTML='<div class="empty"><div class="empty-ico">⬡</div><p>No point balances on file. Share your program balances with your advisor and they\'ll appear here.</p></div>';return;}
+  el.innerHTML='<div class="points-grid">'+points.map(p=>`<div class="point-card"><div class="point-prog">${esc(p.program||p.name||'Program')}</div><div class="point-bal">${fmtNum(p.balance||p.points||0)}</div></div>`).join('')+'</div>';
+}
+
+/* ── SSE + polling ── */
+let evtSource=null,pollTimer=null,reconnectTimer=null,reconnectDelay=2000,sseFailures=0;
+async function refetchMe(){
+  const token=getToken();if(!token||document.hidden)return;
+  try{const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
+    if(res.ok)renderPortal(await res.json());else if(res.status===401)logout();}catch(e){}
+}
 function connectStream(){
-  const token=getToken();
-  if(!token||document.hidden)return;
-  disconnectStream();
-  try{
-    evtSource=new EventSource('/api/client/stream?token='+encodeURIComponent(token));
+  const token=getToken();if(!token||document.hidden)return;disconnectStream();
+  try{evtSource=new EventSource('/api/client/stream?token='+encodeURIComponent(token));
     evtSource.addEventListener('hello',()=>{sseFailures=0;reconnectDelay=2000;stopPoll();});
     evtSource.addEventListener('changed',refetchMe);
     evtSource.addEventListener('bye',()=>{disconnectStream();scheduleReconnect();});
     evtSource.onerror=()=>{disconnectStream();sseFailures++;if(sseFailures>=3)startPoll();scheduleReconnect();};
   }catch(e){startPoll();}
 }
-
 function disconnectStream(){if(evtSource){evtSource.close();evtSource=null;}}
 function scheduleReconnect(){clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{reconnectDelay=Math.min(reconnectDelay*2,60000);connectStream();},reconnectDelay);}
 function startPoll(){if(!pollTimer)pollTimer=setInterval(()=>{if(!document.hidden)refetchMe();},60000);}
 function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
 function startAutoRefresh(){connectStream();}
 function stopAutoRefresh(){disconnectStream();stopPoll();clearTimeout(reconnectTimer);}
+document.addEventListener('visibilitychange',()=>{if(!getToken())return;if(document.hidden)stopAutoRefresh();else{refetchMe();connectStream();}});
 
-document.addEventListener('visibilitychange',()=>{
-  if(!getToken())return;
-  if(document.hidden)stopAutoRefresh();
-  else{refetchMe();connectStream();}
-});
-
-/* ── AUTO-LOGIN on load ── */
 (async function(){
-  const token=getToken();
-  if(!token)return;
-  try{
-    const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
-    if(res.ok){currentData=await res.json();showPortal(currentData);}
-    else clearToken();
-  }catch(e){clearToken();}
+  const token=getToken();if(!token)return;
+  try{const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
+    if(res.ok)showPortal(await res.json());else clearToken();}catch(e){clearToken();}
 })();
 </script>
 </body>

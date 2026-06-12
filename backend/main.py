@@ -1481,6 +1481,49 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
         for r in savings_recs
     )
     payload["lifetime_savings_cents"] = lifetime_savings_cents
+
+    # Real trip pipeline rows (from trip_requests table) so the portal can show
+    # live workflow status, not just the legacy data.trips JSON.
+    trips = db.query(TripRequest).filter(TripRequest.client_id == client.id).order_by(TripRequest.created_at.desc()).all()
+    payload["pipeline_trips"] = [
+        {
+            "id": t.id,
+            "destination": t.destination,
+            "origin": t.origin,
+            "dates": t.dates,
+            "passengers": t.passengers,
+            "cabin": t.cabin,
+            "workflow_status": t.workflow_status,
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+        }
+        for t in trips
+    ]
+
+    # Per-trip savings breakdown the client is allowed to see (no internal notes,
+    # no screenshots of our research — just their documented wins and the fee).
+    all_recs = db.query(SavingsRecord).filter(
+        SavingsRecord.client_id == client.id,
+        SavingsRecord.status.in_(["booked", "invoiced", "paid"])
+    ).order_by(SavingsRecord.created_at.desc()).all()
+    savings_breakdown = []
+    total_fee_cents = 0
+    for r in all_recs:
+        gross = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee = calc_fee(gross, r.fee_rate_bps)
+        total_fee_cents += fee
+        savings_breakdown.append({
+            "trip_label": r.trip_label,
+            "cash_benchmark_cents": r.cash_benchmark_cents,
+            "points_used": r.points_used,
+            "points_program": r.points_program,
+            "gross_savings_cents": gross,
+            "fee_cents": fee,
+            "status": r.status,
+            "invoice_number": r.invoice_number,
+        })
+    payload["savings_breakdown"] = savings_breakdown
+    payload["total_fee_cents"] = total_fee_cents
+    payload["trips_count"] = len(trips)
     return payload
 
 
