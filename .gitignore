@@ -10,3 +10,4 @@ venv/
 # Generated briefing artifacts (the email is the deliverable, not the file)
 logs/daily_brief_*.html
 logs/morning_brief_*.html
+.claude/
