@@ -92,13 +92,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .msg-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .msg-time{font-size:12px;color:var(--dim)}
 .msg-body{font-size:14px;color:var(--text);line-height:1.6;white-space:pre-wrap}
-.msg-plan{margin-top:16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden}
-.msg-plan-hd{background:var(--card);padding:11px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.plan-opt{padding:16px;border-bottom:1px solid var(--border)}
-.plan-opt:last-child{border-bottom:none}
-.plan-opt-num{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:5px}
-.plan-opt-desc{font-size:13px;line-height:1.55;white-space:pre-wrap}
-.plan-opt-img{margin-top:10px;border-radius:6px;max-width:100%;max-height:280px;object-fit:contain;border:1px solid var(--border)}
+/* ── PLAN CARD ── */
+.plan-card{background:var(--white);border:1px solid var(--accent-border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}
+.plan-hd{background:linear-gradient(135deg,#fff7ed,#ffedd5);padding:18px 22px;border-bottom:1px solid var(--accent-border)}
+.plan-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.plan-eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.plan-title{font-size:18px;font-weight:800;letter-spacing:-.3px;line-height:1.25}
+.plan-route{font-size:13px;color:var(--muted);margin-top:3px}
+.plan-body{padding:20px 22px}
+.plan-overview{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap;margin-bottom:18px}
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:16px;padding-top:18px;border-top:1px solid var(--border)}
+.plan-field-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:4px}
+.plan-field-val{font-size:15px;font-weight:700}
+.plan-field-val.green{color:var(--green)}.plan-field-val.blue{color:var(--blue)}
+.msg-plan-link{margin-top:14px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:8px 14px}
 
 /* ── TRIPS ── */
 .trip-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 24px;margin-bottom:14px;box-shadow:var(--shadow)}
@@ -211,6 +218,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
           <div class="status-label">Latest Trip Status</div>
           <div class="status-steps" id="ov-status-steps"></div>
         </div>
+        <div id="ov-plan"></div>
         <div class="sec-head">Recent Messages</div>
         <div class="msg-list" id="ov-messages"></div>
       </div>
@@ -254,6 +262,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
 function fmtUsd(c){return '$'+Math.round((c||0)/100).toLocaleString('en-US')}
 function fmtNum(n){return Number(n||0).toLocaleString('en-US')}
+// Parse a free-text money string like "$3,550" or "3550.00" → integer cents (0 if unparseable)
+function moneyToCents(s){if(s==null)return 0;const m=String(s).replace(/[^0-9.]/g,'');if(!m)return 0;const v=parseFloat(m);return isNaN(v)?0:Math.round(v*100);}
+// Pull every plan the advisor has sent, newest first, each tagged with its message time
+function extractPlans(msgs){return (msgs||[]).filter(m=>{const p=m.plan||m.plan_details;return p&&(p.title||p.dest||p.overview);}).map(m=>({...(m.plan||m.plan_details),_time:m.time||m.ts||''}));}
 
 const TOKEN_KEY='dat_client_token';
 const getToken=()=>sessionStorage.getItem(TOKEN_KEY);
@@ -323,19 +335,23 @@ function renderPortal(c){
     document.getElementById('ov-status').style.display='block';
   }else{document.getElementById('ov-status').style.display='none';}
 
-  // Messages (from data.messages JSON)
+  // Messages (from data.messages JSON), newest first
   const msgs=(c.messages||[]).slice().reverse();
   const unread=msgs.filter(m=>m.unread).length;
   setUnread(unread);
   renderMessages('ov-messages',msgs.slice(0,3),true);
   renderMessages('messages-container',msgs,false);
 
-  // Trips tab
-  document.getElementById('trips-sub').textContent=trips.length?(trips.length+' trip'+(trips.length!==1?'s':'')+' in your pipeline'):'No trips yet';
-  renderTrips(trips);
+  // Plans the advisor has sent (newest first) — surfaced across Overview, Trips, Savings
+  const plans=extractPlans(msgs);
+  renderOverviewPlan(plans);
 
-  // Savings tab
-  renderSavings(c.savings_breakdown||[],c.lifetime_savings_cents||0,c.total_fee_cents||0);
+  // Trips tab — pass plans so each can show its matching plan inline
+  document.getElementById('trips-sub').textContent=trips.length?(trips.length+' trip'+(trips.length!==1?'s':'')+' in your pipeline'):'No trips yet';
+  renderTrips(trips,plans);
+
+  // Savings tab — real booked records, with projected savings from plans as a fallback
+  renderSavings(c.savings_breakdown||[],c.lifetime_savings_cents||0,c.total_fee_cents||0,plans);
 
   // Points tab
   renderPoints(c.points||[]);
@@ -357,26 +373,61 @@ function renderStatusBar(elId,status){
   }).join('');
 }
 
+function fmtTime(s){if(!s)return '';const d=new Date(s);if(isNaN(d))return esc(s);return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+
+// One advisor plan rendered as a rich card. `compact` drops the overview text.
+function renderPlanCard(p,compact){
+  const route=p.dest?('Plan for '+esc(p.dest)):'';
+  const fields=[];
+  if(p.points)fields.push(['Points','blue',fmtNum(String(p.points).replace(/[^0-9]/g,''))||esc(p.points)]);
+  if(p.value)fields.push(['Est. Value','green',esc(p.value)]);
+  if(p.program)fields.push(['Program','',esc(p.program)]);
+  if(p.cabin)fields.push(['Cabin','',esc(p.cabin)]);
+  if(p.dates)fields.push(['Dates','',esc(p.dates)]);
+  const grid=fields.length?`<div class="plan-grid">${fields.map(f=>`<div><div class="plan-field-label">${f[0]}</div><div class="plan-field-val ${f[1]}">${f[2]}</div></div>`).join('')}</div>`:'';
+  const ov=(!compact&&p.overview)?`<div class="plan-overview">${esc(p.overview)}</div>`:'';
+  return `<div class="plan-card">
+    <div class="plan-hd">
+      <div class="plan-eyebrow"><span class="dot"></span>Your advisor's plan</div>
+      <div class="plan-title">${esc(p.title||'Your award plan')}</div>
+      ${route?`<div class="plan-route">${route}</div>`:''}
+    </div>
+    <div class="plan-body">${ov}${grid}</div>
+  </div>`;
+}
+
 function renderMessages(elId,msgs,preview){
   const el=document.getElementById(elId);
   if(!msgs.length){el.innerHTML='<div class="empty"><div class="empty-ico">✉</div><p>No messages yet. Your advisor will reach out as soon as there\'s an update.</p></div>';return;}
   el.innerHTML=msgs.map(m=>{
-    let plan='';
-    const pd=m.plan_details||m.plan;
-    if(pd&&pd.options&&pd.options.length){
-      plan='<div class="msg-plan"><div class="msg-plan-hd">Your Options</div>'+pd.options.map(o=>
-        `<div class="plan-opt"><div class="plan-opt-num">Option ${esc(o.num)}</div><div class="plan-opt-desc">${esc(o.desc)}</div>${o.img?`<img class="plan-opt-img" src="${esc(o.img)}" alt="Option">`:''}</div>`
-      ).join('')+'</div>';
-    }
+    const pd=m.plan||m.plan_details;
+    const hasPlan=pd&&(pd.title||pd.dest||pd.overview);
+    const plan=(!preview&&hasPlan)?renderPlanCard(pd,false):'';
     const body=esc(m.text||m.body||'');
     const shown=preview&&body.length>160?body.slice(0,160)+'…':body;
+    const planTag=preview&&hasPlan?' <span class="msg-plan-link" style="padding:2px 8px;font-size:11px">📋 Plan attached</span>':'';
     return `<div class="msg-card ${m.unread?'unread':''}">
-      <div class="msg-meta"><div class="msg-from">${m.unread?'<span class="msg-dot"></span>':''}${esc(m.from||'District Award Travel')}</div><div class="msg-time">${esc(m.ts||m.time||'')}</div></div>
-      <div class="msg-body">${shown}</div>${preview?'':plan}</div>`;
+      <div class="msg-meta"><div class="msg-from">${m.unread?'<span class="msg-dot"></span>':''}${esc(m.from||'District Award Travel')}${planTag}</div><div class="msg-time">${fmtTime(m.time||m.ts)}</div></div>
+      ${m.subject&&!preview?`<div class="sv-label" style="margin-bottom:6px">${esc(m.subject)}</div>`:''}
+      <div class="msg-body">${shown}</div>${plan}</div>`;
   }).join('');
 }
 
-function renderTrips(trips){
+// Highlight the most recent plan on the Overview so the client never misses it.
+function renderOverviewPlan(plans){
+  const el=document.getElementById('ov-plan');
+  if(!plans||!plans.length){el.innerHTML='';return;}
+  el.innerHTML='<div class="sec-head">Your Latest Plan</div>'+renderPlanCard(plans[0],false);
+}
+
+// Match a plan to a trip by destination text (case-insensitive substring either way).
+function planForTrip(t,plans){
+  if(!t.destination)return null;
+  const d=t.destination.toLowerCase();
+  return (plans||[]).find(p=>{const pd=(p.dest||'').toLowerCase();return pd&&(pd.includes(d)||d.includes(pd));})||null;
+}
+
+function renderTrips(trips,plans){
   const el=document.getElementById('trips-container');
   if(!trips.length){el.innerHTML='<div class="empty"><div class="empty-ico">🗺</div><p>Your trips will appear here once your advisor logs them. If you just applied, hang tight — we\'re reviewing your intake.</p></div>';return;}
   el.innerHTML=trips.map(t=>{
@@ -387,17 +438,36 @@ function renderTrips(trips){
     if(t.cabin)fields.push(['Cabin',esc(t.cabin)]);
     if(t.origin)fields.push(['From',esc(t.origin)]);
     const grid=fields.length?`<div class="trip-grid">${fields.map(f=>`<div><div class="trip-field-label">${f[0]}</div><div class="trip-field-val">${f[1]}</div></div>`).join('')}</div>`:'';
+    const p=planForTrip(t,plans);
+    const planBlock=p?`<div style="padding-top:16px;margin-top:4px">${renderPlanCard(p,true)}</div>`:'';
     return `<div class="trip-card">
       <div class="trip-top">
         <div><div class="trip-dest">${esc(t.destination||'Your trip')}</div><div class="trip-route">${t.origin?esc(t.origin)+' → ':''}${esc(t.destination||'')}</div></div>
         <span class="badge ${b[0]}">${b[1]}</span>
-      </div>${grid}</div>`;
+      </div>${grid}${planBlock}</div>`;
   }).join('');
 }
 
-function renderSavings(rows,totalSave,totalFee){
+function renderSavings(rows,totalSave,totalFee,plans){
   const el=document.getElementById('savings-container');
-  if(!rows.length){el.innerHTML='<div class="empty"><div class="empty-ico">◎</div><p>No documented savings yet. Once you book an option we found and we verify the cash benchmark, your savings will show here.</p></div>';return;}
+  if(!rows.length){
+    // No documented (booked) savings yet — show projected savings from the plans
+    // your advisor has sent, so the page is never empty once a plan exists.
+    const proj=(plans||[]).map(p=>({label:p.title||(p.dest?'Plan for '+p.dest:'Award plan'),cents:moneyToCents(p.value),program:p.program})).filter(x=>x.cents>0);
+    if(!proj.length){
+      el.innerHTML='<div class="empty"><div class="empty-ico">◎</div><p>No documented savings yet. Once you book an option we found and we verify the cash benchmark, your savings will show here.</p></div>';
+      return;
+    }
+    const projTotal=proj.reduce((s,x)=>s+x.cents,0);
+    const list=proj.map(x=>`
+      <div class="sv-row">
+        <div><div class="sv-label">${esc(x.label)}</div><div class="sv-sub">${x.program?esc(x.program)+' · ':''}estimated — not yet booked</div></div>
+        <div class="sv-amt"><div class="sv-save" style="color:var(--blue)">${fmtUsd(x.cents)}</div><div class="sv-fee">projected</div></div>
+      </div>`).join('');
+    el.innerHTML=`<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:13px 16px;font-size:13px;color:var(--muted);margin-bottom:16px">These are <strong style="color:var(--text)">projected</strong> savings from plans your advisor sent. They become documented savings once you book and we verify the cash price.</div>`+list+
+      `<div class="sv-total" style="background:rgba(37,99,235,.06);border-color:rgba(37,99,235,.2)"><div><div class="sv-total-label">Projected Savings</div><div class="sv-total-sub">Estimated across your open plans</div></div><div class="sv-total-val" style="color:var(--blue)">${fmtUsd(projTotal)}</div></div>`;
+    return;
+  }
   const list=rows.map(r=>`
     <div class="sv-row">
       <div><div class="sv-label">${esc(r.trip_label||'Trip')}</div><div class="sv-sub">${fmtNum(r.points_used)} ${esc(r.points_program||'points')} · cash ${fmtUsd(r.cash_benchmark_cents)}${r.invoice_number?' · '+esc(r.invoice_number):''}</div></div>
