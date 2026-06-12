@@ -174,6 +174,18 @@ footer{background:var(--off);border-top:1px solid var(--border);padding:40px 48p
   .cta-inner{padding:36px 24px}
 }
 @media(max-width:700px){.sticky-cta{display:block}}
+/* ── SCROLL REVEAL ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
+.reveal.in{opacity:1;transform:none}
+.reveal-stagger>*{opacity:0;transform:translateY(24px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
+.reveal-stagger.in>*{opacity:1;transform:none}
+.reveal-stagger.in>*:nth-child(1){transition-delay:0s}
+.reveal-stagger.in>*:nth-child(2){transition-delay:.1s}
+.reveal-stagger.in>*:nth-child(3){transition-delay:.2s}
+.reveal-stagger.in>*:nth-child(4){transition-delay:.3s}
+@media(prefers-reduced-motion:reduce){
+  .reveal,.reveal-stagger>*{opacity:1;transform:none;transition:none}
+}
 </style>
 </head>
 <body>
@@ -227,9 +239,9 @@ footer{background:var(--off);border-top:1px solid var(--border);padding:40px 48p
 
 <section id="how-it-works" class="how-bg below-fold">
   <div class="section-inner">
-    <div class="section-label">How It Works</div>
-    <h2 class="section-h2">Three steps. You stay in control.</h2>
-    <div class="how-steps">
+    <div class="section-label reveal">How It Works</div>
+    <h2 class="section-h2 reveal">Three steps. You stay in control.</h2>
+    <div class="how-steps reveal-stagger">
       <div class="how-card">
         <div class="how-num">1</div>
         <div class="how-title">Share your points</div>
@@ -251,9 +263,9 @@ footer{background:var(--off);border-top:1px solid var(--border);padding:40px 48p
 
 <section id="sample" class="below-fold">
   <div class="section-inner">
-    <div class="section-label">Sample Plan</div>
-    <h2 class="section-h2">Here's what a plan looks like.</h2>
-    <div class="sample-card">
+    <div class="section-label reveal">Sample Plan</div>
+    <h2 class="section-h2 reveal">Here's what a plan looks like.</h2>
+    <div class="sample-card reveal">
       <span class="sample-badge">Sample — not a real client</span>
       <div class="sample-route">IAD → Tokyo NRT</div>
       <div class="sample-class">ANA Business Class · 75,000 Chase UR via transfer</div>
@@ -270,10 +282,10 @@ footer{background:var(--off);border-top:1px solid var(--border);padding:40px 48p
 
 <section id="examples" class="how-bg below-fold">
   <div class="section-inner">
-    <div class="section-label">Savings Examples</div>
-    <h2 class="section-h2">What this looks like in dollars.</h2>
-    <p class="section-sub">Documented rows come from our savings ledger. Illustrative rows show the math on classic sweet spots.</p>
-    <div class="ex-table-wrap">
+    <div class="section-label reveal">Savings Examples</div>
+    <h2 class="section-h2 reveal">What this looks like in dollars.</h2>
+    <p class="section-sub reveal">Documented rows come from our savings ledger. Illustrative rows show the math on classic sweet spots.</p>
+    <div class="ex-table-wrap reveal">
       <table class="ex-table" id="ex-table" style="display:none">
         <thead><tr><th>Route</th><th>Cash price</th><th>You'd pay</th><th>Savings</th><th>Our fee (10%)</th><th>Your net win</th></tr></thead>
         <tbody id="ex-tbody"></tbody>
@@ -285,10 +297,10 @@ footer{background:var(--off);border-top:1px solid var(--border);padding:40px 48p
 
 <section id="pricing" class="pricing-bg below-fold">
   <div class="section-inner" style="text-align:center">
-    <div class="section-label">Pricing</div>
-    <h2 class="section-h2">We charge 10% of verified savings.</h2>
-    <p class="section-sub" style="margin:0 auto">If we can't beat the cash price, you owe nothing.</p>
-    <div class="pricing-cols">
+    <div class="section-label reveal">Pricing</div>
+    <h2 class="section-h2 reveal">We charge 10% of verified savings.</h2>
+    <p class="section-sub reveal" style="margin:0 auto">If we can't beat the cash price, you owe nothing.</p>
+    <div class="pricing-cols reveal-stagger">
       <div class="pricing-col"><div class="pc-label">You save</div><div class="pc-val">$3,000</div><div class="pc-sub">documented, timestamped</div></div>
       <div class="pricing-col"><div class="pc-label">Our fee</div><div class="pc-val">$300</div><div class="pc-sub">10% — after you save</div></div>
     </div>
@@ -298,9 +310,9 @@ footer{background:var(--off);border-top:1px solid var(--border);padding:40px 48p
 
 <section id="faq" class="below-fold">
   <div class="section-inner">
-    <div class="section-label" style="text-align:center">FAQ</div>
-    <h2 class="section-h2" style="text-align:center">Fair questions, straight answers.</h2>
-    <div class="faq-list">
+    <div class="section-label reveal" style="text-align:center">FAQ</div>
+    <h2 class="section-h2 reveal" style="text-align:center">Fair questions, straight answers.</h2>
+    <div class="faq-list reveal-stagger">
       <details class="faq">
         <summary>Do you need my passwords?</summary>
         <div class="faq-a">No. Screenshots and balance totals only. You never share login credentials — you share the numbers you choose to tell us.</div>
@@ -326,7 +338,7 @@ footer{background:var(--off);border-top:1px solid var(--border);padding:40px 48p
 </section>
 
 <section class="cta-section below-fold">
-  <div class="cta-inner">
+  <div class="cta-inner reveal">
     <h2 class="cta-h2">Your points are losing value every year you sit on them.</h2>
     <p class="cta-sub">Three minutes to find out what they're actually worth.</p>
     <a href="intake.html" class="btn btn-primary btn-lg">Apply free →</a>
@@ -403,6 +415,14 @@ fetch('/api/public/examples').then(function(r){return r.json()}).then(function(r
   var hero=document.getElementById('hero'),bar=document.getElementById('sticky-cta');
   if(!hero||!bar||!('IntersectionObserver' in window))return;
   new IntersectionObserver(function(entries){bar.classList.toggle('visible',!entries[0].isIntersecting);},{threshold:0}).observe(hero);
+})();
+(function(){
+  var els=document.querySelectorAll('.reveal,.reveal-stagger');
+  if(!('IntersectionObserver' in window)){els.forEach(function(el){el.classList.add('in')});return;}
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+  },{threshold:.12,rootMargin:'0px 0px -8% 0px'});
+  els.forEach(function(el){io.observe(el)});
 })();
 (function(){
   var mark=document.getElementById('dat-mark');if(!mark)return;
