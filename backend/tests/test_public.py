@@ -220,3 +220,18 @@ def test_intake_stores_consent_and_funnel_event():
     ev = db.query(FunnelEvent).filter(FunnelEvent.session_id == "sess-intake-1").first()
     db.close()
     assert ev is not None and ev.event == "submit" and ev.utm_source == "newsletter"
+
+
+def test_intake_honeypot_discards_silently():
+    """Bots fill the invisible 'hp' field — we answer ok but store nothing."""
+    resp = client.post("/api/intake", json={
+        "first_name": "Spam", "last_name": "Bot",
+        "email": "spam.bot@example.com", "hp": "http://spam.example",
+    })
+    assert resp.status_code == 200
+    assert resp.json()["ok"] is True
+    db = TestingSession()
+    from backend.main import Intake
+    rec = db.query(Intake).filter(Intake.email == "spam.bot@example.com").first()
+    db.close()
+    assert rec is None

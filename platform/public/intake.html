@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apply — District Award Travel</title>
+<meta name="description" content="Three quick steps. No credit card, no upfront fee — you only pay 10% of what you actually save.">
+<meta name="theme-color" content="#f97316">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -11,7 +16,7 @@
   --bg:#ffffff;--off:#fafaf9;--card:#f5f5f4;
   --text:#1c1917;--muted:#78716c;--dim:#a8a29e;
   --accent:#f97316;--accent-dim:rgba(249,115,22,.08);--accent-border:rgba(249,115,22,.2);
-  --border:#e7e5e4;--border2:#d6d3d1;--red:#ef4444;
+  --border:#e7e5e4;--border2:#d6d3d1;--red:#ef4444;--green:#16a34a;
   --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
   --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
@@ -21,64 +26,118 @@ a{text-decoration:none;color:inherit}
 nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:60px;background:var(--bg);border-bottom:1px solid var(--border)}
 .nav-logo{font-size:15px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px}
 .nav-logo span{color:var(--accent)}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;border:none;font-family:var(--font)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;border:none;font-family:var(--font)}
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
 .btn-ghost:hover{color:var(--text);background:var(--card)}
 .btn-primary{background:var(--accent);color:#fff}
 .btn-primary:hover{background:#ea6c0a;transform:translateY(-1px);box-shadow:0 4px 16px rgba(249,115,22,.3)}
 .btn-primary:disabled{background:var(--dim);color:#fff;transform:none;box-shadow:none;cursor:not-allowed}
-.page{max-width:680px;margin:0 auto;padding:48px 24px 80px}
-.page-header{margin-bottom:40px;text-align:center}
+.page{max-width:620px;margin:0 auto;padding:40px 24px 80px}
+.page-header{margin-bottom:28px;text-align:center}
 .page-h1{font-size:28px;font-weight:800;letter-spacing:-.7px;color:var(--text);margin-bottom:8px}
-.page-sub{font-size:14px;color:var(--muted);line-height:1.6}
-.form-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:28px;margin-bottom:16px;box-shadow:var(--shadow)}
-.form-card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
-.form-card-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.page-sub{font-size:14px;color:var(--muted)}
+
+/* ── PROGRESS ── */
+.progress-wrap{margin-bottom:24px}
+.progress-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.progress-step{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.07em}
+.progress-pct{font-size:12px;color:var(--dim);font-weight:600}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#fb923c);border-radius:3px;width:33%;transition:width .45s cubic-bezier(.16,1,.3,1)}
+
+/* ── RESTORE BANNER ── */
+.restore-banner{display:none;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid var(--accent-border);border-radius:12px;padding:14px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.restore-banner.show{display:flex}
+.restore-txt{font-size:13px;line-height:1.5}
+.restore-actions{display:flex;gap:8px;flex-shrink:0}
+.btn-sm{padding:7px 14px;font-size:12px}
+
+/* ── STEPS ── */
+.step{display:none;animation:stepIn .35s cubic-bezier(.16,1,.3,1)}
+.step.active{display:block}
+@keyframes stepIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+.form-card{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px;box-shadow:var(--shadow)}
+.form-card-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.3px}
+.form-card-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .form-full{grid-column:1/-1}
 .field{display:flex;flex-direction:column;gap:5px}
 .field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em}
 .field label .req{color:var(--red);margin-left:2px}
-.field input,.field select,.field textarea{background:var(--off);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:10px 13px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);background:var(--bg)}
+.field input,.field select,.field textarea{background:var(--off);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:11px 13px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);background:var(--bg);box-shadow:0 0 0 3px var(--accent-dim)}
 .field input::placeholder,.field textarea::placeholder{color:var(--dim)}
 .field select option{background:var(--bg)}
 .field textarea{resize:vertical;min-height:88px}
-.field-hint{font-size:11px;color:var(--dim)}
-/* Points rows */
+.field .err-msg{display:none;font-size:11px;color:var(--red);font-weight:500}
+.field.invalid input,.field.invalid select{border-color:var(--red)}
+.field.invalid .err-msg{display:block}
+
+/* ── CABIN CHIPS ── */
+.chip-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.chip{border:1px solid var(--border);background:var(--off);border-radius:8px;padding:10px 6px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;font-family:var(--font)}
+.chip:hover{border-color:var(--accent-border)}
+.chip.sel{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+.chip .chip-ico{display:block;font-size:16px;margin-bottom:3px}
+
+/* ── POINTS ROWS ── */
 .points-rows{display:flex;flex-direction:column;gap:8px;margin-top:4px}
-.points-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center}
-.points-row input{background:var(--off);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:9px 12px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+.points-row{display:grid;grid-template-columns:1.3fr 1fr auto;gap:8px;align-items:center}
+.points-row input{background:var(--off);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
 .points-row input:focus{border-color:var(--accent);background:var(--bg)}
 .points-row input::placeholder{color:var(--dim)}
 .btn-remove{background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;line-height:1;padding:6px;border-radius:4px;transition:color .15s}
 .btn-remove:hover{color:var(--red)}
-.btn-add-row{background:none;border:1px dashed var(--border2);color:var(--muted);padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;width:100%;font-family:var(--font);margin-top:8px}
+.btn-add-row{background:none;border:1px dashed var(--border2);color:var(--muted);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;width:100%;font-family:var(--font);margin-top:10px}
 .btn-add-row:hover{border-color:var(--accent);color:var(--accent)}
-/* Agree row */
-.agree-row{display:flex;align-items:flex-start;gap:12px;background:var(--off);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:border-color .2s;margin-top:4px}
+.pts-skip{margin-top:14px;font-size:12px;color:var(--dim);text-align:center}
+
+/* ── NAV BUTTONS ── */
+.step-nav{display:flex;gap:10px;margin-top:4px}
+.step-nav .btn{min-height:48px;font-size:15px;border-radius:10px}
+.btn-back{flex:0 0 auto;padding:9px 22px}
+.btn-next{flex:1}
+
+/* ── AGREE ── */
+.agree-row{display:flex;align-items:flex-start;gap:12px;background:var(--off);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .2s,background .2s}
 .agree-row:hover{border-color:var(--accent-border)}
 .agree-row.checked{border-color:var(--accent-border);background:var(--accent-dim)}
 .agree-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;margin-top:2px}
-.agree-row label{font-size:13px;color:var(--text);cursor:pointer;line-height:1.5;font-weight:500}
-/* Success */
-#success{display:none;text-align:center;padding:48px 0}
-.success-icon{font-size:56px;margin-bottom:20px}
-.success-h2{font-size:26px;font-weight:800;color:var(--text);margin-bottom:10px}
-.success-sub{font-size:15px;color:var(--muted);max-width:460px;margin:0 auto;line-height:1.6}
-.success-next{margin:32px auto 0;max-width:460px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:22px;text-align:left;box-shadow:var(--shadow)}
+.agree-row span{font-size:13px;color:var(--text);line-height:1.5;font-weight:500}
+
+/* ── TRUST STRIP ── */
+.trust-strip{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin-top:18px}
+.trust-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim)}
+.trust-item svg{width:13px;height:13px;color:var(--green);flex-shrink:0}
+
+/* ── SUBMIT ERROR ── */
+.submit-err{display:none;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.25);border-radius:10px;padding:13px 16px;font-size:13px;color:var(--red);margin-bottom:14px;line-height:1.5}
+.submit-err.show{display:block}
+
+/* ── SUCCESS ── */
+#success{display:none;text-align:center;padding:40px 0}
+.success-check{width:72px;height:72px;border-radius:50%;background:rgba(22,163,74,.1);border:2px solid rgba(22,163,74,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 22px;animation:pop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.success-check svg{width:34px;height:34px;color:var(--green)}
+.success-h2{font-size:26px;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:-.6px}
+.success-sub{font-size:15px;color:var(--muted);max-width:440px;margin:0 auto;line-height:1.6}
+.success-next{margin:30px auto 0;max-width:440px;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:22px;text-align:left;box-shadow:var(--shadow)}
 .success-next-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
 .success-next-item{display:flex;gap:10px;font-size:13px;color:var(--muted);margin-bottom:9px;align-items:flex-start}
 .success-next-item:last-child{margin-bottom:0}
 .success-next-num{width:20px;height:20px;border-radius:50%;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-/* Hidden legacy fields */
-#legacy-points-fields{display:none}
+
+/* honeypot — visually gone, still in DOM for bots */
+.hp-field{position:absolute;left:-9999px;top:-9999px;height:1px;width:1px;overflow:hidden}
+
 @media(max-width:640px){
   nav{padding:0 16px}
-  .page{padding:28px 16px 60px}
+  .page{padding:24px 16px 60px}
   .form-grid{grid-template-columns:1fr}
-  .points-row{grid-template-columns:1fr 1fr auto}
+  .form-card{padding:22px 18px}
+  .chip-row{grid-template-columns:repeat(2,1fr)}
 }
+@media(prefers-reduced-motion:reduce){.step,.success-check,.progress-fill{animation:none;transition:none}}
 </style>
 </head>
 <body>
@@ -89,289 +148,431 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 </nav>
 
 <div class="page">
-  <div class="page-header">
-    <h1 class="page-h1">Tell us about your trip.</h1>
-    <p class="page-sub">Takes 3 minutes. No credit card.</p>
+  <div class="page-header" id="page-header">
+    <h1 class="page-h1">Let's find your flight.</h1>
+    <p class="page-sub">Three quick steps · no credit card · pay only after you save</p>
+  </div>
+
+  <div class="restore-banner" id="restore-banner">
+    <div class="restore-txt">👋 <strong>Welcome back.</strong> We saved your answers from last time.</div>
+    <div class="restore-actions">
+      <button class="btn btn-primary btn-sm" onclick="restoreDraft()">Resume</button>
+      <button class="btn btn-ghost btn-sm" onclick="discardDraft()">Start fresh</button>
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-meta">
+      <span class="progress-step" id="progress-label">Step 1 of 3 — Your trip</span>
+      <span class="progress-pct" id="progress-pct">33%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
   </div>
 
   <form id="intakeForm" novalidate>
+    <!-- honeypot: bots fill it, humans never see it -->
+    <div class="hp-field" aria-hidden="true"><input type="text" name="hp" tabindex="-1" autocomplete="off"></div>
 
-    <!-- About You -->
-    <div class="form-card">
-      <div class="form-card-title">About you</div>
-      <div class="form-card-sub">Basic contact info so we can reach you.</div>
-      <div class="form-grid">
-        <div class="field">
-          <label>First Name <span class="req">*</span></label>
-          <input type="text" name="first_name" placeholder="Jordan" required>
+    <!-- ═══ STEP 1 — YOUR TRIP ═══ -->
+    <div class="step active" id="step-1">
+      <div class="form-card">
+        <div class="form-card-title">Where are we sending you? ✈️</div>
+        <div class="form-card-sub">Dream big — that's what the points are for.</div>
+        <div class="form-grid">
+          <div class="field form-full">
+            <label>Destination <span class="req">*</span></label>
+            <input type="text" name="travel_goals" placeholder="Tokyo, Paris, anywhere warm…" autocomplete="off">
+            <span class="err-msg">Tell us where you want to go.</span>
+          </div>
+          <div class="field form-full">
+            <label>Travel dates</label>
+            <input type="text" name="trip1_dates" placeholder="Flexible / Summer 2026 / Dec 20–27">
+          </div>
+          <div class="field form-full">
+            <label>Cabin</label>
+            <div class="chip-row" id="cabin-chips">
+              <button type="button" class="chip" data-val="economy"><span class="chip-ico">💺</span>Economy</button>
+              <button type="button" class="chip" data-val="premium_economy"><span class="chip-ico">🛋</span>Premium</button>
+              <button type="button" class="chip sel" data-val="business"><span class="chip-ico">🥂</span>Business</button>
+              <button type="button" class="chip" data-val="first"><span class="chip-ico">👑</span>First</button>
+            </div>
+            <input type="hidden" name="cabin_pref" value="business">
+          </div>
+          <div class="field">
+            <label>Trip type</label>
+            <select name="trip_type">
+              <option value="leisure">Leisure / vacation</option>
+              <option value="business">Business travel</option>
+              <option value="mixed">Mixed</option>
+              <option value="honeymoon">Honeymoon / anniversary</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Max stops</label>
+            <select name="max_stops">
+              <option value="nonstop">Nonstop only</option>
+              <option value="1" selected>Max 1 stop</option>
+              <option value="2">Up to 2 stops</option>
+              <option value="any">No preference</option>
+            </select>
+          </div>
+          <div class="field form-full">
+            <label>Anything else about the dream?</label>
+            <textarea name="notes" placeholder="Lie-flat seats, anniversary trip, traveling with kids…"></textarea>
+          </div>
         </div>
-        <div class="field">
-          <label>Last Name <span class="req">*</span></label>
-          <input type="text" name="last_name" placeholder="Mills" required>
-        </div>
-        <div class="field">
-          <label>Email <span class="req">*</span></label>
-          <input type="email" name="email" placeholder="jordan@example.com" required>
-        </div>
-        <div class="field">
-          <label>Phone</label>
-          <input type="tel" name="phone" placeholder="+1 (202) 555-0000">
-        </div>
-        <div class="field">
-          <label>Home Airport <span class="req">*</span></label>
-          <input type="text" name="home_airport" placeholder="e.g. BUF – Buffalo" required>
-        </div>
-        <div class="field">
-          <label>How did you hear about us?</label>
-          <select name="referral_source">
-            <option value="">Select…</option>
-            <option>Friend or family referral</option>
-            <option>Social media</option>
-            <option>Search engine</option>
-            <option>Word of mouth</option>
-            <option>Other</option>
-          </select>
-        </div>
-        <div class="field form-full">
-          <label>Referral name (if applicable)</label>
-          <input type="text" name="referral_name" placeholder="Who referred you? (optional)">
-        </div>
+      </div>
+      <div class="step-nav">
+        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(1)">Next — your points →</button>
       </div>
     </div>
 
-    <!-- Where do you want to go -->
-    <div class="form-card">
-      <div class="form-card-title">Your trip</div>
-      <div class="form-card-sub">Tell us what you're dreaming about.</div>
-      <div class="form-grid">
-        <div class="field form-full">
-          <label>Where do you want to go? <span class="req">*</span></label>
-          <input type="text" name="travel_goals" placeholder="e.g. Tokyo, Paris, anywhere warm" required>
+    <!-- ═══ STEP 2 — YOUR POINTS ═══ -->
+    <div class="step" id="step-2">
+      <div class="form-card">
+        <div class="form-card-title">What are you sitting on? ⬡</div>
+        <div class="form-card-sub">Every program counts — rough estimates are fine. We never ask for passwords.</div>
+        <div class="points-rows" id="points-rows">
+          <div class="points-row">
+            <input type="text" class="pts-prog" placeholder="Program (e.g. Chase UR)">
+            <input type="text" class="pts-bal" placeholder="Balance (e.g. 80,000)" inputmode="numeric">
+            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>
+          </div>
+          <div class="points-row">
+            <input type="text" class="pts-prog" placeholder="Program (e.g. Amex MR)">
+            <input type="text" class="pts-bal" placeholder="Balance (e.g. 150,000)" inputmode="numeric">
+            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>
+          </div>
         </div>
-        <div class="field form-full">
-          <label>What's your travel goal?</label>
-          <textarea name="notes" placeholder="Business class to Europe, lie-flat seats, Hawaii for our anniversary…"></textarea>
-        </div>
-        <div class="field form-full">
-          <label>Travel dates</label>
-          <input type="text" name="trip1_dates" placeholder="Flexible / Summer 2026 / Dec 20–27">
-        </div>
+        <button type="button" class="btn-add-row" onclick="addPtsRow()">+ Add another program</button>
+        <div class="pts-skip">Not sure what you have? Skip this — we'll figure it out together.</div>
+      </div>
+      <div class="step-nav">
+        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(2)">← Back</button>
+        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(2)">Next — about you →</button>
       </div>
     </div>
 
-    <!-- Point balances -->
-    <div class="form-card">
-      <div class="form-card-title">Your point balances</div>
-      <div class="form-card-sub">Add every program you hold — even rough estimates help. Program name + balance.</div>
-      <div class="points-rows" id="points-rows">
-        <div class="points-row">
-          <input type="text" class="pts-prog" placeholder="Program (e.g. Chase UR)">
-          <input type="text" class="pts-bal" placeholder="Balance (e.g. 80,000)">
-          <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>
-        </div>
-        <div class="points-row">
-          <input type="text" class="pts-prog" placeholder="Program (e.g. Amex MR)">
-          <input type="text" class="pts-bal" placeholder="Balance (e.g. 150,000)">
-          <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>
+    <!-- ═══ STEP 3 — ABOUT YOU ═══ -->
+    <div class="step" id="step-3">
+      <div class="form-card">
+        <div class="form-card-title">Almost there 🎯</div>
+        <div class="form-card-sub">Just enough to reach you with your options.</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>First name <span class="req">*</span></label>
+            <input type="text" name="first_name" placeholder="Jordan" autocomplete="given-name">
+            <span class="err-msg">Required.</span>
+          </div>
+          <div class="field">
+            <label>Last name <span class="req">*</span></label>
+            <input type="text" name="last_name" placeholder="Mills" autocomplete="family-name">
+            <span class="err-msg">Required.</span>
+          </div>
+          <div class="field">
+            <label>Email <span class="req">*</span></label>
+            <input type="email" name="email" placeholder="jordan@example.com" autocomplete="email">
+            <span class="err-msg">A valid email is required.</span>
+          </div>
+          <div class="field">
+            <label>Phone</label>
+            <input type="tel" name="phone" placeholder="+1 (202) 555-0000" autocomplete="tel">
+          </div>
+          <div class="field">
+            <label>Home airport <span class="req">*</span></label>
+            <input type="text" name="home_airport" placeholder="e.g. IAD – Washington" autocomplete="off">
+            <span class="err-msg">Required — where do you fly from?</span>
+          </div>
+          <div class="field">
+            <label>Preferred contact</label>
+            <select name="comm_pref">
+              <option value="email">Email</option>
+              <option value="text">Text / SMS</option>
+              <option value="whatsapp">WhatsApp</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>How did you hear about us?</label>
+            <select name="referral_source">
+              <option value="">Select…</option>
+              <option>Friend or family referral</option>
+              <option>Social media</option>
+              <option>Search engine</option>
+              <option>Word of mouth</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Referral name (optional)</label>
+            <input type="text" name="referral_name" placeholder="Who sent you?">
+          </div>
         </div>
       </div>
-      <button type="button" class="btn-add-row" onclick="addPtsRow()">+ Add program</button>
-    </div>
 
-    <!-- Preferences (preserved for backend compatibility) -->
-    <div class="form-card">
-      <div class="form-card-title">Preferences</div>
-      <div class="form-card-sub">Help us find the best fit.</div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Target cabin class</label>
-          <select name="cabin_pref">
-            <option value="economy">Economy</option>
-            <option value="premium_economy">Premium Economy</option>
-            <option value="business" selected>Business</option>
-            <option value="first">First Class</option>
-          </select>
+      <div class="form-card">
+        <div style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:16px">
+          Our fee is <strong style="color:var(--accent)">10% of what you save</strong> — documented against the real cash price. If we can't beat cash, you owe <strong style="color:var(--green)">$0</strong>.
         </div>
-        <div class="field">
-          <label>Maximum stops</label>
-          <select name="max_stops">
-            <option value="nonstop">Nonstop only</option>
-            <option value="1" selected>Max 1 stop</option>
-            <option value="2">Up to 2 stops</option>
-            <option value="any">No preference</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Trip type</label>
-          <select name="trip_type">
-            <option value="leisure">Leisure / vacation</option>
-            <option value="business">Business travel</option>
-            <option value="mixed">Mixed</option>
-            <option value="honeymoon">Honeymoon / anniversary</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>How do you prefer we contact you?</label>
-          <select name="comm_pref">
-            <option value="email">Email</option>
-            <option value="text">Text / SMS</option>
-            <option value="whatsapp">WhatsApp</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Submit -->
-    <div class="form-card">
-      <div style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:16px">
-        District Award Travel charges a <strong style="color:var(--accent)">10% fee on savings we identify</strong> — and nothing at all if we can't beat the cash price.
-      </div>
-      <div class="field">
-        <label style="display:none">Fee agreement</label>
         <label class="agree-row" id="agree-row">
-          <input type="checkbox" id="agree" name="agree" required>
-          <span>I understand and agree. This is an advisory service — I will book my own flights and hotels using DAT's guidance.</span>
+          <input type="checkbox" id="agree" name="agree">
+          <span>I understand and agree. This is an advisory service — I book my own flights with DAT's step-by-step guidance.</span>
         </label>
+        <div class="field" style="margin-top:6px"><span class="err-msg" id="agree-err">Please check the box to continue.</span></div>
+        <div class="submit-err" id="submit-err"></div>
+        <div style="margin-top:18px">
+          <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;min-height:50px;font-size:15px;border-radius:10px">Submit — it's free</button>
+        </div>
+        <div class="trust-strip">
+          <div class="trust-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1,9 5,13 15,3"/></svg>$0 upfront</div>
+          <div class="trust-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1,9 5,13 15,3"/></svg>No passwords ever</div>
+          <div class="trust-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1,9 5,13 15,3"/></svg>Reply in 24–72h</div>
+        </div>
       </div>
-      <div style="margin-top:20px">
-        <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;min-height:48px;font-size:15px;border-radius:8px">Submit — it's free</button>
+      <div class="step-nav" style="margin-top:0">
+        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(3)">← Back</button>
       </div>
     </div>
-
-    <!-- Hidden fields preserved for backend compatibility -->
-    <div id="legacy-points-fields">
-      <input type="text" name="has_amex_mr"><input type="text" name="pts_amex_mr" id="pts_amex_mr">
-      <input type="text" name="has_chase_ur"><input type="text" name="pts_chase_ur" id="pts_chase_ur">
-      <input type="text" name="has_citi_ty"><input type="text" name="pts_citi_ty" id="pts_citi_ty">
-      <input type="text" name="has_cap1"><input type="text" name="pts_cap1" id="pts_cap1">
-      <input type="text" name="has_bilt"><input type="text" name="pts_bilt" id="pts_bilt">
-      <input type="text" name="has_aa"><input type="text" name="pts_aa" id="pts_aa">
-      <input type="text" name="has_united"><input type="text" name="pts_united" id="pts_united">
-      <input type="text" name="has_delta"><input type="text" name="pts_delta" id="pts_delta">
-      <input type="text" name="has_alaska"><input type="text" name="pts_alaska" id="pts_alaska">
-      <input type="text" name="has_aeroplan"><input type="text" name="pts_aeroplan" id="pts_aeroplan">
-      <input type="text" name="has_avios"><input type="text" name="pts_avios" id="pts_avios">
-      <input type="text" name="has_flying_blue"><input type="text" name="pts_flying_blue" id="pts_flying_blue">
-      <input type="text" name="has_virgin_atlantic"><input type="text" name="pts_virgin_atlantic" id="pts_virgin_atlantic">
-      <input type="text" name="has_krisflyer"><input type="text" name="pts_krisflyer" id="pts_krisflyer">
-      <input type="text" name="has_asia_miles"><input type="text" name="pts_asia_miles" id="pts_asia_miles">
-      <input type="text" name="has_finnair"><input type="text" name="pts_finnair" id="pts_finnair">
-      <input type="text" name="has_ana"><input type="text" name="pts_ana" id="pts_ana">
-      <input type="text" name="has_jal"><input type="text" name="pts_jal" id="pts_jal">
-      <input type="text" name="has_southwest"><input type="text" name="pts_southwest" id="pts_southwest">
-      <input type="text" name="has_marriott"><input type="text" name="pts_marriott" id="pts_marriott">
-      <input type="text" name="has_hyatt"><input type="text" name="pts_hyatt" id="pts_hyatt">
-      <input type="text" name="has_hilton"><input type="text" name="pts_hilton" id="pts_hilton">
-      <input type="text" name="has_ihg"><input type="text" name="pts_ihg" id="pts_ihg">
-      <input type="text" name="has_wyndham"><input type="text" name="pts_wyndham" id="pts_wyndham">
-    </div>
-
   </form>
 
   <div id="success">
-    <div class="success-icon">✈️</div>
-    <h2 class="success-h2">Application received.</h2>
-    <p class="success-sub">We'll review your points portfolio and travel goals and reach out within 24 hours with your personalized redemption options.</p>
+    <div class="success-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,13 9,18 20,6"/></svg></div>
+    <h2 class="success-h2">You're in.</h2>
+    <p class="success-sub">Check your inbox for a confirmation. Your options are usually ready within 24–72 hours.</p>
     <div class="success-next">
       <div class="success-next-title">What happens next</div>
-      <div class="success-next-item"><span class="success-next-num">1</span><span>We analyze your points balances across all programs and run an availability search for your specific routes.</span></div>
-      <div class="success-next-item"><span class="success-next-num">2</span><span>We prepare your personalized redemption plan — exactly which points to use, what it saves you, and our fee.</span></div>
-      <div class="success-next-item"><span class="success-next-num">3</span><span>We reach out to walk you through the plan. If you love it, we guide you through booking step by step.</span></div>
-      <div class="success-next-item"><span class="success-next-num">4</span><span>You pay our 10% fee after your bookings are confirmed. No savings, no fee.</span></div>
+      <div class="success-next-item"><span class="success-next-num">1</span><span>We search transfer partners and sweet spots for your route.</span></div>
+      <div class="success-next-item"><span class="success-next-num">2</span><span>You get up to 3 options with proof screenshots and exact savings.</span></div>
+      <div class="success-next-item"><span class="success-next-num">3</span><span>You book it yourself with our step-by-step guide — we're with you the whole way.</span></div>
+      <div class="success-next-item"><span class="success-next-num">4</span><span>You pay 10% of documented savings. No savings, no fee.</span></div>
     </div>
     <div style="margin-top:28px"><a href="index.html" class="btn btn-ghost">← Back to site</a></div>
   </div>
 </div>
 
 <script>
-/* ── Points rows ── */
-function addPtsRow(){
+/* ═══ Funnel tracking ═══ */
+function sid(){
+  var s=sessionStorage.getItem('dat_sid');
+  if(!s){s=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));sessionStorage.setItem('dat_sid',s);}
+  return s;
+}
+function track(event){
+  try{
+    var payload=JSON.stringify({event:event,page:'intake',session_id:sid(),
+      utm_source:sessionStorage.getItem('dat_utm_source')||'',
+      utm_medium:sessionStorage.getItem('dat_utm_medium')||'',
+      utm_campaign:sessionStorage.getItem('dat_utm_campaign')||''});
+    if(navigator.sendBeacon){navigator.sendBeacon('/api/track',new Blob([payload],{type:'application/json'}));}
+    else fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:payload,keepalive:true}).catch(function(){});
+  }catch(e){}
+}
+track('page_view');
+var formStarted=false;
+function markStart(){if(!formStarted){formStarted=true;track('form_start');}}
+
+/* ═══ Steps ═══ */
+var STEP_LABELS={1:'Step 1 of 3 — Your trip',2:'Step 2 of 3 — Your points',3:'Step 3 of 3 — About you'};
+var curStep=1,maxTracked=0;
+function showStep(n){
+  curStep=n;
+  document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('step-'+n).classList.add('active');
+  document.getElementById('progress-label').textContent=STEP_LABELS[n];
+  document.getElementById('progress-pct').textContent=Math.round(n/3*100)+'%';
+  document.getElementById('progress-fill').style.width=(n/3*100)+'%';
+  window.scrollTo({top:0,behavior:'smooth'});
+  saveDraft();
+}
+function validateStep(n){
+  var ok=true;
+  document.querySelectorAll('#step-'+n+' .field.invalid').forEach(function(f){f.classList.remove('invalid');});
+  if(n===1){
+    var dest=document.querySelector('[name=travel_goals]');
+    if(!dest.value.trim()){dest.closest('.field').classList.add('invalid');ok=false;}
+  }
+  if(n===3){
+    ['first_name','last_name','home_airport'].forEach(function(name){
+      var f=document.querySelector('[name='+name+']');
+      if(!f.value.trim()){f.closest('.field').classList.add('invalid');ok=false;}
+    });
+    var em=document.querySelector('[name=email]');
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em.value.trim())){em.closest('.field').classList.add('invalid');ok=false;}
+  }
+  if(!ok){
+    var firstBad=document.querySelector('#step-'+n+' .field.invalid input,#step-'+n+' .field.invalid select');
+    if(firstBad)firstBad.focus();
+  }
+  return ok;
+}
+function nextStep(from){
+  if(!validateStep(from))return;
+  if(from>maxTracked){maxTracked=from;track('step_'+from+'_complete');}
+  showStep(from+1);
+}
+function prevStep(from){showStep(from-1);}
+
+/* ═══ Cabin chips ═══ */
+document.querySelectorAll('#cabin-chips .chip').forEach(function(c){
+  c.addEventListener('click',function(){
+    document.querySelectorAll('#cabin-chips .chip').forEach(function(x){x.classList.remove('sel');});
+    c.classList.add('sel');
+    document.querySelector('[name=cabin_pref]').value=c.dataset.val;
+    markStart();saveDraft();
+  });
+});
+
+/* ═══ Points rows ═══ */
+function addPtsRow(prog,bal){
   var row=document.createElement('div');
   row.className='points-row';
-  row.innerHTML='<input type="text" class="pts-prog" placeholder="Program"><input type="text" class="pts-bal" placeholder="Balance"><button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>';
+  row.innerHTML='<input type="text" class="pts-prog" placeholder="Program"><input type="text" class="pts-bal" placeholder="Balance" inputmode="numeric"><button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>';
+  if(prog)row.querySelector('.pts-prog').value=prog;
+  if(bal)row.querySelector('.pts-bal').value=bal;
   document.getElementById('points-rows').appendChild(row);
 }
 function removePtsRow(btn){
   var rows=document.getElementById('points-rows');
-  if(rows.children.length<=1) return;
+  if(rows.children.length<=1)return;
   btn.closest('.points-row').remove();
+  saveDraft();
+}
+function ptsList(){
+  var list=[];
+  document.querySelectorAll('.points-row').forEach(function(row){
+    var p=row.querySelector('.pts-prog').value.trim(),b=row.querySelector('.pts-bal').value.trim();
+    if(p||b)list.push({program:p,balance:b});
+  });
+  return list;
 }
 
-/* ── Agree row visual toggle ── */
-document.getElementById('agree').addEventListener('change',function(){
+/* ═══ Agree toggle ═══ */
+var agreeCb=document.getElementById('agree');
+agreeCb.addEventListener('change',function(){
   document.getElementById('agree-row').classList.toggle('checked',this.checked);
-});
-document.getElementById('agree-row').addEventListener('click',function(e){
-  if(e.target!==document.getElementById('agree')){
-    var cb=document.getElementById('agree');
-    cb.checked=!cb.checked;
-    this.classList.toggle('checked',cb.checked);
-  }
+  document.getElementById('agree-err').style.display='none';
 });
 
-/* ── Funnel tracking ── */
-function track(event,extra){
-  try{
-    var sid=sessionStorage.getItem('dat_sid')||(function(){var s=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));sessionStorage.setItem('dat_sid',s);return s;})();
-    var payload=Object.assign({event:event,page:'intake',session_id:sid},extra||{});
-    if(navigator.sendBeacon){navigator.sendBeacon('/api/track',new Blob([JSON.stringify(payload)],{type:'application/json'}));}
-    else fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true}).catch(function(){});
-  }catch(e){}
+/* ═══ Autosave + restore ═══ */
+var DRAFT_KEY='dat_intake_draft',saveTimer=null,restoring=false;
+function saveDraft(){
+  if(restoring)return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(function(){
+    try{
+      var fields={};
+      document.querySelectorAll('#intakeForm input[name],#intakeForm select[name],#intakeForm textarea[name]').forEach(function(f){
+        if(f.name==='hp'||f.type==='checkbox')return;
+        fields[f.name]=f.value;
+      });
+      localStorage.setItem(DRAFT_KEY,JSON.stringify({fields:fields,points:ptsList(),step:curStep,ts:Date.now()}));
+    }catch(e){}
+  },350);
 }
-track('page_view');
+function loadDraft(){
+  try{
+    var raw=localStorage.getItem(DRAFT_KEY);if(!raw)return null;
+    var d=JSON.parse(raw);
+    if(!d||!d.ts||Date.now()-d.ts>7*24*3600*1000)return null;       // 7-day TTL
+    var hasContent=Object.keys(d.fields||{}).some(function(k){return (d.fields[k]||'').trim()&&k!=='cabin_pref'&&k!=='max_stops'&&k!=='trip_type'&&k!=='comm_pref';})||(d.points||[]).length;
+    return hasContent?d:null;
+  }catch(e){return null;}
+}
+function restoreDraft(){
+  var d=loadDraft();if(!d)return discardDraft();
+  restoring=true;
+  Object.keys(d.fields||{}).forEach(function(k){
+    var f=document.querySelector('[name='+k+']');
+    if(f)f.value=d.fields[k];
+  });
+  // cabin chip visual
+  var cab=(d.fields||{}).cabin_pref;
+  if(cab){document.querySelectorAll('#cabin-chips .chip').forEach(function(c){c.classList.toggle('sel',c.dataset.val===cab);});}
+  // points rows
+  var pts=d.points||[];
+  if(pts.length){
+    document.getElementById('points-rows').innerHTML='';
+    pts.forEach(function(p){addPtsRow(p.program,p.balance);});
+    if(pts.length<2)addPtsRow();
+  }
+  restoring=false;
+  document.getElementById('restore-banner').classList.remove('show');
+  showStep(Math.min(Math.max(d.step||1,1),3));
+}
+function discardDraft(){
+  try{localStorage.removeItem(DRAFT_KEY);}catch(e){}
+  document.getElementById('restore-banner').classList.remove('show');
+}
+if(loadDraft())document.getElementById('restore-banner').classList.add('show');
 
-/* ── Submit ── */
-document.getElementById('intakeForm').addEventListener('submit',function(e){
+document.getElementById('intakeForm').addEventListener('input',function(){markStart();saveDraft();});
+document.getElementById('intakeForm').addEventListener('change',saveDraft);
+
+/* Enter advances steps instead of submitting early */
+document.getElementById('intakeForm').addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA'&&curStep<3){e.preventDefault();nextStep(curStep);}
+});
+
+/* ═══ Submit — reliable: await, retry, never lose the lead ═══ */
+function showSubmitErr(msg){
+  var el=document.getElementById('submit-err');
+  el.textContent=msg;el.classList.add('show');
+}
+async function postIntake(data){
+  var delays=[0,1500,3500];                       // up to 3 attempts
+  for(var i=0;i<delays.length;i++){
+    if(delays[i])await new Promise(function(r){setTimeout(r,delays[i]);});
+    try{
+      var res=await fetch('/api/intake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+      if(res.ok)return {ok:true};
+      if(res.status===422){var d=await res.json().catch(function(){return{};});return {ok:false,fatal:true,msg:d.detail||'Something in the form was rejected — check your email address.'};}
+      if(res.status===429)return {ok:false,fatal:true,msg:'Too many submissions from this network — please try again in an hour.'};
+      // 5xx → retry
+    }catch(e){/* network error → retry */}
+  }
+  return {ok:false,fatal:false,msg:'We couldn’t reach our server. Your answers are saved on this device — please try again in a minute.'};
+}
+document.getElementById('intakeForm').addEventListener('submit',async function(e){
   e.preventDefault();
-  var agree=document.getElementById('agree');
-  if(!agree.checked){
+  document.getElementById('submit-err').classList.remove('show');
+  if(!validateStep(3))return;
+  if(!agreeCb.checked){
+    document.getElementById('agree-err').style.display='block';
     document.getElementById('agree-row').style.outline='2px solid var(--red)';
     setTimeout(function(){document.getElementById('agree-row').style.outline='';},2000);
     return;
   }
-  // Validate required fields
-  var required=this.querySelectorAll('[required]');
-  var ok=true;
-  required.forEach(function(f){
-    f.style.borderColor='';
-    if(f.type==='checkbox'){if(!f.checked)ok=false;}
-    else if(!f.value.trim()){f.style.borderColor='var(--red)';ok=false;}
-  });
-  if(!ok)return;
-
   var btn=document.getElementById('submitBtn');
   btn.disabled=true;btn.textContent='Submitting…';
 
-  var fd=new FormData(this);
   var data={};
-  fd.forEach(function(v,k){data[k]=v;});
-  data.submitted_at=new Date().toISOString();
-
-  // Collect point rows from UI into the data payload
-  var ptRows=document.querySelectorAll('.points-row');
-  var ptList=[];
-  ptRows.forEach(function(row,i){
-    var prog=row.querySelector('.pts-prog').value.trim();
-    var bal=row.querySelector('.pts-bal').value.trim();
-    if(prog||bal) ptList.push({program:prog,balance:bal});
+  document.querySelectorAll('#intakeForm input[name],#intakeForm select[name],#intakeForm textarea[name]').forEach(function(f){
+    if(f.type==='checkbox'){data[f.name]=f.checked?'on':'';}
+    else data[f.name]=f.value;
   });
-  data.points_list=JSON.stringify(ptList);
-  // Also format as a travel_goals-compatible string for the notes field
-  if(ptList.length){
-    data.points_summary=ptList.map(function(p){return p.program+(p.balance?' '+p.balance:'');}).join(', ');
-  }
-  // Statuses default
+  data.submitted_at=new Date().toISOString();
+  data.consent='true';                              // backend records consent_at
+  data._session_id=sid();                           // backend logs the funnel 'submit' event
+  data.utm_source=sessionStorage.getItem('dat_utm_source')||'';
+  data.utm_medium=sessionStorage.getItem('dat_utm_medium')||'';
+  data.utm_campaign=sessionStorage.getItem('dat_utm_campaign')||'';
+  var list=ptsList();
+  data.points_list=JSON.stringify(list);
+  if(list.length)data.points_summary=list.map(function(p){return p.program+(p.balance?' '+p.balance:'');}).join(', ');
   data.airline_status=data.airline_status||'None';
   data.hotel_status=data.hotel_status||'None';
 
-  // Show success immediately (UX)
-  document.getElementById('intakeForm').style.display='none';
-  document.querySelector('.page-header').style.display='none';
-  document.getElementById('success').style.display='block';
-
-  track('intake_submit');
-
-  fetch('/api/intake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).catch(function(){});
+  var result=await postIntake(data);
+  if(result.ok){
+    discardDraft();
+    document.getElementById('intakeForm').style.display='none';
+    document.getElementById('page-header').style.display='none';
+    document.getElementById('progress-wrap').style.display='none';
+    document.getElementById('success').style.display='block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }else{
+    btn.disabled=false;btn.textContent='Submit — it’s free';
+    showSubmitErr(result.msg);
+  }
 });
 </script>
 </body>
