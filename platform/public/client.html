@@ -4,77 +4,89 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My Portal — District Award Travel</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#f5f1ed; color:#2a2a2a; font-family:system-ui,-apple-system,sans-serif; min-height:100vh; }
-
-  /* NAV */
-  nav { background:#ff8a1e; padding:18px 32px; display:flex; align-items:center; justify-content:space-between; }
-  .logo { font-size:1.2rem; font-weight:800; color:#fff; }
-  .nav-info { display:flex; gap:20px; align-items:center; font-size:.9rem; }
-  .nav-info span { color:rgba(255,255,255,0.8); }
-  .nav-info strong { color:#fff; }
-  .btn-logout { background:rgba(255,255,255,.2); color:#fff; border:none; padding:7px 16px; border-radius:6px; cursor:pointer; font-size:.85rem; transition:all .2s; }
-  .btn-logout:hover { background:rgba(255,255,255,.3); }
-
-  /* LOGIN */
-  #login-screen { display:flex; align-items:center; justify-content:center; min-height:calc(100vh - 60px); padding:40px 20px; }
-  .login-box { background:#fff; border:2px solid #ff8a1e; border-radius:12px; padding:40px; width:100%; max-width:380px; box-shadow:0 4px 16px rgba(0,0,0,.08); }
-  .login-box h2 { font-size:1.4rem; color:#ff8a1e; margin-bottom:6px; }
-  .login-box p { color:#888; font-size:.9rem; margin-bottom:24px; }
-  .form-group { margin-bottom:16px; }
-  .form-group label { display:block; font-size:.8rem; color:#666; margin-bottom:5px; font-weight:600; }
-  .form-group input { width:100%; padding:10px 12px; border:1px solid #ddd; border-radius:6px; font-size:.9rem; }
-  .form-group input:focus { outline:none; border-color:#ff8a1e; box-shadow:0 0 0 3px rgba(255,138,30,.1); }
-  .btn-primary { width:100%; background:#ff8a1e; color:#fff; border:none; padding:12px; border-radius:6px; font-weight:700; cursor:pointer; font-size:.95rem; }
-  .btn-primary:hover { background:#e85d04; }
-  .login-error { color:#ef4444; font-size:.85rem; margin-top:10px; display:none; text-align:center; }
-
-  /* PORTAL */
-  #portal { display:none; padding:40px 32px; max-width:1000px; margin:0 auto; }
-  .portal-head { margin-bottom:40px; }
-  .portal-head h1 { font-size:2rem; color:#2a2a2a; margin-bottom:4px; font-weight:800; }
-  .portal-head p { color:#888; font-size:.95rem; }
-
-  /* MESSAGES SECTION */
-  .section { margin-bottom:40px; }
-  .section-title { font-size:1rem; font-weight:800; color:#ff8a1e; margin-bottom:16px; text-transform:uppercase; letter-spacing:.05em; }
-  .message-card { background:#fff; border-left:4px solid #ff8a1e; padding:20px; margin-bottom:12px; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.04); }
-  .message-card.unread { background:rgba(255,138,30,.05); }
-  .msg-from { font-weight:700; color:#2a2a2a; margin-bottom:4px; font-size:.95rem; }
-  .msg-subject { color:#ff8a1e; font-weight:600; margin-bottom:8px; font-size:.9rem; }
-  .msg-body { color:#555; line-height:1.6; margin-bottom:12px; white-space:pre-wrap; word-wrap:break-word; }
-  .msg-time { font-size:.75rem; color:#aaa; }
-  .msg-options { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-  .msg-option { display:inline-block; padding:6px 12px; background:#f5f1ed; color:#666; border-radius:4px; font-size:.8rem; border-left:2px solid #ff8a1e; }
-
-  /* TRIPS */
-  .trip-card { background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.04); margin-bottom:12px; }
-  .trip-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
-  .trip-dest { font-size:1.3rem; font-weight:800; color:#2a2a2a; }
-  .trip-dates { color:#888; font-size:.9rem; margin-top:2px; }
-  .trip-meta { font-size:.85rem; color:#888; line-height:1.8; }
-
-  /* POINTS */
-  .points-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
-  .point-card { background:#fff; padding:18px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,.04); border-top:3px solid #ff8a1e; }
-  .point-name { font-weight:700; color:#2a2a2a; font-size:.95rem; margin-bottom:8px; }
-  .point-balance { font-size:1.5rem; color:#ff8a1e; font-weight:800; }
-
-  /* EMPTY STATE */
-  .empty-state { text-align:center; padding:40px 20px; color:#888; }
-  .empty-icon { font-size:3rem; margin-bottom:12px; }
-  .empty-text { font-size:.95rem; }
-
-  .hidden { display:none; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#ffffff;--off:#fafaf9;--card:#f5f5f4;
+  --text:#1c1917;--muted:#78716c;--dim:#a8a29e;
+  --accent:#f97316;--accent-dim:rgba(249,115,22,.08);--accent-border:rgba(249,115,22,.2);
+  --border:#e7e5e4;--border2:#d6d3d1;--red:#ef4444;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--off);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+a{text-decoration:none;color:inherit}
+/* NAV */
+nav{background:var(--bg);border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 0 var(--border)}
+.nav-logo{font-size:15px;font-weight:800;color:var(--text)}
+.nav-logo span{color:var(--accent)}
+.nav-right{display:flex;align-items:center;gap:16px}
+.nav-email{font-size:13px;color:var(--muted)}
+.btn-logout{background:none;border:1px solid var(--border2);color:var(--muted);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:var(--font);transition:all .2s}
+.btn-logout:hover{border-color:var(--accent-border);color:var(--accent)}
+/* LOGIN */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);padding:40px 20px}
+.login-box{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:36px;width:100%;max-width:360px;box-shadow:var(--shadow)}
+.login-box h2{font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.5px}
+.login-box p{color:var(--muted);font-size:13px;margin-bottom:24px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600;letter-spacing:.02em}
+.form-group input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:var(--font);background:var(--off);color:var(--text);outline:none;transition:border-color .15s}
+.form-group input:focus{outline:none;border-color:var(--accent);background:var(--bg)}
+.btn-primary{width:100%;background:var(--accent);color:#fff;border:none;padding:11px;border-radius:8px;font-weight:700;cursor:pointer;font-size:14px;font-family:var(--font);transition:all .18s}
+.btn-primary:hover{background:#ea6c0a}
+.login-error{color:var(--red);font-size:13px;margin-top:10px;display:none;text-align:center}
+/* PORTAL */
+#portal{display:none;padding:36px 24px;max-width:860px;margin:0 auto}
+.portal-head{margin-bottom:32px}
+.portal-head h1{font-size:26px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.7px}
+.portal-head p{color:var(--muted);font-size:14px}
+.savings-counter{display:none;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-top:16px;box-shadow:var(--shadow);text-align:center;max-width:340px}
+.savings-label{font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.savings-amount{font-size:32px;font-weight:800;color:var(--accent);letter-spacing:-1px;font-variant-numeric:tabular-nums}
+/* SECTION */
+.section{margin-bottom:32px}
+.section-title{font-size:11px;font-weight:700;color:var(--accent);margin-bottom:14px;text-transform:uppercase;letter-spacing:.1em}
+/* MESSAGE CARD */
+.message-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:10px;box-shadow:var(--shadow);border-left:3px solid var(--border2)}
+.message-card.unread{border-left-color:var(--accent);background:var(--bg)}
+.msg-from{font-weight:700;color:var(--text);margin-bottom:3px;font-size:14px}
+.msg-subject{color:var(--accent);font-weight:600;margin-bottom:8px;font-size:13px}
+.msg-body{color:var(--muted);line-height:1.65;margin-bottom:10px;white-space:pre-wrap;word-wrap:break-word;font-size:14px}
+.msg-time{font-size:12px;color:var(--dim)}
+.msg-options{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.msg-option{display:inline-block;padding:6px 12px;background:var(--off);color:var(--muted);border-radius:6px;font-size:12px;border-left:2px solid var(--accent)}
+/* TRIP CARD */
+.trip-card{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:10px;box-shadow:var(--shadow)}
+.trip-dest{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.4px}
+.trip-dates{color:var(--muted);font-size:13px;margin-bottom:6px}
+.trip-meta{font-size:13px;color:var(--dim)}
+/* POINTS GRID */
+.points-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.point-card{background:var(--bg);padding:16px;border-radius:10px;border:1px solid var(--border);box-shadow:var(--shadow)}
+.point-name{font-weight:700;color:var(--text);font-size:13px;margin-bottom:6px}
+.point-balance{font-size:20px;color:var(--accent);font-weight:800;letter-spacing:-.5px}
+/* EMPTY STATE */
+.empty-state{text-align:center;padding:36px 20px;color:var(--dim);background:var(--bg);border:1px dashed var(--border2);border-radius:12px}
+.empty-icon{font-size:28px;margin-bottom:10px}
+.empty-text{font-size:14px}
+.hidden{display:none}
+@media(max-width:600px){
+  nav{padding:0 16px}
+  .nav-email{display:none}
+  #portal{padding:24px 16px}
+  .points-grid{grid-template-columns:1fr 1fr}
+}
 </style>
 </head>
 <body>
 
 <nav>
-  <div class="logo">District Award Travel</div>
-  <div class="nav-info">
-    <div><span>Welcome,</span> <strong id="nav-name">Client</strong></div>
+  <div class="nav-logo">District <span>Award</span> Travel</div>
+  <div class="nav-right">
+    <span class="nav-email" id="nav-name">Client</span>
     <button class="btn-logout" onclick="logout()">Sign Out</button>
   </div>
 </nav>
@@ -89,7 +101,7 @@
     </div>
     <div class="form-group">
       <label>Access Code</label>
-      <input type="password" id="login-pass" placeholder="••••••••">
+      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
     <button class="btn-primary" onclick="doLogin()">Sign In</button>
     <div class="login-error" id="login-error"></div>
@@ -100,15 +112,14 @@
   <div class="portal-head">
     <h1 id="portal-name">Welcome</h1>
     <p id="portal-tier">District Award Travel Client</p>
-    <div id="savings-counter" style="display:none;margin-top:14px;text-align:center">
-      <div style="font-size:.78rem;color:var(--muted,#9ca3af);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px">You've saved with District</div>
-      <div id="savings-amount" style="font-size:2.2rem;font-weight:800;color:#d97706;font-variant-numeric:tabular-nums">$0</div>
+    <div class="savings-counter" id="savings-counter">
+      <div class="savings-label">You've saved with District</div>
+      <div class="savings-amount" id="savings-amount">$0</div>
     </div>
   </div>
 
-  <!-- MESSAGES FROM ADVISOR -->
   <div class="section">
-    <div class="section-title">💬 Messages from Braden</div>
+    <div class="section-title">Messages from Braden</div>
     <div id="messages-container">
       <div class="empty-state">
         <div class="empty-icon">📭</div>
@@ -117,9 +128,8 @@
     </div>
   </div>
 
-  <!-- TRIPS -->
   <div class="section">
-    <div class="section-title">✈️ Your Trips</div>
+    <div class="section-title">Your Trips</div>
     <div id="trips-container">
       <div class="empty-state">
         <div class="empty-icon">🗺️</div>
@@ -128,24 +138,21 @@
     </div>
   </div>
 
-  <!-- POINTS -->
   <div class="section">
-    <div class="section-title">⭐ Your Points & Miles</div>
+    <div class="section-title">Your Points &amp; Miles</div>
     <div id="points-container" class="points-grid">
-      <div class="empty-state">
+      <div class="empty-state" style="grid-column:1/-1">
         <div class="empty-icon">💰</div>
         <div class="empty-text">No points recorded yet.</div>
       </div>
     </div>
   </div>
-
 </div>
 
 <script>
 let currentClient = null;
 let autoRefreshInterval = null;
 
-// Escape user/admin-supplied strings before HTML interpolation
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -158,9 +165,8 @@ function showPortal(c) {
   document.getElementById('portal').style.display = 'block';
   const firstName = (c.name || 'Client').split(' ')[0];
   document.getElementById('nav-name').textContent = firstName;
-  document.getElementById('portal-name').textContent = `Welcome back, ${firstName}`;
+  document.getElementById('portal-name').textContent = 'Hi ' + firstName + ' 👋';
   document.getElementById('portal-tier').textContent = (c.tier || 'Client') + ' — District Award Travel';
-  // savings counter
   const lifetimeCents = c.lifetime_savings_cents || 0;
   if (lifetimeCents > 0) {
     const counterEl = document.getElementById('savings-counter');
@@ -197,7 +203,6 @@ async function doLogin() {
   const pass = document.getElementById('login-pass').value.trim();
   const btn = document.querySelector('#login-screen .btn-primary');
   if (btn) { btn.disabled = true; btn.textContent = 'Signing in...'; }
-
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -240,7 +245,6 @@ function renderPortal(c) {
   const messages = data.messages || c.messages || [];
   const trips = data.trips || c.trips || [];
   const points = data.points || c.points || [];
-
   renderMessages(messages);
   renderTrips(trips);
   renderPoints(points);
@@ -249,7 +253,7 @@ function renderPortal(c) {
 function renderMessages(msgs) {
   const mc = document.getElementById('messages-container');
   if (!msgs || msgs.length === 0) {
-    mc.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No messages yet.</div></div>';
+    mc.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No messages yet. Your advisor will reach out soon.</div></div>';
     return;
   }
   mc.innerHTML = msgs.map(m => `
@@ -275,16 +279,12 @@ function renderTrips(trips) {
   }
   tc.innerHTML = trips.map(t => `
     <div class="trip-card">
-      <div class="trip-header">
-        <div>
-          <div class="trip-dest">${esc(t.destination || t.dest || 'Trip')}</div>
-          <div class="trip-dates">${esc(t.dates)}</div>
-        </div>
-      </div>
+      <div class="trip-dest">${esc(t.destination || t.dest || 'Trip')}</div>
+      <div class="trip-dates">${esc(t.dates || '')}</div>
       <div class="trip-meta">
-        ${t.passengers ? `${esc(t.passengers)} passenger${t.passengers != '1' ? 's' : ''}` : ''}
-        ${t.cabin ? `• ${esc(t.cabin)}` : ''}
-        ${t.flexibility ? `• ${esc(t.flexibility)}` : ''}
+        ${t.passengers ? esc(t.passengers) + ' passenger' + (t.passengers != '1' ? 's' : '') : ''}
+        ${t.cabin ? ' · ' + esc(t.cabin) : ''}
+        ${t.flexibility ? ' · ' + esc(t.flexibility) : ''}
       </div>
     </div>
   `).join('');
@@ -304,16 +304,11 @@ function renderPoints(points) {
   `).join('');
 }
 
-/* ── Live updates: SSE first, adaptive polling fallback, paused when hidden ──
-   The stream sends 'changed' only when the admin actually mutates this
-   client's data; we then refetch once. Heartbeats keep proxies open. The
-   server ends each stream after 5 min; we reconnect with backoff. After 3
-   consecutive stream failures we fall back to 60s polling and periodically
-   retry SSE. Everything stops while the tab is hidden. */
+/* ── Live updates: SSE first, adaptive polling fallback, paused when hidden ── */
 let evtSource = null;
 let sseFailures = 0;
 let reconnectTimer = null;
-let reconnectDelay = 2000;   // 2s → 4s → 8s … max 60s
+let reconnectDelay = 2000;
 
 async function refetchMe() {
   const token = sessionStorage.getItem('dat_client_token');
@@ -327,7 +322,7 @@ async function refetchMe() {
         renderPortal(currentClient);
       }
     }
-  } catch (e) { /* transient network error — next event/poll retries */ }
+  } catch (e) {}
 }
 
 function connectStream() {
@@ -339,12 +334,12 @@ function connectStream() {
     evtSource.addEventListener('hello', function() {
       sseFailures = 0;
       reconnectDelay = 2000;
-      stopPollingFallback();   // SSE is healthy — polling not needed
+      stopPollingFallback();
     });
     evtSource.addEventListener('changed', refetchMe);
     evtSource.addEventListener('bye', function() {
       disconnectStream();
-      scheduleReconnect();     // normal 5-min rotation, not a failure
+      scheduleReconnect();
     });
     evtSource.onerror = function() {
       disconnectStream();
@@ -353,7 +348,7 @@ function connectStream() {
       scheduleReconnect();
     };
   } catch (e) {
-    startPollingFallback();    // EventSource unsupported
+    startPollingFallback();
   }
 }
 
@@ -383,9 +378,7 @@ function stopPollingFallback() {
   }
 }
 
-function startAutoRefresh() {
-  connectStream();
-}
+function startAutoRefresh() { connectStream(); }
 
 function stopAutoRefresh() {
   disconnectStream();
@@ -398,11 +391,20 @@ document.addEventListener('visibilitychange', function() {
   if (document.hidden) {
     stopAutoRefresh();
   } else {
-    refetchMe();        // catch up on anything missed while hidden
+    refetchMe();
     connectStream();
   }
 });
-</script>
 
+// Auto-login from session
+(async function() {
+  const token = sessionStorage.getItem('dat_client_token');
+  if (!token) return;
+  try {
+    const me = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (me.ok) return showPortal(await me.json());
+  } catch (e) {}
+})();
+</script>
 </body>
 </html>
