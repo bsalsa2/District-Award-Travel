@@ -1683,6 +1683,7 @@ def send_message(msg_in: SendMessageIn, _: dict = Depends(require_admin), db: Se
 
     message = {
         "from": "Braden — DAT",
+        "sender": "advisor",
         "time": dt.datetime.utcnow().isoformat(),
         "subject": msg_in.subject,
         "text": msg_in.body,
@@ -1695,15 +1696,127 @@ def send_message(msg_in: SendMessageIn, _: dict = Depends(require_admin), db: Se
     data["messages"] = messages
     client.data = json.dumps(data)
     db.commit()
+    bump_client_version(client.email)
 
-    # Also send email notification
+    # Also send email notification (chat replies have no subject)
+    email_subject = f"New message: {msg_in.subject}" if msg_in.subject.strip() else "New message from Braden — District Award Travel"
     send_email_to(
         client.email,
-        f"New message: {msg_in.subject}",
+        email_subject,
         f"Hi {client.name.split()[0]},\n\n{msg_in.body}\n\nLog in to your portal to view this message.\n\nBest,\nBraden\nDistrict Award Travel"
     )
 
     return {"ok": True, "message_id": len(messages) - 1}
+
+
+# ── Two-way chat: client ↔ advisor ──
+# Messages live in the client's data.messages JSON array (same thread the
+# admin already writes to). sender: "advisor" | "client". unread = unread by
+# client; unread_admin = unread by advisor.
+
+class ClientMessageIn(BaseModel):
+    body: str
+
+
+@app.post("/api/client/message")
+@limiter.limit("30/minute")
+def client_send_message(request: Request, msg_in: ClientMessageIn,
+                        identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
+    """Client sends a chat message to the advisor."""
+    if identity.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    client = db.query(Client).filter(Client.email == identity["sub"]).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    text = (msg_in.body or "").strip()
+    if not text:
+        raise HTTPException(status_code=422, detail="Message is empty")
+    if len(text) > 5000:
+        raise HTTPException(status_code=422, detail="Message too long (5000 chars max)")
+
+    data = json.loads(client.data or "{}")
+    messages = data.get("messages", [])
+    messages.append({
+        "from": client.name,
+        "sender": "client",
+        "time": dt.datetime.utcnow().isoformat(),
+        "text": text,
+        "unread_admin": True,
+    })
+    data["messages"] = messages
+    client.data = json.dumps(data)
+    db.commit()
+    bump_client_version(client.email)  # update the client's other open tabs
+
+    # Notify the advisor by email so nothing sits unanswered
+    send_email(
+        f"💬 New portal message from {client.name}",
+        f"{client.name} ({client.email}) wrote:\n\n{text}\n\nReply from the admin dashboard → Messages.",
+        reply_to=client.email,
+    )
+    return {"ok": True, "message_id": len(messages) - 1}
+
+
+@app.post("/api/client/messages/read")
+def client_mark_messages_read(identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
+    """Client opened the thread — clear unread flags on advisor messages."""
+    if identity.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    client = db.query(Client).filter(Client.email == identity["sub"]).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    data = json.loads(client.data or "{}")
+    changed = False
+    for m in data.get("messages", []):
+        if m.get("unread") and m.get("sender") != "client":
+            m["unread"] = False
+            changed = True
+    if changed:
+        client.data = json.dumps(data)
+        db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/admin/inbox")
+def admin_inbox(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Chat inbox: every client with their last message + unread-by-admin count,
+    sorted by most recent activity. Powers the WhatsApp-style Messages panel."""
+    rows = []
+    for c in db.query(Client).all():
+        data = json.loads(c.data or "{}")
+        msgs = data.get("messages", [])
+        last = msgs[-1] if msgs else None
+        rows.append({
+            "email": c.email,
+            "name": c.name,
+            "tier": c.tier,
+            "unread": sum(1 for m in msgs if m.get("unread_admin")),
+            "last": {
+                "sender": last.get("sender", "advisor"),
+                "text": (last.get("text") or "")[:140],
+                "time": last.get("time", ""),
+            } if last else None,
+        })
+    rows.sort(key=lambda r: (r["last"]["time"] if r["last"] else ""), reverse=True)
+    return rows
+
+
+@app.post("/api/admin/clients/{email}/messages/read")
+def admin_mark_messages_read(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Advisor opened a thread — clear unread_admin flags on client messages."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    data = json.loads(client.data or "{}")
+    changed = False
+    for m in data.get("messages", []):
+        if m.get("unread_admin"):
+            m["unread_admin"] = False
+            changed = True
+    if changed:
+        client.data = json.dumps(data)
+        db.commit()
+    return {"ok": True}
 
 
 # ── AI: Gemini Vision document scanner ──

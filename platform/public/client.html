@@ -143,6 +143,33 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .point-prog{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
 .point-bal{font-size:24px;font-weight:800;color:var(--blue);letter-spacing:-.5px}
 
+/* ── CHAT ── */
+.chat-wrap{background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:420px;overflow:hidden}
+.chat-scroll{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.bubble-row{display:flex;flex-direction:column;align-items:flex-start}
+.bubble-row.me{align-items:flex-end}
+.bubble{max-width:78%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.55;white-space:pre-wrap;box-shadow:0 1px 2px rgba(0,0,0,.04);word-break:break-word}
+.bubble.adv{background:var(--white);border:1px solid var(--border);border-bottom-left-radius:4px}
+.bubble.me{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.bubble-subject{font-weight:700;margin-bottom:3px}
+.bubble-meta{font-size:10.5px;color:var(--dim);margin-top:4px;padding:0 4px}
+.bubble-plan{max-width:92%;width:100%}
+.bubble-plan .plan-card{margin-bottom:0;margin-top:8px}
+.chat-day{text-align:center;font-size:11px;color:var(--dim);margin:10px 0 2px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.chat-compose{display:flex;gap:10px;padding:14px;border-top:1px solid var(--border);background:var(--white);align-items:flex-end}
+.chat-input{flex:1;border:1px solid var(--border2);border-radius:10px;padding:11px 14px;font-size:14px;font-family:var(--font);color:var(--text);resize:none;outline:none;max-height:120px;line-height:1.45;transition:border-color .15s,box-shadow .15s}
+.chat-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.chat-send{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 20px;font-weight:700;font-size:14px;cursor:pointer;font-family:var(--font);transition:background .15s}
+.chat-send:hover{background:#ea6c0a}.chat-send:disabled{opacity:.5;cursor:not-allowed}
+.chat-note{text-align:center;font-size:11px;color:var(--dim);padding:6px 0 10px;background:var(--white)}
+
+/* ── HELP BANNER ── */
+.help-banner{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid var(--accent-border);border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+.help-txt{font-size:14px;line-height:1.5}
+.help-txt strong{font-weight:700}
+.help-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:background .15s}
+.help-btn:hover{background:#ea6c0a}
+
 /* ── EMPTY ── */
 .empty{text-align:center;padding:56px 24px;color:var(--muted)}
 .empty-ico{font-size:40px;margin-bottom:14px;opacity:.3}
@@ -157,6 +184,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
   .stats{grid-template-columns:1fr 1fr;gap:10px}
   .stat-val{font-size:22px}
   .status-sep{width:14px;margin:0 3px}
+  .chat-wrap{height:calc(100vh - 250px);min-height:340px}
+  .bubble{max-width:88%}
   .mtabs{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);z-index:100;height:62px;box-shadow:0 -2px 12px rgba(0,0,0,.05)}
   .mtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;color:var(--muted);border:none;background:none;font-family:var(--font);font-weight:500;cursor:pointer;position:relative}
   .mtab.active{color:var(--accent)}
@@ -218,6 +247,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
           <div class="status-label">Latest Trip Status</div>
           <div class="status-steps" id="ov-status-steps"></div>
         </div>
+        <div id="ov-help"></div>
         <div id="ov-plan"></div>
         <div class="sec-head">Recent Messages</div>
         <div class="msg-list" id="ov-messages"></div>
@@ -226,6 +256,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
       <!-- TRIPS -->
       <div class="panel" id="panel-trips">
         <div class="phead"><h1>My Trips</h1><p id="trips-sub">Your trips and where each one stands</p></div>
+        <div id="trips-help"></div>
         <div id="trips-container"></div>
       </div>
 
@@ -243,8 +274,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 
       <!-- MESSAGES -->
       <div class="panel" id="panel-messages">
-        <div class="phead"><h1>Messages</h1><p>Updates and options from your advisor</p></div>
-        <div class="msg-list" id="messages-container"></div>
+        <div class="phead"><h1>Messages</h1><p>Chat directly with your advisor</p></div>
+        <div class="chat-wrap">
+          <div class="chat-scroll" id="chat-scroll"></div>
+          <div class="chat-compose">
+            <textarea class="chat-input" id="chat-input" rows="1" placeholder="Type a message…" onkeydown="chatKey(event)" oninput="autoGrow(this)"></textarea>
+            <button class="chat-send" id="chat-send" onclick="sendChat()">Send</button>
+          </div>
+          <div class="chat-note">Messages go straight to Braden — replies usually same day</div>
+        </div>
       </div>
     </main>
   </div>
@@ -311,6 +349,15 @@ function switchTab(id){
   const t=document.getElementById('panel-'+id);if(t)t.classList.add('active');
   document.querySelectorAll('.nav-item,.mtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
   document.querySelector('.main').scrollTop=0;window.scrollTo(0,0);
+  if(id==='messages'){markChatRead();scrollChatBottom(true);}
+}
+
+// Jump into the chat from anywhere (help banners), optionally pre-filling the box
+function openChat(prefill){
+  switchTab('messages');
+  const inp=document.getElementById('chat-input');
+  if(prefill&&!inp.value)inp.value=prefill;
+  inp.focus();
 }
 
 let currentData=null;
@@ -335,16 +382,21 @@ function renderPortal(c){
     document.getElementById('ov-status').style.display='block';
   }else{document.getElementById('ov-status').style.display='none';}
 
-  // Messages (from data.messages JSON), newest first
+  // Messages (from data.messages JSON), newest first for the overview preview
   const msgs=(c.messages||[]).slice().reverse();
-  const unread=msgs.filter(m=>m.unread).length;
+  const unread=msgs.filter(m=>m.unread&&m.sender!=='client').length;
   setUnread(unread);
   renderMessages('ov-messages',msgs.slice(0,3),true);
-  renderMessages('messages-container',msgs,false);
+  renderChat(c.messages||[]);
+  // If the chat is already open when a new message lands, mark it read right away
+  if(document.getElementById('panel-messages').classList.contains('active')&&unread>0)markChatRead();
 
   // Plans the advisor has sent (newest first) — surfaced across Overview, Trips, Savings
   const plans=extractPlans(msgs);
   renderOverviewPlan(plans);
+
+  // "I'm here to help" booking nudges on Overview + Trips
+  renderHelpBanners(trips,plans);
 
   // Trips tab — pass plans so each can show its matching plan inline
   document.getElementById('trips-sub').textContent=trips.length?(trips.length+' trip'+(trips.length!==1?'s':'')+' in your pipeline'):'No trips yet';
@@ -411,6 +463,96 @@ function renderMessages(elId,msgs,preview){
       ${m.subject&&!preview?`<div class="sv-label" style="margin-bottom:6px">${esc(m.subject)}</div>`:''}
       <div class="msg-body">${shown}</div>${plan}</div>`;
   }).join('');
+}
+
+/* ── CHAT (WhatsApp-style thread with the advisor) ── */
+function dayLabel(s){
+  if(!s)return '';
+  const d=new Date(s);if(isNaN(d))return '';
+  const today=new Date();const yd=new Date();yd.setDate(today.getDate()-1);
+  const same=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+  if(same(d,today))return 'Today';
+  if(same(d,yd))return 'Yesterday';
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function clockTime(s){const d=new Date(s);return isNaN(d)?'':d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});}
+
+function renderChat(msgs){
+  const el=document.getElementById('chat-scroll');
+  const nearBottom=el.scrollHeight-el.scrollTop-el.clientHeight<80||!el.innerHTML;
+  if(!msgs.length){
+    el.innerHTML='<div class="empty"><div class="empty-ico">💬</div><p>No messages yet — say hi! I\'m here to help with anything, especially when it\'s time to book.</p></div>';
+    return;
+  }
+  let html='',lastDay='';
+  msgs.forEach(m=>{
+    const mine=m.sender==='client';
+    const day=dayLabel(m.time||m.ts);
+    if(day&&day!==lastDay){html+=`<div class="chat-day">${esc(day)}</div>`;lastDay=day;}
+    const pd=m.plan||m.plan_details;
+    const hasPlan=pd&&(pd.title||pd.dest||pd.overview);
+    const subj=(!mine&&m.subject)?`<div class="bubble-subject">${esc(m.subject)}</div>`:'';
+    html+=`<div class="bubble-row ${mine?'me':''} ${hasPlan?'bubble-plan':''}">
+      <div class="bubble ${mine?'me':'adv'}">${subj}${esc(m.text||m.body||'')}</div>
+      ${hasPlan?renderPlanCard(pd,false):''}
+      <div class="bubble-meta">${mine?'You':'Braden'} · ${clockTime(m.time||m.ts)}</div>
+    </div>`;
+  });
+  el.innerHTML=html;
+  if(nearBottom)scrollChatBottom();
+}
+function scrollChatBottom(force){
+  const el=document.getElementById('chat-scroll');
+  if(el)requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});
+}
+function autoGrow(t){t.style.height='auto';t.style.height=Math.min(t.scrollHeight,120)+'px';}
+function chatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
+
+async function sendChat(){
+  const inp=document.getElementById('chat-input');
+  const btn=document.getElementById('chat-send');
+  const text=inp.value.trim();
+  if(!text)return;
+  const token=getToken();if(!token)return logout();
+  btn.disabled=true;
+  try{
+    const res=await fetch('/api/client/message',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({body:text})});
+    if(res.ok){
+      inp.value='';autoGrow(inp);
+      // Optimistic append so the bubble shows instantly
+      if(currentData){currentData.messages=currentData.messages||[];
+        currentData.messages.push({sender:'client',from:'You',time:new Date().toISOString(),text});
+        renderChat(currentData.messages);scrollChatBottom(true);}
+      refetchMe();
+    }else if(res.status===401){logout();}
+    else{const d=await res.json().catch(()=>({}));alert(d.detail||'Could not send — try again.');}
+  }catch(e){alert('Could not reach server. Check your connection.');}
+  btn.disabled=false;inp.focus();
+}
+
+async function markChatRead(){
+  if(!currentData)return;
+  const unread=(currentData.messages||[]).some(m=>m.unread&&m.sender!=='client');
+  setUnread(0);
+  if(!unread)return;
+  (currentData.messages||[]).forEach(m=>{if(m.sender!=='client')m.unread=false;});
+  const token=getToken();if(!token)return;
+  try{await fetch('/api/client/messages/read',{method:'POST',headers:{'Authorization':'Bearer '+token}});}catch(e){}
+}
+
+/* ── "I'm here to help" booking nudges ── */
+function renderHelpBanners(trips,plans){
+  const latest=trips&&trips.length?trips[0].workflow_status:null;
+  const bookingPhase=plans.length>0||['options_sent','awaiting_decision','booked'].includes(latest);
+  const banner=(txt,btn)=>`<div class="help-banner"><div class="help-txt">${txt}</div><button class="help-btn" onclick="openChat()">${btn}</button></div>`;
+  document.getElementById('ov-help').innerHTML=bookingPhase
+    ?banner('💬 <strong>Need a hand booking?</strong> I\'m here to help — if anything in your plan is confusing, just send me a message and we\'ll walk through it together.','Message Braden →')
+    :banner('💬 <strong>Questions?</strong> I\'m here to help — message me anytime, about anything.','Message Braden →');
+  document.getElementById('trips-help').innerHTML=bookingPhase
+    ?banner('✈️ <strong>Ready to book?</strong> Booking award flights can be tricky — I\'m here to help every step of the way. Message me and I\'ll guide you through it.','Get booking help →')
+    :'';
 }
 
 // Highlight the most recent plan on the Overview so the client never misses it.
