@@ -24,6 +24,10 @@ Environment variables (set these in Render → Environment):
 
 import os
 import json
+import secrets
+import hmac
+import urllib.parse
+from zoneinfo import ZoneInfo
 import smtplib
 import datetime as dt
 from email.mime.text import MIMEText
@@ -37,34 +41,70 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime
+from pydantic import BaseModel, EmailStr, Field, field_validator
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+
+try:
+    from backend import ai_client
+except ImportError:  # running as a flat module (uvicorn main:app)
+    import ai_client
+AIUnavailable = ai_client.AIUnavailable
 
 # ──────────────────────────────────────────────────────────────────────────
 # Configuration
 # ──────────────────────────────────────────────────────────────────────────
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-me")
+# Render gives a postgres:// URL; SQLAlchemy needs postgresql://
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+IS_PRODUCTION = bool(DATABASE_URL)
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///./dat.db"
+
+# Explicit environment name. Anything with a real DATABASE_URL defaults to
+# "production" — staging must OPT IN via ENV=staging. Safe-by-default: a
+# service that forgets the var gets production behavior (strict secrets,
+# seed scripts refuse to run).
+ENV = os.environ.get("ENV", "production" if IS_PRODUCTION else "development")
+
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@districtawardtravel.com").lower()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+
+# In production (real database), secrets MUST come from the environment.
+# Refusing to start beats running with forgeable tokens or a guessable admin password.
+if IS_PRODUCTION:
+    _missing = [n for n, v in (("SECRET_KEY", SECRET_KEY), ("ADMIN_PASSWORD", ADMIN_PASSWORD)) if not v]
+    if _missing:
+        raise RuntimeError(
+            f"Refusing to start: missing required env vars in production: {', '.join(_missing)}. "
+            "Set them in the Render dashboard (Environment tab)."
+        )
+else:
+    # Local dev: ephemeral key (tokens won't survive restarts — fine for dev) and a dev password.
+    import secrets as _secrets
+    SECRET_KEY = SECRET_KEY or _secrets.token_hex(32)
+    ADMIN_PASSWORD = ADMIN_PASSWORD or "dev-only-password"
+
 ALGORITHM = "HS256"
 TOKEN_TTL_HOURS = 24 * 7  # one week
-
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@districtawardtravel.com").lower()
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "dat2026")
 
 GMAIL_USER = os.environ.get("GMAIL_USER", "")
 GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
 NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", GMAIL_USER or "districtawardtravel@gmail.com")
 
+# Public proof thresholds — stats only shown once they clear these floors
+PROOF_MIN_SAVINGS_CENTS = int(os.environ.get("PROOF_MIN_SAVINGS_CENTS", "500000"))  # $5,000
+PROOF_MIN_TRIPS = int(os.environ.get("PROOF_MIN_TRIPS", "5"))
+PROOF_MIN_CPP_RECORDS = int(os.environ.get("PROOF_MIN_CPP_RECORDS", "3"))
+
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SEATS_AERO_API_KEY = os.environ.get("SEATS_AERO_API_KEY", "")
-
-# Render gives a postgres:// URL; SQLAlchemy needs postgresql://
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./dat.db"
 
 # Path to the static website files
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -74,7 +114,13 @@ PUBLIC_DIR = os.path.normpath(os.path.join(HERE, "..", "platform", "public"))
 # Database
 # ──────────────────────────────────────────────────────────────────────────
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
+# Pool pinned for Render free Postgres (~95 usable connections, 1 web instance):
+# 5 persistent + 5 overflow = hard cap of 10 from this process. pool_recycle
+# beats Render's idle-connection reaping; pre_ping catches the stragglers.
+engine = create_engine(
+    DATABASE_URL, connect_args=connect_args, pool_pre_ping=True,
+    pool_size=5, max_overflow=5, pool_recycle=300, pool_timeout=10,
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
 
@@ -108,10 +154,170 @@ class Intake(Base):
     email = Column(String, default="", index=True)
     phone = Column(String, default="")
     payload = Column(Text, default="{}")  # complete raw submission
+    consent_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
 
 
+class FunnelEvent(Base):
+    __tablename__ = "funnel_events"
+    id         = Column(Integer, primary_key=True)
+    session_id = Column(String, default="", index=True)
+    event      = Column(String, nullable=False, index=True)   # page_view|form_start|step_1_complete|step_2_complete|step_3_complete|submit
+    page       = Column(String, default="")
+    utm_source = Column(String, default="")
+    utm_medium = Column(String, default="")
+    utm_campaign = Column(String, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+
+class SavingsRecord(Base):
+    __tablename__ = "savings_records"
+    id                        = Column(Integer, primary_key=True)
+    client_id                 = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    trip_label                = Column(String, default="")
+    cash_benchmark_cents      = Column(Integer, nullable=False)
+    benchmark_source          = Column(String, default="")
+    benchmark_captured_at     = Column(DateTime, nullable=True)
+    benchmark_screenshot      = Column(Text, default="")
+    benchmark_assumptions     = Column(Text, default="")
+    option_booked             = Column(Text, default="")
+    points_used               = Column(Integer, default=0)
+    points_program            = Column(String, default="")
+    award_taxes_fees_cents    = Column(Integer, default=0)
+    other_out_of_pocket_cents = Column(Integer, default=0)
+    fee_rate_bps              = Column(Integer, default=1000)
+    status                    = Column(String, default="draft", index=True)
+    invoice_number            = Column(String, default="")
+    invoiced_at               = Column(DateTime, nullable=True)
+    paid_at                   = Column(DateTime, nullable=True)
+    payment_method            = Column(String, default="")
+    notes                     = Column(Text, default="")
+    report_token              = Column(String, default="", index=True)
+    created_at                = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at                = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+
+
+class TripRequest(Base):
+    __tablename__ = "trip_requests"
+    id                   = Column(Integer, primary_key=True)
+    client_id            = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    destination          = Column(String, default="")
+    origin               = Column(String, default="")
+    dates                = Column(String, default="")
+    passengers           = Column(String, default="1")
+    cabin                = Column(String, default="")
+    flexibility          = Column(String, default="")
+    workflow_status      = Column(String, default="new", index=True)
+    stage_entered_at     = Column(DateTime, default=dt.datetime.utcnow)
+    last_activity_at     = Column(DateTime, default=dt.datetime.utcnow)
+    savings_record_id    = Column(Integer, ForeignKey("savings_records.id"), nullable=True)
+    time_tracked_minutes = Column(Integer, default=0)
+    notes                = Column(Text, default="[]")
+    created_at           = Column(DateTime, default=dt.datetime.utcnow)
+
+
+class WorkflowEvent(Base):
+    __tablename__ = "workflow_events"
+    id          = Column(Integer, primary_key=True)
+    trip_id     = Column(Integer, ForeignKey("trip_requests.id"), nullable=False, index=True)
+    from_status = Column(String, default="")
+    to_status   = Column(String, nullable=False)
+    note        = Column(Text, default="")
+    created_at  = Column(DateTime, default=dt.datetime.utcnow)
+
+
+class ResearchTemplate(Base):
+    __tablename__ = "research_templates"
+    id          = Column(Integer, primary_key=True)
+    program     = Column(String, nullable=False)
+    portal_name = Column(String, nullable=False)
+    portal_url  = Column(String, default="")
+    sort_order  = Column(Integer, default=0)
+    active      = Column(Integer, default=1)
+
+
+class Snippet(Base):
+    __tablename__ = "snippets"
+    id         = Column(Integer, primary_key=True)
+    title      = Column(String, nullable=False)
+    body       = Column(Text, default="")
+    category   = Column(String, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+
+
+class MessageTemplate(Base):
+    __tablename__ = "message_templates"
+    id         = Column(Integer, primary_key=True)
+    category   = Column(String, default="")
+    title      = Column(String, nullable=False)
+    subject    = Column(String, default="")
+    body       = Column(Text, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+
+
+class EmailLog(Base):
+    __tablename__ = "email_log"
+    id         = Column(Integer, primary_key=True)
+    recipient  = Column(String, default="")
+    subject    = Column(String, default="")
+    status     = Column(String, default="pending", index=True)  # pending|sent|failed
+    attempts   = Column(Integer, default=0)
+    last_error = Column(Text, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+
+
+class ErrorLog(Base):
+    __tablename__ = "error_log"
+    id         = Column(Integer, primary_key=True)
+    request_id = Column(String, default="", index=True)
+    route      = Column(String, default="")
+    method     = Column(String, default="")
+    message    = Column(Text, default="")
+    traceback  = Column(Text, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow, index=True)
+
+
+class AIUsage(Base):
+    __tablename__ = "ai_usage"
+    id                = Column(Integer, primary_key=True)
+    provider          = Column(String, nullable=False, index=True)
+    operation         = Column(String, default="")
+    latency_ms        = Column(Integer, default=0)
+    success           = Column(Integer, default=1)
+    error             = Column(Text, default="")
+    est_cost_microusd = Column(Integer, default=0)
+    created_at        = Column(DateTime, default=dt.datetime.utcnow)
+
+
 Base.metadata.create_all(bind=engine)
+
+# Additive migration: create_all doesn't add columns to existing tables.
+try:
+    from sqlalchemy import text as _sql_text
+    with engine.begin() as _conn:
+        _conn.execute(_sql_text("ALTER TABLE intakes ADD COLUMN consent_at TIMESTAMP"))
+except Exception:
+    pass  # column already exists (or fresh DB where create_all included it)
+
+# Index migration: create_all skips existing tables entirely, so indexes added
+# after a table first shipped must be created explicitly. IF NOT EXISTS works
+# on both Postgres and SQLite. Rollback for each: DROP INDEX <name>.
+_INDEX_MIGRATIONS = [
+    "CREATE INDEX IF NOT EXISTS ix_intakes_created_at ON intakes (created_at)",
+    "CREATE INDEX IF NOT EXISTS ix_savings_records_invoice_number ON savings_records (invoice_number)",
+    "CREATE INDEX IF NOT EXISTS ix_workflow_events_created_at ON workflow_events (created_at)",
+    "CREATE INDEX IF NOT EXISTS ix_trip_requests_savings_record_id ON trip_requests (savings_record_id)",
+]
+try:
+    from sqlalchemy import text as _sql_text2
+    with engine.begin() as _conn:
+        for _stmt in _INDEX_MIGRATIONS:
+            _conn.execute(_sql_text2(_stmt))
+except Exception as _e:
+    print(f"[startup] index migration warning: {_e}")
 
 
 def get_db():
@@ -164,33 +370,258 @@ def require_admin(identity: dict = Depends(current_identity)) -> dict:
 
 
 # ──────────────────────────────────────────────────────────────────────────
-# Email
+# Savings formulas — integer math only, no floats
 # ──────────────────────────────────────────────────────────────────────────
+VALID_STATUS_TRANSITIONS = {
+    "draft":     {"presented", "void"},
+    "presented": {"booked", "draft", "void"},
+    "booked":    {"invoiced", "void"},
+    "invoiced":  {"paid", "void"},
+    "paid":      {"void"},
+    "void":      set(),
+}
+VALID_STATUSES = set(VALID_STATUS_TRANSITIONS.keys())
+
+
+def calc_gross_savings(cash_benchmark_cents: int, award_taxes_fees_cents: int, other_out_of_pocket_cents: int) -> int:
+    return cash_benchmark_cents - award_taxes_fees_cents - other_out_of_pocket_cents
+
+
+def calc_fee(gross_savings_cents: int, fee_rate_bps: int) -> int:
+    """Round half-up via +5000 before integer division by 10000."""
+    if gross_savings_cents <= 0:
+        return 0
+    return (gross_savings_cents * fee_rate_bps + 5000) // 10000
+
+
+def calc_cpp_tenths(gross_savings_cents: int, points_used: int) -> int:
+    """Cents-per-point * 10, integer. Returns 0 if points_used == 0."""
+    if points_used <= 0:
+        return 0
+    return (gross_savings_cents * 1000) // points_used
+
+
+def is_valid_transition(current_status: str, new_status: str) -> bool:
+    return new_status in VALID_STATUS_TRANSITIONS.get(current_status, set())
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Workflow logic
+# ──────────────────────────────────────────────────────────────────────────
+WORKFLOW_TRANSITIONS = {
+    "new":               {"researching", "declined", "lost"},
+    "researching":       {"options_sent", "new", "declined", "lost"},
+    "options_sent":      {"awaiting_decision", "researching", "declined", "lost"},
+    "awaiting_decision": {"booked", "researching", "declined", "lost"},
+    "booked":            {"closed"},
+    "closed":            set(),
+    "declined":          set(),
+    "lost":              set(),
+}
+WORKFLOW_STATUSES = set(WORKFLOW_TRANSITIONS.keys())
+REASON_REQUIRED_STATUSES = {"declined", "lost"}
+
+
+def is_valid_workflow_transition(current: str, new: str) -> bool:
+    return new in WORKFLOW_TRANSITIONS.get(current, set())
+
+
+def trip_attention_flags(workflow_status: str, stage_entered_at, last_activity_at, now=None) -> dict:
+    now = now or dt.datetime.utcnow()
+    hours = int((now - stage_entered_at).total_seconds() // 3600) if stage_entered_at else 0
+    level = "ok"
+    follow_up = False
+    if workflow_status == "new":
+        if hours > 48:
+            level = "red"
+        elif hours > 24:
+            level = "amber"
+    elif workflow_status == "researching":
+        if hours > 48:
+            level = "red"
+        elif hours > 24:
+            level = "amber"
+    elif workflow_status == "options_sent":
+        idle_hours = int((now - last_activity_at).total_seconds() // 3600) if last_activity_at else hours
+        if idle_hours > 72:
+            follow_up = True
+            level = "amber"
+    return {"level": level, "follow_up": follow_up, "hours_in_stage": hours}
+
+
+import re as _re
+def render_template(body: str, variables: dict) -> str:
+    def replacer(m):
+        key = m.group(1)
+        return str(variables[key]) if key in variables else m.group(0)
+    return _re.sub(r"\{(\w+)\}", replacer, body)
+
+
+def _trip_row(trip: TripRequest, client=None, now=None) -> dict:
+    flags = trip_attention_flags(trip.workflow_status, trip.stage_entered_at, trip.last_activity_at, now)
+    row = {
+        "id": trip.id,
+        "client_id": trip.client_id,
+        "destination": trip.destination,
+        "origin": trip.origin,
+        "dates": trip.dates,
+        "passengers": trip.passengers,
+        "cabin": trip.cabin,
+        "flexibility": trip.flexibility,
+        "workflow_status": trip.workflow_status,
+        "stage_entered_at": trip.stage_entered_at.isoformat() if trip.stage_entered_at else None,
+        "last_activity_at": trip.last_activity_at.isoformat() if trip.last_activity_at else None,
+        "savings_record_id": trip.savings_record_id,
+        "time_tracked_minutes": trip.time_tracked_minutes,
+        "notes": json.loads(trip.notes or "[]"),
+        "created_at": trip.created_at.isoformat() if trip.created_at else None,
+        **flags,
+    }
+    if client:
+        row["client_name"] = client.name
+        row["client_email"] = client.email
+        cdata = json.loads(client.data or "{}")
+        row["programs"] = [p.get("program", "") for p in cdata.get("points", [])]
+    return row
+
+
+def _savings_row(rec: SavingsRecord) -> dict:
+    gross = calc_gross_savings(rec.cash_benchmark_cents, rec.award_taxes_fees_cents, rec.other_out_of_pocket_cents)
+    fee = calc_fee(gross, rec.fee_rate_bps)
+    cpp = calc_cpp_tenths(gross, rec.points_used)
+    return {
+        "id": rec.id,
+        "client_id": rec.client_id,
+        "trip_label": rec.trip_label,
+        "cash_benchmark_cents": rec.cash_benchmark_cents,
+        "benchmark_source": rec.benchmark_source,
+        "benchmark_captured_at": rec.benchmark_captured_at.isoformat() if rec.benchmark_captured_at else None,
+        "benchmark_assumptions": rec.benchmark_assumptions,
+        "benchmark_screenshot": rec.benchmark_screenshot,
+        "option_booked": rec.option_booked,
+        "points_used": rec.points_used,
+        "points_program": rec.points_program,
+        "award_taxes_fees_cents": rec.award_taxes_fees_cents,
+        "other_out_of_pocket_cents": rec.other_out_of_pocket_cents,
+        "fee_rate_bps": rec.fee_rate_bps,
+        "gross_savings_cents": gross,
+        "fee_cents": fee,
+        "cpp_tenths": cpp,
+        "status": rec.status,
+        "invoice_number": rec.invoice_number,
+        "invoiced_at": rec.invoiced_at.isoformat() if rec.invoiced_at else None,
+        "paid_at": rec.paid_at.isoformat() if rec.paid_at else None,
+        "payment_method": rec.payment_method,
+        "notes": rec.notes,
+        "report_token": rec.report_token,
+        "created_at": rec.created_at.isoformat() if rec.created_at else None,
+        "updated_at": rec.updated_at.isoformat() if rec.updated_at else None,
+    }
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Email — single interface, async with retry, logged to email_log.
+# A failed email must NEVER fail the request that triggered it. The
+# transport is swappable (EMAIL_PROVIDER env) so moving to a transactional
+# provider later is config + one function, not a refactor.
+# ──────────────────────────────────────────────────────────────────────────
+import threading as _threading
+
+EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "gmail")
+EMAIL_RETRY_DELAYS = [5, 25]  # seconds between attempts (3 attempts total)
+
+
+def _smtp_transport(to: str, subject: str, body: str, reply_to: str = "") -> None:
+    """Gmail SMTP transport. Raises on failure (retry logic lives above it)."""
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        raise RuntimeError("GMAIL_USER / GMAIL_APP_PASSWORD not set")
+    msg = MIMEMultipart()
+    msg["From"] = f"District Award Travel <{GMAIL_USER}>"
+    msg["To"] = to
+    msg["Subject"] = subject
+    if reply_to:
+        msg["Reply-To"] = reply_to
+    msg.attach(MIMEText(body, "plain"))
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as server:
+        server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        server.sendmail(GMAIL_USER, [to], msg.as_string())
+
+
+_email_transport = _smtp_transport  # seam for tests / future providers
+
+
+def _send_with_retry(log_id: int, to: str, subject: str, body: str,
+                     reply_to: str = "", sleep_fn=None, session_factory=None) -> bool:
+    """Attempt delivery up to 3 times with backoff, recording every attempt
+    on the email_log row. Never raises."""
+    import time as _t
+    sleep_fn = sleep_fn or _t.sleep
+    session_factory = session_factory or SessionLocal
+
+    def _update(status: str, attempts: int, err: str):
+        try:
+            db = session_factory()
+            try:
+                row = db.query(EmailLog).filter(EmailLog.id == log_id).first()
+                if row:
+                    row.status = status
+                    row.attempts = attempts
+                    row.last_error = err[:1000]
+                    row.updated_at = dt.datetime.utcnow()
+                    db.commit()
+            finally:
+                db.close()
+        except Exception:
+            pass  # logging must never break sending
+
+    last_err = ""
+    for attempt in range(1, len(EMAIL_RETRY_DELAYS) + 2):
+        try:
+            _email_transport(to, subject, body, reply_to)
+            _update("sent", attempt, "")
+            return True
+        except Exception as e:
+            last_err = str(e)
+            if attempt <= len(EMAIL_RETRY_DELAYS):
+                _update("pending", attempt, last_err)
+                sleep_fn(EMAIL_RETRY_DELAYS[attempt - 1])
+    _update("failed", len(EMAIL_RETRY_DELAYS) + 1, last_err)
+    print(f"[email] giving up after {len(EMAIL_RETRY_DELAYS) + 1} attempts to {to}: {last_err}")
+    return False
+
+
+def queue_email(to: str, subject: str, body: str, reply_to: str = "") -> bool:
+    """The ONE way to send email. Creates an email_log row and delivers from
+    a daemon thread (with retries) so the calling request returns instantly.
+    Returns True = queued (delivery status lives in email_log)."""
+    if not to:
+        return False
+    try:
+        db = SessionLocal()
+        try:
+            row = EmailLog(recipient=to, subject=subject[:300], status="pending", attempts=0)
+            db.add(row)
+            db.commit()
+            log_id = row.id
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"[email] could not create email_log row: {e}")
+        return False
+    _threading.Thread(
+        target=_send_with_retry, args=(log_id, to, subject, body, reply_to), daemon=True
+    ).start()
+    return True
+
+
 def send_email(subject: str, body: str, reply_to: str = "") -> bool:
-    """Send a plain-text email to the admin notify address."""
-    return send_email_to(NOTIFY_EMAIL, subject, body, reply_to=reply_to)
+    """Queue a plain-text email to the admin notify address."""
+    return queue_email(NOTIFY_EMAIL, subject, body, reply_to=reply_to)
 
 
 def send_email_to(to: str, subject: str, body: str, reply_to: str = "") -> bool:
-    """Send a plain-text email via Gmail SMTP to any address. Returns True on success."""
-    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
-        print("[email] GMAIL_USER / GMAIL_APP_PASSWORD not set — skipping send.")
-        return False
-    try:
-        msg = MIMEMultipart()
-        msg["From"] = f"District Award Travel <{GMAIL_USER}>"
-        msg["To"] = to
-        msg["Subject"] = subject
-        if reply_to:
-            msg["Reply-To"] = reply_to
-        msg.attach(MIMEText(body, "plain"))
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            server.sendmail(GMAIL_USER, [to], msg.as_string())
-        return True
-    except Exception as e:
-        print(f"[email] send failed: {e}")
-        return False
+    """Queue a plain-text email to any address (kept for existing call sites)."""
+    return queue_email(to, subject, body, reply_to=reply_to)
 
 
 def format_intake_email(data: dict) -> str:
@@ -241,14 +672,215 @@ def format_intake_email(data: dict) -> str:
 # App
 # ──────────────────────────────────────────────────────────────────────────
 app = FastAPI(title="District Award Travel API", version="2.0.0")
+APP_VERSION = os.environ.get("RENDER_GIT_COMMIT", "dev")[:12]
+
+# ──────────────────────────────────────────────────────────────────────────
+# Observability: structured JSON logs, request middleware, slow-query log,
+# error capture with email alert. Fail loudly to the operator, never to
+# the client beyond a clean 500.
+# ──────────────────────────────────────────────────────────────────────────
+import logging
+import time as _time
+import traceback as _traceback
+import threading as _threading
+import uuid as _uuid
+
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record):
+        entry = {
+            "ts": dt.datetime.utcnow().isoformat(timespec="milliseconds") + "Z",
+            "level": record.levelname,
+            "msg": record.getMessage(),
+        }
+        for key in ("request_id", "route", "method", "status", "latency_ms", "duration_ms", "query"):
+            if hasattr(record, key):
+                entry[key] = getattr(record, key)
+        return json.dumps(entry)
+
+
+logger = logging.getLogger("dat")
+if not logger.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(_JsonFormatter())
+    logger.addHandler(_h)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+SLOW_QUERY_MS = int(os.environ.get("SLOW_QUERY_MS", "200"))
+
+from sqlalchemy import event as _sa_event
+
+
+@_sa_event.listens_for(engine, "before_cursor_execute")
+def _before_cursor(conn, cursor, statement, parameters, context, executemany):
+    context._dat_query_start = _time.perf_counter()
+
+
+@_sa_event.listens_for(engine, "after_cursor_execute")
+def _after_cursor(conn, cursor, statement, parameters, context, executemany):
+    start = getattr(context, "_dat_query_start", None)
+    if start is None:
+        return
+    elapsed_ms = int((_time.perf_counter() - start) * 1000)
+    if elapsed_ms >= SLOW_QUERY_MS:
+        logger.warning("slow query", extra={"duration_ms": elapsed_ms, "query": statement[:300]})
+
+
+def _record_error(request_id: str, route: str, method: str, exc: BaseException):
+    """Persist the error and email the operator. Runs in a thread so the
+    (blocking, up-to-10s) SMTP send never delays the error response."""
+    tb = "".join(_traceback.format_exception(type(exc), exc, exc.__traceback__))[-8000:]
+
+    def _work():
+        try:
+            db = SessionLocal()
+            try:
+                db.add(ErrorLog(request_id=request_id, route=route, method=method,
+                                message=str(exc)[:500], traceback=tb))
+                db.commit()
+            finally:
+                db.close()
+        except Exception:
+            pass  # never let error-logging cause more errors
+        try:
+            send_email(
+                subject=f"[DAT 500] {method} {route}",
+                body=f"request_id: {request_id}\nroute: {method} {route}\n\n{str(exc)[:500]}\n\n{tb}",
+            )
+        except Exception:
+            pass
+
+    _threading.Thread(target=_work, daemon=True).start()
+
+
+@app.middleware("http")
+async def request_logging_middleware(request: Request, call_next):
+    request_id = _uuid.uuid4().hex[:12]
+    start = _time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        latency_ms = int((_time.perf_counter() - start) * 1000)
+        logger.error("unhandled error", extra={
+            "request_id": request_id, "route": request.url.path,
+            "method": request.method, "status": 500, "latency_ms": latency_ms,
+        })
+        _record_error(request_id, request.url.path, request.method, exc)
+        return JSONResponse(status_code=500, content={
+            "detail": "Something went wrong on our side. We've been notified.",
+            "request_id": request_id,
+        })
+    latency_ms = int((_time.perf_counter() - start) * 1000)
+    if not request.url.path.startswith(("/assets", "/favicon")):
+        level = logging.WARNING if response.status_code >= 400 else logging.INFO
+        logger.log(level, "request", extra={
+            "request_id": request_id, "route": request.url.path,
+            "method": request.method, "status": response.status_code,
+            "latency_ms": latency_ms,
+        })
+    response.headers["X-Request-ID"] = request_id
+    return response
+
+
+@app.get("/healthz")
+def healthz():
+    """Liveness + DB check for external uptime monitoring. A dead database
+    must report unhealthy — a monitor pinging a static 200 proves nothing."""
+    try:
+        from sqlalchemy import text as _t
+        with engine.connect() as conn:
+            conn.execute(_t("SELECT 1"))
+        return {"status": "ok", "version": APP_VERSION, "db": "ok"}
+    except Exception as e:
+        logger.error("healthz db failure", extra={"route": "/healthz"})
+        return JSONResponse(status_code=503, content={"status": "degraded", "version": APP_VERSION, "db": f"error: {str(e)[:200]}"})
+
+# Frontends are served from this same origin, so cross-origin access is only
+# needed for explicitly listed extra origins (ALLOWED_ORIGINS, comma-separated).
+ALLOWED_ORIGINS = [
+    o.strip() for o in os.environ.get(
+        "ALLOWED_ORIGINS",
+        "https://district-award-travel.onrender.com,https://districtawardtravel.com,https://www.districtawardtravel.com",
+    ).split(",") if o.strip()
+]
+if not IS_PRODUCTION:
+    ALLOWED_ORIGINS += ["http://localhost:8000", "http://127.0.0.1:8000"]
+
+from fastapi.middleware.gzip import GZipMiddleware
+
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # admin.html alone is >150KB
+
+
+@app.middleware("http")
+async def cache_headers_middleware(request: Request, call_next):
+    """Immutable assets get a day of caching; HTML stays no-cache so deploys
+    are visible immediately; API responses are never cached."""
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/assets/") or path == "/favicon.svg":
+        response.headers.setdefault("Cache-Control", "public, max-age=86400")
+    elif path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-store")
+    elif path.endswith(".html") or path == "/":
+        response.headers.setdefault("Cache-Control", "no-cache")
+    return response
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
+
+# Rate limiting: protects login endpoints from brute force and the intake
+# form from spam floods (each intake also triggers outbound emails).
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.on_event("startup")
+def seed_phase2_defaults():
+    db = SessionLocal()
+    try:
+        if db.query(ResearchTemplate).count() == 0:
+            defaults = [
+                ("Chase Ultimate Rewards", "Hyatt (1:1 transfer)", "https://world.hyatt.com/content/gp/en/awards/award-search.html", 1),
+                ("Chase Ultimate Rewards", "United MileagePlus (1:1 transfer)", "https://www.united.com/en/us/book-flight/united-awards", 2),
+                ("Chase Ultimate Rewards", "Air Canada Aeroplan (1:1 transfer)", "https://www.aircanada.com/aeroplan/redeem/", 3),
+                ("Chase Ultimate Rewards", "Air France/KLM Flying Blue (1:1 transfer)", "https://wwws.airfrance.us/information/flying-blue", 4),
+                ("Amex Membership Rewards", "ANA Mileage Club (1:1 transfer)", "https://www.ana.co.jp/en/us/amc/", 1),
+                ("Amex Membership Rewards", "Air France/KLM Flying Blue (1:1 transfer)", "https://wwws.airfrance.us/information/flying-blue", 2),
+                ("Amex Membership Rewards", "Avianca LifeMiles (1:1 transfer)", "https://www.lifemiles.com/", 3),
+                ("Amex Membership Rewards", "Delta SkyMiles (1:1 transfer)", "https://www.delta.com/us/en/skymiles/redeem-miles/book-award-travel", 4),
+                ("Capital One Miles", "Turkish Miles&Smiles (1:1 transfer)", "https://www.turkishairlines.com/en-us/miles-and-smiles/", 1),
+                ("Capital One Miles", "Air Canada Aeroplan (1:1 transfer)", "https://www.aircanada.com/aeroplan/redeem/", 2),
+                ("United MileagePlus", "United Award Search", "https://www.united.com/en/us/book-flight/united-awards", 1),
+                ("American AAdvantage", "AA Award Search", "https://www.aa.com/homePage.do", 1),
+                ("Alaska Mileage Plan", "Alaska Award Search", "https://www.alaskaair.com/content/mileage-plan/use-miles/award-travel", 1),
+                ("World of Hyatt", "Hyatt Award Search", "https://world.hyatt.com/content/gp/en/awards/award-search.html", 1),
+                ("Delta SkyMiles", "Delta Award Search", "https://www.delta.com/us/en/skymiles/redeem-miles/book-award-travel", 1),
+            ]
+            for program, portal_name, portal_url, sort_order in defaults:
+                db.add(ResearchTemplate(program=program, portal_name=portal_name, portal_url=portal_url, sort_order=sort_order))
+            db.commit()
+        if db.query(MessageTemplate).count() == 0:
+            templates = [
+                ("welcome", "Welcome", "Welcome to District Award Travel!", "Hi {first_name},\n\nWelcome to District Award Travel! I'm Braden, and I'm excited to help you get the most out of your points and miles.\n\nI've reviewed your profile and I'm already thinking about some great options for your trips. I'll be in touch soon with personalized recommendations.\n\nIn the meantime, feel free to reply with any questions or updates to your travel plans.\n\nBest,\nBraden\nDistrict Award Travel"),
+                ("options_ready", "Options Ready", "Your travel options are ready — {route}", "Hi {first_name},\n\nGreat news — I've put together some award options for {route} that I think you'll love.\n\nPlease log in to your portal to review the detailed options with screenshots. Once you've had a chance to look them over, let me know which direction interests you most and I'll help you get it booked.\n\nRemember: award space can disappear quickly, so don't wait too long!\n\nBest,\nBraden\nDistrict Award Travel"),
+                ("nudge_72h", "72h Follow-Up Nudge", "Quick check-in on your options — {route}", "Hi {first_name},\n\nJust checking in on the options I sent over for {route}. Have you had a chance to look them over?\n\nIf you have any questions or want me to search for other options, just reply and I'll get right on it.\n\nBest,\nBraden\nDistrict Award Travel"),
+                ("booking_confirmed", "Booking Confirmed", "Booking confirmed — {route}", "Hi {first_name},\n\nFantastic news — your trip is booked! Here's a quick recap:\n\nRoute: {route}\n\nYou saved {savings_amount} compared to the cash price. My fee is {fee_amount}, which I'll invoice shortly.\n\nThank you for trusting District Award Travel. I can't wait to hear about your trip!\n\nBest,\nBraden\nDistrict Award Travel"),
+                ("invoice", "Invoice", "Invoice from District Award Travel — {route}", "Hi {first_name},\n\nThank you for working with District Award Travel! Please find your invoice details below:\n\nRoute: {route}\nTotal Savings: {savings_amount}\nDistrict Fee (10%): {fee_amount}\n\nPayment can be made via Venmo, Zelle, or check. Please reach out with any questions.\n\nThank you again!\n\nBraden\nDistrict Award Travel"),
+                ("referral_ask", "Referral Ask", "Quick favor?", "Hi {first_name},\n\nI hope you're enjoying the fruits of your savings — {savings_amount} is nothing to sneeze at!\n\nI'm growing District Award Travel mostly through word of mouth, and if you know anyone who travels and has points sitting around, I'd love an introduction. One name is all it takes.\n\nThank you for being such a great client.\n\nBraden\nDistrict Award Travel"),
+            ]
+            for category, title, subject, body in templates:
+                db.add(MessageTemplate(category=category, title=title, subject=subject, body=body))
+            db.commit()
+    finally:
+        db.close()
 
 
 @app.on_event("startup")
@@ -291,28 +923,153 @@ class ClientIn(BaseModel):
     data: dict = {}
 
 
+class SavingsCreateIn(BaseModel):
+    client_email: str
+    trip_label: str = ""
+    cash_benchmark_cents: int = Field(..., ge=0)
+    benchmark_source: str = ""
+    benchmark_captured_at: Optional[str] = None  # ISO datetime string
+    benchmark_assumptions: str = ""
+    benchmark_screenshot: str = ""   # base64, validated <= 1.5MB
+    option_booked: str = ""
+    points_used: int = Field(0, ge=0)
+    points_program: str = ""
+    award_taxes_fees_cents: int = Field(0, ge=0)
+    other_out_of_pocket_cents: int = Field(0, ge=0)
+    fee_rate_bps: int = Field(1000, ge=0, le=10000)
+    notes: str = ""
+
+class SavingsPatchIn(BaseModel):
+    trip_label: Optional[str] = None
+    cash_benchmark_cents: Optional[int] = Field(None, ge=0)
+    benchmark_source: Optional[str] = None
+    benchmark_captured_at: Optional[str] = None
+    benchmark_assumptions: Optional[str] = None
+    benchmark_screenshot: Optional[str] = None
+    option_booked: Optional[str] = None
+    points_used: Optional[int] = Field(None, ge=0)
+    points_program: Optional[str] = None
+    award_taxes_fees_cents: Optional[int] = Field(None, ge=0)
+    other_out_of_pocket_cents: Optional[int] = Field(None, ge=0)
+    fee_rate_bps: Optional[int] = Field(None, ge=0, le=10000)
+    notes: Optional[str] = None
+    payment_method: Optional[str] = None
+
+class StatusAdvanceIn(BaseModel):
+    new_status: str
+    payment_method: Optional[str] = None  # recorded when transitioning to paid
+
+
+class TripCreateIn(BaseModel):
+    client_email: str
+    destination: str = ""
+    origin: str = ""
+    dates: str = ""
+    passengers: str = "1"
+    cabin: str = ""
+    flexibility: str = ""
+
+
+class TripPatchIn(BaseModel):
+    destination: Optional[str] = None
+    origin: Optional[str] = None
+    dates: Optional[str] = None
+    passengers: Optional[str] = None
+    cabin: Optional[str] = None
+    flexibility: Optional[str] = None
+
+
+class WorkflowAdvanceIn(BaseModel):
+    new_status: str
+    note: str = ""
+
+
+class TripNoteIn(BaseModel):
+    text: str
+
+
+class TripTimeIn(BaseModel):
+    minutes: int = Field(..., ge=1, le=600)
+
+
+class LinkSavingsIn(BaseModel):
+    savings_record_id: int
+
+
+class SnippetIn(BaseModel):
+    title: str
+    body: str = ""
+    category: str = ""
+
+
+class SnippetPatchIn(BaseModel):
+    title: Optional[str] = None
+    body: Optional[str] = None
+    category: Optional[str] = None
+
+
+class ResearchTemplateIn(BaseModel):
+    program: str
+    portal_name: str
+    portal_url: str = ""
+    sort_order: int = 0
+    active: int = 1
+
+
+class ResearchTemplatePatchIn(BaseModel):
+    program: Optional[str] = None
+    portal_name: Optional[str] = None
+    portal_url: Optional[str] = None
+    sort_order: Optional[int] = None
+    active: Optional[int] = None
+
+
+class MessageTemplateIn(BaseModel):
+    category: str = ""
+    title: str
+    subject: str = ""
+    body: str = ""
+
+
+class MessageTemplatePatchIn(BaseModel):
+    category: Optional[str] = None
+    title: Optional[str] = None
+    subject: Optional[str] = None
+    body: Optional[str] = None
+
+
+class TemplateRenderIn(BaseModel):
+    client_email: str
+    trip_id: Optional[int] = None
+
+
+ALLOWED_FUNNEL_EVENTS = {
+    "page_view", "form_start",
+    "step_1_complete", "step_2_complete", "step_3_complete",
+    "submit",
+}
+
+
+class TrackIn(BaseModel):
+    event: str
+    session_id: str = Field("", max_length=64)
+    page: str = Field("", max_length=200)
+    utm_source: str = Field("", max_length=100)
+    utm_medium: str = Field("", max_length=100)
+    utm_campaign: str = Field("", max_length=100)
+
+    @field_validator("event")
+    @classmethod
+    def _event_allowed(cls, v: str) -> str:
+        if v not in ALLOWED_FUNNEL_EVENTS:
+            raise ValueError("unknown event")
+        return v
+
+
 # ── Health ──
 @app.get("/api/health")
 def health():
     return {"status": "ok", "time": dt.datetime.utcnow().isoformat()}
-
-
-# ── Diagnostics (safe: never reveals the password itself) ──
-@app.get("/api/admin/diag")
-def admin_diag(db: Session = Depends(get_db)):
-    """Tells us whether the admin exists and whether the env-var password
-    actually matches the stored hash — so we can pinpoint a login failure
-    without leaking any secret. Reports the password LENGTH only."""
-    admin = db.query(Admin).filter(Admin.email == ADMIN_EMAIL).first()
-    return {
-        "expected_login_email": ADMIN_EMAIL,
-        "admin_exists": admin is not None,
-        "db_type": "postgres" if DATABASE_URL.startswith("postgresql") else "sqlite",
-        "env_password_length": len(ADMIN_PASSWORD),
-        "env_password_matches_stored": (
-            verify_pw(ADMIN_PASSWORD, admin.password_hash) if admin else None
-        ),
-    }
 
 
 # ── AI: parse a raw email into structured client data ──
@@ -355,7 +1112,7 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
         raise HTTPException(status_code=400, detail="raw_email is required")
 
     if GROQ_API_KEY:
-        try:
+        def _do_groq():
             import httpx
             resp = httpx.post(
                 "https://api.groq.com/openai/v1/chat/completions",
@@ -375,14 +1132,16 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
                 content = content.split("```")[1]
                 if content.startswith("json"):
                     content = content[4:]
-            parsed = json.loads(content)
+            return json.loads(content)
+        try:
+            parsed = ai_client.call_ai("groq", "parse-email", _do_groq, db_session_factory=SessionLocal)
             return {"ok": True, "source": "groq", "data": parsed}
-        except Exception as e:
+        except (AIUnavailable, Exception) as e:
             print(f"[groq] parse failed: {e}")
             # fall through to Gemini
 
     if GEMINI_API_KEY:
-        try:
+        def _do_gemini():
             import httpx
             resp = httpx.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
@@ -395,9 +1154,11 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
                 content = content.split("```")[1]
                 if content.startswith("json"):
                     content = content[4:]
-            parsed = json.loads(content)
+            return json.loads(content)
+        try:
+            parsed = ai_client.call_ai("gemini", "parse-email", _do_gemini, db_session_factory=SessionLocal)
             return {"ok": True, "source": "gemini", "data": parsed}
-        except Exception as e:
+        except (AIUnavailable, Exception) as e:
             print(f"[gemini] parse failed: {e}")
 
     # No AI key configured — return empty stub so UI still works
@@ -409,17 +1170,60 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
 
 
 # ── Intake ──
+# The form posts a flat dict with a fixed core plus dynamic trip{N}_* / pts_*
+# keys, so validation happens on the parsed dict: required well-formed email,
+# every value length-capped, total payload bounded.
+INTAKE_MAX_FIELD_LEN = 5000
+INTAKE_MAX_KEYS = 120
+_EMAIL_RE = __import__("re").compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def validate_intake(data: dict) -> dict:
+    if not isinstance(data, dict) or len(data) > INTAKE_MAX_KEYS:
+        raise HTTPException(status_code=422, detail="Invalid submission")
+    email = str(data.get("email", "")).strip().lower()
+    if not _EMAIL_RE.match(email) or len(email) > 254 or "\n" in email or "\r" in email:
+        raise HTTPException(status_code=422, detail="A valid email address is required")
+    clean = {}
+    for k, v in data.items():
+        key = str(k)[:60]
+        val = str(v) if v is not None else ""
+        if len(val) > INTAKE_MAX_FIELD_LEN:
+            raise HTTPException(status_code=422, detail=f"Field '{key}' is too long")
+        clean[key] = val
+    clean["email"] = email
+    return clean
+
+
 @app.post("/api/intake")
+@limiter.limit("10/hour")
 async def submit_intake(request: Request, db: Session = Depends(get_db)):
-    data = await request.json()
+    try:
+        raw = await request.json()
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid JSON")
+    data = validate_intake(raw)
+    # Funnel: record a submit event if the form sent a session id (stripped from stored payload)
+    session_id = str(data.pop("_session_id", "") or "")[:64]
+    consent_at = dt.datetime.utcnow() if str(data.get("consent", "")).lower() in ("true", "1", "yes", "on") else None
     rec = Intake(
-        first_name=data.get("first_name", ""),
-        last_name=data.get("last_name", ""),
+        first_name=data.get("first_name", "")[:100],
+        last_name=data.get("last_name", "")[:100],
         email=data.get("email", ""),
-        phone=data.get("phone", ""),
+        phone=data.get("phone", "")[:40],
         payload=json.dumps(data),
+        consent_at=consent_at,
     )
     db.add(rec)
+    if session_id:
+        db.add(FunnelEvent(
+            session_id=session_id,
+            event="submit",
+            page="intake",
+            utm_source=str(data.get("utm_source", ""))[:100],
+            utm_medium=str(data.get("utm_medium", ""))[:100],
+            utm_campaign=str(data.get("utm_campaign", ""))[:100],
+        ))
     db.commit()
     name = f"{data.get('first_name','')} {data.get('last_name','')}".strip() or "Someone"
     # Notify admin
@@ -453,40 +1257,141 @@ districtawardtravel@gmail.com
     return {"ok": True, "id": rec.id}
 
 
-@app.post("/api/setup/admin")
-def setup_admin(body: LoginIn, db: Session = Depends(get_db)):
-    """Create the first admin account. Only works if no admins exist yet."""
-    existing = db.query(Admin).first()
-    if existing:
-        raise HTTPException(status_code=403, detail="Admin already exists. Use normal login.")
-    admin = Admin(
-        email=body.email.lower(),
-        password_hash=hash_pw(body.password),
-        name=body.email.split("@")[0].title(),
+# ── Public trust surface: funnel tracking, proof stats, savings examples ──
+EARNED_PROOF_STATUSES = ("booked", "invoiced", "paid")
+
+
+@app.post("/api/track")
+@limiter.limit("120/hour")
+async def track_event(request: Request, body: TrackIn, db: Session = Depends(get_db)):
+    """First-party funnel beacon. Must never break page UX beyond validation."""
+    try:
+        db.add(FunnelEvent(
+            session_id=body.session_id,
+            event=body.event,
+            page=body.page,
+            utm_source=body.utm_source,
+            utm_medium=body.utm_medium,
+            utm_campaign=body.utm_campaign,
+        ))
+        db.commit()
+    except Exception as e:
+        print(f"[track] write failed: {e}")
+    return {"ok": True}
+
+
+def _earned_records(db: Session):
+    return db.query(SavingsRecord).filter(SavingsRecord.status.in_(EARNED_PROOF_STATUSES)).all()
+
+
+@app.get("/api/public/proof")
+@limiter.limit("60/minute")
+def public_proof(request: Request, db: Session = Depends(get_db)):
+    """Aggregate stats only — never any client data, names, or emails."""
+    recs = _earned_records(db)
+    total = sum(
+        calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        for r in recs
     )
-    db.add(admin)
-    db.commit()
-    return {"ok": True, "message": "Admin account created. You can now log in normally."}
+    trips = len(recs)
+    cpp_recs = [r for r in recs if r.points_used and r.points_used > 0]
+    avg_cpp_tenths = None
+    if len(cpp_recs) >= PROOF_MIN_CPP_RECORDS:
+        gross_sum = sum(
+            calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+            for r in cpp_recs
+        )
+        pts_sum = sum(r.points_used for r in cpp_recs)
+        if pts_sum > 0:
+            avg_cpp_tenths = (gross_sum * 1000) // pts_sum
+    return {
+        "total_savings_cents": total if total >= PROOF_MIN_SAVINGS_CENTS else None,
+        "trips_planned": trips if trips >= PROOF_MIN_TRIPS else None,
+        "avg_cpp_tenths": avg_cpp_tenths,
+    }
 
 
-@app.post("/api/setup/sync-password")
-def sync_admin_password(db: Session = Depends(get_db)):
-    """Sync admin password with ADMIN_PASSWORD env var. Use if stuck on login."""
-    admin_password = os.environ.get("ADMIN_PASSWORD", "")
-    if not admin_password:
-        raise HTTPException(status_code=400, detail="ADMIN_PASSWORD env var not set")
-    admin = db.query(Admin).filter(Admin.email == "admin@districtawardtravel.com").first()
-    if not admin:
-        raise HTTPException(status_code=404, detail="Admin account not found")
-    admin.password_hash = hash_pw(admin_password)
-    db.commit()
-    return {"ok": True, "message": "Admin password synced with env var. Try signing in again."}
+# Illustrative seeded examples — labeled real:false server-side so a fake can
+# never render as documented. (route, cash_cents, taxes_fees_cents, other_cents, points_used)
+ILLUSTRATIVE_EXAMPLES = [
+    ("IAD → Tokyo (HND) · Business",        428000, 11240,    0,  75000),
+    ("DCA → Paris (CDG) · Premium Economy", 168000,  9830,    0,  60000),
+    ("BWI → Cancún · Economy, family of 4", 152000, 22400,    0, 100000),
+    ("Maui · 5-night Hyatt hotel",          297500,     0,    0,  87500),
+]
 
+
+def _example_row(route, cash_cents, taxes_cents, other_cents, points_used, real):
+    gross = calc_gross_savings(cash_cents, taxes_cents, other_cents)
+    fee = calc_fee(gross, 1000)
+    return {
+        "route": route,
+        "cash_cents": cash_cents,
+        "out_of_pocket_cents": taxes_cents + other_cents,
+        "points_used": points_used,
+        "savings_cents": gross,
+        "fee_cents": fee,
+        "net_win_cents": gross - fee,
+        "real": real,
+    }
+
+
+@app.get("/api/public/examples")
+@limiter.limit("60/minute")
+def public_examples(request: Request, db: Session = Depends(get_db)):
+    """Up to 6 anonymized savings examples. NO names or emails, ever."""
+    rows = []
+    recs = db.query(SavingsRecord).filter(
+        SavingsRecord.status.in_(EARNED_PROOF_STATUSES)
+    ).order_by(SavingsRecord.created_at.desc()).all()
+    for r in recs:
+        gross = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        if not r.trip_label or not r.trip_label.strip() or not r.points_used or r.points_used <= 0 or gross <= 0:
+            continue
+        row = _example_row(
+            r.trip_label, r.cash_benchmark_cents,
+            r.award_taxes_fees_cents, r.other_out_of_pocket_cents,
+            r.points_used, True,
+        )
+        row["fee_cents"] = calc_fee(gross, r.fee_rate_bps)
+        row["net_win_cents"] = gross - row["fee_cents"]
+        rows.append(row)
+        if len(rows) >= 6:
+            break
+    if len(rows) < 4:
+        for ex in ILLUSTRATIVE_EXAMPLES:
+            if len(rows) >= 6:
+                break
+            rows.append(_example_row(*ex, real=False))
+    return rows
+
+
+@app.get("/api/admin/funnel")
+def admin_funnel(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Weekly funnel (last 8 ISO weeks): page_view / form_start / submit counts
+    plus a by-utm_source breakdown of submits."""
+    cutoff = dt.datetime.utcnow() - dt.timedelta(days=56)
+    events = db.query(FunnelEvent).filter(FunnelEvent.created_at >= cutoff).all()
+    weeks: dict = {}
+    for e in events:
+        iso = e.created_at.isocalendar()
+        key = f"{iso[0]}-W{iso[1]:02d}"
+        w = weeks.setdefault(key, {
+            "week": key, "page_view": 0, "form_start": 0, "submit": 0,
+            "submits_by_utm_source": {},
+        })
+        if e.event in ("page_view", "form_start", "submit"):
+            w[e.event] += 1
+        if e.event == "submit":
+            src = e.utm_source or "(direct)"
+            w["submits_by_utm_source"][src] = w["submits_by_utm_source"].get(src, 0) + 1
+    return {"weeks": sorted(weeks.values(), key=lambda w: w["week"])}
 
 
 # ── Auth ──
 @app.post("/api/admin/login")
-def admin_login(body: LoginIn, db: Session = Depends(get_db)):
+@limiter.limit("5/15minutes")
+def admin_login(request: Request, body: LoginIn, db: Session = Depends(get_db)):
     admin = db.query(Admin).filter(Admin.email == body.email.lower()).first()
     if not admin or not verify_pw(body.password, admin.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -494,7 +1399,8 @@ def admin_login(body: LoginIn, db: Session = Depends(get_db)):
 
 
 @app.post("/api/auth/login")
-def client_login(body: LoginIn, db: Session = Depends(get_db)):
+@limiter.limit("5/15minutes")
+def client_login(request: Request, body: LoginIn, db: Session = Depends(get_db)):
     client = db.query(Client).filter(Client.email == body.email.lower()).first()
     if not client or not verify_pw(body.password, client.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -502,6 +1408,59 @@ def client_login(body: LoginIn, db: Session = Depends(get_db)):
 
 
 # ── Client self ──
+# In-process change counters drive the SSE stream: admin mutations bump the
+# client's version; the stream watches the dict (zero DB connections held per
+# stream — Postgres impact of N portal tabs is nil between events). Single
+# Render instance → in-process state is authoritative. Restart = clients
+# reconnect and refetch, which is the correct behavior anyway.
+_client_versions: dict = {}
+
+
+def bump_client_version(email: str):
+    if email:
+        _client_versions[email] = _client_versions.get(email, 0) + 1
+
+
+@app.get("/api/client/stream")
+async def client_stream(token: str = ""):
+    """SSE: emits 'changed' when the client's data is mutated, comment
+    heartbeats every 30s, and ends after 5 minutes (client auto-reconnects)
+    so Render spin-downs and dead connections can't accumulate.
+
+    EventSource can't set headers, so auth is the JWT in a query param. The
+    request-logging middleware logs only the path, never the query string.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    if payload.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    email = payload["sub"]
+
+    async def gen():
+        import asyncio
+        last_version = _client_versions.get(email, 0)
+        started = _time.monotonic()
+        last_beat = started
+        yield f"event: hello\ndata: {{\"v\": {last_version}}}\n\n"
+        while _time.monotonic() - started < 300:  # 5 min, then reconnect
+            await asyncio.sleep(2)
+            v = _client_versions.get(email, 0)
+            now = _time.monotonic()
+            if v != last_version:
+                last_version = v
+                yield f"event: changed\ndata: {{\"v\": {v}}}\n\n"
+            elif now - last_beat >= 30:
+                last_beat = now
+                yield ": heartbeat\n\n"
+        yield "event: bye\ndata: {}\n\n"
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 @app.get("/api/client/me")
 def client_me(identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
     if identity.get("role") != "client":
@@ -511,7 +1470,45 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
         raise HTTPException(status_code=404, detail="Client not found")
     payload = json.loads(client.data or "{}")
     payload.update({"name": client.name, "tier": client.tier, "email": client.email})
+    # compute lifetime savings for this client (booked, invoiced, paid — not void/draft/presented)
+    EARNED_STATUSES = {"booked", "invoiced", "paid"}
+    savings_recs = db.query(SavingsRecord).filter(
+        SavingsRecord.client_id == client.id,
+        SavingsRecord.status.in_(list(EARNED_STATUSES))
+    ).all()
+    lifetime_savings_cents = sum(
+        calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        for r in savings_recs
+    )
+    payload["lifetime_savings_cents"] = lifetime_savings_cents
     return payload
+
+
+class UpdateClientDataIn(BaseModel):
+    data: dict
+
+
+@app.put("/api/client/me")
+def update_client_me(body: UpdateClientDataIn, identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
+    """Client updates their own profile data (preferences, trips, etc.)."""
+    if identity.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    client = db.query(Client).filter(Client.email == identity["sub"]).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    existing = json.loads(client.data or "{}")
+    # Deep merge: if body.data["preferences"] exists, merge it; same for other top-level keys
+    for key, val in body.data.items():
+        if key in ["preferences", "trips", "points", "savings", "messages", "recommendations"]:
+            if isinstance(val, dict) and isinstance(existing.get(key), dict):
+                existing[key].update(val)
+            else:
+                existing[key] = val
+        else:
+            existing[key] = val
+    client.data = json.dumps(existing)
+    db.commit()
+    return {"ok": True}
 
 
 # ── Admin: client management ──
@@ -522,6 +1519,18 @@ def list_clients(_: dict = Depends(require_admin), db: Session = Depends(get_db)
         {"email": c.email, "name": c.name, "tier": c.tier, "created_at": c.created_at.isoformat()}
         for c in clients
     ]
+
+
+@app.get("/api/admin/clients/{email}")
+def get_client(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Return full client data including their portal JSON for the admin profile drawer."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    payload = json.loads(client.data or "{}")
+    payload.update({"name": client.name, "tier": client.tier, "email": client.email,
+                     "created_at": client.created_at.isoformat()})
+    return payload
 
 
 @app.post("/api/admin/clients")
@@ -541,10 +1550,6 @@ def create_client(body: ClientIn, _: dict = Depends(require_admin), db: Session 
     return {"ok": True, "email": email}
 
 
-class UpdateClientDataIn(BaseModel):
-    data: dict
-
-
 @app.put("/api/admin/clients/{email}")
 def update_client_data(email: str, body: UpdateClientDataIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Merge a partial data dict into an existing client's JSON payload."""
@@ -555,6 +1560,7 @@ def update_client_data(email: str, body: UpdateClientDataIn, _: dict = Depends(r
     existing.update(body.data)
     client.data = json.dumps(existing)
     db.commit()
+    bump_client_version(client.email)
     return {"ok": True}
 
 
@@ -587,15 +1593,28 @@ def add_client_point(email: str, body: PointEntryIn, _: dict = Depends(require_a
     data["points"] = points
     client.data = json.dumps(data)
     db.commit()
+    bump_client_version(client.email)
     return {"ok": True}
 
 
 @app.delete("/api/admin/clients/{email}")
 def delete_client(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    """Permanently delete a client record. Use only for test/duplicate accounts."""
+    """Permanently delete a client record. Use only for test/duplicate accounts.
+
+    Refuses while savings records or trip requests reference the client —
+    deleting would orphan revenue/audit history. Void or reassign those first.
+    """
     client = db.query(Client).filter(Client.email == email.lower()).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+    savings_count = db.query(SavingsRecord).filter(SavingsRecord.client_id == client.id).count()
+    trips_count = db.query(TripRequest).filter(TripRequest.client_id == client.id).count()
+    if savings_count or trips_count:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Client has {savings_count} savings record(s) and {trips_count} trip(s). "
+                   "Delete/void those first — deleting the client would orphan ledger history.",
+        )
     db.delete(client)
     db.commit()
     return {"ok": True}
@@ -669,9 +1688,9 @@ class ScanDocumentIn(BaseModel):
 async def scan_document(body: ScanDocumentIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Gemini Vision reads a loyalty document image and auto-fills client points data."""
     if not GEMINI_API_KEY:
-        raise HTTPException(status_code=400, detail="GEMINI_API_KEY not configured")
+        return {"ok": False, "error": "AI scanner unavailable — enter balances manually", "manual": True}
 
-    try:
+    def _do():
         import httpx
         resp = httpx.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
@@ -687,10 +1706,13 @@ async def scan_document(body: ScanDocumentIn, _: dict = Depends(require_admin), 
             content = content.split("```")[1]
             if content.startswith("json"):
                 content = content[4:]
-        extracted = json.loads(content)
-    except Exception as e:
+        return json.loads(content)
+
+    try:
+        extracted = ai_client.call_ai("gemini", "scan-document", _do, db_session_factory=SessionLocal)
+    except (AIUnavailable, Exception) as e:
         print(f"[gemini-vision] scan failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Gemini Vision scan failed: {e}")
+        return {"ok": False, "error": "AI scanner unavailable — enter balances manually", "manual": True}
 
     saved = False
     if body.client_email:
@@ -766,12 +1788,12 @@ class SweetSpotIn(BaseModel):
 @app.post("/api/ai/sweet-spots")
 async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Gemini generates 3 personalized award recommendations + seats.aero live availability."""
-    if not GEMINI_API_KEY:
-        raise HTTPException(status_code=400, detail="GEMINI_API_KEY not configured")
-
     client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+
+    if not GEMINI_API_KEY:
+        return {"ok": False, "error": "AI recommendations unavailable — no AI key configured", "manual": True}
 
     data = json.loads(client.data or "{}")
     points = data.get("points", [])
@@ -790,7 +1812,7 @@ async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: S
               .replace("{home_airport}", home_airport)
               .replace("{client_name}", client.name))
 
-    try:
+    def _do():
         import httpx
         resp = httpx.post(
             f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
@@ -803,10 +1825,13 @@ async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: S
             content = content.split("```")[1]
             if content.startswith("json"):
                 content = content[4:]
-        recs = json.loads(content)
-    except Exception as e:
+        return json.loads(content)
+
+    try:
+        recs = ai_client.call_ai("gemini", "sweet-spots", _do, db_session_factory=SessionLocal)
+    except (AIUnavailable, Exception) as e:
         print(f"[gemini] sweet spots failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Gemini request failed: {e}")
+        return {"ok": False, "error": "AI recommendations unavailable — try again shortly", "manual": True}
 
     # Enrich with seats.aero live award availability
     if SEATS_AERO_API_KEY:
@@ -916,7 +1941,7 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
         return s.strip()
 
     if GROQ_API_KEY:
-        try:
+        def _do_groq():
             import httpx
             resp = httpx.post(
                 "https://api.groq.com/openai/v1/chat/completions",
@@ -931,13 +1956,15 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
             )
             resp.raise_for_status()
             content = strip_fences(resp.json()["choices"][0]["message"]["content"].strip())
-            parsed = json.loads(content)
+            return json.loads(content)
+        try:
+            parsed = ai_client.call_ai("groq", "parse-threads", _do_groq, db_session_factory=SessionLocal)
             return {"ok": True, "source": "groq", "data": parsed}
-        except Exception as e:
+        except (AIUnavailable, Exception) as e:
             print(f"[groq] thread parse failed: {e}")
 
     if GEMINI_API_KEY:
-        try:
+        def _do_gemini():
             import httpx
             resp = httpx.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
@@ -946,9 +1973,11 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
             )
             resp.raise_for_status()
             content = strip_fences(resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip())
-            parsed = json.loads(content)
+            return json.loads(content)
+        try:
+            parsed = ai_client.call_ai("gemini", "parse-threads", _do_gemini, db_session_factory=SessionLocal)
             return {"ok": True, "source": "gemini", "data": parsed}
-        except Exception as e:
+        except (AIUnavailable, Exception) as e:
             print(f"[gemini] thread parse failed: {e}")
 
     return {"ok": True, "source": "none", "data": {
@@ -958,6 +1987,224 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
         "conversation_summary": "AI not available — review manually.",
         "action_items": [],
     }}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Savings Ledger endpoints
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.post("/api/admin/savings")
+def create_savings(body: SavingsCreateIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
+    if not client:
+        raise HTTPException(404, "Client not found")
+    if len(body.benchmark_screenshot) > 2_000_000:  # ~1.5MB base64
+        raise HTTPException(422, "Screenshot too large (max ~1.5 MB)")
+    captured_at = None
+    if body.benchmark_captured_at:
+        try:
+            captured_at = dt.datetime.fromisoformat(body.benchmark_captured_at)
+        except ValueError:
+            raise HTTPException(422, "benchmark_captured_at must be ISO datetime")
+    rec = SavingsRecord(
+        client_id=client.id,
+        trip_label=body.trip_label,
+        cash_benchmark_cents=body.cash_benchmark_cents,
+        benchmark_source=body.benchmark_source,
+        benchmark_captured_at=captured_at or dt.datetime.utcnow(),
+        benchmark_assumptions=body.benchmark_assumptions,
+        benchmark_screenshot=body.benchmark_screenshot,
+        option_booked=body.option_booked,
+        points_used=body.points_used,
+        points_program=body.points_program,
+        award_taxes_fees_cents=body.award_taxes_fees_cents,
+        other_out_of_pocket_cents=body.other_out_of_pocket_cents,
+        fee_rate_bps=body.fee_rate_bps,
+        report_token=secrets.token_urlsafe(32),
+    )
+    db.add(rec)
+    db.commit()
+    db.refresh(rec)
+    return _savings_row(rec)
+
+
+@app.get("/api/admin/savings/summary")
+def savings_summary(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    recs = db.query(SavingsRecord).filter(SavingsRecord.status != "void").all()
+    totals = {"draft": 0, "presented": 0, "booked": 0, "invoiced": 0, "paid": 0}
+    fees   = {"draft": 0, "presented": 0, "booked": 0, "invoiced": 0, "paid": 0}
+    for r in recs:
+        gross = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee   = calc_fee(gross, r.fee_rate_bps)
+        if r.status in totals:
+            totals[r.status] += gross
+            fees[r.status]   += fee
+    return {
+        "gross_savings_by_status": totals,
+        "fees_by_status": fees,
+        "owed_cents":      fees["booked"],
+        "invoiced_cents":  fees["invoiced"],
+        "collected_cents": fees["paid"],
+    }
+
+
+@app.get("/api/admin/savings")
+def list_savings(client_email: Optional[str] = None, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    q = db.query(SavingsRecord)
+    if client_email:
+        client = db.query(Client).filter(Client.email == client_email.lower()).first()
+        if not client:
+            return []
+        q = q.filter(SavingsRecord.client_id == client.id)
+    recs = q.order_by(SavingsRecord.created_at.desc()).all()
+    return [_savings_row(r) for r in recs]
+
+
+@app.patch("/api/admin/savings/{record_id}")
+def update_savings(record_id: int, body: SavingsPatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+    if rec.status in ("invoiced", "paid"):
+        raise HTTPException(400, "Cannot edit a record in invoiced or paid status")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        if field == "benchmark_screenshot" and val and len(val) > 2_000_000:
+            raise HTTPException(422, "Screenshot too large (max ~1.5 MB)")
+        if field == "benchmark_captured_at":
+            if val:
+                try:
+                    val = dt.datetime.fromisoformat(val)
+                except ValueError:
+                    raise HTTPException(422, "benchmark_captured_at must be ISO datetime")
+            setattr(rec, "benchmark_captured_at", val)
+            continue
+        setattr(rec, field, val)
+    rec.updated_at = dt.datetime.utcnow()
+    db.commit()
+    db.refresh(rec)
+    return _savings_row(rec)
+
+
+@app.patch("/api/admin/savings/{record_id}/status")
+def advance_status(record_id: int, body: StatusAdvanceIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+    if not is_valid_transition(rec.status, body.new_status):
+        raise HTTPException(400, f"Cannot transition from '{rec.status}' to '{body.new_status}'")
+    if body.new_status == "invoiced" and not rec.invoice_number:
+        year = dt.datetime.utcnow().year
+        existing = db.query(SavingsRecord).filter(
+            SavingsRecord.invoice_number.like(f"DAT-{year}-%")
+        ).all()
+        nums = []
+        for r in existing:
+            try:
+                nums.append(int(r.invoice_number.split("-")[-1]))
+            except (ValueError, IndexError):
+                pass
+        next_num = max(nums, default=0) + 1
+        rec.invoice_number = f"DAT-{year}-{next_num:04d}"
+        rec.invoiced_at = dt.datetime.utcnow()
+    if body.new_status == "paid":
+        rec.paid_at = dt.datetime.utcnow()
+        if body.payment_method:
+            rec.payment_method = body.payment_method
+    rec.status = body.new_status
+    rec.updated_at = dt.datetime.utcnow()
+    db.commit()
+    db.refresh(rec)
+    row = _savings_row(rec)
+    client = db.query(Client).filter(Client.id == rec.client_id).first()
+    if client:
+        row["client_email"] = client.email
+        # status changes move the lifetime-savings counter — wake the stream
+        bump_client_version(client.email)
+    return row
+
+
+@app.delete("/api/admin/savings/{record_id}")
+def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+    if rec.status in ("invoiced", "paid"):
+        raise HTTPException(400, "Cannot delete an invoiced or paid record; void it instead")
+    db.delete(rec)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/report/{token}")
+@limiter.limit("30/minute")
+def savings_report(request: Request, token: str, db: Session = Depends(get_db)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.report_token == token).first()
+    if not rec:
+        raise HTTPException(404, "Report not found")
+    client = db.query(Client).filter(Client.id == rec.client_id).first()
+    client_name = client.name if client else "Client"
+    gross = calc_gross_savings(rec.cash_benchmark_cents, rec.award_taxes_fees_cents, rec.other_out_of_pocket_cents)
+    fee   = calc_fee(gross, rec.fee_rate_bps)
+    cpp   = calc_cpp_tenths(gross, rec.points_used)
+
+    def fmt_usd(cents: int) -> str:
+        sign = "-" if cents < 0 else ""
+        cents = abs(cents)
+        return f"{sign}${cents // 100:,}.{cents % 100:02d}"
+
+    cpp_display = f"{cpp // 10}.{cpp % 10}¢/pt" if rec.points_used else "N/A"
+
+    screenshot_html = ""
+    if rec.benchmark_screenshot:
+        screenshot_html = f'<img src="{rec.benchmark_screenshot}" alt="Benchmark screenshot" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px;margin-top:8px;">'
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Savings Report — {rec.trip_label or "Trip"}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; color: #111827; margin: 0; padding: 24px; }}
+  .card {{ background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 700px; margin: 0 auto; padding: 32px; }}
+  .logo {{ font-size: 1.1rem; font-weight: 700; color: #d97706; letter-spacing: .02em; margin-bottom: 4px; }}
+  h1 {{ font-size: 1.4rem; font-weight: 700; margin: 0 0 4px; }}
+  .sub {{ color: #6b7280; font-size: .9rem; margin-bottom: 24px; }}
+  table {{ width: 100%; border-collapse: collapse; }}
+  td {{ padding: 8px 0; border-bottom: 1px solid #f3f4f6; }}
+  td:first-child {{ color: #6b7280; width: 200px; }}
+  td:last-child {{ font-weight: 500; text-align: right; }}
+  .savings-row td {{ font-size: 1.15rem; font-weight: 700; color: #059669; }}
+  .fee-row td {{ color: #d97706; }}
+  .footer {{ margin-top: 24px; font-size: .8rem; color: #9ca3af; text-align: center; }}
+  @media print {{ body {{ background: #fff; padding: 0; }} }}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">District Award Travel</div>
+  <h1>{rec.trip_label or "Savings Report"}</h1>
+  <div class="sub">Prepared for {client_name} &middot; {rec.benchmark_captured_at.strftime('%B %d, %Y') if rec.benchmark_captured_at else ''}</div>
+  <table>
+    <tr><td>Cash Benchmark</td><td>{fmt_usd(rec.cash_benchmark_cents)}</td></tr>
+    {'<tr><td>Benchmark Source</td><td>' + rec.benchmark_source + '</td></tr>' if rec.benchmark_source else ''}
+    {'<tr><td>Assumptions</td><td style="font-size:.85rem;text-align:right;white-space:pre-wrap;">' + rec.benchmark_assumptions + '</td></tr>' if rec.benchmark_assumptions else ''}
+    <tr><td>Option Booked</td><td style="text-align:right;white-space:pre-wrap;">{rec.option_booked or '—'}</td></tr>
+    {'<tr><td>Points Used</td><td>' + f"{rec.points_used:,} {rec.points_program}".strip() + '</td></tr>' if rec.points_used else ''}
+    {'<tr><td>Award Taxes + Fees</td><td>' + fmt_usd(rec.award_taxes_fees_cents) + '</td></tr>' if rec.award_taxes_fees_cents else ''}
+    {'<tr><td>Other Out-of-Pocket</td><td>' + fmt_usd(rec.other_out_of_pocket_cents) + '</td></tr>' if rec.other_out_of_pocket_cents else ''}
+    {'<tr><td>Cents per Point</td><td>' + cpp_display + '</td></tr>' if rec.points_used else ''}
+    <tr class="savings-row"><td>Gross Savings</td><td>{fmt_usd(gross)}</td></tr>
+    <tr class="fee-row"><td>District Fee (10%)</td><td>{fmt_usd(fee)}</td></tr>
+    {'<tr><td>Invoice</td><td>' + rec.invoice_number + '</td></tr>' if rec.invoice_number else ''}
+  </table>
+  {screenshot_html}
+  <div class="footer">District Award Travel &mdash; districtawardtravel@gmail.com</div>
+</div>
+</body>
+</html>"""
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(html)
 
 
 @app.get("/api/admin/intakes")
@@ -985,6 +2232,498 @@ def delete_intake(intake_id: int, _: dict = Depends(require_admin), db: Session 
     db.delete(intake)
     db.commit()
     return {"ok": True}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Phase 2 — Workflow / Trip Requests
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/admin/board")
+def get_board(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    now = dt.datetime.utcnow()
+    trips = db.query(TripRequest).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    columns = {s: [] for s in WORKFLOW_STATUSES}
+    needs_attention = []
+    for trip in trips:
+        client = client_map.get(trip.client_id)
+        row = _trip_row(trip, client, now)
+        columns.setdefault(trip.workflow_status, []).append(row)
+        if row["level"] in ("red", "amber") or row["follow_up"]:
+            needs_attention.append(row)
+        elif trip.workflow_status == "new":
+            needs_attention.append(row)
+    # sort needs_attention: reds first, then follow_up, then ambers, by hours desc
+    def urgency_key(r):
+        lvl = {"red": 0, "amber": 1, "ok": 2}.get(r["level"], 2)
+        fu = 0 if r["follow_up"] else 1
+        return (lvl, fu, -r["hours_in_stage"])
+    needs_attention.sort(key=urgency_key)
+    seen = set()
+    deduped = []
+    for r in needs_attention:
+        if r["id"] not in seen:
+            seen.add(r["id"])
+            deduped.append(r)
+    return {"columns": columns, "needs_attention": deduped}
+
+
+@app.get("/api/admin/trips")
+def list_trips(client_email: Optional[str] = None, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    now = dt.datetime.utcnow()
+    q = db.query(TripRequest)
+    if client_email:
+        client = db.query(Client).filter(Client.email == client_email.lower()).first()
+        if not client:
+            return []
+        q = q.filter(TripRequest.client_id == client.id)
+    trips = q.order_by(TripRequest.created_at.desc()).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    return [_trip_row(t, client_map.get(t.client_id), now) for t in trips]
+
+
+@app.post("/api/admin/trips")
+def create_trip(body: TripCreateIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
+    if not client:
+        raise HTTPException(404, "Client not found")
+    trip = TripRequest(
+        client_id=client.id,
+        destination=body.destination,
+        origin=body.origin,
+        dates=body.dates,
+        passengers=body.passengers,
+        cabin=body.cabin,
+        flexibility=body.flexibility,
+    )
+    db.add(trip)
+    db.flush()
+    db.add(WorkflowEvent(trip_id=trip.id, from_status="", to_status="new"))
+    db.commit()
+    db.refresh(trip)
+    return _trip_row(trip, client)
+
+
+@app.patch("/api/admin/trips/{trip_id}")
+def update_trip(trip_id: int, body: TripPatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(trip, field, val)
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    return _trip_row(trip, client)
+
+
+@app.patch("/api/admin/trips/{trip_id}/status")
+def advance_trip_status(trip_id: int, body: WorkflowAdvanceIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    if not is_valid_workflow_transition(trip.workflow_status, body.new_status):
+        raise HTTPException(400, f"Cannot transition from '{trip.workflow_status}' to '{body.new_status}'")
+    if body.new_status in REASON_REQUIRED_STATUSES and not body.note.strip():
+        raise HTTPException(422, "A reason is required when marking a trip declined or lost")
+    old_status = trip.workflow_status
+    trip.workflow_status = body.new_status
+    trip.stage_entered_at = dt.datetime.utcnow()
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.add(WorkflowEvent(trip_id=trip.id, from_status=old_status, to_status=body.new_status, note=body.note))
+    db.commit()
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    result = _trip_row(trip, client)
+    if body.new_status == "booked":
+        result["prompt_savings_record"] = True
+    return result
+
+
+@app.get("/api/admin/trips/{trip_id}/events")
+def trip_events(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    events = db.query(WorkflowEvent).filter(WorkflowEvent.trip_id == trip_id).order_by(WorkflowEvent.created_at.desc()).all()
+    return [{"id": e.id, "from_status": e.from_status, "to_status": e.to_status, "note": e.note, "created_at": e.created_at.isoformat()} for e in events]
+
+
+@app.post("/api/admin/trips/{trip_id}/notes")
+def add_trip_note(trip_id: int, body: TripNoteIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    notes = json.loads(trip.notes or "[]")
+    notes.append({"text": body.text, "at": dt.datetime.utcnow().isoformat()})
+    trip.notes = json.dumps(notes)
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True, "notes": notes}
+
+
+@app.post("/api/admin/trips/{trip_id}/time")
+def add_trip_time(trip_id: int, body: TripTimeIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    trip.time_tracked_minutes = (trip.time_tracked_minutes or 0) + body.minutes
+    db.commit()
+    return {"ok": True, "time_tracked_minutes": trip.time_tracked_minutes}
+
+
+@app.get("/api/admin/trips/{trip_id}/cockpit")
+def trip_cockpit(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    now = dt.datetime.utcnow()
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    if not client:
+        raise HTTPException(404, "Client not found")
+    cdata = json.loads(client.data or "{}")
+    points = cdata.get("points", [])
+    program_names = [p.get("program", "") for p in points]
+    templates = db.query(ResearchTemplate).filter(ResearchTemplate.active == 1).all()
+    checklist = []
+    for t in templates:
+        if any(t.program.lower() in pn.lower() or pn.lower() in t.program.lower() for pn in program_names):
+            checklist.append({"program": t.program, "portal_name": t.portal_name, "portal_url": t.portal_url})
+    events = db.query(WorkflowEvent).filter(WorkflowEvent.trip_id == trip_id).order_by(WorkflowEvent.created_at.desc()).all()
+    gf_query = urllib.parse.quote(f"flights from {trip.origin or 'origin'} to {trip.destination or 'destination'}")
+    google_flights_url = f"https://www.google.com/travel/flights?q={gf_query}"
+    effective_hourly_rate_cents = None
+    if trip.savings_record_id and trip.time_tracked_minutes and trip.time_tracked_minutes > 0:
+        sr = db.query(SavingsRecord).filter(SavingsRecord.id == trip.savings_record_id).first()
+        if sr and sr.status == "paid":
+            gross = calc_gross_savings(sr.cash_benchmark_cents, sr.award_taxes_fees_cents, sr.other_out_of_pocket_cents)
+            fee = calc_fee(gross, sr.fee_rate_bps)
+            effective_hourly_rate_cents = fee * 60 // trip.time_tracked_minutes
+    return {
+        "trip": _trip_row(trip, client, now),
+        "client": {
+            "name": client.name,
+            "email": client.email,
+            "points": points,
+            "preferences": cdata.get("preferences", {}),
+        },
+        "events": [{"from_status": e.from_status, "to_status": e.to_status, "note": e.note, "created_at": e.created_at.isoformat()} for e in events],
+        "research_checklist": checklist,
+        "google_flights_url": google_flights_url,
+        "effective_hourly_rate_cents": effective_hourly_rate_cents,
+    }
+
+
+@app.post("/api/admin/trips/{trip_id}/link-savings")
+def link_savings(trip_id: int, body: LinkSavingsIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    sr = db.query(SavingsRecord).filter(SavingsRecord.id == body.savings_record_id).first()
+    if not sr:
+        raise HTTPException(404, "Savings record not found")
+    if sr.client_id != trip.client_id:
+        raise HTTPException(400, "Savings record belongs to a different client")
+    trip.savings_record_id = body.savings_record_id
+    db.commit()
+    return {"ok": True}
+
+
+@app.post("/api/admin/trips/import-legacy")
+def import_legacy_trips(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    clients = db.query(Client).all()
+    imported = 0
+    for client in clients:
+        cdata = json.loads(client.data or "{}")
+        if cdata.get("_trips_imported"):
+            continue
+        for t in cdata.get("trips", []):
+            trip = TripRequest(
+                client_id=client.id,
+                destination=t.get("destination", ""),
+                dates=t.get("dates", ""),
+                passengers=str(t.get("passengers", "1")),
+                cabin=t.get("cabin", ""),
+                flexibility=t.get("flexibility", ""),
+                stage_entered_at=client.created_at,
+                last_activity_at=client.created_at,
+            )
+            db.add(trip)
+            db.flush()
+            db.add(WorkflowEvent(trip_id=trip.id, from_status="", to_status="new", note="imported from legacy client data"))
+            imported += 1
+        cdata["_trips_imported"] = True
+        client.data = json.dumps(cdata)
+    db.commit()
+    return {"ok": True, "imported": imported}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Research Templates / Snippets / Message Templates
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/admin/research-templates")
+def list_research_templates(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rows = db.query(ResearchTemplate).order_by(ResearchTemplate.sort_order, ResearchTemplate.id).all()
+    return [{"id": r.id, "program": r.program, "portal_name": r.portal_name, "portal_url": r.portal_url, "sort_order": r.sort_order, "active": r.active} for r in rows]
+
+
+@app.post("/api/admin/research-templates")
+def create_research_template(body: ResearchTemplateIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = ResearchTemplate(**body.model_dump())
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return {"id": t.id, **body.model_dump()}
+
+
+@app.patch("/api/admin/research-templates/{tmpl_id}")
+def update_research_template(tmpl_id: int, body: ResearchTemplatePatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(ResearchTemplate).filter(ResearchTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(t, field, val)
+    db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/admin/research-templates/{tmpl_id}")
+def delete_research_template(tmpl_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(ResearchTemplate).filter(ResearchTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    db.delete(t)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/admin/snippets")
+def list_snippets(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rows = db.query(Snippet).order_by(Snippet.category, Snippet.title).all()
+    return [{"id": r.id, "title": r.title, "body": r.body, "category": r.category} for r in rows]
+
+
+@app.post("/api/admin/snippets")
+def create_snippet(body: SnippetIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    s = Snippet(**body.model_dump())
+    db.add(s)
+    db.commit()
+    db.refresh(s)
+    return {"id": s.id, **body.model_dump()}
+
+
+@app.patch("/api/admin/snippets/{snippet_id}")
+def update_snippet(snippet_id: int, body: SnippetPatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    s = db.query(Snippet).filter(Snippet.id == snippet_id).first()
+    if not s:
+        raise HTTPException(404, "Snippet not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(s, field, val)
+    s.updated_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/admin/snippets/{snippet_id}")
+def delete_snippet(snippet_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    s = db.query(Snippet).filter(Snippet.id == snippet_id).first()
+    if not s:
+        raise HTTPException(404, "Snippet not found")
+    db.delete(s)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/admin/templates")
+def list_message_templates(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rows = db.query(MessageTemplate).order_by(MessageTemplate.category, MessageTemplate.title).all()
+    return [{"id": r.id, "category": r.category, "title": r.title, "subject": r.subject, "body": r.body} for r in rows]
+
+
+@app.post("/api/admin/templates")
+def create_message_template(body: MessageTemplateIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = MessageTemplate(**body.model_dump())
+    db.add(t)
+    db.commit()
+    db.refresh(t)
+    return {"id": t.id, **body.model_dump()}
+
+
+@app.patch("/api/admin/templates/{tmpl_id}")
+def update_message_template(tmpl_id: int, body: MessageTemplatePatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(MessageTemplate).filter(MessageTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    for field, val in body.model_dump(exclude_unset=True).items():
+        setattr(t, field, val)
+    t.updated_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/admin/templates/{tmpl_id}")
+def delete_message_template(tmpl_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(MessageTemplate).filter(MessageTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    db.delete(t)
+    db.commit()
+    return {"ok": True}
+
+
+@app.post("/api/admin/templates/{tmpl_id}/render")
+def render_message_template(tmpl_id: int, body: TemplateRenderIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    t = db.query(MessageTemplate).filter(MessageTemplate.id == tmpl_id).first()
+    if not t:
+        raise HTTPException(404, "Template not found")
+    client = db.query(Client).filter(Client.email == body.client_email.lower()).first()
+    if not client:
+        raise HTTPException(404, "Client not found")
+    variables: dict = {"first_name": client.name.split()[0] if client.name else client.name}
+    if body.trip_id:
+        trip = db.query(TripRequest).filter(TripRequest.id == body.trip_id).first()
+        if trip:
+            variables["route"] = f"{trip.origin} → {trip.destination}" if trip.origin else trip.destination
+            if trip.savings_record_id:
+                sr = db.query(SavingsRecord).filter(SavingsRecord.id == trip.savings_record_id).first()
+                if sr:
+                    gross = calc_gross_savings(sr.cash_benchmark_cents, sr.award_taxes_fees_cents, sr.other_out_of_pocket_cents)
+                    fee = calc_fee(gross, sr.fee_rate_bps)
+                    def _fmt(c): return f"${abs(c) // 100:,}.{abs(c) % 100:02d}"
+                    variables["savings_amount"] = _fmt(gross)
+                    variables["fee_amount"] = _fmt(fee)
+    return {"subject": render_template(t.subject, variables), "body": render_template(t.body, variables)}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# AI health
+# ──────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/admin/email-log")
+def email_log_list(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Last 100 outbound emails with delivery status — answers 'did the
+    client actually get it?' without grepping server logs."""
+    rows = db.query(EmailLog).order_by(EmailLog.created_at.desc()).limit(100).all()
+    return [{
+        "id": r.id, "recipient": r.recipient, "subject": r.subject,
+        "status": r.status, "attempts": r.attempts, "last_error": r.last_error,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+        "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+    } for r in rows]
+
+
+@app.get("/api/admin/ai-health")
+def ai_health(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    cutoff = dt.datetime.utcnow() - dt.timedelta(hours=24)
+    rows = db.query(AIUsage).filter(AIUsage.created_at >= cutoff).all()
+    by_provider: dict = {}
+    for r in rows:
+        p = by_provider.setdefault(r.provider, {"calls": 0, "failures": 0, "total_latency_ms": 0})
+        p["calls"] += 1
+        if not r.success:
+            p["failures"] += 1
+        p["total_latency_ms"] += r.latency_ms
+    stats = {}
+    for prov, p in by_provider.items():
+        stats[prov] = {
+            "calls_24h": p["calls"],
+            "failures_24h": p["failures"],
+            "avg_latency_ms": p["total_latency_ms"] // p["calls"] if p["calls"] else 0,
+        }
+    providers_configured = {
+        "gemini": bool(GEMINI_API_KEY),
+        "groq": bool(GROQ_API_KEY),
+        "seats_aero": bool(SEATS_AERO_API_KEY),
+    }
+    return {"providers_configured": providers_configured, "stats_24h": stats, "breakers": ai_client.get_health()}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Daily ops digest
+# ──────────────────────────────────────────────────────────────────────────
+
+def build_digest(db: Session, now=None) -> dict:
+    ET = ZoneInfo("America/New_York")
+    now = now or dt.datetime.utcnow()
+    since_24h = now - dt.timedelta(hours=24)
+    new_intakes = db.query(Intake).filter(Intake.created_at >= since_24h).count()
+    total_intakes = db.query(Intake).count()
+    trips = db.query(TripRequest).filter(TripRequest.workflow_status.notin_(["closed", "declined", "lost"])).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    stale_cards = []
+    awaiting = []
+    for trip in trips:
+        flags = trip_attention_flags(trip.workflow_status, trip.stage_entered_at, trip.last_activity_at, now)
+        if flags["level"] in ("red", "amber") or flags["follow_up"]:
+            client = client_map.get(trip.client_id)
+            stale_cards.append({
+                "client": client.name if client else "?",
+                "destination": trip.destination,
+                "status": trip.workflow_status,
+                "hours_in_stage": flags["hours_in_stage"],
+                "level": flags["level"],
+            })
+        if trip.workflow_status == "awaiting_decision":
+            client = client_map.get(trip.client_id)
+            awaiting.append({"client": client.name if client else "?", "destination": trip.destination})
+    invoiced = db.query(SavingsRecord).filter(SavingsRecord.status == "invoiced").all()
+    invoiced_list = []
+    for r in invoiced:
+        client = client_map.get(r.client_id)
+        gross = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee = calc_fee(gross, r.fee_rate_bps)
+        invoiced_list.append({"invoice_number": r.invoice_number, "client": client.name if client else "?", "fee_cents": fee})
+    events_24h = db.query(WorkflowEvent).filter(WorkflowEvent.created_at >= since_24h).count()
+    return {
+        "generated_at_et": now.astimezone(ET).isoformat(),
+        "new_intakes_24h": new_intakes,
+        "total_pending_intakes": total_intakes,
+        "stale_trips": stale_cards,
+        "awaiting_decision_trips": awaiting,
+        "outstanding_invoices": invoiced_list,
+        "workflow_events_24h": events_24h,
+    }
+
+
+@app.get("/api/admin/digest")
+def get_digest(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    return build_digest(db)
+
+
+CRON_SECRET = os.environ.get("CRON_SECRET", "")
+
+
+@app.post("/api/cron/digest")
+def cron_digest(key: str = "", db: Session = Depends(get_db)):
+    if not CRON_SECRET:
+        raise HTTPException(503, "Digest cron not configured — set CRON_SECRET env var")
+    if not hmac.compare_digest(key, CRON_SECRET):
+        raise HTTPException(403, "Invalid cron key")
+    digest = build_digest(db)
+    ET = ZoneInfo("America/New_York")
+    lines = [
+        f"District Award Travel — Daily Digest",
+        f"Generated: {digest['generated_at_et']}",
+        "",
+        f"NEW INTAKES: {digest['new_intakes_24h']} in last 24h ({digest['total_pending_intakes']} total pending)",
+        "",
+    ]
+    if digest["stale_trips"]:
+        lines.append("NEEDS ATTENTION:")
+        for t in digest["stale_trips"]:
+            lines.append(f"  [{t['level'].upper()}] {t['client']} — {t['destination']} ({t['status']}, {t['hours_in_stage']}h in stage)")
+        lines.append("")
+    if digest["awaiting_decision_trips"]:
+        lines.append("AWAITING DECISION:")
+        for t in digest["awaiting_decision_trips"]:
+            lines.append(f"  {t['client']} — {t['destination']}")
+        lines.append("")
+    if digest["outstanding_invoices"]:
+        lines.append("OUTSTANDING INVOICES:")
+        for inv in digest["outstanding_invoices"]:
+            fee_str = f"${inv['fee_cents'] // 100:,}.{inv['fee_cents'] % 100:02d}"
+            lines.append(f"  {inv['invoice_number']} — {inv['client']} — {fee_str}")
+        lines.append("")
+    lines.append(f"Workflow events in last 24h: {digest['workflow_events_24h']}")
+    sent = send_email("DAT Daily Digest", "\n".join(lines))
+    return {"ok": True, "sent": sent}
 
 
 # ──────────────────────────────────────────────────────────────────────────

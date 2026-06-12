@@ -1,5 +1,11 @@
 fastapi
 sqlalchemy
-sqlite3
 requests
 beautifulsoup4
+python-jose
+cryptography
+bcrypt
+httpx
+pydantic
+uvicorn
+slowapi

@@ -1030,6 +1030,7 @@ const CLIENTS = {
 };
 
 let currentClient = null;
+let autoRefreshInterval = null;
 
 /* ─── SESSION RESTORE ───────────────────────────────────────── */
 (async function restoreSession() {
@@ -1272,8 +1273,8 @@ function renderMessages(c) {
         </div>
         <div class="msg-text">${m.text}</div>
       </div>
-      <div class="msg-time">${m.time}</div>
-    </div>`).join('');
+    </div>
+  `).join('');
 }
 
 function renderOverviewMessages(c) {
@@ -1310,6 +1311,108 @@ function switchPanel(id, btn, silent) {
   const mobileBtn = document.querySelector('.mobile-tab[data-panel="' + id + '"]');
   if (mobileBtn) mobileBtn.classList.add('active');
 }
+
+/* ── Live updates: SSE first, adaptive polling fallback, paused when hidden ── */
+let evtSource = null;
+let sseFailures = 0;
+let reconnectTimer = null;
+let reconnectDelay = 2000;
+
+async function refetchMe() {
+  const token = sessionStorage.getItem('dat_client_token');
+  if (!token) { stopAutoRefresh(); return; }
+  try {
+    const res = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (res.ok) {
+      const updated = await res.json();
+      if (currentClient) {
+        Object.assign(currentClient, updated);
+        renderPortal(currentClient);
+      }
+    }
+  } catch (e) {}
+}
+
+function connectStream() {
+  const token = sessionStorage.getItem('dat_client_token');
+  if (!token || document.hidden) return;
+  disconnectStream();
+  try {
+    evtSource = new EventSource('/api/client/stream?token=' + encodeURIComponent(token));
+    evtSource.addEventListener('hello', function() {
+      sseFailures = 0;
+      reconnectDelay = 2000;
+      stopPollingFallback();
+    });
+    evtSource.addEventListener('changed', refetchMe);
+    evtSource.addEventListener('bye', function() {
+      disconnectStream();
+      scheduleReconnect();
+    });
+    evtSource.onerror = function() {
+      disconnectStream();
+      sseFailures++;
+      if (sseFailures >= 3) startPollingFallback();
+      scheduleReconnect();
+    };
+  } catch (e) {
+    startPollingFallback();
+  }
+}
+
+function disconnectStream() {
+  if (evtSource) { evtSource.close(); evtSource = null; }
+}
+
+function scheduleReconnect() {
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(function() {
+    reconnectDelay = Math.min(reconnectDelay * 2, 60000);
+    connectStream();
+  }, reconnectDelay);
+}
+
+function startPollingFallback() {
+  if (autoRefreshInterval) return;
+  autoRefreshInterval = setInterval(function() {
+    if (!document.hidden) refetchMe();
+  }, 60000);
+}
+
+function stopPollingFallback() {
+  if (autoRefreshInterval) {
+    clearInterval(autoRefreshInterval);
+    autoRefreshInterval = null;
+  }
+}
+
+function startAutoRefresh() { connectStream(); }
+
+function stopAutoRefresh() {
+  disconnectStream();
+  stopPollingFallback();
+  clearTimeout(reconnectTimer);
+}
+
+document.addEventListener('visibilitychange', function() {
+  if (!sessionStorage.getItem('dat_client_token')) return;
+  if (document.hidden) {
+    stopAutoRefresh();
+  } else {
+    refetchMe();
+    connectStream();
+  }
+});
+
+// Auto-login from session
+(async function() {
+  const token = sessionStorage.getItem('dat_client_token');
+  if (!token) return;
+  try {
+    const me = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (me.ok) return showPortal(await me.json());
+  } catch (e) {}
+})();
 </script>
 </body>
 </html>
