@@ -4,1414 +4,409 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Portal — District Award Travel</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg: #0a0805;
-  --surface: #12100d;
-  --surface2: #1a1510;
-  --border: #2a2018;
-  --orange: #ff8a1e;
-  --orange-dim: rgba(255,138,30,0.1);
-  --orange-border: rgba(255,138,30,0.25);
-  --gold: #ffb347;
-  --green: #00e87a;
-  --blue: #38b6ff;
-  --red: #ff5c5c;
-  --text: #f0e8dc;
-  --muted: #8a7a68;
-  --font: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-}
-
-/* ─── LOGIN ─────────────────────────────────────────────────── */
-#login-screen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 40px 20px;
-  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,138,30,0.07) 0%, transparent 70%),
-              var(--bg);
-}
-
-.login-wrap {
-  width: 100%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0;
-}
-
-.login-logo-row {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-bottom: 32px;
-  gap: 12px;
-}
-
-.login-logo-row img {
-  width: 88px;
-  height: 88px;
-  object-fit: contain;
-}
-
-.login-brand {
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--gold);
-  text-transform: uppercase;
-}
-
-.login-sub {
-  font-size: 0.8rem;
-  color: var(--muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-top: -4px;
-}
-
-.login-box {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 40px 36px 36px;
-  width: 100%;
-}
-
-.form-group {
-  margin-bottom: 18px;
-}
-
-.form-group label {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--muted);
-  margin-bottom: 7px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-
-.form-group input {
-  width: 100%;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 13px 16px;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  font-family: var(--font);
-}
-
-.form-group input:focus {
-  border-color: var(--orange-border);
-  box-shadow: 0 0 0 3px var(--orange-dim);
-}
-
-.form-group input::placeholder { color: var(--muted); opacity: 0.6; }
-
-.btn-primary {
-  width: 100%;
-  background: linear-gradient(135deg, #ff8a1e 0%, #e85d04 100%);
-  color: #fff;
-  border: none;
-  padding: 14px;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: opacity 0.2s, transform 0.1s;
-  letter-spacing: 0.03em;
-  font-family: var(--font);
-  margin-top: 4px;
-}
-
-.btn-primary:hover { opacity: 0.92; }
-.btn-primary:active { transform: scale(0.99); }
-.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
-
-.login-error {
-  color: var(--red);
-  font-size: 0.83rem;
-  margin-top: 12px;
-  display: none;
-  text-align: center;
-}
-
-.login-footer {
-  margin-top: 20px;
-  font-size: 0.78rem;
-  color: var(--muted);
-  text-align: center;
-}
-
-.login-footer a {
-  color: var(--orange);
-  text-decoration: none;
-  font-weight: 500;
-}
-
-.login-footer a:hover { text-decoration: underline; }
-
-/* ─── PORTAL LAYOUT ─────────────────────────────────────────── */
-#portal {
-  display: none;
-  min-height: 100vh;
-}
-
-.portal-layout {
-  display: flex;
-  min-height: 100vh;
-}
-
-/* ─── SIDEBAR ───────────────────────────────────────────────── */
-.sidebar {
-  width: 240px;
-  flex-shrink: 0;
-  background: var(--surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-}
-
-.sidebar-header {
-  padding: 24px 20px 20px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.sidebar-header img {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.sidebar-brand {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--gold);
-  line-height: 1.3;
-}
-
-.sidebar-client {
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-client-name {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
-.sidebar-tier {
-  font-size: 0.72rem;
-  color: var(--orange);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  font-weight: 500;
-}
-
-.sidebar-nav {
-  padding: 12px 10px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 0.87rem;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.15s;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-  font-family: var(--font);
-  font-weight: 500;
-}
-
-.nav-item:hover { background: var(--surface2); color: var(--text); }
-
-.nav-item.active {
-  background: var(--orange-dim);
-  color: var(--orange);
-  border: 1px solid var(--orange-border);
-}
-
-.nav-icon {
-  font-size: 1rem;
-  width: 18px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.sidebar-footer {
-  padding: 16px 10px;
-  border-top: 1px solid var(--border);
-}
-
-.btn-signout {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.15s;
-  border: none;
-  background: none;
-  width: 100%;
-  text-align: left;
-  font-family: var(--font);
-  font-weight: 500;
-}
-
-.btn-signout:hover { color: var(--red); background: rgba(255,92,92,0.07); }
-
-/* ─── MAIN CONTENT ──────────────────────────────────────────── */
-.main-content {
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
-}
-
-.panel {
-  display: none;
-  padding: 40px 48px;
-  max-width: 1100px;
-}
-
-.panel.active { display: block; }
-
-/* ─── PANEL HEADERS ─────────────────────────────────────────── */
-.panel-heading {
-  margin-bottom: 36px;
-}
-
-.panel-heading h1 {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 6px;
-  letter-spacing: -0.01em;
-}
-
-.panel-heading p {
-  font-size: 0.88rem;
-  color: var(--muted);
-}
-
-/* ─── STAT CARDS ────────────────────────────────────────────── */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 36px;
-}
-
-.stat-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 22px 24px;
-  transition: border-color 0.2s;
-}
-
-.stat-card:hover { border-color: rgba(42,32,24,0.8); }
-
-.stat-label {
-  font-size: 0.7rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 500;
-  margin-bottom: 10px;
-}
-
-.stat-value {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1;
-  margin-bottom: 6px;
-}
-
-.stat-value.orange { color: var(--orange); }
-.stat-value.gold   { color: var(--gold); }
-.stat-value.blue   { color: var(--blue); }
-
-.stat-sub {
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
-/* ─── URGENCY BANNER ────────────────────────────────────────── */
-.urgency-banner {
-  background: rgba(255,179,71,0.07);
-  border: 1px solid rgba(255,179,71,0.3);
-  border-radius: 12px;
-  padding: 16px 22px;
-  margin-bottom: 32px;
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-}
-
-.urgency-icon { font-size: 1.25rem; flex-shrink: 0; margin-top: 1px; }
-
-.urgency-text {
-  font-size: 0.87rem;
-  line-height: 1.6;
-  color: var(--text);
-}
-
-.urgency-text strong { color: var(--gold); }
-
-/* ─── SECTION TITLE ─────────────────────────────────────────── */
-.section-title {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* ─── BADGE ─────────────────────────────────────────────────── */
-.badge {
-  font-size: 0.68rem;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.badge-active  { background: rgba(0,232,122,0.12); color: var(--green); }
-.badge-urgent  { background: rgba(255,179,71,0.15); color: var(--gold); }
-.badge-pending { background: rgba(56,182,255,0.12); color: var(--blue); }
-.badge-planned { background: rgba(138,122,104,0.15); color: var(--muted); }
-
-/* ─── RECENT MESSAGES PREVIEW ───────────────────────────────── */
-.overview-messages {
-  margin-top: 36px;
-}
-
-.msg-preview-item {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px 20px;
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.msg-preview-item:hover { border-color: var(--orange-border); }
-.msg-preview-item.unread { border-left: 3px solid var(--orange); }
-
-/* ─── TRIP CARDS ────────────────────────────────────────────── */
-.trips-grid { display: grid; gap: 20px; }
-
-.trip-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  overflow: hidden;
-  transition: border-color 0.2s;
-}
-
-.trip-card:hover { border-color: rgba(255,138,30,0.2); }
-.trip-card.urgent { border-color: rgba(255,179,71,0.35); }
-
-.trip-header {
-  padding: 24px 28px 20px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.trip-dest {
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-bottom: 4px;
-  color: var(--text);
-}
-
-.trip-dates { font-size: 0.84rem; color: var(--muted); }
-
-.trip-body { padding: 24px 28px; }
-
-.trip-segments { display: grid; gap: 10px; }
-
-.segment {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 14px 18px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr auto;
-  align-items: center;
-  gap: 14px;
-}
-
-.seg-label {
-  font-size: 0.68rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-bottom: 3px;
-  font-weight: 500;
-}
-
-.seg-val { font-size: 0.9rem; font-weight: 600; }
-
-.seg-arrow { color: var(--muted); font-size: 1rem; }
-
-.seg-status { text-align: right; }
-
-.seg-status-text { font-size: 0.75rem; font-weight: 500; }
-.seg-status-text.confirmed { color: var(--green); }
-.seg-status-text.pending   { color: var(--gold); }
-.seg-status-text.action    { color: var(--red); }
-
-.seg-notes { font-size: 0.74rem; color: var(--muted); margin-top: 3px; }
-
-.action-box {
-  background: rgba(255,179,71,0.06);
-  border: 1px solid rgba(255,179,71,0.28);
-  border-radius: 10px;
-  padding: 16px 20px;
-  margin-top: 16px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.action-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
-
-.action-text { font-size: 0.84rem; line-height: 1.6; color: var(--text); }
-.action-text strong { color: var(--gold); display: block; margin-bottom: 3px; }
-
-/* ─── SAVINGS ───────────────────────────────────────────────── */
-.savings-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 8px 0;
-  margin-bottom: 24px;
-  overflow: hidden;
-}
-
-.savings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-  gap: 16px;
-}
-
-.savings-row:last-child { border-bottom: none; }
-
-.savings-row-label { font-size: 0.9rem; color: var(--text); font-weight: 500; }
-.savings-row-sub { font-size: 0.77rem; color: var(--muted); margin-top: 2px; }
-.savings-row-val { font-size: 0.92rem; font-weight: 600; text-align: right; }
-
-.savings-total {
-  background: rgba(0,232,122,0.05);
-  border: 1px solid rgba(0,232,122,0.2);
-  border-radius: 12px;
-  padding: 20px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.savings-total-label { font-size: 1rem; font-weight: 600; }
-.savings-total-sub { font-size: 0.78rem; color: var(--muted); margin-top: 3px; }
-.savings-total-val { font-size: 2rem; font-weight: 800; color: var(--green); letter-spacing: -0.02em; }
-
-.fee-box {
-  background: rgba(255,179,71,0.05);
-  border: 1px solid rgba(255,179,71,0.2);
-  border-radius: 12px;
-  padding: 18px 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.fee-box-label { font-size: 0.92rem; font-weight: 600; }
-.fee-box-val { font-size: 1.6rem; font-weight: 800; color: var(--gold); letter-spacing: -0.02em; }
-
-/* ─── POINTS ────────────────────────────────────────────────── */
-.points-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-.points-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 22px 22px;
-  transition: border-color 0.2s;
-}
-
-.points-card:hover { border-color: var(--orange-border); }
-
-.points-program {
-  font-size: 0.72rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  font-weight: 500;
-  margin-bottom: 10px;
-}
-
-.points-balance {
-  font-size: 1.55rem;
-  font-weight: 800;
-  color: var(--blue);
-  letter-spacing: -0.02em;
-  margin-bottom: 4px;
-}
-
-.points-est { font-size: 0.75rem; color: var(--muted); }
-
-/* ─── MESSAGES ──────────────────────────────────────────────── */
-.messages-list { display: grid; gap: 12px; }
-
-.message-item {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 20px 24px;
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  transition: border-color 0.2s;
-}
-
-.message-item:hover { border-color: var(--orange-border); }
-.message-item.unread { border-left: 3px solid var(--orange); }
-
-.msg-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(255,138,30,0.15), rgba(255,138,30,0.05));
-  border: 1px solid var(--orange-border);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.78rem;
-  color: var(--orange);
-}
-
-.msg-content { flex: 1; min-width: 0; }
-
-.msg-from {
-  font-size: 0.84rem;
-  font-weight: 600;
-  margin-bottom: 4px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.msg-unread-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--orange);
-  flex-shrink: 0;
-}
-
-.msg-text {
-  font-size: 0.84rem;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.msg-time {
-  font-size: 0.74rem;
-  color: var(--muted);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* ─── MOBILE: Bottom tab bar ────────────────────────────────── */
-@media (max-width: 767px) {
-  .sidebar {
-    display: none;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    top: auto;
-    height: auto;
-    width: 100%;
-    flex-direction: row;
-    border-right: none;
-    border-top: 1px solid var(--border);
-    z-index: 100;
-  }
-
-  .sidebar.mobile-open { display: flex; }
-
-  .mobile-bottom-bar {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
-    z-index: 100;
-    height: 60px;
-  }
-
-  .mobile-tab {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    font-size: 0.6rem;
-    color: var(--muted);
-    cursor: pointer;
-    transition: color 0.15s;
-    border: none;
-    background: none;
-    font-family: var(--font);
-    font-weight: 500;
-    letter-spacing: 0.03em;
-  }
-
-  .mobile-tab.active { color: var(--orange); }
-  .mobile-tab-icon { font-size: 1.15rem; }
-
-  .portal-layout { flex-direction: column; }
-
-  .main-content { padding-bottom: 70px; }
-
-  .panel { padding: 24px 18px; }
-
-  .stats-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-
-  .points-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-
-  .segment { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .seg-arrow { display: none; }
-
-  .trip-header { flex-direction: column; gap: 10px; }
-}
-
-@media (min-width: 768px) {
-  .mobile-bottom-bar { display: none; }
-}
-
-@media (max-width: 1050px) and (min-width: 768px) {
-  .panel { padding: 32px 28px; }
-  .points-grid { grid-template-columns: repeat(2, 1fr); }
-  .stats-row { grid-template-columns: repeat(3, 1fr); }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fafaf9;--white:#ffffff;--card:#f5f5f4;
+  --text:#1c1917;--muted:#78716c;--dim:#a8a29e;
+  --accent:#f97316;--accent-dim:rgba(249,115,22,.08);--accent-border:rgba(249,115,22,.2);
+  --border:#e7e5e4;--border2:#d6d3d1;
+  --green:#16a34a;--red:#dc2626;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* ── LOGIN ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.login-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:var(--shadow)}
+.login-brand{font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px}
+.login-brand span{color:var(--accent)}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:32px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.field input{width:100%;border:1px solid var(--border2);border-radius:8px;padding:11px 14px;font-size:14px;font-family:var(--font);color:var(--text);background:var(--white);outline:none;transition:border-color .15s,box-shadow .15s}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.btn-login{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s,transform .1s;margin-top:4px}
+.btn-login:hover{background:#ea6c0a}
+.btn-login:active{transform:scale(.99)}
+.btn-login:disabled{opacity:.55;cursor:not-allowed}
+.login-err{color:var(--red);font-size:13px;margin-top:12px;display:none;text-align:center}
+.login-foot{margin-top:20px;font-size:13px;color:var(--muted);text-align:center}
+.login-foot a{color:var(--accent);font-weight:500}
+
+/* ── PORTAL ── */
+#portal{display:none}
+.portal-nav{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 32px;height:60px;
+  background:rgba(255,255,255,.96);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--border);
+}
+.portal-nav-brand{font-size:15px;font-weight:800;color:var(--text)}
+.portal-nav-brand span{color:var(--accent)}
+.portal-nav-right{display:flex;align-items:center;gap:16px}
+.portal-nav-email{font-size:13px;color:var(--muted)}
+.btn-logout{background:none;border:1px solid var(--border2);border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;font-family:var(--font);transition:.15s}
+.btn-logout:hover{color:var(--text);border-color:var(--border2)}
+.portal-body{max-width:900px;margin:0 auto;padding:40px 24px 80px}
+
+/* ── GREETING ── */
+.greeting{margin-bottom:36px}
+.greeting h1{font-size:28px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
+.greeting p{font-size:15px;color:var(--muted)}
+
+/* ── SAVINGS HERO ── */
+.savings-hero{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:28px 32px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:var(--shadow)}
+.savings-hero-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px}
+.savings-hero-val{font-size:36px;font-weight:800;color:var(--green);letter-spacing:-1px}
+.savings-hero-sub{font-size:13px;color:var(--muted);margin-top:4px}
+.savings-hero-icon{font-size:40px;opacity:.15}
+
+/* ── STATUS CARD ── */
+.status-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px 28px;margin-bottom:24px;box-shadow:var(--shadow)}
+.status-card-label{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:14px}
+.status-steps{display:flex;align-items:center;gap:0;flex-wrap:wrap}
+.status-step{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-dot.done{background:var(--green)}
+.status-dot.active{background:var(--accent)}
+.status-dot.pending{background:var(--border2)}
+.status-sep{width:28px;height:2px;background:var(--border);margin:0 4px;flex-shrink:0}
+.status-step.active-step span{color:var(--accent);font-weight:700}
+.status-step.done-step span{color:var(--green)}
+.status-step.pending-step span{color:var(--dim)}
+
+/* ── SECTION HEADING ── */
+.section-head{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:36px 0 14px}
+
+/* ── MESSAGES ── */
+.msg-list{display:flex;flex-direction:column;gap:12px}
+.msg-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 24px;box-shadow:var(--shadow)}
+.msg-card.unread{border-left:3px solid var(--accent)}
+.msg-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.msg-from{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.msg-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.msg-time{font-size:12px;color:var(--dim)}
+.msg-body{font-size:14px;color:var(--muted);line-height:1.6}
+.msg-plan{margin-top:16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.msg-plan-header{background:var(--card);padding:12px 16px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.plan-option{padding:16px;border-bottom:1px solid var(--border)}
+.plan-option:last-child{border-bottom:none}
+.plan-option-num{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:4px}
+.plan-option-desc{font-size:13px;color:var(--text);line-height:1.5}
+.plan-option-img{margin-top:10px;border-radius:6px;max-width:100%;max-height:240px;object-fit:contain}
+
+/* ── TRIPS ── */
+.trip-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow)}
+.trip-dest{font-size:17px;font-weight:700;margin-bottom:4px}
+.trip-meta{font-size:13px;color:var(--muted)}
+.trip-badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;margin-top:8px}
+.badge-new{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)}
+.badge-researching{background:#fef9c3;color:#854d0e;border:1px solid #fef08a}
+.badge-options{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.badge-booked{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
+.badge-done{background:var(--card);color:var(--muted);border:1px solid var(--border)}
+
+/* ── POINTS ── */
+.points-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.point-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+.point-prog{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
+.point-bal{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.5px}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:.3}
+.empty p{font-size:14px}
+
+/* ── MOBILE ── */
+@media(max-width:600px){
+  .portal-nav{padding:0 16px}
+  .portal-nav-email{display:none}
+  .portal-body{padding:24px 16px 60px}
+  .greeting h1{font-size:22px}
+  .savings-hero{flex-direction:column;align-items:flex-start}
+  .savings-hero-icon{display:none}
+  .status-steps{gap:4px}
+  .status-sep{width:16px}
 }
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════ LOGIN ═══════════════════════════════ -->
+<!-- LOGIN -->
 <div id="login-screen">
-  <div class="login-wrap">
-    <div class="login-logo-row">
-      <img src="assets/dat-logo.svg" alt="District Award Travel">
-      <div class="login-brand">District Award Travel</div>
-      <div class="login-sub">Client Portal</div>
+  <div class="login-card">
+    <div class="login-brand">District <span>Award</span> Travel</div>
+    <div class="login-sub">Client Portal</div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-    <div class="login-box">
-      <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="login-email" placeholder="you@example.com"
-               onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <div class="form-group">
-        <label>Access Code</label>
-        <input type="password" id="login-pass" placeholder="Provided by your advisor"
-               onkeydown="if(event.key==='Enter')doLogin()">
-      </div>
-      <button class="btn-primary" id="login-btn" onclick="doLogin()">Sign In</button>
-      <div class="login-error" id="login-error">Invalid credentials. Contact your advisor.</div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-pass" placeholder="Your access code" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-    <p class="login-footer">
-      New client? <a href="intake.html">Start your intake &rarr;</a>
-    </p>
+    <button class="btn-login" id="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="login-err">Invalid credentials. Contact your advisor.</div>
+    <div class="login-foot">New client? <a href="intake.html">Apply here →</a></div>
   </div>
 </div>
 
-<!-- ═══════════════════════ PORTAL ══════════════════════════════ -->
+<!-- PORTAL -->
 <div id="portal">
-  <div class="portal-layout">
+  <nav class="portal-nav">
+    <div class="portal-nav-brand">District <span>Award</span> Travel</div>
+    <div class="portal-nav-right">
+      <span class="portal-nav-email" id="nav-email"></span>
+      <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
+  </nav>
+  <div class="portal-body">
+    <div class="greeting">
+      <h1 id="greeting-name">Welcome back</h1>
+      <p id="greeting-sub">District Award Travel — Client Portal</p>
+    </div>
 
-    <!-- SIDEBAR -->
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-header">
-        <img src="assets/dat-logo.svg" alt="DAT">
-        <div class="sidebar-brand">District<br>Award Travel</div>
+    <div id="savings-hero" style="display:none" class="savings-hero">
+      <div>
+        <div class="savings-hero-label">Total Savings with District</div>
+        <div class="savings-hero-val" id="savings-val">$0</div>
+        <div class="savings-hero-sub">Documented and verified</div>
       </div>
-      <div class="sidebar-client">
-        <div class="sidebar-client-name" id="sidebar-name">—</div>
-        <div class="sidebar-tier" id="sidebar-tier">—</div>
-      </div>
-      <nav class="sidebar-nav">
-        <button class="nav-item active" onclick="switchPanel('overview',this)" data-panel="overview">
-          <span class="nav-icon">◈</span> Overview
-        </button>
-        <button class="nav-item" onclick="switchPanel('trips',this)" data-panel="trips">
-          <span class="nav-icon">✈</span> My Trips
-        </button>
-        <button class="nav-item" onclick="switchPanel('savings',this)" data-panel="savings">
-          <span class="nav-icon">◎</span> Savings &amp; Fees
-        </button>
-        <button class="nav-item" onclick="switchPanel('points',this)" data-panel="points">
-          <span class="nav-icon">⬡</span> My Points
-        </button>
-        <button class="nav-item" onclick="switchPanel('messages',this)" data-panel="messages">
-          <span class="nav-icon">◻</span> Messages
-          <span id="sidebar-unread" style="display:none;margin-left:auto;width:7px;height:7px;border-radius:50%;background:var(--orange);"></span>
-        </button>
-      </nav>
-      <div class="sidebar-footer">
-        <button class="btn-signout" onclick="logout()">
-          <span class="nav-icon">↩</span> Sign Out
-        </button>
-      </div>
-    </aside>
+      <div class="savings-hero-icon">✈</div>
+    </div>
 
-    <!-- MAIN -->
-    <main class="main-content">
+    <div id="status-card" style="display:none" class="status-card">
+      <div class="status-card-label">Your Trip Status</div>
+      <div class="status-steps" id="status-steps"></div>
+    </div>
 
-      <!-- OVERVIEW -->
-      <div class="panel active" id="panel-overview">
-        <div class="panel-heading">
-          <h1 id="overview-greeting">Welcome back</h1>
-          <p id="overview-sub">District Award Travel — Client Portal</p>
-        </div>
+    <div class="section-head">Messages from Your Advisor</div>
+    <div class="msg-list" id="msg-list"><div class="empty"><div class="empty-icon">✉</div><p>No messages yet. Your advisor will be in touch soon.</p></div></div>
 
-        <div class="stats-row">
-          <div class="stat-card">
-            <div class="stat-label">Total Savings</div>
-            <div class="stat-value orange" id="stat-savings">—</div>
-            <div class="stat-sub">cash vs. points cost</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Advisory Fee</div>
-            <div class="stat-value gold" id="stat-fee">—</div>
-            <div class="stat-sub">10% of savings generated</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Points Portfolio</div>
-            <div class="stat-value blue" id="stat-points">—</div>
-            <div class="stat-sub">across all programs</div>
-          </div>
-        </div>
+    <div class="section-head">Your Trips</div>
+    <div id="trips-list"><div class="empty"><div class="empty-icon">🗺</div><p>Your trip details will appear here once your advisor begins research.</p></div></div>
 
-        <div class="urgency-banner" id="urgency-banner" style="display:none">
-          <div class="urgency-icon">⚠️</div>
-          <div class="urgency-text" id="urgency-text"></div>
-        </div>
-
-        <div class="overview-messages">
-          <div class="section-title">Recent Messages</div>
-          <div id="overview-messages-list"></div>
-        </div>
-      </div>
-
-      <!-- MY TRIPS -->
-      <div class="panel" id="panel-trips">
-        <div class="panel-heading">
-          <h1>My Trips</h1>
-          <p id="trips-sub">Your active and upcoming itineraries</p>
-        </div>
-        <div class="trips-grid" id="trips-container"></div>
-      </div>
-
-      <!-- SAVINGS & FEES -->
-      <div class="panel" id="panel-savings">
-        <div class="panel-heading">
-          <h1>Savings &amp; Fees</h1>
-          <p>Breakdown of value generated through points redemptions</p>
-        </div>
-        <div id="savings-container"></div>
-      </div>
-
-      <!-- MY POINTS -->
-      <div class="panel" id="panel-points">
-        <div class="panel-heading">
-          <h1>My Points</h1>
-          <p>Current balances across all loyalty programs</p>
-        </div>
-        <div class="points-grid" id="points-container"></div>
-      </div>
-
-      <!-- MESSAGES -->
-      <div class="panel" id="panel-messages">
-        <div class="panel-heading">
-          <h1>Messages</h1>
-          <p>Updates and notes from your advisor</p>
-        </div>
-        <div class="messages-list" id="messages-container"></div>
-      </div>
-
-    </main>
-  </div>
-
-  <!-- MOBILE BOTTOM BAR -->
-  <div class="mobile-bottom-bar">
-    <button class="mobile-tab active" data-panel="overview" onclick="switchPanel('overview',this)">
-      <span class="mobile-tab-icon">◈</span>Overview
-    </button>
-    <button class="mobile-tab" data-panel="trips" onclick="switchPanel('trips',this)">
-      <span class="mobile-tab-icon">✈</span>Trips
-    </button>
-    <button class="mobile-tab" data-panel="savings" onclick="switchPanel('savings',this)">
-      <span class="mobile-tab-icon">◎</span>Savings
-    </button>
-    <button class="mobile-tab" data-panel="points" onclick="switchPanel('points',this)">
-      <span class="mobile-tab-icon">⬡</span>Points
-    </button>
-    <button class="mobile-tab" data-panel="messages" onclick="switchPanel('messages',this)">
-      <span class="mobile-tab-icon">◻</span>Messages
-    </button>
+    <div id="points-section" style="display:none">
+      <div class="section-head">Your Points</div>
+      <div class="points-grid" id="points-grid"></div>
+    </div>
   </div>
 </div>
 
 <script>
-/* ─── DEMO CLIENTS ──────────────────────────────────────────── */
-const CLIENTS = {
-  "tammy@carnegroup.com": {
-    pass: "tammy2026",
-    name: "Tammy Jennissen",
-    tier: "Executive Platinum",
-    stats: { trips: 3, savings: "$9,420", fee: "$942", points: "2.8M" },
-    urgency: "<strong>Action Required by June 30, 2026:</strong> Casa di Langa (Piedmont, Italy) must be booked through Amex Fine Hotels & Resorts to receive the 15% Amex discount. Your advisor is ready to book — please confirm dates Aug 5–9.",
-    trips: [
-      {
-        dest: "Italy — Franciacorta & Piedmont & Milan",
-        dates: "July 29 – August 13, 2026",
-        status: "active",
-        segments: [
-          { from: "Washington, DC", to: "Milan (MXP)", date: "Jul 29", method: "Employer Covered", status: "confirmed", notes: "Arrival flight covered by employer" },
-          { from: "Milan", to: "L'Albereta, Franciacorta", date: "Jul 30–Aug 5", method: "Wedding Party Covers", status: "confirmed", notes: "6 nights, Franciacorta wine country" },
-          { from: "Franciacorta", to: "Casa di Langa, Piedmont", date: "Aug 5–9", method: "Amex FHR — Cash", status: "action", notes: "⚠️ BOOK BY JUNE 30 — Amex FHR 15% discount" },
-          { from: "Piedmont", to: "Laqua by the Lake, Orta", date: "Aug 9–11", method: "Amex Hotel Collection", status: "pending", notes: "2 nights, Orta San Giulio" },
-          { from: "Orta", to: "Milan Marriott Hotel", date: "Aug 11–13", method: "120,000 Marriott Points", status: "pending", notes: "Best value option confirmed by advisor" },
-          { from: "Milan (MXP)", to: "Washington, DC", date: "Aug 13", method: "TBD", status: "pending", notes: "Return flight TBD" }
-        ],
-        action: { show: true, text: "<strong>Urgent: Casa di Langa booking deadline June 30, 2026</strong>Your advisor has confirmed availability Aug 5–9 through Amex Fine Hotels & Resorts. The 15% FHR discount applies only through the Amex portal and expires June 30. Confirm to lock in your rate." }
-      },
-      {
-        dest: "Iceland",
-        dates: "October 17–24, 2026",
-        status: "planned",
-        segments: [
-          { from: "Washington, DC", to: "Reykjavik (KEF)", date: "Oct 17", method: "Miles — TBD", status: "pending", notes: "Award space research in progress" },
-          { from: "Reykjavik", to: "Washington, DC", date: "Oct 24", method: "Miles — TBD", status: "pending", notes: "" }
-        ],
-        action: { show: false, text: "" }
-      },
-      {
-        dest: "Japan — Tokyo",
-        dates: "December 2026 (dates TBD)",
-        status: "planned",
-        segments: [
-          { from: "New York (JFK)", to: "Tokyo (HND)", date: "Dec TBD", method: "35,000 AA Miles + $5.60", status: "pending", notes: "JAL AA167 nonstop — Business Class. Cash value: $913–983. Award space opens ~Mar 8, 2026." },
-          { from: "Tokyo (HND)", to: "New York (JFK)", date: "Dec TBD", method: "Miles — TBD", status: "pending", notes: "Return routing TBD" }
-        ],
-        action: { show: false, text: "" }
-      }
-    ],
-    savings: [
-      { label: "Japan — JAL Business JFK→HND", sub: "35K AA miles vs $943 cash", cash: "$943", points: "$166", save: "$777", fee: "$78" },
-      { label: "Milan — Marriott Hotel (2 nights)", sub: "120K Marriott points vs $580 cash", cash: "$580", points: "$72", save: "$508", fee: "$51" },
-      { label: "Italy — Additional hotel savings", sub: "Amex FHR 15% discount + Hotel Collection credits", cash: "$1,200", points: "$800", save: "$400", fee: "$40" }
-    ],
-    totalSavings: "$1,685", totalFee: "$169",
-    points: [
-      { program: "Amex Membership Rewards", balance: "1,000,000+", est: "~$20,000 value at 2¢/pt" },
-      { program: "American Airlines AAdvantage", balance: "1,600,000", est: "~$24,000 value at 1.5¢/pt" },
-      { program: "Marriott Bonvoy", balance: "500,000+", est: "~$3,500 value at 0.7¢/pt" }
-    ],
-    messages: [
-      { from: "Jordan Mills — DAT", time: "Jun 5, 2026", text: "Tammy — Casa di Langa availability confirmed for Aug 5–9. I need your go-ahead by June 30 to lock in the Amex FHR 15% discount rate. This is the best property in the entire Piedmont itinerary. Please reply ASAP.", unread: true },
-      { from: "Jordan Mills — DAT", time: "May 28, 2026", text: "Milan hotel confirmed: Milan Marriott at 120,000 Bonvoy points for 2 nights (Aug 11–13). Best value of the four options we reviewed. Laqua by the Lake also confirmed with Amex Hotel Collection perks.", unread: false },
-      { from: "Jordan Mills — DAT", time: "May 10, 2026", text: "Full Italy itinerary mapped. Your employer is covering MXP arrival, wedding party covers Franciacorta. Remaining cost: Casa di Langa (cash + FHR discount), Orta (Amex Hotel Collection), Milan (Marriott points).", unread: false }
-    ]
-  },
-  "darren@email.com": {
-    pass: "darren2026",
-    name: "Darren Fernandez",
-    tier: "Group Travel Client",
-    stats: { trips: 1, savings: "Calculating", fee: "TBD", points: "Confirming" },
-    urgency: null,
-    trips: [
-      {
-        dest: "South Africa — Cape Town & Johannesburg",
-        dates: "December 16, 2026 – January 1, 2027",
-        status: "active",
-        segments: [
-          { from: "Washington, DC", to: "South Africa", date: "Dec 16", method: "TBD — Research in Progress", status: "pending", notes: "6 passengers. Peak season. Award space extremely limited." },
-          { from: "South Africa", to: "Washington, DC", date: "Jan 1", method: "TBD", status: "pending", notes: "Return routing TBD" }
-        ],
-        action: { show: true, text: "<strong>Points balance confirmation needed</strong>Your advisor needs your current United MileagePlus and Amex Membership Rewards balances to finalize the redemption strategy. Peak December travel for 6 passengers is challenging — Turkish (via Istanbul), Ethiopian (via Addis Ababa), and Qatar (via Doha) are the primary cash alternatives being evaluated." }
-      }
-    ],
-    savings: [],
-    totalSavings: "Pending", totalFee: "Pending",
-    points: [
-      { program: "United MileagePlus", balance: "Balance TBD", est: "Please confirm with advisor" },
-      { program: "Amex Membership Rewards", balance: "Balance TBD", est: "Please confirm with advisor" }
-    ],
-    messages: [
-      { from: "Jordan Mills — DAT", time: "Jun 1, 2026", text: "Darren — welcome aboard! Referred by your contact, and excited to work on the South Africa group trip. I need your current United MileagePlus and Amex MR balances to start mapping options. Peak December for 6 pax is a puzzle but we'll crack it.", unread: true }
-    ]
-  }
-};
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
+function fmtUsd(cents){return '$'+Math.round(cents/100).toLocaleString('en-US')}
+function fmtNum(n){return Number(n).toLocaleString('en-US')}
 
-let currentClient = null;
-let autoRefreshInterval = null;
+/* ── AUTH ── token lives in sessionStorage so it clears on tab close */
+const TOKEN_KEY = 'dat_client_token';
+function getToken(){return sessionStorage.getItem(TOKEN_KEY)}
+function setToken(t){sessionStorage.setItem(TOKEN_KEY,t)}
+function clearToken(){sessionStorage.removeItem(TOKEN_KEY)}
 
-/* ─── SESSION RESTORE ───────────────────────────────────────── */
-(async function restoreSession() {
-  const token = localStorage.getItem('dat_client_token');
-  if (!token) return;
-  try {
-    const res = await fetch('/api/client/me', {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if (res.ok) {
-      const client = await res.json();
-      showPortal(client);
-    } else {
-      localStorage.removeItem('dat_client_token');
+function loginErr(msg){
+  const el=document.getElementById('login-err');
+  el.textContent=msg||'Invalid credentials. Contact your advisor.';
+  el.style.display='block';
+  setTimeout(()=>el.style.display='none',4000);
+}
+
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  const pass=document.getElementById('login-pass').value;
+  const btn=document.getElementById('login-btn');
+  if(!email||!pass)return loginErr('Enter your email and password.');
+  btn.disabled=true;btn.textContent='Signing in…';
+  try{
+    const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    if(res.ok){
+      const {token}=await res.json();
+      setToken(token);
+      const me=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
+      if(me.ok){btn.disabled=false;btn.textContent='Sign In';return showPortal(await me.json());}
+    }else if(res.status===429){
+      btn.disabled=false;btn.textContent='Sign In';
+      return loginErr('Too many attempts. Try again in a few minutes.');
+    }else{
+      btn.disabled=false;btn.textContent='Sign In';
+      return loginErr('Invalid credentials. Contact your advisor.');
     }
-  } catch (e) {
-    // Backend unreachable — stay on login
-    localStorage.removeItem('dat_client_token');
-  }
-})();
-
-/* ─── HELPERS ───────────────────────────────────────────────── */
-function getRegisteredClient(email) {
-  try {
-    const store = JSON.parse(localStorage.getItem('dat_clients') || '{}');
-    return store[email] || null;
-  } catch (e) { return null; }
-}
-
-function loginError(msg) {
-  const err = document.getElementById('login-error');
-  if (msg) err.textContent = msg;
-  err.style.display = 'block';
-  setTimeout(() => err.style.display = 'none', 4000);
-}
-
-/* ─── LOGIN ─────────────────────────────────────────────────── */
-async function doLogin() {
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('login-pass').value.trim();
-  const btn   = document.getElementById('login-btn');
-  btn.disabled = true;
-  btn.textContent = 'Signing in…';
-
-  // 1) Try live backend
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass }),
-    });
-    if (res.ok) {
-      const { token } = await res.json();
-      localStorage.setItem('dat_client_token', token);
-      const me = await fetch('/api/client/me', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (me.ok) {
-        btn.disabled = false; btn.textContent = 'Sign In';
-        return showPortal(await me.json());
-      }
-    } else if (res.status === 401) {
-      btn.disabled = false; btn.textContent = 'Sign In';
-      return loginError('Invalid credentials. Contact your advisor.');
-    }
-  } catch (e) {
-    // Backend unreachable — fall through to demo data
-  }
-
-  // 2) Fallback: built-in / locally-registered demo clients
-  const client = CLIENTS[email] || getRegisteredClient(email);
-  btn.disabled = false; btn.textContent = 'Sign In';
-  if (client && client.pass === pass) {
-    showPortal(client);
-  } else {
-    loginError('Invalid credentials. Contact your advisor.');
+  }catch(e){
+    btn.disabled=false;btn.textContent='Sign In';
+    loginErr('Could not reach server. Check your connection.');
   }
 }
 
-/* ─── PORTAL ────────────────────────────────────────────────── */
-function showPortal(client) {
-  currentClient = client;
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('portal').style.display = 'block';
-  renderPortal(client);
-}
-
-function logout() {
-  currentClient = null;
-  localStorage.removeItem('dat_client_token');
-  document.getElementById('portal').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('login-email').value = '';
-  document.getElementById('login-pass').value = '';
-  // Reset to overview panel for next session
-  switchPanel('overview', document.querySelector('.nav-item[data-panel="overview"]'), true);
-}
-
-function renderPortal(c) {
-  const firstName = (c.name || 'Client').split(' ')[0];
-
-  // Sidebar
-  document.getElementById('sidebar-name').textContent = c.name || 'Client';
-  document.getElementById('sidebar-tier').textContent = c.tier || '';
-
-  // Overview
-  document.getElementById('overview-greeting').textContent = 'Welcome back, ' + firstName;
-  document.getElementById('overview-sub').textContent = (c.tier || '') + ' — District Award Travel';
-
-  // Stats
-  document.getElementById('stat-savings').textContent = c.stats.savings;
-  document.getElementById('stat-fee').textContent = c.stats.fee;
-  document.getElementById('stat-points').textContent = c.stats.points;
-
-  // Urgency
-  if (c.urgency) {
-    const b = document.getElementById('urgency-banner');
-    b.style.display = 'flex';
-    document.getElementById('urgency-text').innerHTML = c.urgency;
-  }
-
-  // Trips subtitle
-  document.getElementById('trips-sub').textContent =
-    c.trips.length + ' trip' + (c.trips.length !== 1 ? 's' : '') + ' — active & upcoming';
-
-  // Render sections
-  document.getElementById('trips-container').innerHTML = c.trips.map(renderTrip).join('');
-  renderSavings(c);
-  renderPoints(c);
-  renderMessages(c);
-  renderOverviewMessages(c);
-
-  // Unread indicator
-  const hasUnread = c.messages.some(m => m.unread);
-  document.getElementById('sidebar-unread').style.display = hasUnread ? 'block' : 'none';
-}
-
-function renderTrip(t) {
-  const statusMap = {
-    active:  { cls: 'badge-active',  label: 'Active'    },
-    urgent:  { cls: 'badge-urgent',  label: 'Urgent'    },
-    pending: { cls: 'badge-pending', label: 'Pending'   },
-    planned: { cls: 'badge-planned', label: 'Planning'  }
-  };
-  const s = statusMap[t.status] || statusMap.planned;
-
-  const segs = t.segments.map(seg => `
-    <div class="segment">
-      <div><div class="seg-label">From</div><div class="seg-val">${seg.from}</div></div>
-      <div class="seg-arrow">→</div>
-      <div><div class="seg-label">To</div><div class="seg-val">${seg.to}</div></div>
-      <div class="seg-status">
-        <div class="seg-label">${seg.date}</div>
-        <div class="seg-status-text ${seg.status}">${seg.method}</div>
-        ${seg.notes ? '<div class="seg-notes">' + seg.notes + '</div>' : ''}
-      </div>
-    </div>`).join('');
-
-  const actionHtml = t.action && t.action.show
-    ? `<div class="action-box">
-         <div class="action-icon">⚡</div>
-         <div class="action-text">${t.action.text}</div>
-       </div>`
-    : '';
-
-  return `
-    <div class="trip-card ${t.status === 'urgent' ? 'urgent' : ''}">
-      <div class="trip-header">
-        <div>
-          <div class="trip-dest">${t.dest}</div>
-          <div class="trip-dates">${t.dates}</div>
-        </div>
-        <span class="badge ${s.cls}">${s.label}</span>
-      </div>
-      <div class="trip-body">
-        <div class="trip-segments">${segs}</div>
-        ${actionHtml}
-      </div>
-    </div>`;
-}
-
-function renderSavings(c) {
-  const sc = document.getElementById('savings-container');
-  if (!c.savings || c.savings.length === 0) {
-    sc.innerHTML = `<div class="savings-card">
-      <div class="savings-row">
-        <p style="color:var(--muted);font-size:0.88rem;padding:8px 0">
-          Savings analysis in progress. Your advisor will update this section once your redemption plan is finalized.
-        </p>
-      </div>
-    </div>`;
-    return;
-  }
-
-  const rows = c.savings.map(s => `
-    <div class="savings-row">
-      <div>
-        <div class="savings-row-label">${s.label}</div>
-        <div class="savings-row-sub">${s.sub}</div>
-      </div>
-      <div class="savings-row-val">
-        <div style="color:var(--muted);font-size:0.78rem;margin-bottom:2px">Cash: ${s.cash} &nbsp;·&nbsp; Points cost: ${s.points}</div>
-        <div style="color:var(--green)">Save ${s.save}</div>
-        <div style="color:var(--gold);font-size:0.78rem">Advisory fee: ${s.fee}</div>
-      </div>
-    </div>`).join('');
-
-  sc.innerHTML = `
-    <div class="savings-card">${rows}</div>
-    <div class="savings-total">
-      <div>
-        <div class="savings-total-label">Total Savings Generated</div>
-        <div class="savings-total-sub">Your DAT advisory fee is 10% of this figure</div>
-      </div>
-      <div class="savings-total-val">${c.totalSavings}</div>
-    </div>
-    <div class="fee-box" style="margin-top:12px">
-      <div class="fee-box-label">Advisory Fee Owed (10%)</div>
-      <div class="fee-box-val">${c.totalFee}</div>
-    </div>`;
-}
-
-function renderPoints(c) {
-  document.getElementById('points-container').innerHTML = c.points.map(p => `
-    <div class="points-card">
-      <div class="points-program">${p.program}</div>
-      <div class="points-balance">${p.balance}</div>
-      <div class="points-est">${p.est}</div>
-    </div>`).join('');
-}
-
-function renderMessages(c) {
-  document.getElementById('messages-container').innerHTML = c.messages.map(m => `
-    <div class="message-item ${m.unread ? 'unread' : ''}">
-      <div class="msg-avatar">JM</div>
-      <div class="msg-content">
-        <div class="msg-from">
-          ${m.from}
-          ${m.unread ? '<span class="msg-unread-dot"></span>' : ''}
-        </div>
-        <div class="msg-text">${m.text}</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderOverviewMessages(c) {
-  const preview = c.messages.slice(0, 2);
-  document.getElementById('overview-messages-list').innerHTML = preview.map(m => `
-    <div class="msg-preview-item ${m.unread ? 'unread' : ''}" onclick="switchPanel('messages', document.querySelector('.nav-item[data-panel=messages]'))">
-      <div class="msg-avatar">JM</div>
-      <div class="msg-content">
-        <div class="msg-from">
-          ${m.from}
-          ${m.unread ? '<span class="msg-unread-dot"></span>' : ''}
-        </div>
-        <div class="msg-text">${m.text.length > 120 ? m.text.slice(0, 120) + '…' : m.text}</div>
-      </div>
-      <div class="msg-time">${m.time}</div>
-    </div>`).join('');
-}
-
-/* ─── PANEL SWITCHING ───────────────────────────────────────── */
-function switchPanel(id, btn, silent) {
-  // Deactivate all panels
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  // Activate target
-  const target = document.getElementById('panel-' + id);
-  if (target) target.classList.add('active');
-
-  // Sidebar nav buttons
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  const sidebarBtn = document.querySelector('.nav-item[data-panel="' + id + '"]');
-  if (sidebarBtn) sidebarBtn.classList.add('active');
-
-  // Mobile tab buttons
-  document.querySelectorAll('.mobile-tab').forEach(b => b.classList.remove('active'));
-  const mobileBtn = document.querySelector('.mobile-tab[data-panel="' + id + '"]');
-  if (mobileBtn) mobileBtn.classList.add('active');
-}
-
-/* ── Live updates: SSE first, adaptive polling fallback, paused when hidden ── */
-let evtSource = null;
-let sseFailures = 0;
-let reconnectTimer = null;
-let reconnectDelay = 2000;
-
-async function refetchMe() {
-  const token = sessionStorage.getItem('dat_client_token');
-  if (!token) { stopAutoRefresh(); return; }
-  try {
-    const res = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
-    if (res.ok) {
-      const updated = await res.json();
-      if (currentClient) {
-        Object.assign(currentClient, updated);
-        renderPortal(currentClient);
-      }
-    }
-  } catch (e) {}
-}
-
-function connectStream() {
-  const token = sessionStorage.getItem('dat_client_token');
-  if (!token || document.hidden) return;
+function logout(){
+  clearToken();
   disconnectStream();
-  try {
-    evtSource = new EventSource('/api/client/stream?token=' + encodeURIComponent(token));
-    evtSource.addEventListener('hello', function() {
-      sseFailures = 0;
-      reconnectDelay = 2000;
-      stopPollingFallback();
-    });
-    evtSource.addEventListener('changed', refetchMe);
-    evtSource.addEventListener('bye', function() {
-      disconnectStream();
-      scheduleReconnect();
-    });
-    evtSource.onerror = function() {
-      disconnectStream();
-      sseFailures++;
-      if (sseFailures >= 3) startPollingFallback();
-      scheduleReconnect();
-    };
-  } catch (e) {
-    startPollingFallback();
+  document.getElementById('portal').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-email').value='';
+  document.getElementById('login-pass').value='';
+}
+
+/* ── RENDER ── */
+function showPortal(c){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('portal').style.display='block';
+  renderPortal(c);
+  startAutoRefresh();
+}
+
+const STATUS_STEPS=[
+  {key:'new',label:'Intake received'},
+  {key:'researching',label:'Researching'},
+  {key:'options_sent',label:'Options sent'},
+  {key:'booked',label:'Booked'},
+  {key:'invoiced',label:'Invoiced'},
+  {key:'closed',label:'Done'}
+];
+
+function renderPortal(c){
+  const name=(c.name||'').split(' ')[0]||'there';
+  document.getElementById('greeting-name').textContent='Hi, '+name+' 👋';
+  document.getElementById('greeting-sub').textContent=c.tier?c.tier+' — District Award Travel':'District Award Travel';
+  document.getElementById('nav-email').textContent=c.email||'';
+
+  // Savings hero
+  const savings=c.lifetime_savings_cents||0;
+  if(savings>0){
+    document.getElementById('savings-val').textContent=fmtUsd(savings);
+    document.getElementById('savings-hero').style.display='flex';
   }
-}
 
-function disconnectStream() {
-  if (evtSource) { evtSource.close(); evtSource = null; }
-}
-
-function scheduleReconnect() {
-  clearTimeout(reconnectTimer);
-  reconnectTimer = setTimeout(function() {
-    reconnectDelay = Math.min(reconnectDelay * 2, 60000);
-    connectStream();
-  }, reconnectDelay);
-}
-
-function startPollingFallback() {
-  if (autoRefreshInterval) return;
-  autoRefreshInterval = setInterval(function() {
-    if (!document.hidden) refetchMe();
-  }, 60000);
-}
-
-function stopPollingFallback() {
-  if (autoRefreshInterval) {
-    clearInterval(autoRefreshInterval);
-    autoRefreshInterval = null;
+  // Messages — stored in client.data.messages
+  const msgs=c.messages||[];
+  const msgEl=document.getElementById('msg-list');
+  if(msgs.length){
+    msgEl.innerHTML=msgs.map(m=>{
+      let planHtml='';
+      if(m.plan_details&&m.plan_details.options&&m.plan_details.options.length){
+        const opts=m.plan_details.options.map(o=>`
+          <div class="plan-option">
+            <div class="plan-option-num">Option ${esc(o.num)}</div>
+            <div class="plan-option-desc">${esc(o.desc)}</div>
+            ${o.img?`<img class="plan-option-img" src="${esc(o.img)}" alt="Option ${esc(o.num)}">`: ''}
+          </div>`).join('');
+        planHtml=`<div class="msg-plan"><div class="msg-plan-header">Your Options</div>${opts}</div>`;
+      }
+      const unread=m.unread?'unread':'';
+      return `<div class="msg-card ${unread}">
+        <div class="msg-meta">
+          <div class="msg-from">${m.unread?'<span class="msg-dot"></span>':''}${esc(m.from||'District Award Travel')}</div>
+          <div class="msg-time">${esc(m.ts||m.time||'')}</div>
+        </div>
+        <div class="msg-body">${esc(m.text||m.body||'')}</div>
+        ${planHtml}
+      </div>`;
+    }).join('');
   }
-}
 
-function startAutoRefresh() { connectStream(); }
+  // Trips from data.trips array
+  const trips=c.trips||[];
+  const tripEl=document.getElementById('trips-list');
+  if(trips.length){
+    // Find latest workflow status from trip data
+    const latestStatus=trips[0].workflow_status||trips[0].status||'new';
+    renderStatusBar(latestStatus);
 
-function stopAutoRefresh() {
-  disconnectStream();
-  stopPollingFallback();
-  clearTimeout(reconnectTimer);
-}
-
-document.addEventListener('visibilitychange', function() {
-  if (!sessionStorage.getItem('dat_client_token')) return;
-  if (document.hidden) {
-    stopAutoRefresh();
+    tripEl.innerHTML=trips.map(t=>{
+      const ws=t.workflow_status||t.status||'new';
+      const badgeMap={new:'badge-new',researching:'badge-researching',options_sent:'badge-options',awaiting_decision:'badge-options',booked:'badge-booked',invoiced:'badge-done',closed:'badge-done'};
+      const labelMap={new:'Intake Received',researching:'Research in Progress',options_sent:'Options Sent',awaiting_decision:'Awaiting Your Decision',booked:'Booked',invoiced:'Invoiced',closed:'Closed'};
+      return `<div class="trip-card">
+        <div class="trip-dest">${esc(t.destination||t.dest||'Your trip')}</div>
+        <div class="trip-meta">${esc(t.origin?t.origin+' → ':'')}${esc(t.destination||'')}${t.dates?' · '+esc(t.dates):''}</div>
+        ${t.passengers?`<div class="trip-meta">${esc(t.passengers)} passenger${t.passengers!=1?'s':''}</div>`:''}
+        <span class="trip-badge ${badgeMap[ws]||'badge-new'}">${labelMap[ws]||ws}</span>
+      </div>`;
+    }).join('');
   } else {
-    refetchMe();
-    connectStream();
+    tripEl.innerHTML='<div class="empty"><div class="empty-icon">🗺</div><p>Your trip details will appear here once your advisor begins research.</p></div>';
   }
+
+  // Points
+  const points=c.points||[];
+  if(points.length){
+    document.getElementById('points-section').style.display='block';
+    document.getElementById('points-grid').innerHTML=points.map(p=>`
+      <div class="point-card">
+        <div class="point-prog">${esc(p.program||p.name||'Program')}</div>
+        <div class="point-bal">${esc(fmtNum(p.balance||p.points||0))}</div>
+      </div>`).join('');
+  }
+}
+
+function renderStatusBar(currentStatus){
+  const card=document.getElementById('status-card');
+  const container=document.getElementById('status-steps');
+  const idx=STATUS_STEPS.findIndex(s=>s.key===currentStatus);
+  if(idx<0)return;
+  card.style.display='block';
+  container.innerHTML=STATUS_STEPS.map((s,i)=>{
+    let cls,dotCls;
+    if(i<idx){cls='done-step';dotCls='done';}
+    else if(i===idx){cls='active-step';dotCls='active';}
+    else{cls='pending-step';dotCls='pending';}
+    const sep=i<STATUS_STEPS.length-1?'<div class="status-sep"></div>':'';
+    return `<div class="status-step ${cls}"><div class="status-dot ${dotCls}"></div><span>${esc(s.label)}</span></div>${sep}`;
+  }).join('');
+}
+
+/* ── SSE + POLLING ── */
+let evtSource=null,pollTimer=null,reconnectTimer=null,reconnectDelay=2000,sseFailures=0;
+let currentData=null;
+
+async function refetchMe(){
+  const token=getToken();
+  if(!token||document.hidden)return;
+  try{
+    const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
+    if(res.ok){currentData=await res.json();renderPortal(currentData);}
+    else if(res.status===401){logout();}
+  }catch(e){}
+}
+
+function connectStream(){
+  const token=getToken();
+  if(!token||document.hidden)return;
+  disconnectStream();
+  try{
+    evtSource=new EventSource('/api/client/stream?token='+encodeURIComponent(token));
+    evtSource.addEventListener('hello',()=>{sseFailures=0;reconnectDelay=2000;stopPoll();});
+    evtSource.addEventListener('changed',refetchMe);
+    evtSource.addEventListener('bye',()=>{disconnectStream();scheduleReconnect();});
+    evtSource.onerror=()=>{disconnectStream();sseFailures++;if(sseFailures>=3)startPoll();scheduleReconnect();};
+  }catch(e){startPoll();}
+}
+
+function disconnectStream(){if(evtSource){evtSource.close();evtSource=null;}}
+function scheduleReconnect(){clearTimeout(reconnectTimer);reconnectTimer=setTimeout(()=>{reconnectDelay=Math.min(reconnectDelay*2,60000);connectStream();},reconnectDelay);}
+function startPoll(){if(!pollTimer)pollTimer=setInterval(()=>{if(!document.hidden)refetchMe();},60000);}
+function stopPoll(){if(pollTimer){clearInterval(pollTimer);pollTimer=null;}}
+function startAutoRefresh(){connectStream();}
+function stopAutoRefresh(){disconnectStream();stopPoll();clearTimeout(reconnectTimer);}
+
+document.addEventListener('visibilitychange',()=>{
+  if(!getToken())return;
+  if(document.hidden)stopAutoRefresh();
+  else{refetchMe();connectStream();}
 });
 
-// Auto-login from session
-(async function() {
-  const token = sessionStorage.getItem('dat_client_token');
-  if (!token) return;
-  try {
-    const me = await fetch('/api/client/me', { headers: { 'Authorization': 'Bearer ' + token } });
-    if (me.ok) return showPortal(await me.json());
-  } catch (e) {}
+/* ── AUTO-LOGIN on load ── */
+(async function(){
+  const token=getToken();
+  if(!token)return;
+  try{
+    const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
+    if(res.ok){currentData=await res.json();showPortal(currentData);}
+    else clearToken();
+  }catch(e){clearToken();}
 })();
 </script>
 </body>
