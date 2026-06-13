@@ -175,6 +175,20 @@
   .achat-tpl-item:hover { background:var(--accent-dim); color:var(--accent); }
   .chat-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:.85rem; padding:40px; text-align:center; }
   @media(max-width:880px){ .chat-layout{grid-template-columns:1fr;} .chat-list{display:none;} .chat-layout.show-list .chat-list{display:block;} .chat-layout.show-list .chat-pane{display:none;} }
+  .chat-sidebar { display:flex; flex-direction:column; border-right:1px solid var(--border); background:var(--surface); overflow:hidden; }
+  .chat-sidebar .chat-list { border-right:none; flex:1; overflow-y:auto; }
+  .inbox-toolbar { padding:10px 12px 8px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:7px; flex-shrink:0; }
+  .inbox-search { width:100%; box-sizing:border-box; border:1px solid var(--border2); border-radius:8px; padding:7px 10px;
+    font-size:.82rem; font-family:var(--font); color:var(--text); background:var(--off); outline:none; }
+  .inbox-search:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+  .inbox-chips { display:flex; gap:6px; }
+  .inbox-chip { font-size:.73rem; font-weight:600; padding:3px 10px; border-radius:20px; border:1px solid var(--border2);
+    background:var(--surface); color:var(--muted); cursor:pointer; transition:all .12s; white-space:nowrap; }
+  .inbox-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .conv-star { background:none; border:none; font-size:.95rem; cursor:pointer; padding:0 2px; color:var(--dim); line-height:1;
+    flex-shrink:0; opacity:.7; transition:opacity .12s; }
+  .conv-star:hover { opacity:1; }
+  mark { background:rgba(var(--accent-rgb,99,102,241),.18); color:inherit; border-radius:2px; }
 
   /* BADGES */
   .section-header { display:flex; align-items:center; justify-content:space-between; margin:0 0 14px; }
@@ -556,8 +570,17 @@
         </div>
         <div class="content">
           <div class="chat-layout show-list" id="chat-layout">
-            <div class="chat-list" id="chat-list">
-              <div class="chat-empty">Loading conversations…</div>
+            <div class="chat-sidebar">
+              <div class="inbox-toolbar">
+                <input type="search" class="inbox-search" id="inbox-search" placeholder="Search conversations…" oninput="renderInbox()" onsearch="renderInbox()">
+                <div class="inbox-chips">
+                  <span class="inbox-chip active" id="chip-all" onclick="setInboxFilter('all')">All</span>
+                  <span class="inbox-chip" id="chip-starred" onclick="setInboxFilter('starred')">⭐ Starred</span>
+                </div>
+              </div>
+              <div class="chat-list" id="chat-list">
+                <div class="chat-empty">Loading conversations…</div>
+              </div>
             </div>
             <div class="chat-pane">
               <div class="chat-pane-head" id="chat-pane-head">Select a conversation</div>
@@ -2048,6 +2071,11 @@ function doAdminLogout(){
    MESSAGES — two-way chat with clients
    ════════════════════════════════════════════ */
 let INBOX=[],CHAT_EMAIL=null,CHAT_MSGS=[],inboxTimer=null,markingRead=false;
+let STARRED_THREADS=(function(){try{return new Set(JSON.parse(localStorage.getItem('dat_starred')||'[]'));}catch(e){return new Set();}}());
+let INBOX_FILTER='all';
+function saveStarred(){try{localStorage.setItem('dat_starred',JSON.stringify([...STARRED_THREADS]));}catch(e){}}
+function toggleStar(email,ev){ev.stopPropagation();if(STARRED_THREADS.has(email)){STARRED_THREADS.delete(email);}else{STARRED_THREADS.add(email);}saveStarred();renderInbox();}
+function setInboxFilter(f){INBOX_FILTER=f;document.getElementById('chip-all').classList.toggle('active',f==='all');document.getElementById('chip-starred').classList.toggle('active',f==='starred');renderInbox();}
 
 async function loadInbox(){
   if(!ADMIN_TOKEN)return;
@@ -2075,15 +2103,29 @@ function chatTime(s){
     :d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
 
+function hlMatch(text,q){if(!q)return esc(text);var s=esc(text),eq=esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return s.replace(new RegExp('('+eq+')','gi'),'<mark>$1</mark>');}
 function renderInbox(){
   const el=document.getElementById('chat-list');
   if(!INBOX.length){el.innerHTML='<div class="chat-empty">No clients yet — conversations appear here once you add clients.</div>';return;}
-  el.innerHTML=INBOX.map(function(r){
+  const q=(document.getElementById('inbox-search')||{}).value||'';
+  const ql=q.toLowerCase();
+  let rows=INBOX.slice();
+  // sort starred to top
+  rows.sort(function(a,b){const as=STARRED_THREADS.has(a.email)?1:0,bs=STARRED_THREADS.has(b.email)?1:0;return bs-as;});
+  // filter by search
+  if(ql)rows=rows.filter(function(r){return (r.name||'').toLowerCase().includes(ql)||(r.email||'').toLowerCase().includes(ql);});
+  // filter by starred chip
+  if(INBOX_FILTER==='starred')rows=rows.filter(function(r){return STARRED_THREADS.has(r.email);});
+  if(!rows.length){el.innerHTML='<div class="chat-empty">No results.</div>';return;}
+  el.innerHTML=rows.map(function(r){
     const prev=r.last?((r.last.sender==='client'?'':'You: ')+r.last.text):'No messages yet';
+    const starred=STARRED_THREADS.has(r.email);
     return '<div class="conv '+(CHAT_EMAIL===r.email?'active':'')+'" onclick="openThread(\''+eid(r.email)+'\')">'+
-      '<div class="conv-top"><div class="conv-name">'+esc(r.name)+'</div>'+
-      '<div style="display:flex;align-items:center;gap:6px">'+(r.unread?'<span class="conv-unread">'+r.unread+'</span>':'')+
-      '<span class="conv-time">'+chatTime(r.last&&r.last.time)+'</span></div></div>'+
+      '<div class="conv-top"><div class="conv-name">'+hlMatch(r.name,q)+'</div>'+
+      '<div style="display:flex;align-items:center;gap:4px">'+(r.unread?'<span class="conv-unread">'+r.unread+'</span>':'')+
+      '<span class="conv-time">'+chatTime(r.last&&r.last.time)+'</span>'+
+      '<button class="conv-star" onclick="toggleStar(\''+eid(r.email)+'\',event)" title="'+(starred?'Unstar':'Star')+'">'+(starred?'★':'☆')+'</button>'+
+      '</div></div>'+
       '<div class="conv-prev '+(r.unread?'unread':'')+'">'+esc(prev)+'</div></div>';
   }).join('');
 }
