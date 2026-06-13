@@ -323,6 +323,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .chat-send{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-family:var(--font);transition:background .15s;display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0}
 .chat-send:hover{background:#ea6c0a}.chat-send:disabled{opacity:.5;cursor:not-allowed}
 .chat-note{text-align:center;font-size:11px;color:var(--dim);padding:6px 0 10px;background:var(--white)}
+/* attachment preview strip */
+.chat-attach-preview{display:none;align-items:flex-start;gap:10px;padding:10px 14px 0;background:var(--white)}
+.chat-attach-preview.visible{display:flex}
+.attach-thumb-wrap{position:relative;display:inline-flex;flex-direction:column;gap:4px}
+.attach-thumb{max-width:120px;max-height:90px;border-radius:8px;border:1px solid var(--border);object-fit:cover;cursor:pointer}
+.attach-meta{font-size:10px;color:var(--dim);max-width:120px;word-break:break-all;line-height:1.3}
+.attach-remove{position:absolute;top:-6px;right:-6px;background:var(--text);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-family:var(--font)}
+.chat-attach-btn{background:none;border:1px solid var(--border2);border-radius:10px;padding:0;width:44px;height:44px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--muted);flex-shrink:0;transition:border-color .15s,color .15s}
+.chat-attach-btn:hover{border-color:var(--accent);color:var(--accent)}
+/* image bubble */
+.bubble-img{max-width:200px;border-radius:10px;border:1px solid rgba(255,255,255,.2);margin-top:6px;cursor:pointer;display:block}
+.bubble.adv .bubble-img{border-color:var(--border)}
 
 /* ── HELP BANNER ── */
 .help-banner{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid var(--accent-border);border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;flex-wrap:wrap}
@@ -532,7 +544,16 @@ body.light-mode{
             </div>
           </div>
           <div class="chat-scroll" id="chat-scroll"></div>
+          <div class="chat-attach-preview" id="chat-attach-preview">
+            <div class="attach-thumb-wrap">
+              <img class="attach-thumb" id="attach-thumb" src="" alt="Attachment preview" onclick="openAttachFull()">
+              <div class="attach-meta" id="attach-meta"></div>
+              <button class="attach-remove" onclick="removeAttachment()" aria-label="Remove attachment">&times;</button>
+            </div>
+          </div>
           <div class="chat-compose">
+            <input type="file" id="chat-file-input" accept="image/*" style="display:none" onchange="handleFileSelect(this)">
+            <button class="chat-attach-btn" id="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()" aria-label="Attach image" title="Attach image">&#128247;</button>
             <textarea class="chat-input" id="chat-input" rows="1" placeholder="Type a message…" onkeydown="chatKey(event)" oninput="autoGrow(this)"></textarea>
             <button class="chat-send" id="chat-send" onclick="sendChat()" aria-label="Send message">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
@@ -908,8 +929,14 @@ function renderChat(msgs){
     const subj=(!mine&&m.subject)?`<div class="bubble-subject">${esc(m.subject)}</div>`:'';
     const ts=clockTime(m.time||m.ts);
     const receipt=!mine?`<div class="bubble-receipt">&#x2713; Delivered</div>`:'';
+    // Image attachment
+    let attachHtml='';
+    if(m.attachment&&m.attachment.type==='image'&&m.attachment.data){
+      const fname=m.attachment.filename?esc(m.attachment.filename):'image';
+      attachHtml=`<img class="bubble-img" src="${esc(m.attachment.data)}" alt="${fname}" onclick="window.open(this.src,'_blank')" loading="lazy">`;
+    }
     html+=`<div class="bubble-row ${mine?'me':''} ${hasPlan?'bubble-plan':''}">
-      <div class="bubble ${mine?'me':'adv'}">${subj}${esc(m.text||m.body||'')}</div>
+      <div class="bubble ${mine?'me':'adv'}">${subj}${esc(m.text||m.body||'')}${attachHtml}</div>
       ${hasPlan?renderPlanCard(pd,false):''}
       <div class="bubble-ts">${ts}</div>
       ${receipt}
@@ -925,22 +952,83 @@ function scrollChatBottom(force){
 function autoGrow(t){t.style.height='auto';t.style.height=Math.min(t.scrollHeight,120)+'px';}
 function chatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
 
+/* ── Image attachment helpers ── */
+let pendingAttachment=null; // {type,data,filename} or null
+
+function handleFileSelect(input){
+  const file=input.files&&input.files[0];
+  if(!file)return;
+  // Reset input so the same file can be re-selected after removal
+  input.value='';
+  if(!file.type.startsWith('image/')){alert('Please select an image file (JPG, PNG, etc.).');return;}
+  if(file.size>5*1024*1024){alert('Image must be under 5 MB. Please choose a smaller file.');return;}
+  const reader=new FileReader();
+  reader.onload=function(ev){compressImage(ev.target.result,file.name,file.size);};
+  reader.readAsDataURL(file);
+}
+
+function compressImage(dataUrl,filename,origSize){
+  const img=new Image();
+  img.onload=function(){
+    const MAX=1200;
+    let w=img.width,h=img.height;
+    if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+    const canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext('2d');
+    ctx.drawImage(img,0,0,w,h);
+    const compressed=canvas.toDataURL('image/jpeg',0.7);
+    const bytes=Math.round((compressed.length*3)/4);
+    const kb=Math.round(bytes/1024);
+    pendingAttachment={type:'image',data:compressed,filename:filename};
+    // Show preview
+    const preview=document.getElementById('chat-attach-preview');
+    const thumb=document.getElementById('attach-thumb');
+    const meta=document.getElementById('attach-meta');
+    thumb.src=compressed;
+    meta.textContent='Attached: '+filename+' ('+kb+' KB)';
+    preview.classList.add('visible');
+  };
+  img.src=dataUrl;
+}
+
+function removeAttachment(){
+  pendingAttachment=null;
+  const preview=document.getElementById('chat-attach-preview');
+  preview.classList.remove('visible');
+  document.getElementById('attach-thumb').src='';
+  document.getElementById('attach-meta').textContent='';
+}
+
+function openAttachFull(){
+  if(pendingAttachment&&pendingAttachment.data){
+    const win=window.open();
+    if(win){win.document.write('<img src="'+pendingAttachment.data+'" style="max-width:100%">');win.document.close();}
+  }
+}
+
 async function sendChat(){
   const inp=document.getElementById('chat-input');
   const btn=document.getElementById('chat-send');
   const text=inp.value.trim();
-  if(!text)return;
+  const attachment=pendingAttachment;
+  if(!text&&!attachment)return;
   const token=getToken();if(!token)return logout();
   btn.disabled=true;inp.disabled=true;
   try{
+    const payload={body:text};
+    if(attachment)payload.attachment=attachment;
     const res=await fetch('/api/client/message',{method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({body:text})});
+      body:JSON.stringify(payload)});
     if(res.ok){
       inp.value='';autoGrow(inp);
+      removeAttachment();
       // Optimistic append so the bubble shows instantly
       if(currentData){currentData.messages=currentData.messages||[];
-        currentData.messages.push({sender:'client',from:'You',time:new Date().toISOString(),text});
+        const msg={sender:'client',from:'You',time:new Date().toISOString(),text};
+        if(attachment)msg.attachment=attachment;
+        currentData.messages.push(msg);
         renderChat(currentData.messages);scrollChatBottom(true);}
       refetchMe();
     }else if(res.status===401){logout();}

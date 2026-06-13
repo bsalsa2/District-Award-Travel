@@ -2218,8 +2218,40 @@ function enterAdmin(){
   loadInbox();
   loadBoard();
   loadStats();
+  loadFunnel();
   if(!inboxTimer)inboxTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadInbox();},30000);
   if(!statsTimer)statsTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadStats();},60000);
+}
+async function loadFunnel(days){
+  days=days||30;
+  try{
+    const res=await fetch('/api/admin/funnel?days='+days,{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok)return;
+    const d=await res.json();
+    document.getElementById('funnel-period').textContent='last '+d.period_days+' days';
+    document.getElementById('funnel-intakes').textContent=d.intakes;
+    document.getElementById('funnel-clients').textContent=d.clients_created;
+    document.getElementById('funnel-booked').textContent=d.trips_booked;
+    var conv=d.intakes>0?Math.round(d.trips_booked/d.intakes*100)+'%':'—';
+    document.getElementById('funnel-conv').textContent=conv;
+    var stages=[
+      {label:'Intakes',val:d.intakes,color:'var(--accent)'},
+      {label:'Clients',val:d.clients_created,color:'var(--blue)'},
+      {label:'Trips',val:d.trips_created,color:'var(--purple)'},
+      {label:'Booked',val:d.trips_booked,color:'var(--green)'}
+    ];
+    var maxVal=Math.max.apply(null,stages.map(function(s){return s.val;}));
+    if(maxVal===0)maxVal=1;
+    document.getElementById('funnel-bars').innerHTML=stages.map(function(s){
+      var pct=Math.round(s.val/maxVal*100);
+      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">'
+        +'<div style="width:72px;font-size:.72rem;color:var(--muted);text-align:right;flex-shrink:0">'+s.label+'</div>'
+        +'<div style="flex:1;background:var(--card);border-radius:4px;height:20px;overflow:hidden">'
+        +'<div style="width:'+pct+'%;background:'+s.color+';height:100%;border-radius:4px;transition:width .4s"></div></div>'
+        +'<div style="width:32px;font-size:.78rem;font-weight:700;color:var(--text)">'+s.val+'</div>'
+        +'</div>';
+    }).join('');
+  }catch(e){console.warn('loadFunnel error',e);}
 }
 function toggleSetupForm(){
   const form=document.getElementById('setup-form');

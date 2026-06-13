@@ -2069,8 +2069,15 @@ def send_message(msg_in: SendMessageIn, _: dict = Depends(require_admin), db: Se
 # admin already writes to). sender: "advisor" | "client". unread = unread by
 # client; unread_admin = unread by advisor.
 
+class ClientMessageAttachmentIn(BaseModel):
+    type: str  # "image"
+    data: str  # data URI base64
+    filename: str = ""
+
+
 class ClientMessageIn(BaseModel):
     body: str
+    attachment: Optional[ClientMessageAttachmentIn] = None
 
 
 @app.post("/api/client/message")
@@ -2084,20 +2091,32 @@ def client_send_message(request: Request, msg_in: ClientMessageIn,
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     text = (msg_in.body or "").strip()
-    if not text:
+    attachment = msg_in.attachment
+    if not text and not attachment:
         raise HTTPException(status_code=422, detail="Message is empty")
     if len(text) > 5000:
         raise HTTPException(status_code=422, detail="Message too long (5000 chars max)")
+    # Basic attachment validation: must be image data URI, cap at ~7MB base64
+    if attachment:
+        if attachment.type != "image":
+            raise HTTPException(status_code=422, detail="Only image attachments are supported")
+        if not attachment.data.startswith("data:image/"):
+            raise HTTPException(status_code=422, detail="Invalid image data")
+        if len(attachment.data) > 7_000_000:
+            raise HTTPException(status_code=422, detail="Attachment too large")
 
     data = json.loads(client.data or "{}")
     messages = data.get("messages", [])
-    messages.append({
+    msg_obj: dict = {
         "from": client.name,
         "sender": "client",
         "time": dt.datetime.utcnow().isoformat(),
         "text": text,
         "unread_admin": True,
-    })
+    }
+    if attachment:
+        msg_obj["attachment"] = attachment.model_dump()
+    messages.append(msg_obj)
     data["messages"] = messages
     client.data = json.dumps(data)
     db.commit()
@@ -3925,6 +3944,78 @@ def get_action_items(_: dict = Depends(require_admin), db: Session = Depends(get
     items.sort(key=lambda i: priority_order.get(i["priority"], 9))
 
     return {"items": items, "total": len(items), "high": high, "medium": medium, "low": low}
+
+
+@app.get("/api/admin/funnel")
+def get_funnel(days: int = 30, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Return funnel analytics for the last N days (default 30)."""
+    period_days = max(1, min(days, 3650))
+    cutoff = dt.datetime.utcnow() - dt.timedelta(days=period_days)
+
+    intakes = db.query(Intake).filter(Intake.created_at >= cutoff).count()
+    clients_created = db.query(Client).filter(Client.created_at >= cutoff).count()
+    trips_created = db.query(TripRequest).filter(TripRequest.created_at >= cutoff).count()
+    trips_booked = (
+        db.query(TripRequest)
+        .filter(TripRequest.created_at >= cutoff, TripRequest.workflow_status == "booked")
+        .count()
+    )
+
+    savings_q = db.query(SavingsRecord).filter(SavingsRecord.created_at >= cutoff).all()
+    savings_logged = len(savings_q)
+    total_savings_cents = sum(s.cash_benchmark_cents for s in savings_q)
+
+    intake_to_client_rate = round(clients_created / intakes, 3) if intakes else 0.0
+    client_to_trip_rate = round(trips_created / clients_created, 3) if clients_created else 0.0
+    trip_to_booked_rate = round(trips_booked / trips_created, 3) if trips_created else 0.0
+
+    # avg days from trip creation to reaching "booked" status via WorkflowEvent
+    booked_events = (
+        db.query(WorkflowEvent)
+        .filter(WorkflowEvent.to_status == "booked", WorkflowEvent.created_at >= cutoff)
+        .all()
+    )
+    days_to_book_list = []
+    for ev in booked_events:
+        trip = db.query(TripRequest).filter(TripRequest.id == ev.trip_id).first()
+        if trip:
+            delta = (ev.created_at - trip.created_at).total_seconds() / 86400
+            if delta >= 0:
+                days_to_book_list.append(delta)
+    avg_days_to_book = round(sum(days_to_book_list) / len(days_to_book_list), 1) if days_to_book_list else 0.0
+
+    # top 3 destinations
+    from collections import Counter
+    dest_counts: Counter = Counter()
+    for trip in db.query(TripRequest).filter(TripRequest.created_at >= cutoff).all():
+        d = (trip.destination or "").strip()
+        if d:
+            dest_counts[d] += 1
+    top_destinations = [d for d, _ in dest_counts.most_common(3)]
+
+    # new clients per week
+    week_counts: dict = {}
+    for client in db.query(Client).filter(Client.created_at >= cutoff).all():
+        iso = client.created_at.isocalendar()
+        week_start = dt.date.fromisocalendar(iso[0], iso[1], 1).isoformat()
+        week_counts[week_start] = week_counts.get(week_start, 0) + 1
+    new_clients_by_week = [{"week": w, "count": c} for w, c in sorted(week_counts.items())]
+
+    return {
+        "period_days": period_days,
+        "intakes": intakes,
+        "clients_created": clients_created,
+        "trips_created": trips_created,
+        "trips_booked": trips_booked,
+        "savings_logged": savings_logged,
+        "total_savings_cents": total_savings_cents,
+        "intake_to_client_rate": intake_to_client_rate,
+        "client_to_trip_rate": client_to_trip_rate,
+        "trip_to_booked_rate": trip_to_booked_rate,
+        "avg_days_to_book": avg_days_to_book,
+        "top_destinations": top_destinations,
+        "new_clients_by_week": new_clients_by_week,
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────────
