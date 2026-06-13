@@ -223,8 +223,9 @@ class WorkflowEvent(Base):
     __tablename__ = "workflow_events"
     id          = Column(Integer, primary_key=True)
     trip_id     = Column(Integer, ForeignKey("trip_requests.id"), nullable=False, index=True)
-    from_status = Column(String, default="")
-    to_status   = Column(String, nullable=False)
+    from_status = Column(String(50), default="")
+    to_status   = Column(String(50), nullable=False)
+    actor       = Column(String(100), default="admin")
     note        = Column(Text, default="")
     created_at  = Column(DateTime, default=dt.datetime.utcnow)
 
@@ -336,6 +337,14 @@ try:
             _conn.execute(_sql_text2(_stmt))
 except Exception as _e:
     print(f"[startup] index migration warning: {_e}")
+
+# Add actor column to workflow_events (existing DBs won't have it from create_all)
+try:
+    from sqlalchemy import text as _sql_text_we
+    with engine.begin() as _conn:
+        _conn.execute(_sql_text_we("ALTER TABLE workflow_events ADD COLUMN actor VARCHAR(100) DEFAULT 'admin'"))
+except Exception:
+    pass  # column already exists (or fresh DB where create_all included it)
 
 # Safe waitlist table migration (create_all handles fresh DBs; this covers existing ones)
 try:
@@ -3454,6 +3463,31 @@ def trip_events(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(r
     return [{"id": e.id, "from_status": e.from_status, "to_status": e.to_status, "note": e.note, "created_at": e.created_at.isoformat()} for e in events]
 
 
+@app.get("/api/admin/trips/{trip_id}/timeline")
+def trip_timeline(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Return workflow event history for a trip, newest first, for audit/timeline display."""
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    events = (
+        db.query(WorkflowEvent)
+        .filter(WorkflowEvent.trip_id == trip_id)
+        .order_by(WorkflowEvent.created_at.desc())
+        .all()
+    )
+    return [
+        {
+            "id": e.id,
+            "from_status": e.from_status,
+            "to_status": e.to_status,
+            "actor": getattr(e, "actor", "admin") or "admin",
+            "note": e.note,
+            "created_at_iso": e.created_at.isoformat() if e.created_at else None,
+        }
+        for e in events
+    ]
+
+
 @app.patch("/api/admin/trips/{trip_id}/research-notes")
 def update_trip_research_notes(trip_id: int, body: TripResearchNotesIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
@@ -3885,6 +3919,37 @@ def get_action_items(_: dict = Depends(require_admin), db: Session = Depends(get
             "destination": trip.destination or "Unknown destination",
             "status": trip.workflow_status,
             "hours": hours_stale,
+        })
+
+    # ── 1b. New intakes (trips in 'new' status >24 h without review) ─────────
+    cutoff_new = now - dt.timedelta(hours=24)
+    new_trips_pending = (
+        db.query(TripRequest)
+        .filter(
+            TripRequest.workflow_status == "new",
+            TripRequest.created_at < cutoff_new,
+        )
+        .all()
+    )
+    stale_trip_ids = {t.id for t in stale_trips}
+    for trip in new_trips_pending:
+        if trip.id in stale_trip_ids:
+            continue  # already reported above
+        client = db.query(Client).filter(Client.id == trip.client_id).first()
+        client_name = client.name if client else "Unknown"
+        client_email = client.email if client else ""
+        hours_waiting = int((now - trip.created_at).total_seconds() // 3600)
+        items.append({
+            "type": "new_trip_pending",
+            "priority": "high",
+            "level": "amber",
+            "trip_id": trip.id,
+            "client_name": client_name,
+            "client_email": client_email,
+            "destination": trip.destination or "Unknown destination",
+            "status": "new",
+            "hours": hours_waiting,
+            "message": "New intake needs review",
         })
 
     # ── 2. Expiring points (<90 days) ────────────────────────────────────────
