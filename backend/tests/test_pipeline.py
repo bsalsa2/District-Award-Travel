@@ -70,6 +70,7 @@ def _make_trip(status="new", stage_entered_at=None, last_activity_at=None, desti
         time_tracked_minutes=0,
         notes="[]",
         created_at=now,
+        research_notes="",
     )
 
 
