@@ -2225,9 +2225,14 @@ async function loadBoard(){
   }catch(e){}
 }
 
+var _TRIP_MAP={};
+
 function renderBoard(data){
   var cols=data.columns||{};
   var attn=data.needs_attention||[];
+  // Build trip lookup map for detail modal
+  Object.keys(cols).forEach(function(k){(cols[k]||[]).forEach(function(t){_TRIP_MAP[t.id]=t;});});
+  attn.forEach(function(t){_TRIP_MAP[t.id]=t;});
   // Attention strip
   var attnEl=document.getElementById('kanban-attention');
   if(attn.length){
@@ -2251,7 +2256,7 @@ function renderBoard(data){
       var hrs=t.hours_in_stage?Math.round(t.hours_in_stage)+'h':'';
       var advBtn=(!['closed','declined','lost','booked'].includes(t.workflow_status))?
         '<button class="kb-advance-btn" onclick="event.stopPropagation();advanceTrip('+t.id+')">&#x2192;</button>':'';
-      return '<div class="'+cls+'" onclick="openClientByTrip(\''+eid(t.client_email||'')+'\')">'+
+      return '<div class="'+cls+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer">'+
         '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+'</div>'+
         '<div class="kb-card-client">'+esc(t.client_name||t.client_email||'')+'</div>'+
         '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+advBtn+'</div></div>';
@@ -2376,6 +2381,92 @@ async function _renderClientDrawer(email){
     +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'pipeline\',document.querySelector(\'.nav-item[data-tab=pipeline]\'));">✈ New Trip</button>'
     +'<button class="drawer-action-btn" onclick="closeClientDrawer();openAddSaving();setTimeout(function(){var s=document.getElementById(\'sv-client-email\');if(s)s.value=\''+esc(email)+'\';},50)">$ Log Saving</button>'
     +'</div>';
+}
+</script>
+
+<!-- TRIP DETAIL MODAL -->
+<div id="trip-detail-overlay" class="overlay" onclick="if(event.target===this)closeTripDetail()">
+  <div class="modal wide">
+    <div class="modal-head">
+      <h2 id="td-title">Trip Detail</h2>
+      <button class="modal-close" onclick="closeTripDetail()">&times;</button>
+    </div>
+    <div id="td-meta" style="font-size:.82rem;color:var(--muted);margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap"></div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Research Notes</div>
+      <textarea id="td-research-notes" rows="6"
+        placeholder="Add research notes, award availability, transfer options..."
+        style="width:100%;box-sizing:border-box;background:var(--off);border:1px solid var(--border2);color:var(--text);
+               border-radius:8px;padding:10px 12px;font-size:.84rem;font-family:var(--font);resize:vertical;outline:none;line-height:1.5"
+        oninput="onResearchNotesInput()"
+        onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 2px var(--accent-dim)'"
+        onblur="this.style.borderColor='var(--border2)';this.style.boxShadow='none'"
+      ></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
+        <span id="td-rn-saved" style="font-size:.75rem;color:var(--green);opacity:0;transition:opacity .4s">&#x2713; Saved</span>
+        <span id="td-rn-count" style="font-size:.75rem;color:var(--muted)">0 / 10000</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   TRIP DETAIL MODAL
+   ════════════════════════════════════════════ */
+var _tdTripId = null;
+var _tdSaveTimer = null;
+
+function openTripDetail(trip) {
+  _tdTripId = trip.id;
+  document.getElementById('td-title').textContent =
+    (trip.destination || '(no destination)') + (trip.client_name ? ' — ' + trip.client_name : '');
+  var metaParts = [];
+  if (trip.origin) metaParts.push('From: ' + trip.origin);
+  if (trip.dates) metaParts.push('Dates: ' + trip.dates);
+  if (trip.cabin) metaParts.push('Cabin: ' + trip.cabin);
+  if (trip.passengers) metaParts.push('Pax: ' + trip.passengers);
+  if (trip.workflow_status) metaParts.push('Status: ' + trip.workflow_status);
+  document.getElementById('td-meta').innerHTML = metaParts.map(function(p){
+    return '<span style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2px 10px">'+esc(p)+'</span>';
+  }).join('');
+  var ta = document.getElementById('td-research-notes');
+  ta.value = trip.research_notes || '';
+  document.getElementById('td-rn-count').textContent = ta.value.length + ' / 10000';
+  document.getElementById('td-rn-saved').style.opacity = '0';
+  document.getElementById('trip-detail-overlay').classList.add('open');
+}
+
+function closeTripDetail() {
+  document.getElementById('trip-detail-overlay').classList.remove('open');
+  if (_tdSaveTimer) { clearTimeout(_tdSaveTimer); _tdSaveTimer = null; }
+  _tdTripId = null;
+}
+
+function onResearchNotesInput() {
+  var ta = document.getElementById('td-research-notes');
+  var len = ta.value.length;
+  document.getElementById('td-rn-count').textContent = len + ' / 10000';
+  document.getElementById('td-rn-saved').style.opacity = '0';
+  if (_tdSaveTimer) clearTimeout(_tdSaveTimer);
+  _tdSaveTimer = setTimeout(saveResearchNotes, 2000);
+}
+
+async function saveResearchNotes() {
+  if (!_tdTripId || !ADMIN_TOKEN) return;
+  var text = document.getElementById('td-research-notes').value;
+  try {
+    var res = await fetch('/api/admin/trips/' + _tdTripId + '/research-notes', {
+      method: 'PATCH',
+      headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN, 'Content-Type': 'application/json'},
+      body: JSON.stringify({research_notes: text})
+    });
+    if (res.ok) {
+      var saved = document.getElementById('td-rn-saved');
+      saved.style.opacity = '1';
+      setTimeout(function(){ saved.style.opacity = '0'; }, 2000);
+    }
+  } catch(e) {}
 }
 </script>
 

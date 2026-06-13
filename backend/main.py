@@ -305,6 +305,13 @@ try:
 except Exception:
     pass  # column already exists (or fresh DB where create_all included it)
 
+try:
+    from sqlalchemy import text as _sql_text_rn
+    with engine.begin() as _conn:
+        _conn.execute(_sql_text_rn("ALTER TABLE trip_requests ADD COLUMN research_notes TEXT DEFAULT ''"))
+except Exception:
+    pass  # column already exists (or fresh DB where create_all included it)
+
 # Index migration: create_all skips existing tables entirely, so indexes added
 # after a table first shipped must be created explicitly. IF NOT EXISTS works
 # on both Postgres and SQLite. Rollback for each: DROP INDEX <name>.
@@ -477,6 +484,7 @@ def _trip_row(trip: TripRequest, client=None, now=None) -> dict:
         "savings_record_id": trip.savings_record_id,
         "time_tracked_minutes": trip.time_tracked_minutes,
         "notes": json.loads(trip.notes or "[]"),
+        "research_notes": trip.research_notes or "",
         "created_at": trip.created_at.isoformat() if trip.created_at else None,
         **flags,
         "stale": flags.get("level") != "ok" and trip.workflow_status not in {"closed", "declined", "lost", "booked"},
@@ -1058,6 +1066,10 @@ class WorkflowAdvanceIn(BaseModel):
 
 class TripNoteIn(BaseModel):
     text: str
+
+
+class TripResearchNotesIn(BaseModel):
+    research_notes: str = Field(..., max_length=10000)
 
 
 class TripTimeIn(BaseModel):
@@ -3063,6 +3075,18 @@ def advance_trip_one_step(trip_id: int, db: Session = Depends(get_db), _: dict =
 def trip_events(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     events = db.query(WorkflowEvent).filter(WorkflowEvent.trip_id == trip_id).order_by(WorkflowEvent.created_at.desc()).all()
     return [{"id": e.id, "from_status": e.from_status, "to_status": e.to_status, "note": e.note, "created_at": e.created_at.isoformat()} for e in events]
+
+
+@app.patch("/api/admin/trips/{trip_id}/research-notes")
+def update_trip_research_notes(trip_id: int, body: TripResearchNotesIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    trip.research_notes = body.research_notes
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    return _trip_row(trip, client)
 
 
 @app.post("/api/admin/trips/{trip_id}/notes")
