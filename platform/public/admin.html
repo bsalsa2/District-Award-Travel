@@ -497,6 +497,26 @@
           </div>
         </div>
         <div class="content">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+            <div style="position:relative;flex:1;min-width:200px">
+              <input type="search" id="client-search" placeholder="Search by name or email…"
+                oninput="filterClients()"
+                style="width:100%;padding:8px 32px 8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:.875rem;box-sizing:border-box;outline:none">
+              <button id="client-search-clear" onclick="document.getElementById('client-search').value='';filterClients()"
+                style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">×</button>
+            </div>
+            <select id="client-status-filter" onchange="filterClients()"
+              style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:.875rem;cursor:pointer">
+              <option value="">All statuses</option>
+              <option value="New">New</option>
+              <option value="Researching">Researching</option>
+              <option value="Options Sent">Options Sent</option>
+              <option value="Awaiting Decision">Awaiting Decision</option>
+              <option value="Booked">Booked</option>
+              <option value="Closed">Closed</option>
+            </select>
+            <div id="client-count-indicator" style="font-size:.82rem;color:var(--muted);white-space:nowrap"></div>
+          </div>
           <div id="clients-table-wrap">
             <div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div>
           </div>
@@ -1176,10 +1196,36 @@ function updateClientMetrics(){
   const nb=document.getElementById('nav-client-count');
   if(nb) nb.textContent=CLIENTS.length;
 }
-function renderClientsTable(){
-  const html = CLIENTS.length
+let clientFilter = {q: '', status: ''};
+function filterClients(){
+  const searchEl = document.getElementById('client-search');
+  const clearBtn = document.getElementById('client-search-clear');
+  const statusEl = document.getElementById('client-status-filter');
+  clientFilter.q = (searchEl ? searchEl.value : '').toLowerCase().trim();
+  clientFilter.status = statusEl ? statusEl.value : '';
+  if(clearBtn) clearBtn.style.display = clientFilter.q ? 'block' : 'none';
+  var filtered = CLIENTS.filter(function(c){
+    var matchesSearch = !clientFilter.q ||
+      (c.name && c.name.toLowerCase().indexOf(clientFilter.q) !== -1) ||
+      (c.email && c.email.toLowerCase().indexOf(clientFilter.q) !== -1);
+    var matchesStatus = !clientFilter.status || (function(){
+      var trips = c.trips && c.trips.length ? c.trips : null;
+      var status = trips ? trips[trips.length-1].workflow_status : (c.workflow_status || '');
+      return status === clientFilter.status;
+    })();
+    return matchesSearch && matchesStatus;
+  });
+  var countEl = document.getElementById('client-count-indicator');
+  if(countEl) countEl.textContent = 'Showing ' + filtered.length + ' of ' + CLIENTS.length + ' clients';
+  renderClientsTable(filtered);
+}
+function renderClientsTable(clientsToRender){
+  var list = clientsToRender !== undefined ? clientsToRender : CLIENTS;
+  var countEl = document.getElementById('client-count-indicator');
+  if(countEl && clientsToRender === undefined) countEl.textContent = 'Showing ' + CLIENTS.length + ' of ' + CLIENTS.length + ' clients';
+  const html = list.length
     ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Added</th><th></th></tr></thead><tbody>'
-      + CLIENTS.map(function(c){
+      + list.map(function(c){
           return '<tr style="cursor:pointer" onclick="openClientDrawer(\''+esc(c.email)+'\')">'
             +'<td><div class="client-name">'+esc(c.name)+'</div></td>'
             +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
@@ -1195,8 +1241,10 @@ function renderClientsTable(){
       + '</tbody></table>'
     : '<div style="padding:40px;text-align:center;color:var(--muted)">'
       +'<div style="font-size:1.5rem;margin-bottom:10px">👤</div>'
-      +'<div style="color:var(--text);margin-bottom:6px">No clients yet</div>'
-      +'<div style="font-size:.83rem">Add a client manually or use <strong style="color:var(--purple)">✨ Import from Email</strong> to create one from a forwarded email.</div></div>';
+      +(CLIENTS.length && list.length===0
+        ? '<div style="color:var(--text);margin-bottom:6px">No clients match your filters</div><div style="font-size:.83rem">Try adjusting the search or status filter.</div>'
+        : '<div style="color:var(--text);margin-bottom:6px">No clients yet</div><div style="font-size:.83rem">Add a client manually or use <strong style="color:var(--purple)">✨ Import from Email</strong> to create one from a forwarded email.</div>')
+      +'</div>';
   const wrap1=document.getElementById('ov-clients-table');
   const wrap2=document.getElementById('clients-table-wrap');
   const tableWrap='<div class="table-wrap">'+html+'</div>';
