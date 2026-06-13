@@ -2602,6 +2602,7 @@ def savings_report(request: Request, token: str, db: Session = Depends(get_db)):
     if rec.benchmark_screenshot:
         screenshot_html = f'<img src="{rec.benchmark_screenshot}" alt="Benchmark screenshot" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px;margin-top:8px;">'
 
+    date_str = rec.benchmark_captured_at.strftime('%B %d, %Y') if rec.benchmark_captured_at else dt.datetime.utcnow().strftime('%B %d, %Y')
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2609,41 +2610,88 @@ def savings_report(request: Request, token: str, db: Session = Depends(get_db)):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Savings Report — {rec.trip_label or "Trip"}</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; color: #111827; margin: 0; padding: 24px; }}
-  .card {{ background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 700px; margin: 0 auto; padding: 32px; }}
-  .logo {{ font-size: 1.1rem; font-weight: 700; color: #d97706; letter-spacing: .02em; margin-bottom: 4px; }}
-  h1 {{ font-size: 1.4rem; font-weight: 700; margin: 0 0 4px; }}
-  .sub {{ color: #6b7280; font-size: .9rem; margin-bottom: 24px; }}
-  table {{ width: 100%; border-collapse: collapse; }}
-  td {{ padding: 8px 0; border-bottom: 1px solid #f3f4f6; }}
-  td:first-child {{ color: #6b7280; width: 200px; }}
-  td:last-child {{ font-weight: 500; text-align: right; }}
-  .savings-row td {{ font-size: 1.15rem; font-weight: 700; color: #059669; }}
-  .fee-row td {{ color: #d97706; }}
-  .footer {{ margin-top: 24px; font-size: .8rem; color: #9ca3af; text-align: center; }}
-  @media print {{ body {{ background: #fff; padding: 0; }} }}
+*,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#f4f3f1;color:#1c1917;-webkit-font-smoothing:antialiased}}
+.page{{max-width:720px;margin:40px auto;padding:0 20px 60px}}
+.card{{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06)}}
+.rpt-head{{background:#0c0905;padding:32px 36px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}}
+.rpt-brand{{color:#fff;font-size:15px;font-weight:900;letter-spacing:-.3px}}
+.rpt-brand span{{color:#f97316}}
+.rpt-tagline{{color:rgba(255,255,255,.45);font-size:12px;margin-top:3px}}
+.rpt-badge{{background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3);color:#fb923c;font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;letter-spacing:.06em;white-space:nowrap;align-self:flex-start}}
+.rpt-hero{{padding:32px 36px;border-bottom:1px solid #f3f0ec;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}}
+.rpt-trip{{font-size:20px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px}}
+.rpt-client{{font-size:13px;color:#78716c}}
+.rpt-amount-block{{text-align:right;flex-shrink:0}}
+.rpt-amount-label{{font-size:11px;font-weight:700;color:#78716c;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}}
+.rpt-amount{{font-size:40px;font-weight:900;color:#059669;letter-spacing:-1.5px;line-height:1}}
+.rpt-cpp{{font-size:12px;color:#78716c;margin-top:4px}}
+.rpt-body{{padding:28px 36px}}
+.rpt-section-label{{font-size:11px;font-weight:700;color:#a8a29e;letter-spacing:.10em;text-transform:uppercase;margin-bottom:14px;margin-top:24px}}
+.rpt-section-label:first-child{{margin-top:0}}
+.rpt-row{{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid #f5f3f0;font-size:14px;gap:16px}}
+.rpt-row:last-of-type{{border-bottom:none}}
+.rpt-row-label{{color:#78716c;flex-shrink:0}}
+.rpt-row-val{{font-weight:500;text-align:right;color:#1c1917;font-variant-numeric:tabular-nums}}
+.rpt-savings-row{{background:linear-gradient(90deg,rgba(5,150,105,.04),rgba(5,150,105,.08));border-radius:10px;padding:14px 16px!important;margin:16px 0;border:none!important}}
+.rpt-savings-row .rpt-row-label{{font-weight:700;color:#065f46;font-size:15px}}
+.rpt-savings-row .rpt-row-val{{font-size:20px;font-weight:900;color:#059669}}
+.rpt-fee-row .rpt-row-val{{color:#d97706}}
+.rpt-screenshot{{margin-top:20px}}
+.rpt-screenshot img{{max-width:100%;border-radius:10px;border:1px solid #e7e5e4}}
+.rpt-option{{background:#fafaf9;border:1px solid #e7e5e4;border-radius:10px;padding:16px;margin-top:4px;font-size:13px;color:#1c1917;line-height:1.6;white-space:pre-wrap;font-family:inherit}}
+.rpt-foot{{background:#fafaf9;border-top:1px solid #f0ece8;padding:20px 36px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}}
+.rpt-foot-brand{{font-size:13px;font-weight:700;color:#a8a29e}}
+.rpt-foot-brand span{{color:#f97316}}
+.rpt-foot-note{{font-size:12px;color:#a8a29e;text-align:right;line-height:1.5}}
+.rpt-print-btn{{display:inline-flex;align-items:center;gap:6px;background:#f97316;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px}}
+.rpt-print-btn:hover{{background:#ea6c0a}}
+@media print{{body{{background:#fff}}.page{{margin:0;padding:0}}.card{{box-shadow:none;border-radius:0}}.rpt-print-btn{{display:none}}}}
+@media(max-width:600px){{.rpt-head,.rpt-hero,.rpt-body,.rpt-foot{{padding:20px}}.rpt-amount{{font-size:32px}}.rpt-trip{{font-size:16px}}}}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">District Award Travel</div>
-  <h1>{rec.trip_label or "Savings Report"}</h1>
-  <div class="sub">Prepared for {client_name} &middot; {rec.benchmark_captured_at.strftime('%B %d, %Y') if rec.benchmark_captured_at else ''}</div>
-  <table>
-    <tr><td>Cash Benchmark</td><td>{fmt_usd(rec.cash_benchmark_cents)}</td></tr>
-    {'<tr><td>Benchmark Source</td><td>' + rec.benchmark_source + '</td></tr>' if rec.benchmark_source else ''}
-    {'<tr><td>Assumptions</td><td style="font-size:.85rem;text-align:right;white-space:pre-wrap;">' + rec.benchmark_assumptions + '</td></tr>' if rec.benchmark_assumptions else ''}
-    <tr><td>Option Booked</td><td style="text-align:right;white-space:pre-wrap;">{rec.option_booked or '—'}</td></tr>
-    {'<tr><td>Points Used</td><td>' + f"{rec.points_used:,} {rec.points_program}".strip() + '</td></tr>' if rec.points_used else ''}
-    {'<tr><td>Award Taxes + Fees</td><td>' + fmt_usd(rec.award_taxes_fees_cents) + '</td></tr>' if rec.award_taxes_fees_cents else ''}
-    {'<tr><td>Other Out-of-Pocket</td><td>' + fmt_usd(rec.other_out_of_pocket_cents) + '</td></tr>' if rec.other_out_of_pocket_cents else ''}
-    {'<tr><td>Cents per Point</td><td>' + cpp_display + '</td></tr>' if rec.points_used else ''}
-    <tr class="savings-row"><td>Gross Savings</td><td>{fmt_usd(gross)}</td></tr>
-    <tr class="fee-row"><td>District Fee (10%)</td><td>{fmt_usd(fee)}</td></tr>
-    {'<tr><td>Invoice</td><td>' + rec.invoice_number + '</td></tr>' if rec.invoice_number else ''}
-  </table>
-  {screenshot_html}
-  <div class="footer">District Award Travel &mdash; districtawardtravel@gmail.com</div>
+<div class="page">
+  <div class="card">
+    <div class="rpt-head">
+      <div>
+        <div class="rpt-brand">District <span>Award</span> Travel</div>
+        <div class="rpt-tagline">Award travel advisory · districtawardtravel@gmail.com</div>
+      </div>
+      <div class="rpt-badge">SAVINGS PROOF</div>
+    </div>
+    <div class="rpt-hero">
+      <div>
+        <div class="rpt-trip">{rec.trip_label or "Trip"}</div>
+        <div class="rpt-client">Prepared for {client_name} · {date_str}</div>
+      </div>
+      <div class="rpt-amount-block">
+        <div class="rpt-amount-label">You Saved</div>
+        <div class="rpt-amount">{fmt_usd(gross)}</div>
+        {'<div class="rpt-cpp">' + cpp_display + ' · ' + f"{rec.points_used:,}" + ' pts</div>' if rec.points_used else ''}
+      </div>
+    </div>
+    <div class="rpt-body">
+      <div class="rpt-section-label">Cash Benchmark</div>
+      <div class="rpt-row"><span class="rpt-row-label">Cash price (verified)</span><span class="rpt-row-val">{fmt_usd(rec.cash_benchmark_cents)}</span></div>
+      {'<div class="rpt-row"><span class="rpt-row-label">Source</span><span class="rpt-row-val" style="font-size:12px">' + rec.benchmark_source + '</span></div>' if rec.benchmark_source else ''}
+      {'<div class="rpt-row"><span class="rpt-row-label">Assumptions</span><span class="rpt-row-val" style="font-size:12px;white-space:pre-wrap">' + rec.benchmark_assumptions + '</span></div>' if rec.benchmark_assumptions else ''}
+      {('<div class="rpt-screenshot">' + screenshot_html + '</div>') if screenshot_html else ''}
+      <div class="rpt-section-label">What You Paid</div>
+      {'<div class="rpt-row"><span class="rpt-row-label">Points used</span><span class="rpt-row-val">' + f"{rec.points_used:,} {rec.points_program}".strip() + '</span></div>' if rec.points_used else ''}
+      {'<div class="rpt-row"><span class="rpt-row-label">Award taxes + fees</span><span class="rpt-row-val">' + fmt_usd(rec.award_taxes_fees_cents) + '</span></div>' if rec.award_taxes_fees_cents else ''}
+      {'<div class="rpt-row"><span class="rpt-row-label">Other out-of-pocket</span><span class="rpt-row-val">' + fmt_usd(rec.other_out_of_pocket_cents) + '</span></div>' if rec.other_out_of_pocket_cents else ''}
+      {'<div class="rpt-section-label">Option Booked</div><div class="rpt-option">' + rec.option_booked + '</div>' if rec.option_booked else ''}
+      <div class="rpt-row rpt-savings-row"><span class="rpt-row-label">Gross Savings</span><span class="rpt-row-val">{fmt_usd(gross)}</span></div>
+      <div class="rpt-row rpt-fee-row"><span class="rpt-row-label">District Advisory Fee (10%)</span><span class="rpt-row-val">{fmt_usd(fee)}</span></div>
+      {'<div class="rpt-row" style="font-weight:700"><span class="rpt-row-label">Invoice #</span><span class="rpt-row-val">' + rec.invoice_number + '</span></div>' if rec.invoice_number else ''}
+      <button class="rpt-print-btn" onclick="window.print()">&#9113; Print / Save PDF</button>
+    </div>
+    <div class="rpt-foot">
+      <div class="rpt-foot-brand">District <span>Award</span> Travel</div>
+      <div class="rpt-foot-note">Benchmarks timestamped at research time. Savings = verified cash price − your out-of-pocket.<br>Advisory fee = 10% of gross savings, payable after booking.</div>
+    </div>
+  </div>
 </div>
 </body>
 </html>"""
