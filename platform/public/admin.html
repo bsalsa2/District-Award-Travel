@@ -483,12 +483,14 @@
   /* CLIENT DETAIL DRAWER */
   .client-drawer{position:fixed;right:0;top:0;height:100vh;width:400px;background:var(--surface,#fff);border-left:1px solid var(--border);z-index:200;transform:translateX(100%);transition:transform .3s ease;overflow-y:auto;display:flex;flex-direction:column}
   .client-drawer.open{transform:translateX(0)}
-  .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199;display:none}
-  .drawer-overlay.open{display:block}
-  .drawer-header{display:flex;align-items:flex-start;justify-content:space-between;padding:24px 20px 16px;border-bottom:1px solid var(--border);gap:12px}
+  .client-drawer.closing{transform:translateX(100%)}
+  .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199;display:none;opacity:0;transition:opacity .3s ease}
+  .drawer-overlay.open{display:block;opacity:1}
+  .drawer-overlay.closing{opacity:0}
+  .drawer-header{display:flex;align-items:flex-start;justify-content:space-between;padding:20px 20px 14px;border-bottom:1px solid var(--border);gap:12px}
   .drawer-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:0;line-height:1;flex-shrink:0}
   .drawer-close:hover{color:var(--text)}
-  .drawer-body{padding:20px;flex:1;display:flex;flex-direction:column;gap:20px}
+  .drawer-body{padding:20px;flex:1;display:flex;flex-direction:column;gap:16px}
   .drawer-stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
   .drawer-stat-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
   .drawer-stat-value{font-size:1.4rem;font-weight:700;color:var(--text)}
@@ -497,6 +499,23 @@
   .drawer-action-btn{width:100%;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;font-weight:600;cursor:pointer;text-align:left;transition:background .15s}
   .drawer-action-btn:hover{background:var(--card)}
   .drawer-snippet{font-size:.83rem;color:var(--muted);background:var(--card);border-radius:8px;padding:10px 14px;border:1px solid var(--border);font-style:italic;line-height:1.5}
+  .drawer-mini-stats{display:flex;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:10px}
+  .drawer-mini-stat{flex:1;text-align:center;padding:8px 6px;border-right:1px solid var(--border)}
+  .drawer-mini-stat:last-child{border-right:none}
+  .drawer-mini-stat-val{font-size:.95rem;font-weight:700;color:var(--text)}
+  .drawer-mini-stat-lbl{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:1px}
+  .drawer-trip-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .drawer-trip-card-info{flex:1;min-width:0}
+  .drawer-trip-dest{font-size:.84rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .drawer-trip-status{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:2px 7px;border-radius:5px;display:inline-block;margin-top:3px}
+  .drawer-trip-advance{padding:5px 10px;border-radius:6px;border:1px solid rgba(69,179,255,.4);background:none;color:var(--blue,#4a9eff);font-size:.76rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .15s}
+  .drawer-trip-advance:hover{background:rgba(69,179,255,.08)}
+  .drawer-quick-reply{border-top:1px solid var(--border);padding:14px 20px;display:flex;gap:8px;align-items:flex-end;background:var(--surface);flex-shrink:0}
+  .drawer-quick-reply textarea{flex:1;resize:none;border:1px solid var(--border2);border-radius:8px;padding:8px 10px;font-size:.84rem;font-family:var(--font);background:var(--off);color:var(--text);outline:none;min-height:38px;max-height:90px;line-height:1.4;transition:border .2s}
+  .drawer-quick-reply textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim)}
+  .drawer-quick-send{padding:8px 14px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap;transition:filter .2s;font-family:var(--font)}
+  .drawer-quick-send:hover{filter:brightness(1.1)}
+  .drawer-quick-sent{font-size:.75rem;color:var(--green);font-weight:600;display:none;padding:4px 0}
   @media(max-width:640px){.client-drawer{width:100%}}
 
   /* SAVINGS PIPELINE STRIP */
@@ -538,6 +557,189 @@
   .gsearch-item-sub { font-size:.75rem; color:var(--muted); margin-top:1px; }
   .gsearch-empty { padding:20px; text-align:center; font-size:.84rem; color:var(--muted); }
   .gsearch-spinner { padding:16px; text-align:center; font-size:.8rem; color:var(--dim); }
+
+  /* ══════════════════════════════════════════
+     PREMIUM DARK DASHBOARD POLISH
+     ══════════════════════════════════════════ */
+
+  /* 1. SIDEBAR — gradient logo area */
+  .sidebar-logo-gradient {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    padding: 20px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    border-bottom: 1px solid rgba(249,115,22,.2);
+    flex-shrink: 0;
+  }
+  .sidebar-logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .sidebar-logo-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,.3));
+  }
+  .sidebar-logo-dat {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -.02em;
+    line-height: 1;
+    text-shadow: 0 2px 8px rgba(0,0,0,.3);
+  }
+  .sidebar-logo-subtitle {
+    font-size: .65rem;
+    color: rgba(255,255,255,.75);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-weight: 600;
+  }
+
+  /* Active nav: left border + text + bg */
+  .nav-item.active {
+    border-left: 3px solid #f97316 !important;
+    color: #f97316 !important;
+    background: rgba(249,115,22,.1) !important;
+    padding-left: 9px !important;
+    border-color: rgba(249,115,22,.18) !important;
+  }
+  /* Nav hover glow */
+  .nav-item:hover {
+    color: var(--text) !important;
+    background: rgba(249,115,22,.06) !important;
+    box-shadow: inset 0 0 12px rgba(249,115,22,.05) !important;
+  }
+
+  /* 2. KANBAN CARDS — rich depth */
+  .kb-card {
+    border-radius: 12px !important;
+    position: relative;
+    overflow: hidden;
+  }
+  .kb-card:hover {
+    border-color: rgba(249,115,22,.45) !important;
+    box-shadow: 0 4px 20px rgba(249,115,22,.15) !important;
+    border-left: 3px solid rgba(249,115,22,.7) !important;
+  }
+  /* Destination watermark */
+  .kb-card-watermark {
+    position: absolute;
+    bottom: -6px;
+    right: 6px;
+    font-size: 2rem;
+    font-weight: 900;
+    color: rgba(249,115,22,.06);
+    line-height: 1;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 90%;
+    letter-spacing: -.03em;
+    text-transform: uppercase;
+    user-select: none;
+  }
+  /* Time-in-stage badge */
+  .kb-card-time-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    font-size: .6rem;
+    font-weight: 700;
+    background: rgba(249,115,22,.12);
+    color: rgba(249,115,22,.8);
+    border: 1px solid rgba(249,115,22,.2);
+    border-radius: 6px;
+    padding: 2px 6px;
+    letter-spacing: .02em;
+    pointer-events: none;
+  }
+
+  /* 3. STATS CARDS — orange gradient top border */
+  .metric-card {
+    border-top: 2px solid rgba(249,115,22,.35) !important;
+    position: relative;
+    overflow: hidden;
+  }
+  .metric-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 40px;
+    background: linear-gradient(180deg, rgba(249,115,22,.05), transparent);
+    pointer-events: none;
+  }
+
+  /* 4. PIPELINE column headers — premium pill */
+  .kb-col-head {
+    border-top: 2px solid rgba(249,115,22,.3) !important;
+  }
+  .kb-col-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .kb-status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: #f97316;
+  }
+
+  /* 5. CLIENT TABLE — alternating rows + hover flash */
+  tbody tr:nth-child(even) td {
+    background: rgba(249,115,22,.025);
+  }
+  tbody tr {
+    cursor: pointer;
+    transition: all .15s;
+  }
+  tbody tr:hover td {
+    background: rgba(249,115,22,.06) !important;
+    box-shadow: inset 3px 0 0 #f97316;
+  }
+
+  /* 6. MODALS */
+  .overlay {
+    backdrop-filter: blur(8px) !important;
+  }
+  .modal {
+    border: 1px solid rgba(249,115,22,.2) !important;
+    box-shadow: 0 24px 64px rgba(0,0,0,.8), 0 0 40px rgba(249,115,22,.08) !important;
+  }
+
+  /* Primary button hover glow */
+  .btn-primary:hover {
+    box-shadow: 0 0 20px rgba(249,115,22,.4) !important;
+  }
+  .btn-action.solid:hover {
+    box-shadow: 0 0 20px rgba(249,115,22,.4) !important;
+    filter: brightness(1.08) !important;
+  }
+
+  /* Input focus — orange bottom border animation */
+  .form-group input, .form-group textarea, .form-group select {
+    border-bottom: 2px solid transparent !important;
+    transition: border-color .2s, border-bottom-color .2s, box-shadow .2s !important;
+  }
+  .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+    border-bottom: 2px solid #f97316 !important;
+    box-shadow: 0 0 0 3px var(--accent-dim) !important;
+  }
+
+  /* Stat counter animation */
+  @keyframes statCountUp {
+    from { opacity: 0; transform: translateY(6px) scale(.96); }
+    to   { opacity: 1; transform: none; }
+  }
+  .metric-val.counting {
+    animation: statCountUp .4s ease forwards;
+  }
 </style>
 </head>
 <body>
@@ -569,9 +771,12 @@
 <div id="admin">
   <div class="admin-layout">
     <div class="sidebar">
-      <div class="sidebar-logo">
-        <img src="assets/dat-logo.svg" alt="DAT">
-        <div><div class="lt">District<br><span>Award Travel</span></div><div class="lb">Advisor Console</div></div>
+      <div class="sidebar-logo-gradient">
+        <div class="sidebar-logo-mark">
+          <span class="sidebar-logo-icon">✈</span>
+          <span class="sidebar-logo-dat">DAT</span>
+        </div>
+        <div class="sidebar-logo-subtitle">District Award Travel</div>
       </div>
       <nav class="sidebar-nav">
         <button class="nav-item active" onclick="switchPanel('overview',this)"><span class="nav-icon">◉</span> Overview</button>
@@ -3027,12 +3232,21 @@ function renderBoard(data){
         notesBadge='<span class="notes-badge" data-tip="'+esc(tip)+'" title=" ">&#x1F4DD;</span>';
       }
       var idx=cardIndex++;
-      return '<div class="'+cls+'" data-kb-idx="'+idx+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer">'+
+      // Time-in-stage badge
+      var timeBadge='';
+      if(t.hours_in_stage){
+        var h=Math.round(t.hours_in_stage);
+        var timeLbl=h>=48?Math.round(h/24)+'d '+(h%24)+'h':h+'h';
+        timeBadge='<span class="kb-card-time-badge">'+timeLbl+'</span>';
+      }
+      var watermark='<div class="kb-card-watermark">'+esc((t.destination||'').split(',')[0].trim().slice(0,16))+'</div>';
+      return '<div class="'+cls+'" data-kb-idx="'+idx+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer;padding-bottom:'+(timeBadge?'28px':'10px')+'">'+
         '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+notesBadge+'</div>'+
         '<div class="kb-card-client">'+esc(t.client_name||t.client_email||'')+'</div>'+
-        '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+advBtn+'</div></div>';
+        '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+advBtn+'</div>'+
+        watermark+timeBadge+'</div>';
     }).join(''):'<div class="kb-empty">&#x2708;<br>No trips here</div>';
-    return '<div class="kb-col"><div class="kb-col-head"><span class="kb-col-title">'+col.label+'</span>'+
+    return '<div class="kb-col"><div class="kb-col-head"><span class="kb-col-title"><span class="kb-status-dot"></span>'+col.label+'</span>'+
       '<span class="kb-col-count">'+cards.length+'</span></div><div class="kb-cards">'+cardHtml+'</div></div>';
   }).join('');
   // Staggered entrance animation
@@ -3132,8 +3346,14 @@ function openClientDrawer(email){
   _renderClientDrawer(email);
 }
 function closeClientDrawer(){
-  document.getElementById('client-drawer-overlay').classList.remove('open');
-  document.getElementById('client-drawer').classList.remove('open');
+  var overlay=document.getElementById('client-drawer-overlay');
+  var drawer=document.getElementById('client-drawer');
+  overlay.classList.add('closing');
+  drawer.classList.add('closing');
+  setTimeout(function(){
+    overlay.classList.remove('open','closing');
+    drawer.classList.remove('open','closing');
+  },300);
   _drawerEmail=null;
 }
 async function _renderClientDrawer(email){
@@ -3417,13 +3637,25 @@ async function logTime() {
 <div class="drawer-overlay" id="client-drawer-overlay" onclick="closeClientDrawer()"></div>
 <div class="client-drawer" id="client-drawer">
   <div class="drawer-header" id="client-drawer-header">
-    <div>
+    <div style="flex:1;min-width:0">
       <div style="font-size:1.1rem;font-weight:700;color:var(--text)" id="client-drawer-name"></div>
-      <div style="font-size:.82rem;color:var(--muted);margin-top:3px" id="client-drawer-email"></div>
+      <div style="font-size:.82rem;color:var(--muted);margin-top:2px" id="client-drawer-email"></div>
+      <div class="drawer-mini-stats" id="client-drawer-mini-stats" style="display:none">
+        <div class="drawer-mini-stat"><div class="drawer-mini-stat-val" id="dms-trips">—</div><div class="drawer-mini-stat-lbl">Trips</div></div>
+        <div class="drawer-mini-stat"><div class="drawer-mini-stat-val" id="dms-programs">—</div><div class="drawer-mini-stat-lbl">Programs</div></div>
+        <div class="drawer-mini-stat"><div class="drawer-mini-stat-val" id="dms-savings">—</div><div class="drawer-mini-stat-lbl">Savings</div></div>
+      </div>
     </div>
     <button class="drawer-close" onclick="closeClientDrawer()">×</button>
   </div>
   <div class="drawer-body" id="client-drawer-content"></div>
+  <div class="drawer-quick-reply" id="client-drawer-quick-reply" style="display:none">
+    <textarea id="drawer-reply-input" rows="1" placeholder="Quick message…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();drawerSendQuickReply();}"></textarea>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <button class="drawer-quick-send" onclick="drawerSendQuickReply()">Send</button>
+      <span class="drawer-quick-sent" id="drawer-reply-sent">✓ Sent</span>
+    </div>
+  </div>
 </div>
 
 <!-- KEYBOARD SHORTCUTS HELP MODAL -->
@@ -3600,6 +3832,71 @@ async function logTime() {
   window.gsearchPickClient=function(email){closeDrop();inp.value='';lastQ='';openClientDrawer(email);};
   window.gsearchPickTrip=function(){closeDrop();inp.value='';lastQ='';switchPanel('pipeline',navBtnFor('pipeline'));};
   window.gsearchPickSaving=function(){closeDrop();inp.value='';lastQ='';switchPanel('fees',navBtnFor('fees'));};
+})();
+
+/* ══════════════════════════════════════════
+   PREMIUM STAT COUNTER ANIMATION
+   ══════════════════════════════════════════ */
+(function(){
+  function easeOut(t){return 1-(1-t)*(1-t);}
+  function animateCount(el, endVal, prefix, suffix, duration){
+    if(!el)return;
+    var start=null;
+    el.classList.add('counting');
+    function step(ts){
+      if(!start)start=ts;
+      var prog=Math.min((ts-start)/duration,1);
+      var cur=Math.round(easeOut(prog)*endVal);
+      el.textContent=prefix+cur.toLocaleString()+suffix;
+      if(prog<1)requestAnimationFrame(step);
+      else el.textContent=prefix+endVal.toLocaleString()+suffix;
+    }
+    requestAnimationFrame(step);
+  }
+  // Patch the stats setter to animate numbers
+  var _origLoadStats=window.loadStats;
+  window.loadStats=async function(){
+    await (_origLoadStats||function(){})();
+    // Animate numeric metric-val elements
+    document.querySelectorAll('.metric-val').forEach(function(el){
+      var txt=(el.textContent||'').trim();
+      // Match plain numbers or numbers with $ prefix
+      var m=txt.match(/^\$?([\d,]+)$/);
+      if(m){
+        var num=parseInt(m[1].replace(/,/g,''),10);
+        if(!isNaN(num)&&num>0){
+          var prefix=txt.startsWith('$')?'$':'';
+          animateCount(el,num,prefix,'',800);
+        }
+      }
+    });
+  };
+  // Also run after DOM updates via MutationObserver on overview panel
+  var ovPanel=document.getElementById('panel-overview');
+  if(ovPanel){
+    var alreadyAnimated=new WeakSet();
+    var obs=new MutationObserver(function(mutations){
+      mutations.forEach(function(m){
+        m.addedNodes.forEach(function(n){
+          if(n.nodeType!==1)return;
+          var els=n.classList&&n.classList.contains('metric-val')?[n]:n.querySelectorAll&&n.querySelectorAll('.metric-val')||[];
+          els.forEach(function(el){
+            if(alreadyAnimated.has(el))return;
+            var txt=(el.textContent||'').trim();
+            var mm=txt.match(/^\$?([\d,]+)$/);
+            if(mm){
+              var num2=parseInt(mm[1].replace(/,/g,''),10);
+              if(!isNaN(num2)&&num2>0){
+                alreadyAnimated.add(el);
+                animateCount(el,num2,txt.startsWith('$')?'$':'','',800);
+              }
+            }
+          });
+        });
+      });
+    });
+    obs.observe(ovPanel,{childList:true,subtree:true,characterData:true});
+  }
 })();
 </script>
 </body>
