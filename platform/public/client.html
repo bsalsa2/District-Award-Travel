@@ -295,6 +295,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .empty-ico{font-size:40px;margin-bottom:14px;opacity:.3}
 .empty p{font-size:14px;max-width:380px;margin:0 auto}
 
+/* ── LIGHT MODE (applied via body.light-mode) ── */
+body.light-mode{
+  --bg:#ffffff;--white:#f8f8f8;--card:#efefef;
+  --text:#111111;--muted:#555555;--border:#d0d0d0;
+}
+
+/* ── SETTINGS GEAR ── */
+.btn-settings{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:18px;color:var(--muted);cursor:pointer;border:none;background:none;font-family:var(--font);transition:.15s;line-height:1}
+.btn-settings:hover{color:var(--text);background:var(--card)}
+
+/* ── PREFERENCES PANEL ── */
+#prefs-panel{display:none;position:fixed;top:0;right:0;bottom:0;width:300px;background:var(--white);border-left:1px solid var(--border);box-shadow:-4px 0 24px rgba(0,0,0,.12);z-index:200;flex-direction:column;padding:0}
+#prefs-panel.open{display:flex}
+.prefs-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
+.prefs-title{font-size:15px;font-weight:700}
+.prefs-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;padding:4px}
+.prefs-body{padding:20px;display:flex;flex-direction:column;gap:20px;flex:1}
+.pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pref-label{font-size:14px;font-weight:500}
+.pref-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.pref-toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.pref-toggle input{opacity:0;width:0;height:0;position:absolute}
+.pref-slider{position:absolute;inset:0;background:#ccc;border-radius:24px;cursor:pointer;transition:background .2s}
+.pref-slider::before{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s}
+.pref-toggle input:checked+.pref-slider{background:var(--accent)}
+.pref-toggle input:checked+.pref-slider::before{transform:translateX(20px)}
+.prefs-foot{padding:16px 20px;border-top:1px solid var(--border)}
+.btn-save-prefs{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s}
+.btn-save-prefs:hover{background:#ea6c0a}
+.prefs-msg{font-size:12px;text-align:center;margin-top:8px;color:var(--green);min-height:16px}
+
 /* ── MOBILE ── */
 .mtabs{display:none}
 @media(max-width:768px){
@@ -372,7 +403,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
         <button class="nav-item" data-tab="points" onclick="switchTab('points')"><span class="nav-ico">⬡</span> My Points</button>
         <button class="nav-item" data-tab="messages" onclick="switchTab('messages')"><span class="nav-ico">✉</span> Messages <span class="nav-badge" id="nav-unread" style="display:none">0</span></button>
       </nav>
-      <div class="sb-foot"><button class="btn-out" onclick="logout()"><span class="nav-ico">↩</span> Sign Out</button></div>
+      <div class="sb-foot">
+        <button class="btn-settings" onclick="openPrefs()" title="Settings" aria-label="Settings">⚙</button>
+        <button class="btn-out" onclick="logout()"><span class="nav-ico">↩</span> Sign Out</button>
+      </div>
     </aside>
 
     <main class="main">
@@ -469,6 +503,40 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
     </main>
   </div>
 
+  <!-- PREFERENCES PANEL -->
+  <div id="prefs-panel" role="dialog" aria-label="Preferences">
+    <div class="prefs-head">
+      <div class="prefs-title">Settings</div>
+      <button class="prefs-close" onclick="closePrefs()" aria-label="Close">&#x2715;</button>
+    </div>
+    <div class="prefs-body">
+      <div class="pref-row">
+        <div>
+          <div class="pref-label">Light mode</div>
+          <div class="pref-sub">Switch to a light color scheme</div>
+        </div>
+        <label class="pref-toggle">
+          <input type="checkbox" id="pref-light-mode">
+          <span class="pref-slider"></span>
+        </label>
+      </div>
+      <div class="pref-row">
+        <div>
+          <div class="pref-label">Email notifications</div>
+          <div class="pref-sub">Get notified when there are updates</div>
+        </div>
+        <label class="pref-toggle">
+          <input type="checkbox" id="pref-email-notifs">
+          <span class="pref-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="prefs-foot">
+      <button class="btn-save-prefs" onclick="savePrefs()">Save preferences</button>
+      <div class="prefs-msg" id="prefs-msg"></div>
+    </div>
+  </div>
+
   <div class="mtabs">
     <button class="mtab active" data-tab="overview" onclick="switchTab('overview')"><span class="mtab-ico">◈</span>Overview</button>
     <button class="mtab" data-tab="trips" onclick="switchTab('trips')"><span class="mtab-ico">✈</span>Trips</button>
@@ -516,7 +584,7 @@ async function doLogin(){
     if(res.ok){
       const {token}=await res.json();setToken(token);
       const me=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
-      if(me.ok){btn.disabled=false;btn.textContent='Sign In';return showPortal(await me.json());}
+      if(me.ok){const meData=await me.json();applyPrefs(meData.preferences);btn.disabled=false;btn.textContent='Sign In';return showPortal(meData);}
     }else if(res.status===429){btn.disabled=false;btn.textContent='Sign In';return loginErr('Too many attempts. Try again in a few minutes.');}
     btn.disabled=false;btn.textContent='Sign In';loginErr('Invalid credentials. Contact your advisor.');
   }catch(e){btn.disabled=false;btn.textContent='Sign In';loginErr('Could not reach server. Check your connection.');}
@@ -1012,12 +1080,55 @@ function startAutoRefresh(){connectStream();}
 function stopAutoRefresh(){disconnectStream();stopPoll();clearTimeout(reconnectTimer);}
 document.addEventListener('visibilitychange',()=>{if(!getToken())return;if(document.hidden)stopAutoRefresh();else{refetchMe();connectStream();}});
 
+/* ── PREFERENCES ── */
+function applyPrefs(prefs){
+  if(!prefs)return;
+  // dark_mode=true (default) → no class; dark_mode=false → light-mode class
+  if(prefs.dark_mode===false){
+    document.body.classList.add('light-mode');
+    const el=document.getElementById('pref-light-mode');if(el)el.checked=true;
+  }else{
+    document.body.classList.remove('light-mode');
+    const el=document.getElementById('pref-light-mode');if(el)el.checked=false;
+  }
+  const notifEl=document.getElementById('pref-email-notifs');
+  if(notifEl)notifEl.checked=prefs.email_notifications===true;
+}
+
+function openPrefs(){
+  document.getElementById('prefs-panel').classList.add('open');
+  document.getElementById('prefs-msg').textContent='';
+}
+function closePrefs(){document.getElementById('prefs-panel').classList.remove('open');}
+
+async function savePrefs(){
+  const lightMode=document.getElementById('pref-light-mode').checked;
+  const emailNotifs=document.getElementById('pref-email-notifs').checked;
+  const token=getToken();if(!token)return logout();
+  const msgEl=document.getElementById('prefs-msg');
+  msgEl.textContent='Saving…';msgEl.style.color='var(--muted)';
+  try{
+    const res=await fetch('/api/client/preferences',{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({dark_mode:!lightMode,email_notifications:emailNotifs})
+    });
+    if(res.ok){
+      const d=await res.json();
+      applyPrefs(d.preferences);
+      msgEl.textContent='Saved!';msgEl.style.color='var(--green)';
+      setTimeout(()=>{msgEl.textContent='';closePrefs();},1200);
+    }else if(res.status===401){logout();}
+    else{msgEl.textContent='Could not save.';msgEl.style.color='var(--red)';}
+  }catch(e){msgEl.textContent='Network error.';msgEl.style.color='var(--red)';}
+}
+
 (async function(){
   const token=getToken();if(!token)return;
   const boot=document.getElementById('boot');
   boot.classList.add('show');                      // branded splash instead of a login flash
   try{const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
-    if(res.ok)showPortal(await res.json());else clearToken();}catch(e){clearToken();}
+    if(res.ok){const data=await res.json();applyPrefs(data.preferences);showPortal(data);}else clearToken();}catch(e){clearToken();}
   boot.classList.remove('show');
 })();
 </script>
