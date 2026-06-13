@@ -1532,6 +1532,7 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
             "fee_cents": fee,
             "status": r.status,
             "invoice_number": r.invoice_number,
+            "report_url": f"/api/report/{r.report_token}" if r.report_token else None,
         })
     payload["savings_breakdown"] = savings_breakdown
     payload["total_fee_cents"] = total_fee_cents

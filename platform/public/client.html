@@ -787,7 +787,11 @@ function renderSavings(rows,totalSave,totalFee,plans){
   const list=rows.map(r=>`
     <div class="sv-row">
       <div><div class="sv-label">${esc(r.trip_label||'Trip')}</div><div class="sv-sub">${fmtNum(r.points_used)} ${esc(r.points_program||'points')} · cash ${fmtUsd(r.cash_benchmark_cents)}${r.invoice_number?' · '+esc(r.invoice_number):''}</div></div>
-      <div class="sv-amt"><div class="sv-save">${fmtUsd(r.gross_savings_cents)}</div><div class="sv-fee">fee ${fmtUsd(r.fee_cents)}</div></div>
+      <div class="sv-amt">
+        <div class="sv-save">${fmtUsd(r.gross_savings_cents)}</div>
+        <div class="sv-fee">fee ${fmtUsd(r.fee_cents)}</div>
+        ${r.report_url?`<a href="${esc(r.report_url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--accent);text-decoration:none;margin-top:4px;padding:3px 8px;border:1px solid var(--accent-border);border-radius:6px">&#9113; Proof</a>`:''}
+      </div>
     </div>`).join('');
   el.innerHTML=list+
     `<div class="sv-total"><div><div class="sv-total-label">Total Savings Generated</div><div class="sv-total-sub">Our advisory fee is 10% of this</div></div><div class="sv-total-val">${fmtUsd(totalSave)}</div></div>
