@@ -1676,6 +1676,39 @@ def delete_client(email: str, _: dict = Depends(require_admin), db: Session = De
     return {"ok": True}
 
 
+@app.get("/api/admin/expiring-points")
+def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """All client point balances with an expiration_date, sorted soonest first.
+    Returns rows within 180 days; includes urgency level for the admin UI."""
+    clients = db.query(Client).all()
+    today = dt.date.today()
+    rows = []
+    for c in clients:
+        data = json.loads(c.data or "{}")
+        for p in data.get("points", []):
+            exp_str = p.get("expiration_date") or ""
+            if not exp_str:
+                continue
+            try:
+                exp_date = dt.date.fromisoformat(str(exp_str)[:10])
+            except ValueError:
+                continue
+            days_left = (exp_date - today).days
+            if days_left > 180 or days_left < 0:
+                continue
+            rows.append({
+                "client_name": c.name,
+                "client_email": c.email,
+                "program": p.get("program") or p.get("name") or "Unknown",
+                "balance": p.get("balance") or p.get("points") or 0,
+                "expiration_date": str(exp_date),
+                "days_left": days_left,
+                "urgency": "urgent" if days_left <= 30 else "warning" if days_left <= 90 else "calm",
+            })
+    rows.sort(key=lambda r: r["days_left"])
+    return rows
+
+
 class SendMessageIn(BaseModel):
     client_email: str
     subject: str

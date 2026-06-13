@@ -308,6 +308,33 @@
   @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,1fr)} .deal-cards-grid{grid-template-columns:1fr 1fr} }
   @media(max-width:800px){ .sidebar{display:none} .content{padding:16px} .page-header{padding:16px}
     .metrics-grid{grid-template-columns:repeat(2,1fr)} .intake-card{grid-template-columns:1fr} .deal-cards-grid{grid-template-columns:1fr} }
+
+  /* ── KANBAN ── */
+  .kanban-wrap{overflow-x:auto;padding-bottom:8px}
+  .kanban-board{display:flex;gap:16px;min-width:max-content;padding:4px 2px}
+  .kb-col{width:240px;flex-shrink:0;background:var(--surface,#12100d);border-radius:12px;border:1px solid var(--border,rgba(255,255,255,.07));overflow:hidden}
+  .kb-col-head{padding:12px 14px;border-bottom:1px solid var(--border,rgba(255,255,255,.07));display:flex;align-items:center;justify-content:space-between}
+  .kb-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,rgba(250,248,243,.55))}
+  .kb-col-count{font-size:11px;font-weight:700;background:rgba(255,255,255,.07);color:var(--muted,rgba(250,248,243,.55));border-radius:100px;padding:2px 7px}
+  .kb-cards{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:80px}
+  .kb-card{background:var(--card,#1a1814);border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.07));padding:10px 12px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .kb-card:hover{border-color:rgba(249,115,22,.3);box-shadow:0 2px 12px rgba(249,115,22,.08)}
+  .kb-card.stale{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)}
+  .kb-card.critical{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
+  .kb-card-dest{font-size:13px;font-weight:700;color:var(--text,#faf8f3);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kb-card-client{font-size:11px;color:var(--muted,rgba(250,248,243,.55))}
+  .kb-card-meta{margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .kb-card-hours{font-size:10px;color:var(--dim,rgba(250,248,243,.3))}
+  .kb-card-stale{font-size:10px;background:rgba(245,158,11,.15);color:#fbbf24;border-radius:4px;padding:1px 5px;font-weight:700}
+  .kb-card-crit{font-size:10px;background:rgba(239,68,68,.15);color:#f87171;border-radius:4px;padding:1px 5px;font-weight:700}
+  .kb-advance-btn{display:inline-flex;align-items:center;justify-content:center;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.2);color:#f97316;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+  .kb-advance-btn:hover{background:rgba(249,115,22,.2)}
+  .kb-empty{padding:20px 12px;text-align:center;font-size:12px;color:var(--dim,rgba(250,248,243,.3))}
+  .kb-attention{background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;padding:12px 16px;margin-bottom:16px}
+  .kb-attention-title{font-size:12px;font-weight:700;color:#fb923c;margin-bottom:8px}
+  .kb-attention-list{display:flex;flex-direction:column;gap:4px}
+  .kb-attn-item{font-size:13px;color:var(--text,#faf8f3);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .kb-attn-item-sub{font-size:11px;color:var(--muted,rgba(250,248,243,.55))}
 </style>
 </head>
 <body>
@@ -345,6 +372,7 @@
       </div>
       <nav class="sidebar-nav">
         <button class="nav-item active" onclick="switchPanel('overview',this)"><span class="nav-icon">◉</span> Overview</button>
+        <button class="nav-item" data-tab="pipeline" onclick="switchPanel('pipeline',this)"><span class="nav-icon">◉</span> Pipeline <span class="nav-badge" id="nav-pipeline-count" style="display:none">0</span></button>
         <button class="nav-item" onclick="switchPanel('urgent',this)"><span class="nav-icon">⚡</span> Action Items <span class="nav-badge" id="nav-ai-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('intake',this)"><span class="nav-icon">📋</span> Intake Queue <span class="nav-badge muted" id="nav-intake-count">0</span></button>
@@ -393,6 +421,21 @@
           </div>
           <div class="table-wrap" id="ov-clients-table">
             <div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">Loading clients…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PIPELINE (Kanban) -->
+      <div class="panel" id="panel-pipeline">
+        <div class="page-header">
+          <div><h1>Pipeline</h1><p>Drag or click &#x2192; to advance trips through the workflow</p></div>
+        </div>
+        <div class="content">
+          <div id="kanban-attention" style="display:none"></div>
+          <div class="kanban-wrap">
+            <div class="kanban-board" id="kanban-board">
+              <div style="padding:40px;text-align:center;color:var(--muted)">Loading pipeline&#x2026;</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1638,6 +1681,7 @@ function enterAdmin(){
   renderFees();
   checkAIStatus();
   loadInbox();
+  loadBoard();
   if(!inboxTimer)inboxTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadInbox();},30000);
 }
 function toggleSetupForm(){
@@ -1964,6 +2008,105 @@ function eid(s){ return String(s||'').replace(/'/g,"\\'"); }
 document.querySelectorAll('.overlay').forEach(function(o){
   o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('open');});
 });
+
+/* ════════════════════════════════════════════
+   KANBAN PIPELINE
+   ════════════════════════════════════════════ */
+var KB_COLS=[
+  {key:'new',label:'New'},
+  {key:'researching',label:'Researching'},
+  {key:'options_sent',label:'Options Sent'},
+  {key:'awaiting_decision',label:'Awaiting Decision'},
+  {key:'booked',label:'Booked'},
+  {key:'closed',label:'Closed'}
+];
+
+async function loadBoard(){
+  if(!ADMIN_TOKEN)return;
+  try{
+    var res=await fetch('/api/admin/board',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok)return;
+    var data=await res.json();
+    renderBoard(data);
+  }catch(e){}
+}
+
+function renderBoard(data){
+  var cols=data.columns||{};
+  var attn=data.needs_attention||[];
+  // Attention strip
+  var attnEl=document.getElementById('kanban-attention');
+  if(attn.length){
+    attnEl.style.display='block';
+    attnEl.innerHTML='<div class="kb-attention"><div class="kb-attention-title">&#x26A0; Needs attention ('+attn.length+')</div>'+
+      '<div class="kb-attention-list">'+attn.slice(0,5).map(function(t){
+        return '<div class="kb-attn-item"><div><div>'+esc(t.destination||'Trip')+'</div><div class="kb-attn-item-sub">'+esc(t.client_name||t.client_email||'')+'</div></div>'+
+          '<button class="kb-advance-btn" onclick="advanceTrip('+t.id+')">Advance &#x2192;</button></div>';
+      }).join('')+'</div></div>';
+  }else{attnEl.style.display='none';}
+  // Count badge
+  var badge=document.getElementById('nav-pipeline-count');
+  if(badge){if(attn.length){badge.textContent=attn.length;badge.style.display='';}else{badge.style.display='none';}}
+  // Board columns
+  var board=document.getElementById('kanban-board');
+  board.innerHTML=KB_COLS.map(function(col){
+    var cards=(cols[col.key]||[]);
+    var cardHtml=cards.length?cards.map(function(t){
+      var cls='kb-card'+(t.level==='red'?' critical':t.stale?' stale':'');
+      var staleTag=t.level==='red'?'<span class="kb-card-crit">&#x2691; Overdue</span>':t.stale?'<span class="kb-card-stale">&#x2690; Stale</span>':'';
+      var hrs=t.hours_in_stage?Math.round(t.hours_in_stage)+'h':'';
+      var advBtn=(!['closed','declined','lost','booked'].includes(t.workflow_status))?
+        '<button class="kb-advance-btn" onclick="event.stopPropagation();advanceTrip('+t.id+')">&#x2192;</button>':'';
+      return '<div class="'+cls+'" onclick="openClientByTrip(\''+eid(t.client_email||'')+'\')">'+
+        '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+'</div>'+
+        '<div class="kb-card-client">'+esc(t.client_name||t.client_email||'')+'</div>'+
+        '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+advBtn+'</div></div>';
+    }).join(''):'<div class="kb-empty">&#x2014;</div>';
+    return '<div class="kb-col"><div class="kb-col-head"><span class="kb-col-title">'+col.label+'</span>'+
+      '<span class="kb-col-count">'+cards.length+'</span></div><div class="kb-cards">'+cardHtml+'</div></div>';
+  }).join('');
+}
+
+async function advanceTrip(tripId){
+  if(!ADMIN_TOKEN)return;
+  try{
+    var res=await fetch('/api/admin/trips/'+tripId+'/advance',{method:'POST',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(res.ok){toast('Trip advanced ✓');loadBoard();}
+    else{var d=await res.json().catch(function(){return{};});toast('Cannot advance: '+(d.detail||'unknown error'));}
+  }catch(e){toast('Network error');}
+}
+
+function openClientByTrip(email){
+  if(!email)return;
+  switchPanel('clients',document.querySelector('.nav-item[data-tab="clients"]'));
+  if(typeof openClientDetail==='function')openClientDetail(email);
+}
+
+/* ════════════════════════════════════════════
+   EXPIRING POINTS
+   ════════════════════════════════════════════ */
+async function loadExpiringPoints(){
+  if(!ADMIN_TOKEN)return;
+  try{
+    const res=await fetch('/api/admin/expiring-points',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok)return;
+    const rows=await res.json();
+    const el=document.getElementById('expiring-list');
+    if(!el)return;
+    if(!rows.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">No points expiring within 180 days.</div>';return;}
+    el.innerHTML='<div class="expiring-list">'+rows.map(function(r){
+      const daysLabel=r.days_left===0?'Today':r.days_left===1?'Tomorrow':r.days_left+' days';
+      return '<div class="expiring-row '+r.urgency+'">'+
+        '<div style="flex:1">'+
+          '<div style="font-size:13px;font-weight:700">'+esc(r.program)+' · '+esc(r.client_name)+'</div>'+
+          '<div style="font-size:12px;color:var(--muted)">'+Number(r.balance).toLocaleString()+' pts · expires '+r.expiration_date+'</div>'+
+        '</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+(r.urgency==='urgent'?'var(--red)':r.urgency==='warning'?'var(--gold)':'var(--dim)')+'">'+daysLabel+'</div>'+
+      '</div>';
+    }).join('')+'</div>';
+  }catch(e){}
+}
+
 </script>
 </body>
 </html>
