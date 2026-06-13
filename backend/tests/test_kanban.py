@@ -26,11 +26,21 @@ def override_get_db():
         db.close()
 
 
-app.dependency_overrides[get_db] = override_get_db
 client = TestClient(app)
 
 ADMIN_TOKEN = make_token("admin@kanban.test", "admin")
 AUTH = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+
+
+@pytest.fixture(autouse=True)
+def _set_db():
+    prev = app.dependency_overrides.get(get_db)
+    app.dependency_overrides[get_db] = override_get_db
+    yield
+    if prev is None:
+        app.dependency_overrides.pop(get_db, None)
+    else:
+        app.dependency_overrides[get_db] = prev
 
 
 def _client(db, email="c@kanban.test"):

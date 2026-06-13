@@ -2286,6 +2286,17 @@ def advance_status(record_id: int, body: StatusAdvanceIn, db: Session = Depends(
     return row
 
 
+@app.get("/api/admin/savings/{record_id}/report")
+def savings_report_url(record_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+    if not rec.report_token:
+        rec.report_token = secrets.token_urlsafe(32)
+        db.commit()
+    return {"report_url": f"/api/report/{rec.report_token}", "token": rec.report_token}
+
+
 @app.delete("/api/admin/savings/{record_id}")
 def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
