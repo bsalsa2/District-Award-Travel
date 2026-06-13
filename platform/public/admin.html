@@ -374,7 +374,7 @@
         <button class="nav-item active" onclick="switchPanel('overview',this)"><span class="nav-icon">◉</span> Overview</button>
         <button class="nav-item" data-tab="pipeline" onclick="switchPanel('pipeline',this)"><span class="nav-icon">◉</span> Pipeline <span class="nav-badge" id="nav-pipeline-count" style="display:none">0</span></button>
         <button class="nav-item" onclick="switchPanel('urgent',this)"><span class="nav-icon">⚡</span> Action Items <span class="nav-badge" id="nav-ai-count">0</span></button>
-        <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span></button>
+        <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span><span class="nav-badge" id="nav-expiring-count" style="display:none" title="Expiring points alerts">0</span></button>
         <button class="nav-item" onclick="switchPanel('intake',this)"><span class="nav-icon">📋</span> Intake Queue <span class="nav-badge muted" id="nav-intake-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('chat',this)"><span class="nav-icon">💬</span> Messages <span class="nav-badge" id="nav-chat-count" style="display:none">0</span></button>
         <button class="nav-item" onclick="switchPanel('fees',this)"><span class="nav-icon">$</span> Savings &amp; Fees</button>
@@ -2163,6 +2163,10 @@ async function loadExpiringPoints(){
     const res=await fetch('/api/admin/expiring-points',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
     if(!res.ok)return;
     const rows=await res.json();
+    // Update expiring points badge on Clients nav item
+    const urgentCount=rows.filter(function(r){return r.urgency==='urgent'||r.urgency==='warning';}).length;
+    const expBadge=document.getElementById('nav-expiring-count');
+    if(expBadge){if(urgentCount>0){expBadge.textContent=urgentCount;expBadge.style.display='';}else{expBadge.style.display='none';}}
     const el=document.getElementById('expiring-list');
     if(!el)return;
     if(!rows.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">No points expiring within 180 days.</div>';return;}

@@ -805,8 +805,9 @@ ALLOWED_ORIGINS = [
         "https://district-award-travel.onrender.com,https://districtawardtravel.com,https://www.districtawardtravel.com",
     ).split(",") if o.strip()
 ]
-if not IS_PRODUCTION:
-    ALLOWED_ORIGINS += ["http://localhost:8000", "http://127.0.0.1:8000"]
+for _local in ["http://localhost:8000", "http://127.0.0.1:8000"]:
+    if _local not in ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS.append(_local)
 
 from fastapi.middleware.gzip import GZipMiddleware
 
@@ -955,6 +956,7 @@ class SavingsPatchIn(BaseModel):
     fee_rate_bps: Optional[int] = Field(None, ge=0, le=10000)
     notes: Optional[str] = None
     payment_method: Optional[str] = None
+    status: Optional[str] = None
 
 class StatusAdvanceIn(BaseModel):
     new_status: str
@@ -2267,9 +2269,15 @@ def update_savings(record_id: int, body: SavingsPatchIn, db: Session = Depends(g
     rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
     if not rec:
         raise HTTPException(404, "Record not found")
-    if rec.status in ("invoiced", "paid"):
-        raise HTTPException(400, "Cannot edit a record in invoiced or paid status")
+    VALID_STATUSES = {"draft", "booked", "invoiced", "paid", "void", "presented"}
     for field, val in body.model_dump(exclude_unset=True).items():
+        if field == "status":
+            if val not in VALID_STATUSES:
+                raise HTTPException(422, f"Invalid status '{val}'")
+            rec.status = val
+            continue
+        if rec.status in ("invoiced", "paid"):
+            raise HTTPException(400, "Cannot edit a record in invoiced or paid status")
         if field == "benchmark_screenshot" and val and len(val) > 2_000_000:
             raise HTTPException(422, "Screenshot too large (max ~1.5 MB)")
         if field == "benchmark_captured_at":
