@@ -45,8 +45,8 @@
   .form-group textarea { resize:vertical; }
   .form-group input:focus,.form-group textarea:focus,.form-group select:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
   .btn-primary { width:100%; background:var(--accent); color:#fff;
-    border:none; padding:12px; border-radius:8px; font-size:.94rem; font-weight:600; cursor:pointer; transition:filter .2s; font-family:var(--font); }
-  .btn-primary:hover { filter:brightness(1.08); }
+    border:none; padding:12px; border-radius:8px; font-size:.94rem; font-weight:600; cursor:pointer; transition:filter .2s, box-shadow .2s; font-family:var(--font); }
+  .btn-primary:hover { filter:brightness(1.08); box-shadow:0 0 20px rgba(249,115,22,.35); }
   .btn-ghost { background:none; border:1px solid var(--border2); color:var(--muted);
     padding:10px; border-radius:8px; font-size:.85rem; cursor:pointer; transition:all .2s; font-family:var(--font); }
   .btn-ghost:hover { border-color:var(--border2); color:var(--text); background:var(--card); }
@@ -68,7 +68,7 @@
     font-size:.84rem; color:var(--muted); transition:all .15s; border:1px solid transparent;
     background:none; width:100%; text-align:left; font-family:var(--font); font-weight:500; }
   .nav-item:hover { background:var(--off); color:var(--text); }
-  .nav-item.active { background:var(--accent-dim); color:var(--accent); border-color:var(--accent-border); font-weight:600; }
+  .nav-item.active { background:linear-gradient(90deg, rgba(249,115,22,.12), rgba(249,115,22,.04)); color:var(--accent); border-color:var(--accent-border); font-weight:600; box-shadow:inset 3px 0 0 #f97316; }
   .nav-icon { font-size:.9rem; width:20px; text-align:center; }
   .nav-badge { margin-left:auto; background:var(--red); color:#fff; font-size:.63rem; padding:2px 7px; border-radius:10px; font-weight:700; }
   .nav-badge.muted { background:var(--card); color:var(--muted); border:1px solid var(--border); }
@@ -102,9 +102,10 @@
 
   /* METRICS */
   .metrics-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:28px; }
-  .metric-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 18px; box-shadow:var(--shadow); }
+  .metric-card { background:var(--surface); border:1px solid var(--border); border-top:1px solid rgba(249,115,22,.2); border-radius:12px; padding:16px 18px; box-shadow:var(--shadow), 0 0 20px rgba(249,115,22,.08); transition:box-shadow .2s, transform .2s; }
+  .metric-card:hover { box-shadow:var(--shadow), 0 0 40px rgba(249,115,22,.14), 0 4px 20px rgba(0,0,0,.3); transform:translateY(-1px); }
   .metric-label { font-size:.67rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:7px; font-weight:500; }
-  .metric-val { font-size:1.6rem; font-weight:800; color:var(--text); }
+  .metric-val { font-size:1.8rem; font-weight:800; color:var(--text); }
   .metric-val.green{color:var(--green)} .metric-val.gold{color:var(--gold)}
   .metric-val.blue{color:var(--blue)} .metric-val.red{color:var(--red)}
   .metric-delta { font-size:.73rem; color:var(--dim); margin-top:4px; }
@@ -221,7 +222,7 @@
     border:1px solid var(--border2); background:var(--off); color:var(--text); transition:all .15s; white-space:nowrap; font-weight:500; }
   .btn-sm:hover { border-color:var(--accent); color:var(--accent); }
   .btn-sm.primary { background:var(--accent); color:#fff; border:none; font-weight:600; }
-  .btn-sm.primary:hover { filter:brightness(1.08); }
+  .btn-sm.primary:hover { filter:brightness(1.08); box-shadow:0 0 16px rgba(249,115,22,.35); }
   .btn-sm.green { border-color:rgba(22,163,74,.35); color:var(--green); background:rgba(22,163,74,.05); }
   .btn-sm.green:hover { background:rgba(22,163,74,.1); }
   .btn-sm.ai { border-color:rgba(124,58,237,.3); color:var(--purple); background:rgba(124,58,237,.05); }
@@ -295,11 +296,11 @@
   .toggle.on::after { left:22px; }
 
   /* MODAL */
-  .overlay { display:none; position:fixed; inset:0; z-index:500; background:rgba(28,25,23,.5);
-    backdrop-filter:blur(4px); justify-content:center; align-items:flex-start; overflow:auto; padding:44px 20px; }
+  .overlay { display:none; position:fixed; inset:0; z-index:500; background:rgba(28,25,23,.55);
+    backdrop-filter:blur(8px); justify-content:center; align-items:flex-start; overflow:auto; padding:44px 20px; }
   .overlay.open { display:flex; }
-  .modal { background:var(--surface); border:1px solid var(--border); border-radius:16px; width:100%;
-    max-width:600px; padding:28px 30px; box-shadow:0 20px 60px rgba(0,0,0,.12); }
+  .modal { background:var(--surface); border:1px solid var(--border); border-top:1px solid rgba(249,115,22,.2); border-radius:16px; width:100%;
+    max-width:600px; padding:28px 30px; box-shadow:0 20px 60px rgba(0,0,0,.22), 0 0 40px rgba(249,115,22,.06); }
   .modal.wide { max-width:760px; }
   .modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
   .modal-head h2 { font-size:1.1rem; font-weight:700; color:var(--text); }
@@ -367,9 +368,9 @@
   .kanban-wrap{overflow-x:auto;padding-bottom:8px}
   .kanban-board{display:flex;gap:16px;min-width:max-content;padding:4px 2px}
   .kb-col{width:240px;flex-shrink:0;background:var(--surface,#12100d);border-radius:12px;border:1px solid var(--border,rgba(255,255,255,.07));overflow:hidden}
-  .kb-col-head{padding:12px 14px;border-bottom:1px solid var(--border,rgba(255,255,255,.07));display:flex;align-items:center;justify-content:space-between}
+  .kb-col-head{padding:12px 14px;border-bottom:1px solid rgba(249,115,22,.15);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg, rgba(249,115,22,.08), transparent)}
   .kb-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,rgba(250,248,243,.55))}
-  .kb-col-count{font-size:11px;font-weight:700;background:rgba(255,255,255,.07);color:var(--muted,rgba(250,248,243,.55));border-radius:100px;padding:2px 7px}
+  .kb-col-count{font-size:11px;font-weight:700;background:rgba(249,115,22,.18);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:100px;padding:2px 7px}
   .kb-cards{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:80px}
   .kb-card{background:var(--card,#1a1814);border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.07));padding:10px 12px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
   .kb-card:hover{border-color:rgba(249,115,22,.3);box-shadow:0 2px 12px rgba(249,115,22,.08)}
@@ -408,6 +409,19 @@
   .drawer-action-btn:hover{background:var(--card)}
   .drawer-snippet{font-size:.83rem;color:var(--muted);background:var(--card);border-radius:8px;padding:10px 14px;border:1px solid var(--border);font-style:italic;line-height:1.5}
   @media(max-width:640px){.client-drawer{width:100%}}
+
+  /* SAVINGS PIPELINE STRIP */
+  .savings-pipeline-strip { display:flex; align-items:center; justify-content:center; gap:0;
+    background:linear-gradient(135deg, rgba(249,115,22,.06), rgba(249,115,22,.02));
+    border:1px solid rgba(249,115,22,.2); border-radius:14px; padding:24px 32px; margin-bottom:24px;
+    box-shadow:0 0 30px rgba(249,115,22,.08); }
+  .sps-stat { flex:1; text-align:center; }
+  .sps-val { font-size:2.4rem; font-weight:800; letter-spacing:-.02em;
+    background:linear-gradient(135deg, #f97316, #fb923c);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    line-height:1.1; margin-bottom:6px; }
+  .sps-label { font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .sps-sep { width:1px; height:52px; background:linear-gradient(180deg, transparent, rgba(249,115,22,.3), transparent); flex-shrink:0; margin:0 16px; }
 </style>
 </head>
 <body>
@@ -642,6 +656,22 @@
           <div class="header-actions"><button class="btn-action" onclick="exportCSV('/api/admin/export/savings','district-savings.csv')">&#8659; Export CSV</button><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
         </div>
         <div class="content">
+          <div class="savings-pipeline-strip">
+            <div class="sps-stat">
+              <div class="sps-val" id="sps-identified">$0</div>
+              <div class="sps-label">Savings Identified</div>
+            </div>
+            <div class="sps-sep"></div>
+            <div class="sps-stat">
+              <div class="sps-val" id="sps-fees">$0</div>
+              <div class="sps-label">Advisory Fees (10%)</div>
+            </div>
+            <div class="sps-sep"></div>
+            <div class="sps-stat">
+              <div class="sps-val" id="sps-entries">0</div>
+              <div class="sps-label">Entries Logged</div>
+            </div>
+          </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px">
             <div class="metric-card"><div class="metric-label">Total Savings Identified</div><div class="metric-val green" id="fees-total-savings">$0</div><div class="metric-delta">Options presented</div></div>
             <div class="metric-card"><div class="metric-label">Advisory Fees (10%)</div><div class="metric-val gold" id="fees-total-fees">$0</div><div class="metric-delta">On accepted recommendations</div></div>
@@ -1291,9 +1321,14 @@ async function renderFees(){
     var entries=await res.json();
     var sumRes=await fetch('/api/admin/savings/summary',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
     var summary=sumRes.ok?await sumRes.json():{total_gross_cents:0,total_fee_cents:0,count:0};
-    document.getElementById('fees-total-savings').textContent='$'+Math.floor((summary.total_gross_cents||0)/100).toLocaleString();
-    document.getElementById('fees-total-fees').textContent='$'+Math.floor((summary.total_fee_cents||0)/100).toLocaleString();
+    var savingsStr='$'+Math.floor((summary.total_gross_cents||0)/100).toLocaleString();
+    var feesStr='$'+Math.floor((summary.total_fee_cents||0)/100).toLocaleString();
+    document.getElementById('fees-total-savings').textContent=savingsStr;
+    document.getElementById('fees-total-fees').textContent=feesStr;
     document.getElementById('fees-count').textContent=entries.length;
+    document.getElementById('sps-identified').textContent=savingsStr;
+    document.getElementById('sps-fees').textContent=feesStr;
+    document.getElementById('sps-entries').textContent=entries.length;
     var STATUS_BADGE={draft:'muted',booked:'green',invoiced:'gold',paid:'blue',void:'muted'};
     document.getElementById('fees-tbody').innerHTML=entries.length
       ?entries.map(function(e){
