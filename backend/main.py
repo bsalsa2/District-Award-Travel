@@ -1591,6 +1591,43 @@ def public_examples(request: Request, db: Session = Depends(get_db)):
     return rows
 
 
+@app.get("/api/admin/activity-heatmap")
+def admin_activity_heatmap(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Daily activity count for the last 84 days (12 weeks).
+    count = intake submissions + new trip requests + new savings records on that date.
+    level: 0=none, 1=1-2, 2=3-5, 3=6+"""
+    today = dt.date.today()
+    start_date = today - dt.timedelta(days=83)
+    start_dt = dt.datetime(start_date.year, start_date.month, start_date.day)
+
+    # Query each table for created_at in range
+    intakes = db.query(Intake.created_at).filter(Intake.created_at >= start_dt).all()
+    trips = db.query(TripRequest.created_at).filter(TripRequest.created_at >= start_dt).all()
+    savings = db.query(SavingsRecord.created_at).filter(SavingsRecord.created_at >= start_dt).all()
+
+    counts: dict = {}
+    for (ts,) in intakes + trips + savings:
+        if ts:
+            d = ts.date() if hasattr(ts, 'date') else ts
+            key = d.isoformat()
+            counts[key] = counts.get(key, 0) + 1
+
+    def level(c: int) -> int:
+        if c == 0: return 0
+        if c <= 2: return 1
+        if c <= 5: return 2
+        return 3
+
+    days = []
+    for i in range(84):
+        d = start_date + dt.timedelta(days=i)
+        key = d.isoformat()
+        c = counts.get(key, 0)
+        days.append({"date": key, "count": c, "level": level(c)})
+
+    return {"days": days}
+
+
 @app.get("/api/admin/funnel")
 def admin_funnel(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     """Weekly funnel (last 8 ISO weeks): page_view / form_start / submit counts
