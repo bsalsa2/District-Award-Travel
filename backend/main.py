@@ -476,6 +476,7 @@ def _trip_row(trip: TripRequest, client=None, now=None) -> dict:
         "notes": json.loads(trip.notes or "[]"),
         "created_at": trip.created_at.isoformat() if trip.created_at else None,
         **flags,
+        "stale": flags.get("level") != "ok" and trip.workflow_status not in {"closed", "declined", "lost", "booked"},
     }
     if client:
         row["client_name"] = client.name
@@ -1137,7 +1138,7 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
             parsed = ai_client.call_ai("groq", "parse-email", _do_groq, db_session_factory=SessionLocal)
             return {"ok": True, "source": "groq", "data": parsed}
         except (AIUnavailable, Exception) as e:
-            print(f"[groq] parse failed: {e}")
+            logger.warning("ai.parse-email groq failed", extra={"error": str(e)[:200]})
             # fall through to Gemini
 
     if GEMINI_API_KEY:
@@ -1159,7 +1160,7 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
             parsed = ai_client.call_ai("gemini", "parse-email", _do_gemini, db_session_factory=SessionLocal)
             return {"ok": True, "source": "gemini", "data": parsed}
         except (AIUnavailable, Exception) as e:
-            print(f"[gemini] parse failed: {e}")
+            logger.warning("ai.parse-email gemini failed", extra={"error": str(e)[:200]})
 
     # No AI key configured — return empty stub so UI still works
     return {"ok": True, "source": "none", "data": {
@@ -1282,7 +1283,7 @@ async def track_event(request: Request, body: TrackIn, db: Session = Depends(get
         ))
         db.commit()
     except Exception as e:
-        print(f"[track] write failed: {e}")
+        logger.warning("funnel.track write failed", extra={"error": str(e)[:200]})
     return {"ok": True}
 
 
@@ -1873,7 +1874,7 @@ async def scan_document(body: ScanDocumentIn, _: dict = Depends(require_admin), 
     try:
         extracted = ai_client.call_ai("gemini", "scan-document", _do, db_session_factory=SessionLocal)
     except (AIUnavailable, Exception) as e:
-        print(f"[gemini-vision] scan failed: {e}")
+        logger.warning("ai.scan-document failed", extra={"error": str(e)[:200]})
         return {"ok": False, "error": "AI scanner unavailable — enter balances manually", "manual": True}
 
     saved = False
@@ -1992,7 +1993,7 @@ async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: S
     try:
         recs = ai_client.call_ai("gemini", "sweet-spots", _do, db_session_factory=SessionLocal)
     except (AIUnavailable, Exception) as e:
-        print(f"[gemini] sweet spots failed: {e}")
+        logger.warning("ai.sweet-spots failed", extra={"error": str(e)[:200]})
         return {"ok": False, "error": "AI recommendations unavailable — try again shortly", "manual": True}
 
     # Enrich with seats.aero live award availability
@@ -2035,7 +2036,7 @@ async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: S
                         if avail:
                             rec["next_available_date"] = avail[0].get("Date", "")
                 except Exception as e2:
-                    print(f"[seats.aero] {rec.get('destination')}: {e2}")
+                    logger.warning("seats.aero lookup failed", extra={"destination": rec.get("destination", ""), "error": str(e2)[:200]})
 
     # Save to client profile
     data["recommendations"] = recs
@@ -2140,7 +2141,7 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
             parsed = ai_client.call_ai("gemini", "parse-threads", _do_gemini, db_session_factory=SessionLocal)
             return {"ok": True, "source": "gemini", "data": parsed}
         except (AIUnavailable, Exception) as e:
-            print(f"[gemini] thread parse failed: {e}")
+            logger.warning("ai.parse-threads gemini failed", extra={"error": str(e)[:200]})
 
     return {"ok": True, "source": "none", "data": {
         "first_name": None, "last_name": None, "email": None, "phone": None,
@@ -2498,6 +2499,38 @@ def advance_trip_status(trip_id: int, body: WorkflowAdvanceIn, db: Session = Dep
     result = _trip_row(trip, client)
     if body.new_status == "booked":
         result["prompt_savings_record"] = True
+    return result
+
+
+NEXT_STATUS = {
+    "new": "researching",
+    "researching": "options_sent",
+    "options_sent": "awaiting_decision",
+    "awaiting_decision": "booked",
+    "booked": "closed",
+}
+
+
+@app.post("/api/admin/trips/{trip_id}/advance")
+def advance_trip_one_step(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Advance a trip to the next logical status (kanban one-click advance)."""
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    next_s = NEXT_STATUS.get(trip.workflow_status)
+    if not next_s:
+        raise HTTPException(400, f"No automatic next step from '{trip.workflow_status}'")
+    old_status = trip.workflow_status
+    trip.workflow_status = next_s
+    trip.stage_entered_at = dt.datetime.utcnow()
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.add(WorkflowEvent(trip_id=trip.id, from_status=old_status, to_status=next_s, note="Advanced via kanban"))
+    db.commit()
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    result = _trip_row(trip, client)
+    if next_s == "booked":
+        result["prompt_savings_record"] = True
+    logger.info("trip.advance", extra={"trip_id": trip_id, "from": old_status, "to": next_s})
     return result
 
 
