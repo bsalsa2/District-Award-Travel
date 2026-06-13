@@ -83,13 +83,43 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .phead h1{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
 .phead p{font-size:14px;color:var(--muted)}
 
+/* ── SAVINGS HERO ── */
+.savings-hero{
+  display:none;
+  background:linear-gradient(135deg,#0f0a07 0%,#1c0d04 60%,#0a0908 100%);
+  border-radius:18px;padding:32px 36px;margin-bottom:28px;
+  position:relative;overflow:hidden;
+}
+.savings-hero.has-savings{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.savings-hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 80% at 80% 50%,rgba(249,115,22,.12) 0%,transparent 65%);
+  pointer-events:none;
+}
+.sh-left{position:relative}
+.sh-label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(249,115,22,.7);margin-bottom:8px}
+.sh-amount{
+  font-size:clamp(44px,6vw,68px);font-weight:900;line-height:1;
+  background:linear-gradient(90deg,#f97316,#fbbf24);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  letter-spacing:-3px;font-variant-numeric:tabular-nums;
+}
+.sh-tagline{font-size:14px;color:rgba(255,255,255,.5);margin-top:10px;font-weight:500}
+.sh-tagline strong{color:rgba(255,255,255,.8)}
+.sh-right{position:relative;text-align:right}
+.sh-fee-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(249,115,22,.55);margin-bottom:6px}
+.sh-fee{font-size:28px;font-weight:900;color:rgba(249,115,22,.9);letter-spacing:-1px}
+.sh-fee-sub{font-size:12px;color:rgba(255,255,255,.35);margin-top:4px}
+@media(max-width:600px){.savings-hero{padding:24px 22px}.sh-amount{font-size:44px}.sh-right{text-align:left}}
+
 /* ── STAT CARDS ── */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
-.stat{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 22px;box-shadow:var(--shadow)}
-.stat-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px}
-.stat-val{font-size:26px;font-weight:800;letter-spacing:-1px;line-height:1}
+.stat{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 24px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
+.stat:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.08)}
+.stat-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
+.stat-val{font-size:28px;font-weight:900;letter-spacing:-1.5px;line-height:1}
 .stat-val.green{color:var(--green)}.stat-val.orange{color:var(--accent)}.stat-val.blue{color:var(--blue)}
-.stat-sub{font-size:12px;color:var(--muted);margin-top:6px}
+.stat-sub{font-size:12px;color:var(--muted);margin-top:8px}
 
 /* ── STATUS BAR ── */
 .status-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-bottom:28px;box-shadow:var(--shadow)}
@@ -263,6 +293,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
       <!-- OVERVIEW -->
       <div class="panel active" id="panel-overview">
         <div class="phead"><h1 id="ov-greeting">Welcome back</h1><p id="ov-sub">District Award Travel — Client Portal</p></div>
+        <!-- Savings hero — shown when savings > 0 -->
+        <div class="savings-hero" id="savings-hero">
+          <div class="sh-left">
+            <div class="sh-label">Total Saved with District</div>
+            <div class="sh-amount" id="sh-amount">$0</div>
+            <div class="sh-tagline"><strong id="sh-trips-saved">0 trips</strong> · documented &amp; verified</div>
+          </div>
+          <div class="sh-right">
+            <div class="sh-fee-label">Advisory fee</div>
+            <div class="sh-fee" id="sh-fee">$0</div>
+            <div class="sh-fee-sub">10% of savings · paid after</div>
+          </div>
+        </div>
         <div class="stats">
           <div class="stat"><div class="stat-label">Total Savings</div><div class="stat-val green" id="st-savings">$0</div><div class="stat-sub">documented & verified</div></div>
           <div class="stat"><div class="stat-label">Advisory Fee</div><div class="stat-val orange" id="st-fee">$0</div><div class="stat-sub">10% of savings</div></div>
@@ -402,9 +445,21 @@ function renderPortal(c){
   document.getElementById('ov-greeting').textContent='Hi, '+name+' 👋';
   document.getElementById('ov-sub').textContent=(c.tier?c.tier+' — ':'')+'District Award Travel';
 
+  // Savings hero banner
+  const lifetimeSavings=c.lifetime_savings_cents||0;
+  const lifetimeFee=c.total_fee_cents||0;
+  const hero=document.getElementById('savings-hero');
+  if(lifetimeSavings>0){
+    hero.classList.add('has-savings');
+    animStat('sh-amount',lifetimeSavings,fmtUsd);
+    animStat('sh-fee',lifetimeFee,fmtUsd);
+    const tripCount=(c.savings_breakdown||[]).length;
+    document.getElementById('sh-trips-saved').textContent=tripCount+' trip'+(tripCount!==1?'s':'');
+  }else{hero.classList.remove('has-savings')}
+
   // Stats — count up on change
-  animStat('st-savings',c.lifetime_savings_cents||0,fmtUsd);
-  animStat('st-fee',c.total_fee_cents||0,fmtUsd);
+  animStat('st-savings',lifetimeSavings,fmtUsd);
+  animStat('st-fee',lifetimeFee,fmtUsd);
   const trips=c.pipeline_trips||[];
   animStat('st-trips',trips.length,String);
 
