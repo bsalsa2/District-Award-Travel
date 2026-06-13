@@ -730,18 +730,24 @@
 <div id="addsaving-overlay" class="overlay">
   <div class="modal">
     <div class="modal-head"><h2>Log a Saving</h2><button class="modal-close" onclick="closeAddSaving()">&times;</button></div>
-    <p class="modal-sub">Record a savings option you identified. The advisory fee (10%) is calculated automatically.</p>
-    <div class="form-group"><label>Client Name</label><input type="text" id="sv-client" placeholder="Client name"></div>
-    <div class="form-group"><label>Trip / Recommendation</label><input type="text" id="sv-trip" placeholder="e.g. Tokyo — JAL Business"></div>
-    <div class="form-group"><label>Strategy</label><input type="text" id="sv-strategy" placeholder="e.g. 35K AA miles + $5.60"></div>
+    <p class="modal-sub">Record a documented saving. The advisory fee (10%) is calculated automatically.</p>
+    <div class="form-group"><label>Client</label>
+      <select id="sv-client-email"><option value="">Select a client…</option></select>
+    </div>
+    <div class="form-group"><label>Trip Label</label><input type="text" id="sv-trip" placeholder="e.g. IAD → Tokyo, JAL Business"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group"><label>Savings Amount ($)</label><input type="number" id="sv-savings" placeholder="777" min="0"></div>
-      <div class="form-group"><label>Status</label>
-        <select id="sv-status"><option value="Recommended">Recommended</option><option value="Accepted">Accepted</option><option value="Pending">Pending</option><option value="Researching">Researching</option></select>
-      </div>
+      <div class="form-group"><label>Cash Benchmark ($)</label><input type="number" id="sv-benchmark" placeholder="4300" min="0" step="0.01" oninput="updateSvFeePreview()"></div>
+      <div class="form-group"><label>Award Taxes+Fees ($)</label><input type="number" id="sv-taxes" placeholder="112" min="0" step="0.01" oninput="updateSvFeePreview()"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Points Used</label><input type="number" id="sv-points" placeholder="75000" min="0"></div>
+      <div class="form-group"><label>Program</label><input type="text" id="sv-program" placeholder="Chase UR, AA miles…"></div>
+    </div>
+    <div class="form-group"><label>Status</label>
+      <select id="sv-status"><option value="draft">Draft</option><option value="booked" selected>Booked</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option></select>
     </div>
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;font-size:.83rem;color:var(--muted)">
-      Advisory fee: <strong style="color:var(--gold)" id="sv-fee-preview">$0</strong> (10% of savings)
+      Net savings: <strong style="color:var(--green)" id="sv-net-preview">$0</strong> · Advisory fee: <strong style="color:var(--gold)" id="sv-fee-preview">$0</strong>
     </div>
     <button class="btn-primary" onclick="saveSaving()">Log Entry</button>
   </div>
@@ -987,47 +993,94 @@ function saveTask(){
 /* ════════════════════════════════════════════
    SAVINGS / FEES  (localStorage)
    ════════════════════════════════════════════ */
-function loadSavings(){ try{return JSON.parse(localStorage.getItem('dat_savings')||'[]');}catch(e){return[];} }
-function saveSavingsData(a){ localStorage.setItem('dat_savings',JSON.stringify(a)); }
+function updateSvFeePreview(){
+  var bench=Math.round((parseFloat(document.getElementById('sv-benchmark').value)||0)*100);
+  var taxes=Math.round((parseFloat(document.getElementById('sv-taxes').value)||0)*100);
+  var net=Math.max(0,bench-taxes);
+  var fee=Math.round(net*0.1);
+  document.getElementById('sv-net-preview').textContent='$'+(net/100).toFixed(2);
+  document.getElementById('sv-fee-preview').textContent='$'+(fee/100).toFixed(2);
+}
 
-document.getElementById('sv-savings').addEventListener('input', function(){
-  const v=parseFloat(this.value)||0;
-  document.getElementById('sv-fee-preview').textContent='$'+(v*0.1).toFixed(2);
-});
-
-function openAddSaving(){ document.getElementById('addsaving-overlay').classList.add('open'); }
+function openAddSaving(){
+  var sel=document.getElementById('sv-client-email');
+  sel.innerHTML='<option value="">Select a client…</option>'+(CLIENTS||[]).map(function(c){
+    return '<option value="'+esc(c.email)+'">'+esc(c.name)+' ('+esc(c.email)+')</option>';
+  }).join('');
+  document.getElementById('addsaving-overlay').classList.add('open');
+}
 function closeAddSaving(){ document.getElementById('addsaving-overlay').classList.remove('open'); }
-function saveSaving(){
-  const savings=parseFloat(document.getElementById('sv-savings').value)||0;
-  const entry={id:'s'+Date.now(),client:document.getElementById('sv-client').value.trim()||'Unknown',
-    trip:document.getElementById('sv-trip').value.trim(),strategy:document.getElementById('sv-strategy').value.trim(),
-    savings:savings,fee:+(savings*0.1).toFixed(2),status:document.getElementById('sv-status').value};
-  const all=loadSavings(); all.push(entry); saveSavingsData(all);
-  closeAddSaving(); renderFees(); toast('Saving logged ✓');
-  ['sv-client','sv-trip','sv-strategy','sv-savings'].forEach(function(i){document.getElementById(i).value='';});
+async function saveSaving(){
+  if(!ADMIN_TOKEN)return;
+  var clientEmail=document.getElementById('sv-client-email').value;
+  if(!clientEmail){toast('Select a client first');return;}
+  var client=CLIENTS.find(function(c){return c.email===clientEmail;});
+  if(!client){toast('Client not found');return;}
+  var bench=Math.round((parseFloat(document.getElementById('sv-benchmark').value)||0)*100);
+  if(!bench){toast('Enter a cash benchmark');return;}
+  var taxes=Math.round((parseFloat(document.getElementById('sv-taxes').value)||0)*100);
+  var pts=parseInt(document.getElementById('sv-points').value)||0;
+  var body={
+    client_id:client.id,
+    trip_label:document.getElementById('sv-trip').value.trim()||'Trip',
+    cash_benchmark_cents:bench,
+    award_taxes_fees_cents:taxes,
+    points_used:pts,
+    points_program:document.getElementById('sv-program').value.trim(),
+    status:document.getElementById('sv-status').value,
+    fee_rate_bps:1000
+  };
+  try{
+    var res=await fetch('/api/admin/savings',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify(body)});
+    if(res.ok){
+      closeAddSaving(); renderFees(); toast('Saving logged ✓');
+      ['sv-trip','sv-benchmark','sv-taxes','sv-points','sv-program'].forEach(function(i){document.getElementById(i).value='';});
+      document.getElementById('sv-client-email').value='';
+      updateSvFeePreview();
+    }else{var d=await res.json().catch(function(){return{};});toast('Save failed: '+(d.detail||'unknown'));}
+  }catch(e){toast('Network error');}
 }
-function deleteSaving(id){
-  saveSavingsData(loadSavings().filter(function(x){return x.id!==id;}));
-  renderFees(); toast('Entry removed');
+async function deleteSaving(id){
+  if(!ADMIN_TOKEN||!confirm('Delete this savings record?'))return;
+  try{
+    var res=await fetch('/api/admin/savings/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(res.ok){renderFees();toast('Entry removed');}
+    else{var d=await res.json().catch(function(){return{};});toast('Cannot delete: '+(d.detail||'unknown'));}
+  }catch(e){toast('Network error');}
 }
-function renderFees(){
-  const entries=loadSavings();
-  const total=entries.reduce(function(a,b){return a+b.savings;},0);
-  const fees=entries.reduce(function(a,b){return a+b.fee;},0);
-  document.getElementById('fees-total-savings').textContent='$'+total.toLocaleString();
-  document.getElementById('fees-total-fees').textContent='$'+fees.toFixed(2);
-  document.getElementById('fees-count').textContent=entries.length;
-  const STATUS_BADGE={Recommended:'gold',Accepted:'green',Pending:'blue',Researching:'muted'};
-  document.getElementById('fees-tbody').innerHTML = entries.length
-    ? entries.map(function(e){
-        return '<tr><td><div class="client-name">'+esc(e.client)+'</div></td><td>'+esc(e.trip)+'</td><td style="font-size:.79rem;color:var(--muted)">'+esc(e.strategy)+'</td>'
-          +'<td style="color:var(--green);font-weight:600">$'+e.savings.toLocaleString()+'</td>'
-          +'<td style="color:var(--gold);font-weight:600">$'+e.fee.toFixed(2)+'</td>'
+async function renderFees(){
+  if(!ADMIN_TOKEN)return;
+  try{
+    var res=await fetch('/api/admin/savings',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok)return;
+    var entries=await res.json();
+    var sumRes=await fetch('/api/admin/savings/summary',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    var summary=sumRes.ok?await sumRes.json():{total_gross_cents:0,total_fee_cents:0,count:0};
+    document.getElementById('fees-total-savings').textContent='$'+Math.floor((summary.total_gross_cents||0)/100).toLocaleString();
+    document.getElementById('fees-total-fees').textContent='$'+Math.floor((summary.total_fee_cents||0)/100).toLocaleString();
+    document.getElementById('fees-count').textContent=entries.length;
+    var STATUS_BADGE={draft:'muted',booked:'green',invoiced:'gold',paid:'blue',void:'muted'};
+    document.getElementById('fees-tbody').innerHTML=entries.length
+      ?entries.map(function(e){
+        var gross=e.gross_savings_cents||0;
+        var fee=e.fee_cents||0;
+        var reportBtn=e.report_token?'<a href="/api/report/'+esc(e.report_token)+'" target="_blank"><button class="btn-sm" style="border-color:rgba(249,115,22,.3);color:var(--accent)">&#9113; Report</button></a> ':' ';
+        var invoiceBtn=(e.status==='booked'||e.status==='invoiced'||e.status==='paid')?'<a href="/api/admin/savings/invoice/'+e.id+'" target="_blank"><button class="btn-sm">Invoice</button></a> ':' ';
+        return '<tr>'
+          +'<td><div class="client-name">'+esc(e.client_name||'—')+'</div><div style="font-size:.75rem;color:var(--muted)">'+esc(e.client_email||'')+'</div></td>'
+          +'<td>'+esc(e.trip_label||'—')+'</td>'
+          +'<td style="font-size:.79rem;color:var(--muted)">'+fmtUsdCents(gross-fee)+'</td>'
+          +'<td style="color:var(--green);font-weight:600">'+fmtUsdCents(gross)+'</td>'
+          +'<td style="color:var(--gold);font-weight:600">'+fmtUsdCents(fee)+'</td>'
           +'<td><span class="badge badge-'+(STATUS_BADGE[e.status]||'muted')+'">'+esc(e.status)+'</span></td>'
-          +'<td><button class="btn-sm" onclick="deleteSaving(\''+eid(e.id)+'\')">Remove</button></td></tr>';
+          +'<td style="display:flex;gap:4px;flex-wrap:wrap">'+reportBtn+invoiceBtn+'<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteSaving('+e.id+')">🗑</button></td></tr>';
       }).join('')
-    : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
+      :'<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
+  }catch(err){}
 }
+function fmtUsdCents(c){return '$'+Math.floor(c/100).toLocaleString()+'.'+(Math.abs(c)%100<10?'0':'')+(Math.abs(c)%100);}
 
 /* ════════════════════════════════════════════
    CLIENTS — dynamic from backend
