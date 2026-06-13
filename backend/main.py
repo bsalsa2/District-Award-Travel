@@ -2802,6 +2802,62 @@ def get_board(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     return {"columns": columns, "needs_attention": deduped}
 
 
+@app.get("/api/admin/stats")
+def admin_stats(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    now = dt.datetime.utcnow()
+    stale_cutoff = now - dt.timedelta(hours=48)
+    week_ago = now - dt.timedelta(days=7)
+    terminal = {"closed", "declined", "lost", "booked"}
+
+    trips = db.query(TripRequest).all()
+
+    trips_by_status: dict = {}
+    total_trips = 0
+    active_trips = 0
+    trips_stale = 0
+    for t in trips:
+        total_trips += 1
+        s = t.workflow_status or "new"
+        trips_by_status[s] = trips_by_status.get(s, 0) + 1
+        if s not in terminal:
+            active_trips += 1
+            updated = t.last_activity_at or t.created_at
+            if updated and updated < stale_cutoff:
+                trips_stale += 1
+
+    total_clients = db.query(Client).count()
+    new_clients_this_week = db.query(Client).filter(Client.created_at >= week_ago).count()
+
+    savings_recs = db.query(SavingsRecord).filter(
+        SavingsRecord.status.in_(["booked", "invoiced", "paid"])
+    ).all()
+    total_savings_cents = 0
+    total_fees_cents = 0
+    for rec in savings_recs:
+        gross = calc_gross_savings(
+            rec.cash_benchmark_cents,
+            rec.award_taxes_fees_cents,
+            rec.other_out_of_pocket_cents,
+        )
+        total_savings_cents += max(gross, 0)
+        total_fees_cents += calc_fee(gross, rec.fee_rate_bps)
+
+    n_savings = len(savings_recs)
+    avg_savings_per_trip_cents = (total_savings_cents // n_savings) if n_savings else 0
+
+    return {
+        "trips_by_status": trips_by_status,
+        "total_clients": total_clients,
+        "total_trips": total_trips,
+        "active_trips": active_trips,
+        "total_savings_cents": total_savings_cents,
+        "total_fees_cents": total_fees_cents,
+        "avg_savings_per_trip_cents": avg_savings_per_trip_cents,
+        "trips_stale": trips_stale,
+        "new_clients_this_week": new_clients_this_week,
+    }
+
+
 @app.get("/api/admin/trips")
 def list_trips(client_email: Optional[str] = None, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     now = dt.datetime.utcnow()

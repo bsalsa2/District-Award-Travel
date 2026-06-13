@@ -335,6 +335,25 @@
   .kb-attention-list{display:flex;flex-direction:column;gap:4px}
   .kb-attn-item{font-size:13px;color:var(--text,#faf8f3);display:flex;justify-content:space-between;align-items:center;gap:8px}
   .kb-attn-item-sub{font-size:11px;color:var(--muted,rgba(250,248,243,.55))}
+
+  /* CLIENT DETAIL DRAWER */
+  .client-drawer{position:fixed;right:0;top:0;height:100vh;width:400px;background:var(--surface,#fff);border-left:1px solid var(--border);z-index:200;transform:translateX(100%);transition:transform .3s ease;overflow-y:auto;display:flex;flex-direction:column}
+  .client-drawer.open{transform:translateX(0)}
+  .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199;display:none}
+  .drawer-overlay.open{display:block}
+  .drawer-header{display:flex;align-items:flex-start;justify-content:space-between;padding:24px 20px 16px;border-bottom:1px solid var(--border);gap:12px}
+  .drawer-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:0;line-height:1;flex-shrink:0}
+  .drawer-close:hover{color:var(--text)}
+  .drawer-body{padding:20px;flex:1;display:flex;flex-direction:column;gap:20px}
+  .drawer-stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .drawer-stat-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+  .drawer-stat-value{font-size:1.4rem;font-weight:700;color:var(--text)}
+  .drawer-stat-sub{font-size:.8rem;color:var(--muted);margin-top:2px}
+  .drawer-actions{display:flex;flex-direction:column;gap:8px}
+  .drawer-action-btn{width:100%;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;font-weight:600;cursor:pointer;text-align:left;transition:background .15s}
+  .drawer-action-btn:hover{background:var(--card)}
+  .drawer-snippet{font-size:.83rem;color:var(--muted);background:var(--card);border-radius:8px;padding:10px 14px;border:1px solid var(--border);font-style:italic;line-height:1.5}
+  @media(max-width:640px){.client-drawer{width:100%}}
 </style>
 </head>
 <body>
@@ -1115,7 +1134,8 @@ function renderClientsTable(){
   const html = CLIENTS.length
     ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Added</th><th></th></tr></thead><tbody>'
       + CLIENTS.map(function(c){
-          return '<tr><td><div class="client-name">'+esc(c.name)+'</div></td>'
+          return '<tr style="cursor:pointer" onclick="openClientDrawer(\''+esc(c.email)+'\')">'
+            +'<td><div class="client-name">'+esc(c.name)+'</div></td>'
             +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
             +'<td><span class="badge badge-blue">'+esc(c.tier)+'</span></td>'
             +'<td><div class="client-sub">'+(c.created_at||'').slice(0,10)+'</div></td>'
@@ -2183,6 +2203,91 @@ async function loadExpiringPoints(){
   }catch(e){}
 }
 
+
+/* ════════════════════════════════════════════
+   CLIENT DETAIL DRAWER
+   ════════════════════════════════════════════ */
+let _drawerEmail=null;
+function openClientDrawer(email){
+  _drawerEmail=email;
+  const overlay=document.getElementById('client-drawer-overlay');
+  const drawer=document.getElementById('client-drawer');
+  const content=document.getElementById('client-drawer-content');
+  const client=CLIENTS.find(function(c){return c.email===email;});
+  const nameEl=document.getElementById('client-drawer-name');
+  const emailEl=document.getElementById('client-drawer-email');
+  if(nameEl) nameEl.textContent=client?client.name:'';
+  if(emailEl) emailEl.textContent=email;
+  overlay.classList.add('open');
+  drawer.classList.add('open');
+  content.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Loading…</div>';
+  _renderClientDrawer(email);
+}
+function closeClientDrawer(){
+  document.getElementById('client-drawer-overlay').classList.remove('open');
+  document.getElementById('client-drawer').classList.remove('open');
+  _drawerEmail=null;
+}
+async function _renderClientDrawer(email){
+  const content=document.getElementById('client-drawer-content');
+  const client=CLIENTS.find(function(c){return c.email===email;});
+  if(!client){content.innerHTML='<div style="padding:20px;color:var(--muted)">Client not found.</div>';return;}
+
+  // fetch savings
+  let savingsTotal=0;
+  try{
+    const sRes=await fetch('/api/admin/savings?client_email='+encodeURIComponent(email),
+      {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(sRes.ok){
+      const sData=await sRes.json();
+      const items=Array.isArray(sData)?sData:(sData.savings||[]);
+      savingsTotal=items.reduce(function(sum,s){return sum+(s.gross_savings_cents||0);},0);
+    }
+  }catch(e){}
+
+  // latest message from INBOX if available
+  let msgSnippet='';
+  if(typeof INBOX!=='undefined'){
+    const thread=INBOX.find(function(t){return t.email===email;});
+    if(thread&&thread.last&&thread.last.text){
+      msgSnippet=thread.last.text.slice(0,80)+(thread.last.text.length>80?'…':'');
+    }
+  }
+
+  // open trips from client data
+  const trips=Array.isArray(client.trips)?client.trips:[];
+  const openTrips=trips.filter(function(t){return t.workflow_status!=='closed'&&t.workflow_status!=='declined';}).length;
+  const latestTrip=trips[trips.length-1];
+  const statusBadge=latestTrip&&latestTrip.workflow_status?latestTrip.workflow_status:'active';
+
+  const savingsDisplay=savingsTotal>0?'$'+(savingsTotal/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'—';
+
+  content.innerHTML=
+    '<div class="drawer-stat"><div class="drawer-stat-label">Total Savings Identified</div>'
+    +'<div class="drawer-stat-value">'+savingsDisplay+'</div></div>'
+    +(openTrips>0?'<div class="drawer-stat"><div class="drawer-stat-label">Open Trips</div>'
+      +'<div class="drawer-stat-value">'+openTrips+'</div></div>':'')
+    +(msgSnippet?'<div><div class="drawer-stat-label" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px">Latest Message</div>'
+      +'<div class="drawer-snippet">"'+msgSnippet+'"</div></div>':'')
+    +'<div class="drawer-actions">'
+    +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'chat\',document.querySelector(\'.nav-item[onclick*=chat]\'));openThread(\''+esc(email)+'\')">💬 Message</button>'
+    +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'pipeline\',document.querySelector(\'.nav-item[data-tab=pipeline]\'));">✈ New Trip</button>'
+    +'<button class="drawer-action-btn" onclick="closeClientDrawer();openAddSaving();setTimeout(function(){var s=document.getElementById(\'sv-client-email\');if(s)s.value=\''+esc(email)+'\';},50)">$ Log Saving</button>'
+    +'</div>';
+}
 </script>
+
+<!-- CLIENT DETAIL DRAWER -->
+<div class="drawer-overlay" id="client-drawer-overlay" onclick="closeClientDrawer()"></div>
+<div class="client-drawer" id="client-drawer">
+  <div class="drawer-header" id="client-drawer-header">
+    <div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text)" id="client-drawer-name"></div>
+      <div style="font-size:.82rem;color:var(--muted);margin-top:3px" id="client-drawer-email"></div>
+    </div>
+    <button class="drawer-close" onclick="closeClientDrawer()">×</button>
+  </div>
+  <div class="drawer-body" id="client-drawer-content"></div>
+</div>
 </body>
 </html>
