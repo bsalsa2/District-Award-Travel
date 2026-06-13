@@ -38,6 +38,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 @media(prefers-reduced-motion:reduce){.boot-mark,.boot-plane{animation:none}}
 
 /* ── REFERRAL CARD ── */
+.gs-card{display:none;background:#111;border-radius:14px;padding:24px 26px;margin-bottom:24px;border-left:4px solid #f97316;color:#fff}
+.gs-card.visible{display:block}
+.gs-title{font-size:16px;font-weight:700;margin-bottom:2px}
+.gs-sub{font-size:13px;color:#a1a1aa;margin-bottom:16px}
+.gs-progress-wrap{background:#333;border-radius:99px;height:4px;margin-bottom:18px;overflow:hidden}
+.gs-progress-bar{height:4px;background:#f97316;border-radius:99px;transition:width .4s}
+.gs-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.gs-step{display:flex;align-items:center;gap:10px;font-size:14px}
+.gs-step-icon{width:20px;height:20px;border-radius:50%;border:2px solid #555;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700}
+.gs-step-icon.done{border-color:#22c55e;background:#22c55e;color:#fff}
+.gs-step-icon.pending{color:transparent}
+.gs-step-label{color:#e5e7eb}
+.gs-step-label.done{color:#a1a1aa;text-decoration:line-through}
+.gs-cta{background:#f97316;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)}
+.gs-cta:hover{background:#ea6c10}
 .refer-card{background:linear-gradient(135deg,#1c1917,#292524);border-radius:14px;padding:24px 26px;margin-top:28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
 .refer-title{font-size:16px;font-weight:800;margin-bottom:4px;letter-spacing:-.3px}
 .refer-sub{font-size:13px;color:#d6d3d1;line-height:1.5;max-width:420px}
@@ -466,6 +481,14 @@ body.light-mode{
       <!-- OVERVIEW -->
       <div class="panel active" id="panel-overview">
         <div class="phead"><h1 id="ov-greeting">Welcome back</h1><p id="ov-sub">District Award Travel — Client Portal</p></div>
+        <!-- Getting Started checklist — shown for new clients -->
+        <div class="gs-card" id="gs-card">
+          <div class="gs-title">✈ Getting Started with District</div>
+          <div class="gs-sub">Complete these steps to get your plan</div>
+          <div class="gs-progress-wrap"><div class="gs-progress-bar" id="gs-bar" style="width:0%"></div></div>
+          <div class="gs-steps" id="gs-steps"></div>
+          <button class="gs-cta" id="gs-msg-btn" onclick="switchTab('messages')" style="display:none">Message your advisor →</button>
+        </div>
         <!-- Savings hero — shown when savings > 0 -->
         <div class="savings-hero" id="savings-hero">
           <div class="sh-left">
@@ -753,6 +776,9 @@ function renderPortal(c){
   // Savings tab — real booked records, with projected savings from plans as a fallback
   renderSavings(c.savings_breakdown||[],c.lifetime_savings_cents||0,c.total_fee_cents||0,plans);
 
+  // Getting started checklist for new clients
+  renderGettingStarted(c);
+
   // Referral share card (post-booking) + trip milestone badge
   renderShareCard(c.savings_breakdown||[]);
   renderTripMilestoneBadge(c.savings_breakdown||[]);
@@ -806,6 +832,48 @@ function buildShareMessage(savings){
   else if(pts)msg+=' — '+pts+' points for the whole thing';
   msg+='. If you\'ve got points sitting around, check out '+location.origin+'/';
   return msg;
+}
+
+function renderGettingStarted(c){
+  const card=document.getElementById('gs-card');
+  const stepsEl=document.getElementById('gs-steps');
+  const bar=document.getElementById('gs-bar');
+  const msgBtn=document.getElementById('gs-msg-btn');
+  if(!card||!stepsEl||!bar)return;
+
+  const trips=c.pipeline_trips||[];
+  const savings=c.savings_breakdown||[];
+  const points=c.points||c.point_programs||[];
+
+  const s1=true; // account created
+  const s2=points.some(p=>(p.balance||p.points_balance||0)>0);
+  const s3=trips.length>0;
+  const s4=trips.some(t=>{
+    const ws=(t.workflow_status||'').toLowerCase();
+    const order=['options_sent','option_selected','booking','booked','invoiced','paid','closed'];
+    return order.includes(ws);
+  });
+  const s5=savings.some(r=>['booked','invoiced','paid'].includes((r.status||r.workflow_status||'').toLowerCase()));
+
+  const steps=[
+    {label:'Account created',done:s1},
+    {label:'Share your points balances',done:s2},
+    {label:'Submit your trip request',done:s3},
+    {label:'Review your options when ready',done:s4},
+    {label:'Book and save!',done:s5},
+  ];
+  const completed=steps.filter(s=>s.done).length;
+
+  // Hide entirely if all done OR if client is already active (2+ trips and any booked savings)
+  if(completed===5||(trips.length>=2&&s5)){card.classList.remove('visible');return;}
+
+  bar.style.width=(completed/5*100)+'%';
+  stepsEl.innerHTML=steps.map(s=>`<div class="gs-step">
+    <div class="gs-step-icon ${s.done?'done':'pending'}">${s.done?'✓':''}</div>
+    <span class="gs-step-label ${s.done?'done':''}">${s.label}</span>
+  </div>`).join('');
+  msgBtn.style.display=s2?'none':'inline-block';
+  card.classList.add('visible');
 }
 
 function renderShareCard(savings){
