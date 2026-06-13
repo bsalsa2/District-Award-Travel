@@ -44,6 +44,24 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .refer-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:background .15s,transform .1s}
 .refer-btn:hover{background:#ea6c0a}.refer-btn:active{transform:scale(.98)}
 
+/* ── SHARE CARD (post-booking referral) ── */
+.share-card{display:none;background:#fff;border:1px solid var(--accent-border);border-radius:14px;padding:24px 26px;margin-top:28px;position:relative;overflow:hidden}
+.share-card.visible{display:block}
+.share-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f97316,#fbbf24)}
+.share-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:8px}
+.share-title{font-size:16px;font-weight:800;letter-spacing:-.3px;margin-bottom:10px}
+.share-quote{font-size:14px;color:var(--muted);line-height:1.6;background:var(--card);border-left:3px solid var(--accent-border);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:18px;font-style:italic}
+.share-actions{display:flex;gap:10px;flex-wrap:wrap}
+.share-btn{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:9px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font);transition:background .15s,transform .1s}
+.share-btn:active{transform:scale(.98)}
+.share-btn-copy{background:var(--accent);color:#fff}
+.share-btn-copy:hover{background:#ea6c0a}
+.share-btn-email{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)}
+.share-btn-email:hover{background:rgba(249,115,22,.14)}
+
+/* ── TRIP MILESTONE BADGE ── */
+.trip-count-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);margin-top:10px;letter-spacing:.01em}
+
 /* ── LOGIN (dark cinematic, matches landing hero) ── */
 #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:#0c0905;position:relative;overflow:hidden}
 #login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 55% at 50% 25%,rgba(249,115,22,.16),transparent 65%),radial-gradient(ellipse 45% 40% at 15% 80%,rgba(249,115,22,.07),transparent 60%);pointer-events:none}
@@ -367,6 +385,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
             <div class="sh-label">Total Saved with District</div>
             <div class="sh-amount" id="sh-amount">$0</div>
             <div class="sh-tagline"><strong id="sh-trips-saved">0 trips</strong> · documented &amp; verified</div>
+            <div id="sh-trip-milestone"></div>
           </div>
           <div class="sh-right">
             <div class="sh-fee-label">Advisory fee</div>
@@ -393,6 +412,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
             <div class="refer-sub">Most of our clients come from referrals. Send them our way — they'll thank you after their first business-class redemption.</div>
           </div>
           <button class="refer-btn" id="refer-btn" onclick="copyReferral()">Copy invite link</button>
+        </div>
+        <!-- Share card — only visible after a booked/invoiced/paid trip -->
+        <div class="share-card" id="share-card">
+          <div class="share-eyebrow">✈ Tell a friend about District</div>
+          <div class="share-title">Share the savings</div>
+          <div class="share-quote" id="share-quote">Loading your story…</div>
+          <div class="share-actions">
+            <button class="share-btn share-btn-copy" id="share-copy-btn" onclick="copyShareMsg()">📋 Copy message</button>
+            <button class="share-btn share-btn-email" id="share-email-btn" onclick="emailShareMsg()">✉ Email a friend</button>
+          </div>
         </div>
       </div>
 
@@ -594,6 +623,10 @@ function renderPortal(c){
   // Savings tab — real booked records, with projected savings from plans as a fallback
   renderSavings(c.savings_breakdown||[],c.lifetime_savings_cents||0,c.total_fee_cents||0,plans);
 
+  // Referral share card (post-booking) + trip milestone badge
+  renderShareCard(c.savings_breakdown||[]);
+  renderTripMilestoneBadge(c.savings_breakdown||[]);
+
   // Points tab
   renderPoints(c.points||[]);
 }
@@ -623,6 +656,60 @@ function copyReferral(){
   function done(){btn.textContent='✓ Copied — send it!';setTimeout(()=>btn.textContent='Copy invite link',2500);}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(done).catch(()=>prompt('Copy your invite link:',url));}
   else prompt('Copy your invite link:',url);
+}
+
+// Build a share message from the client's best (largest) saving
+function buildShareMessage(savings){
+  const booked=(savings||[]).filter(r=>['booked','invoiced','paid'].includes((r.status||r.workflow_status||'').toLowerCase()));
+  if(!booked.length)return null;
+  const best=booked.reduce((a,b)=>(b.gross_savings_cents||0)>(a.gross_savings_cents||0)?b:a,booked[0]);
+  const dest=best.trip_label||best.destination||null;
+  const saved=best.gross_savings_cents?fmtUsd(best.gross_savings_cents):null;
+  const pts=best.points_used?fmtNum(best.points_used):null;
+  const prog=best.points_program||null;
+  let msg='I just booked a trip through District Award Travel';
+  if(dest)msg+=' to '+dest;
+  if(saved)msg+=' and saved '+saved;
+  if(pts&&prog)msg+=' — '+pts+' '+prog+' points instead of paying cash';
+  else if(pts)msg+=' — '+pts+' points for the whole thing';
+  msg+='. If you\'ve got points sitting around, check out '+location.origin+'/';
+  return msg;
+}
+
+function renderShareCard(savings){
+  const card=document.getElementById('share-card');
+  const quoteEl=document.getElementById('share-quote');
+  if(!card||!quoteEl)return;
+  const msg=buildShareMessage(savings);
+  if(!msg){card.classList.remove('visible');return;}
+  card.classList.add('visible');
+  quoteEl.textContent=msg;
+}
+
+function copyShareMsg(){
+  const msg=document.getElementById('share-quote').textContent;
+  const btn=document.getElementById('share-copy-btn');
+  function done(){btn.textContent='✓ Copied!';setTimeout(()=>btn.innerHTML='📋 Copy message',2000);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(msg).then(done).catch(()=>prompt('Copy this message:',msg));}
+  else prompt('Copy this message:',msg);
+}
+
+function emailShareMsg(){
+  const msg=document.getElementById('share-quote').textContent;
+  const subject=encodeURIComponent('Check out District Award Travel');
+  const body=encodeURIComponent(msg);
+  window.location.href='mailto:?subject='+subject+'&body='+body;
+}
+
+function renderTripMilestoneBadge(savings){
+  const el=document.getElementById('sh-trip-milestone');
+  if(!el)return;
+  const completed=(savings||[]).filter(r=>{const s=(r.status||r.workflow_status||'').toLowerCase();return s==='booked'||s==='closed'||s==='invoiced'||s==='paid';}).length;
+  if(completed>=2){
+    el.innerHTML='<span class="trip-count-badge">&#x2708; '+completed+'-Trip Traveler</span>';
+  }else{
+    el.innerHTML='';
+  }
 }
 
 function setUnread(n){
