@@ -164,6 +164,15 @@
   .achat-send { background:var(--accent); color:#fff; border:none; border-radius:9px; padding:10px 18px;
     font-weight:700; font-size:.85rem; cursor:pointer; font-family:var(--font); }
   .achat-send:disabled { opacity:.5; cursor:not-allowed; }
+  .achat-tpl-wrap { position:relative; flex-shrink:0; }
+  .achat-tpl-btn { background:var(--surface); color:var(--text); border:1px solid var(--border2); border-radius:9px; padding:10px 13px;
+    font-weight:600; font-size:.82rem; cursor:pointer; font-family:var(--font); white-space:nowrap; }
+  .achat-tpl-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .achat-tpl-menu { display:none; position:absolute; bottom:calc(100% + 6px); left:0; min-width:210px; background:var(--surface);
+    border:1px solid var(--border2); border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,.35); z-index:200; overflow:hidden; }
+  .achat-tpl-menu.open { display:block; }
+  .achat-tpl-item { padding:9px 14px; font-size:.84rem; cursor:pointer; color:var(--text); }
+  .achat-tpl-item:hover { background:var(--accent-dim); color:var(--accent); }
   .chat-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:.85rem; padding:40px; text-align:center; }
   @media(max-width:880px){ .chat-layout{grid-template-columns:1fr;} .chat-list{display:none;} .chat-layout.show-list .chat-list{display:block;} .chat-layout.show-list .chat-pane{display:none;} }
 
@@ -523,6 +532,18 @@
               <div class="chat-pane-head" id="chat-pane-head">Select a conversation</div>
               <div class="achat-scroll" id="achat-scroll"><div class="chat-empty">Pick a client on the left to see your conversation.</div></div>
               <div class="achat-compose" id="achat-compose" style="display:none">
+                <div class="achat-tpl-wrap">
+                  <button class="achat-tpl-btn" onclick="toggleChatTplMenu(event)" title="Insert template">&#128203; Templates</button>
+                  <div class="achat-tpl-menu" id="achat-tpl-menu">
+                    <div class="achat-tpl-item" onclick="insertChatTpl('options_ready')">Options Ready</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_nudge')">Nudge</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_invoice')">Invoice</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_checkin')">Check-in</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_recommend')">Recommendation Ready</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_balances')">Request Balances</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_deadline')">Deadline Alert</div>
+                  </div>
+                </div>
                 <textarea class="achat-input" id="achat-input" rows="1" placeholder="Type a reply…" onkeydown="achatKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"></textarea>
                 <button class="achat-send" id="achat-send" onclick="sendAdminChat()">Send</button>
               </div>
@@ -1961,6 +1982,59 @@ function chatShowList(){
   document.getElementById('chat-layout').classList.add('show-list');
   document.getElementById('chat-back-btn').style.display='none';
 }
+/* ── Chat template quick-insert ── */
+const CHAT_TEMPLATES={
+  options_ready:"Hi [name], I've put together some travel options for your trip! Take a look and let me know what you think.",
+  chat_nudge:"Hi [name], just checking in on those travel options I sent over. Any questions?",
+  chat_invoice:"Hi [name], attaching your advisory fee invoice for the [destination] booking. Thanks for choosing District!",
+  chat_checkin:"Hi [name], how's everything going with your upcoming trip? Let me know if you need anything!",
+  chat_recommend:"Hi [name], your award travel recommendation is ready! Log into your portal to check it out, and let me know if you have any questions.",
+  chat_balances:"Hi [name], to map the best strategy for your trip I need your current points balances. A quick screenshot works great!",
+  chat_deadline:"Hi [name], heads-up — there's a time-sensitive award window I want to make sure you don't miss. Can we connect soon?"
+};
+function chatTplFirstName(){
+  if(!CHAT_EMAIL) return '';
+  const c=CLIENTS.find(function(c){return c.email===CHAT_EMAIL;});
+  if(c&&c.name) return c.name.split(' ')[0];
+  const row=INBOX.find(function(r){return r.email===CHAT_EMAIL;});
+  if(row&&row.name) return row.name.split(' ')[0];
+  return '';
+}
+function chatTplDestination(){
+  if(!CHAT_EMAIL) return '[destination]';
+  const c=CLIENTS.find(function(c){return c.email===CHAT_EMAIL;});
+  if(c&&Array.isArray(c.trips)&&c.trips.length){
+    const t=c.trips[c.trips.length-1];
+    if(t.destination) return t.destination;
+    if(t.dest) return t.dest;
+  }
+  return '[destination]';
+}
+function insertChatTpl(key){
+  const raw=CHAT_TEMPLATES[key]||'';
+  const firstName=chatTplFirstName()||'[name]';
+  const dest=chatTplDestination();
+  const text=raw.replace(/\[name\]/g,firstName).replace(/\[destination\]/g,dest);
+  const ta=document.getElementById('achat-input');
+  ta.value=text;
+  ta.style.height='auto';
+  ta.style.height=Math.min(ta.scrollHeight,110)+'px';
+  closeChatTplMenu();
+  ta.focus();
+}
+function toggleChatTplMenu(e){
+  e.stopPropagation();
+  const m=document.getElementById('achat-tpl-menu');
+  m.classList.toggle('open');
+}
+function closeChatTplMenu(){
+  const m=document.getElementById('achat-tpl-menu');
+  if(m) m.classList.remove('open');
+}
+document.addEventListener('click',function(e){
+  const wrap=e.target.closest('.achat-tpl-wrap');
+  if(!wrap) closeChatTplMenu();
+});
 function achatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAdminChat();}}
 
 async function sendAdminChat(){

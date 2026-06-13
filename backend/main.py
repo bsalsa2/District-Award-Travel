@@ -1388,6 +1388,30 @@ def public_proof(request: Request, db: Session = Depends(get_db)):
     }
 
 
+@app.get("/api/public/stats")
+@limiter.limit("60/minute")
+def public_stats(request: Request, db: Session = Depends(get_db)):
+    """Public aggregate savings stats — no auth required, no client data exposed."""
+    recs = db.query(SavingsRecord).filter(
+        SavingsRecord.status.in_(["booked", "invoiced", "paid"])
+    ).all()
+    total_savings_cents = 0
+    for rec in recs:
+        gross = calc_gross_savings(
+            rec.cash_benchmark_cents,
+            rec.award_taxes_fees_cents,
+            rec.other_out_of_pocket_cents,
+        )
+        total_savings_cents += max(gross, 0)
+    trips_completed = len(recs)
+    avg_savings_cents = (total_savings_cents // trips_completed) if trips_completed else 0
+    return {
+        "total_savings_cents": total_savings_cents,
+        "trips_completed": trips_completed,
+        "avg_savings_cents": avg_savings_cents,
+    }
+
+
 # Illustrative seeded examples — labeled real:false server-side so a fake can
 # never render as documented. (route, cash_cents, taxes_fees_cents, other_cents, points_used)
 ILLUSTRATIVE_EXAMPLES = [
