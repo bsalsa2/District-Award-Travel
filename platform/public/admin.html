@@ -921,6 +921,19 @@
 let ADMIN_TOKEN = null;
 let CLIENTS = [];
 
+async function exportCSV(url, filename) {
+  if(!ADMIN_TOKEN){toast('Not logged in');return;}
+  try{
+    const res = await fetch(url, {headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN}});
+    if(!res.ok){toast('Export failed: ' + res.status);return;}
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  }catch(e){toast('Export error');}
+}
+
 /* ════════════════════════════════════════════
    ACTION ITEMS — localStorage persistence
    ════════════════════════════════════════════ */
