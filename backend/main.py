@@ -41,7 +41,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -1279,6 +1279,57 @@ def validate_intake(data: dict) -> dict:
     return clean
 
 
+class IntakeIn(BaseModel):
+    """Pydantic model for /api/intake — enforces field types and length caps."""
+
+    model_config = {"extra": "allow"}
+
+    # Core required fields
+    email: EmailStr
+    # Optional named fields with explicit length bounds
+    first_name: str = Field("", max_length=100)
+    last_name: str = Field("", max_length=100)
+    phone: str = Field("", max_length=30)
+    travel_goals: str = Field("", max_length=5000)
+    notes: str = Field("", max_length=5000)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalise_email(cls, v: object) -> str:
+        v = str(v).strip().lower()
+        if "\n" in v or "\r" in v or len(v) > 254:
+            raise ValueError("invalid email")
+        return v
+
+    @model_validator(mode="after")
+    def cap_extra_fields(self) -> "IntakeIn":
+        """Cap every extra field (trip_*/pts_* etc.) at 500 chars."""
+        extras = self.model_extra or {}
+        capped: dict[str, object] = {}
+        for k, v in extras.items():
+            sv = str(v) if v is not None else ""
+            if len(sv) > 500:
+                raise ValueError(f"Field '{k}' exceeds 500 characters")
+            capped[k] = sv
+        # Replace extra fields in-place with the capped versions
+        for k, v in capped.items():
+            self.__pydantic_extra__[k] = v  # type: ignore[index]
+        return self
+
+    def to_flat_dict(self) -> dict:
+        """Return a flat dict of all fields (named + extra) as strings."""
+        base = {
+            "email": self.email,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "phone": self.phone,
+            "travel_goals": self.travel_goals,
+            "notes": self.notes,
+        }
+        base.update(self.model_extra or {})
+        return base
+
+
 @app.post("/api/intake")
 @limiter.limit("10/hour")
 async def submit_intake(request: Request, db: Session = Depends(get_db)):
@@ -1286,7 +1337,13 @@ async def submit_intake(request: Request, db: Session = Depends(get_db)):
         raw = await request.json()
     except Exception:
         raise HTTPException(status_code=422, detail="Invalid JSON")
-    data = validate_intake(raw)
+    if not isinstance(raw, dict) or len(raw) > INTAKE_MAX_KEYS:
+        raise HTTPException(status_code=422, detail="Invalid submission")
+    try:
+        intake_model = IntakeIn.model_validate(raw)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    data = intake_model.to_flat_dict()
     # Honeypot: the form has an invisible 'hp' field — humans never fill it,
     # bots do. Accept silently (so bots don't adapt) but store nothing.
     if str(data.get("hp", "")).strip():
