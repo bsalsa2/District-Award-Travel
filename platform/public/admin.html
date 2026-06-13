@@ -1074,13 +1074,20 @@ async function renderFees(){
           +'<td style="font-size:.79rem;color:var(--muted)">'+fmtUsdCents(gross-fee)+'</td>'
           +'<td style="color:var(--green);font-weight:600">'+fmtUsdCents(gross)+'</td>'
           +'<td style="color:var(--gold);font-weight:600">'+fmtUsdCents(fee)+'</td>'
-          +'<td><span class="badge badge-'+(STATUS_BADGE[e.status]||'muted')+'">'+esc(e.status)+'</span></td>'
+          +'<td><select class="sv-status-sel" data-id="'+e.id+'" style="font-size:.78rem;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 6px;cursor:pointer"><option value="draft"'+(e.status==='draft'?' selected':'')+'>draft</option><option value="booked"'+(e.status==='booked'?' selected':'')+'>booked</option><option value="invoiced"'+(e.status==='invoiced'?' selected':'')+'>invoiced</option><option value="paid"'+(e.status==='paid'?' selected':'')+'>paid</option><option value="void"'+(e.status==='void'?' selected':'')+'>void</option></select><span class="sv-saved-flash" id="sv-flash-'+e.id+'" style="font-size:.72rem;color:var(--green);margin-left:4px;opacity:0;transition:opacity .3s"></span></td>'
           +'<td style="display:flex;gap:4px;flex-wrap:wrap">'+reportBtn+invoiceBtn+'<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteSaving('+e.id+')">🗑</button></td></tr>';
       }).join('')
       :'<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
   }catch(err){}
 }
 function fmtUsdCents(c){return '$'+Math.floor(c/100).toLocaleString()+'.'+(Math.abs(c)%100<10?'0':'')+(Math.abs(c)%100);}
+document.addEventListener('change',async function(e){
+  if(!e.target.classList.contains('sv-status-sel'))return;
+  var id=e.target.dataset.id; var st=e.target.value;
+  var res=await fetch('/api/admin/savings/'+id,{method:'PATCH',headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({status:st})});
+  var flash=document.getElementById('sv-flash-'+id);
+  if(res.ok&&flash){flash.textContent='✓ Saved';flash.style.opacity='1';setTimeout(function(){flash.style.opacity='0';},2000);}
+});
 
 /* ════════════════════════════════════════════
    CLIENTS — dynamic from backend
@@ -2041,6 +2048,14 @@ document.addEventListener('keydown',function(e){
 /* ════════════════════════════════════════════
    NAV / UTILS
    ════════════════════════════════════════════ */
+var boardTimer=null;
+function _startBoardPoll(){
+  if(boardTimer)return;
+  boardTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadBoard();},30000);
+}
+function _stopBoardPoll(){
+  clearInterval(boardTimer);boardTimer=null;
+}
 function switchPanel(id,btn){
   document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active');});
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
@@ -2048,7 +2063,11 @@ function switchPanel(id,btn){
   const el=document.getElementById('panel-'+id);
   if(el) el.classList.add('active');
   if(id==='chat')loadInbox();
+  if(id==='pipeline'){loadBoard();_startBoardPoll();}else{_stopBoardPoll();}
 }
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&boardTimer)loadBoard();
+});
 let toastTimer=null;
 function toast(msg){
   const t=document.getElementById('toast');
