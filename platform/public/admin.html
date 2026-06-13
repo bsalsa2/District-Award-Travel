@@ -372,7 +372,7 @@
   .kb-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,rgba(250,248,243,.55))}
   .kb-col-count{font-size:11px;font-weight:700;background:rgba(249,115,22,.18);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:100px;padding:2px 7px}
   .kb-cards{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:80px}
-  .kb-card{background:var(--card,#1a1814);border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.07));padding:10px 12px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .kb-card{background:var(--card,#1a1814);border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.07));padding:10px 12px;cursor:pointer}
   .kb-card:hover{border-color:rgba(249,115,22,.3);box-shadow:0 2px 12px rgba(249,115,22,.08)}
   .kb-card.stale{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)}
   .kb-card.critical{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
@@ -384,7 +384,19 @@
   .kb-card-crit{font-size:10px;background:rgba(239,68,68,.15);color:#f87171;border-radius:4px;padding:1px 5px;font-weight:700}
   .kb-advance-btn{display:inline-flex;align-items:center;justify-content:center;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.2);color:#f97316;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
   .kb-advance-btn:hover{background:rgba(249,115,22,.2)}
-  .kb-empty{padding:20px 12px;text-align:center;font-size:12px;color:var(--dim,rgba(250,248,243,.3))}
+  .kb-empty{border:1px dashed rgba(249,115,22,.15);border-radius:10px;padding:24px;text-align:center;font-size:12px;color:var(--dim,rgba(250,248,243,.3));margin:4px}
+  /* ── STATUS BADGE COLORS ── */
+  .badge.status-new{background:rgba(59,130,246,.15);color:#60a5fa}
+  .badge.status-researching{background:rgba(245,158,11,.15);color:#fbbf24}
+  .badge.status-options_sent{background:rgba(139,92,246,.15);color:#a78bfa}
+  .badge.status-awaiting_decision{background:rgba(249,115,22,.15);color:#fb923c}
+  .badge.status-booked{background:rgba(22,163,74,.15);color:#4ade80}
+  .badge.status-closed{background:var(--card);color:var(--muted)}
+  .badge.status-declined{background:rgba(239,68,68,.12);color:#f87171}
+  .badge.status-lost{background:rgba(239,68,68,.12);color:#f87171}
+  /* ── KB CARD ENTRANCE ANIMATION ── */
+  .kb-card{opacity:0;transform:translateY(8px)}
+  .kb-card.kb-card-visible{opacity:1;transform:none;transition:opacity .3s ease,transform .3s ease,border-color .15s,box-shadow .15s}
   .kb-attention{background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;padding:12px 16px;margin-bottom:16px}
   .kb-attention-title{font-size:12px;font-weight:700;color:#fb923c;margin-bottom:8px}
   .kb-attention-list{display:flex;flex-direction:column;gap:4px}
@@ -1407,12 +1419,15 @@ function renderClientsTable(clientsToRender){
   var countEl = document.getElementById('client-count-indicator');
   if(countEl && clientsToRender === undefined) countEl.textContent = 'Showing ' + CLIENTS.length + ' of ' + CLIENTS.length + ' clients';
   const html = list.length
-    ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Added</th><th></th></tr></thead><tbody>'
+    ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>'
       + list.map(function(c){
+          var cTrips=Array.isArray(c.trips)?c.trips:[];
+          var cStatus=cTrips.length?cTrips[cTrips.length-1].workflow_status:(c.workflow_status||'');
           return '<tr style="cursor:pointer" onclick="openClientDrawer(\''+esc(c.email)+'\')">'
             +'<td><div class="client-name">'+esc(c.name)+'</div></td>'
             +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
             +'<td><span class="badge badge-blue">'+esc(c.tier)+'</span></td>'
+            +'<td>'+(cStatus?'<span class="badge status-'+esc(cStatus)+'">'+esc(cStatus.replace(/_/g,' '))+'</span>':'<span style="color:var(--dim);font-size:.75rem">—</span>')+'</td>'
             +'<td><div class="client-sub">'+(c.created_at||'').slice(0,10)+'</div></td>'
             +'<td onclick="event.stopPropagation()"><div style="display:flex;gap:5px;flex-wrap:wrap">'
             +'<button class="btn-sm" onclick="composeTo(\''+esc(c.name)+'\',\''+esc(c.email)+'\')">✉</button>'
@@ -2521,6 +2536,7 @@ function renderBoard(data){
   if(badge){if(attn.length){badge.textContent=attn.length;badge.style.display='';}else{badge.style.display='none';}}
   // Board columns
   var board=document.getElementById('kanban-board');
+  var cardIndex=0;
   board.innerHTML=KB_COLS.map(function(col){
     var cards=(cols[col.key]||[]);
     var cardHtml=cards.length?cards.map(function(t){
@@ -2529,14 +2545,20 @@ function renderBoard(data){
       var hrs=t.hours_in_stage?Math.round(t.hours_in_stage)+'h':'';
       var advBtn=(!['closed','declined','lost','booked'].includes(t.workflow_status))?
         '<button class="kb-advance-btn" onclick="event.stopPropagation();advanceTrip('+t.id+')">&#x2192;</button>':'';
-      return '<div class="'+cls+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer">'+
+      var idx=cardIndex++;
+      return '<div class="'+cls+'" data-kb-idx="'+idx+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer">'+
         '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+'</div>'+
         '<div class="kb-card-client">'+esc(t.client_name||t.client_email||'')+'</div>'+
         '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+advBtn+'</div></div>';
-    }).join(''):'<div class="kb-empty">&#x2014;</div>';
+    }).join(''):'<div class="kb-empty">&#x2708;<br>No trips here</div>';
     return '<div class="kb-col"><div class="kb-col-head"><span class="kb-col-title">'+col.label+'</span>'+
       '<span class="kb-col-count">'+cards.length+'</span></div><div class="kb-cards">'+cardHtml+'</div></div>';
   }).join('');
+  // Staggered entrance animation
+  board.querySelectorAll('.kb-card').forEach(function(el){
+    var delay=(parseInt(el.getAttribute('data-kb-idx'),10)||0)*40;
+    setTimeout(function(){el.classList.add('kb-card-visible');},delay);
+  });
 }
 
 async function advanceTrip(tripId){
@@ -2780,10 +2802,9 @@ function openTripDetail(trip) {
   if (trip.dates) metaParts.push('Dates: ' + trip.dates);
   if (trip.cabin) metaParts.push('Cabin: ' + trip.cabin);
   if (trip.passengers) metaParts.push('Pax: ' + trip.passengers);
-  if (trip.workflow_status) metaParts.push('Status: ' + trip.workflow_status);
   document.getElementById('td-meta').innerHTML = metaParts.map(function(p){
     return '<span style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2px 10px">'+esc(p)+'</span>';
-  }).join('');
+  }).join('')+(trip.workflow_status?'<span class="badge status-badge status-'+esc(trip.workflow_status)+'" style="margin-left:6px">'+esc(trip.workflow_status.replace(/_/g,' '))+'</span>':'');
   var ta = document.getElementById('td-research-notes');
   ta.value = trip.research_notes || '';
   document.getElementById('td-rn-count').textContent = ta.value.length + ' / 10000';

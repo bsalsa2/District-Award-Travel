@@ -2663,6 +2663,43 @@ def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depe
     return {"ok": True}
 
 
+@app.get("/api/admin/search")
+@limiter.limit("30/minute")
+def admin_search(request: Request, q: str = "", db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Global search across clients, trips, and savings records."""
+    if len(q) < 2:
+        return {"clients": [], "trips": [], "savings": []}
+    pat = f"%{q}%"
+    # Clients
+    client_rows = db.query(Client).filter(
+        (Client.name.ilike(pat)) | (Client.email.ilike(pat))
+    ).limit(20).all()
+    clients_out = [{"id": c.id, "name": c.name, "email": c.email, "type": "client"} for c in client_rows]
+
+    # Trips — join client for name/email
+    trip_rows = db.query(TripRequest, Client).join(Client, TripRequest.client_id == Client.id).filter(
+        (TripRequest.destination.ilike(pat)) | (TripRequest.notes.ilike(pat))
+    ).limit(20).all()
+    trips_out = [
+        {"id": t.id, "destination": t.destination, "client_name": c.name, "client_email": c.email,
+         "status": t.workflow_status, "type": "trip"}
+        for t, c in trip_rows
+    ]
+
+    # Savings — join client for email
+    sav_rows = db.query(SavingsRecord, Client).join(Client, SavingsRecord.client_id == Client.id).filter(
+        (SavingsRecord.trip_label.ilike(pat)) | (Client.email.ilike(pat))
+    ).limit(20).all()
+    savings_out = [
+        {"id": r.id, "trip_label": r.trip_label, "client_email": c.email,
+         "gross_savings_cents": calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents),
+         "type": "saving"}
+        for r, c in sav_rows
+    ]
+
+    return {"clients": clients_out, "trips": trips_out, "savings": savings_out}
+
+
 @app.get("/api/admin/export/clients")
 def export_clients(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     """Export all clients as a CSV file."""

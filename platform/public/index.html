@@ -600,6 +600,9 @@ nav.scrolled .mobile-menu .mobile-link{color:var(--muted);border-color:var(--bor
     <circle cx="280" cy="450" r="2" fill="rgba(249,115,22,.4)"/>
   </svg>
 
+  <!-- Hero globe mini-visualization — desktop only -->
+  <canvas id="hero-globe" aria-hidden="true" style="position:absolute;right:-60px;top:50%;transform:translateY(-50%);width:280px;height:280px;opacity:0.35;pointer-events:none;display:none"></canvas>
+
   <div class="hero-inner">
     <div class="hero-eyebrow"><span class="hero-eyebrow-dot"></span>District Award Travel — DC Metro</div>
     <h1 class="hero-h1">Your points are sitting on<br><em>a first-class ticket.</em></h1>
@@ -1116,14 +1119,14 @@ fetch('/api/public/examples').then(function(r){return r.json()}).then(function(r
 (function(){
   var track=document.getElementById('marquee-track');if(!track)return;
   var ROUTES=[
-    ['IAD → NRT','ANA Business · 75k'],
-    ['DCA → CDG','Air France Business · 60k'],
-    ['IAD → LHR','Virgin Upper Class · 47k'],
-    ['BWI → LIS','TAP Business · 45k'],
-    ['IAD → DOH','Qsuites Business · 70k'],
-    ['DCA → HNL','Lie-flat to Hawaii · 50k'],
-    ['IAD → DXB','Emirates First · 102k'],
-    ['BWI → CUN','Family of four · 100k']
+    ['🇯🇵 IAD → NRT','ANA Business · 75k'],
+    ['🇫🇷 DCA → CDG','Air France Business · 60k'],
+    ['🇬🇧 IAD → LHR','Virgin Upper Class · 47k'],
+    ['🇵🇹 BWI → LIS','TAP Business · 45k'],
+    ['🇶🇦 IAD → DOH','Qsuites Business · 70k'],
+    ['🇺🇸 DCA → HNL','Lie-flat to Hawaii · 50k'],
+    ['🇦🇪 IAD → DXB','Emirates First · 102k'],
+    ['🇲🇽 BWI → CUN','Family of four · 100k']
   ];
   var html='';
   ROUTES.forEach(function(r){
@@ -1249,6 +1252,141 @@ fetch('/api/public/examples').then(function(r){return r.json()}).then(function(r
   var btn=document.getElementById('back-to-top');if(!btn)return;
   window.addEventListener('scroll',function(){btn.classList.toggle('visible',window.scrollY>300);},{passive:true});
   btn.addEventListener('click',function(){window.scrollTo({top:0,behavior:'smooth'});});
+})();
+/* hero globe canvas — desktop only, > 900px viewport */
+(function(){
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var canvas=document.getElementById('hero-globe');
+  if(!canvas)return;
+  /* show only on wide viewports */
+  function checkVis(){canvas.style.display=window.innerWidth>900?'block':'none';}
+  checkVis();
+  window.addEventListener('resize',checkVis,{passive:true});
+
+  var ctx=canvas.getContext('2d');
+  var SIZE=280, DPR=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=SIZE*DPR; canvas.height=SIZE*DPR;
+  ctx.scale(DPR,DPR);
+  var R=SIZE/2-4, CX=SIZE/2, CY=SIZE/2;
+  var rotation=0;
+
+  /* destination lat/lon in degrees → canvas x,y on sphere (orthographic projection) */
+  function project(lat,lon,rot){
+    var latR=lat*Math.PI/180, lonR=(lon+rot)*Math.PI/180;
+    var x=CX+R*Math.cos(latR)*Math.sin(lonR);
+    var y=CY-R*Math.sin(latR);
+    var visible=Math.cos(latR)*Math.cos(lonR)>0; /* front hemisphere */
+    return{x:x,y:y,visible:visible};
+  }
+
+  /* destinations: [label, lat, lon] */
+  var DESTS=[
+    ['TYO', 35.7, 139.7],   /* Tokyo */
+    ['LHR', 51.5, -0.1],    /* London */
+    ['SYD', -33.9, 151.2],  /* Sydney */
+    ['JFK', 40.6, -73.8]    /* NYC */
+  ];
+
+  /* pulse state per dot */
+  var pulsePhase=DESTS.map(function(_,i){return i*0.5;});
+
+  var raf=null, running=true;
+
+  function drawGlobe(){
+    ctx.clearRect(0,0,SIZE,SIZE);
+
+    /* clip to circle */
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(CX,CY,R,0,Math.PI*2);
+    ctx.clip();
+
+    /* dark sphere fill */
+    ctx.fillStyle='rgba(12,9,5,0.85)';
+    ctx.fillRect(0,0,SIZE,SIZE);
+
+    /* longitude lines — 4 arcs, evenly spaced */
+    var lons=[-75,-30,15,60];
+    lons.forEach(function(lon){
+      ctx.beginPath();
+      var first=true;
+      for(var lat=-90;lat<=90;lat+=3){
+        var p=project(lat,lon,rotation);
+        if(!p.visible){first=true;continue;}
+        if(first){ctx.moveTo(p.x,p.y);first=false;}else{ctx.lineTo(p.x,p.y);}
+      }
+      ctx.strokeStyle='rgba(249,115,22,0.22)';
+      ctx.lineWidth=0.8;
+      ctx.stroke();
+    });
+
+    /* latitude lines — 4 arcs */
+    var lats=[-45,-15,20,55];
+    lats.forEach(function(lat){
+      ctx.beginPath();
+      var first=true;
+      for(var lon=-180;lon<=180;lon+=3){
+        var p=project(lat,lon,rotation);
+        if(!p.visible){first=true;continue;}
+        if(first){ctx.moveTo(p.x,p.y);first=false;}else{ctx.lineTo(p.x,p.y);}
+      }
+      ctx.strokeStyle='rgba(249,115,22,0.22)';
+      ctx.lineWidth=0.8;
+      ctx.stroke();
+    });
+
+    /* destination dots with pulse */
+    DESTS.forEach(function(d,i){
+      pulsePhase[i]+=0.025;
+      var p=project(d[1],d[2],rotation);
+      if(!p.visible)return;
+      var pulse=0.5+0.5*Math.sin(pulsePhase[i]); /* 0→1 */
+      var scale=1+0.3*pulse;
+
+      /* outer ring */
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,5*scale,0,Math.PI*2);
+      ctx.strokeStyle='rgba(249,115,22,'+(0.55*(1-pulse*0.5)).toFixed(3)+')';
+      ctx.lineWidth=1;
+      ctx.stroke();
+
+      /* core dot */
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,2.5,0,Math.PI*2);
+      var g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,2.5);
+      g.addColorStop(0,'rgba(255,200,100,0.95)');
+      g.addColorStop(1,'rgba(249,115,22,0.7)');
+      ctx.fillStyle=g;
+      ctx.fill();
+    });
+
+    ctx.restore();
+
+    /* globe border glow */
+    ctx.beginPath();
+    ctx.arc(CX,CY,R,0,Math.PI*2);
+    ctx.strokeStyle='rgba(249,115,22,0.18)';
+    ctx.lineWidth=1.2;
+    ctx.stroke();
+  }
+
+  function tick(){
+    if(!running)return;
+    rotation+=0.05; /* 0.05 deg/frame ≈ very slow */
+    if(rotation>360)rotation-=360;
+    drawGlobe();
+    raf=requestAnimationFrame(tick);
+  }
+
+  function start(){if(!raf){running=true;raf=requestAnimationFrame(tick);}}
+  function stop(){running=false;if(raf){cancelAnimationFrame(raf);raf=null;}}
+
+  start();
+  document.addEventListener('visibilitychange',function(){document.hidden?stop():start();});
+  var hero=document.getElementById('hero');
+  if(hero&&'IntersectionObserver' in window){
+    new IntersectionObserver(function(e){e[0].isIntersecting?start():stop();},{threshold:0}).observe(hero);
+  }
 })();
 /* hidden admin nav — 5 taps on footer logo or Ctrl+Shift+A */
 (function(){
