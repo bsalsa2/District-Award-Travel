@@ -3633,6 +3633,142 @@ def cron_digest(key: str = "", db: Session = Depends(get_db)):
 
 
 # ──────────────────────────────────────────────────────────────────────────
+# Action Items — smart alerts aggregated for the admin
+# ──────────────────────────────────────────────────────────────────────────
+
+TERMINAL_STATUSES = {"closed", "declined", "lost", "booked"}
+
+
+@app.get("/api/admin/action-items")
+def get_action_items(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Return prioritised action items: stale trips, expiring points, new intakes."""
+    now = dt.datetime.utcnow()
+    today = dt.date.today()
+    items: list[dict] = []
+
+    # ── 1. Stale trips (>48 h in same non-terminal status) ──────────────────
+    cutoff_trip = now - dt.timedelta(hours=48)
+    stale_trips = (
+        db.query(TripRequest)
+        .filter(
+            TripRequest.workflow_status.notin_(TERMINAL_STATUSES),
+            TripRequest.last_activity_at < cutoff_trip,
+        )
+        .all()
+    )
+    for trip in stale_trips:
+        hours_stale = int((now - trip.last_activity_at).total_seconds() // 3600)
+        client = db.query(Client).filter(Client.id == trip.client_id).first()
+        client_name = client.name if client else "Unknown"
+        client_email = client.email if client else ""
+        items.append({
+            "type": "stale_trip",
+            "priority": "high",
+            "trip_id": trip.id,
+            "client_name": client_name,
+            "client_email": client_email,
+            "destination": trip.destination or "Unknown destination",
+            "status": trip.workflow_status,
+            "hours": hours_stale,
+        })
+
+    # ── 2. Expiring points (<90 days) ────────────────────────────────────────
+    clients_all = db.query(Client).all()
+    for c in clients_all:
+        data = json.loads(c.data or "{}")
+        for p in data.get("points", []):
+            exp_str = p.get("expiration_date") or ""
+            if not exp_str:
+                continue
+            try:
+                exp_date = dt.date.fromisoformat(str(exp_str)[:10])
+            except ValueError:
+                continue
+            days_left = (exp_date - today).days
+            if days_left < 0 or days_left > 90:
+                continue
+            priority = "high" if days_left <= 30 else "medium"
+            items.append({
+                "type": "expiring_points",
+                "priority": priority,
+                "client_name": c.name,
+                "client_email": c.email,
+                "program": p.get("program") or p.get("name") or "Unknown",
+                "days_left": days_left,
+            })
+
+    # ── 3. Unread client messages (>24 h without admin reply) ────────────────
+    cutoff_msg = now - dt.timedelta(hours=24)
+    for c in clients_all:
+        data = json.loads(c.data or "{}")
+        messages = data.get("messages", [])
+        # Find the most recent client message
+        client_msgs = [m for m in messages if m.get("sender") == "client"]
+        if not client_msgs:
+            continue
+        # Sort by time descending
+        client_msgs_sorted = sorted(client_msgs, key=lambda m: m.get("time", ""), reverse=True)
+        latest_client_msg = client_msgs_sorted[0]
+        try:
+            latest_time = dt.datetime.fromisoformat(latest_client_msg["time"])
+        except (KeyError, ValueError):
+            continue
+        if latest_time > cutoff_msg:
+            # Client sent a message recently (>24h ago check fails) — not stale yet
+            continue
+        # Check if there's an advisor reply after this client message
+        later_advisor = any(
+            m.get("sender") == "advisor" and m.get("time", "") > latest_client_msg.get("time", "")
+            for m in messages
+        )
+        if later_advisor:
+            continue
+        hours_waiting = int((now - latest_time).total_seconds() // 3600)
+        items.append({
+            "type": "unread_message",
+            "priority": "high",
+            "client_name": c.name,
+            "client_email": c.email,
+            "hours_waiting": hours_waiting,
+        })
+
+    # ── 4. New intakes (<48 h old, not yet converted) ────────────────────────
+    cutoff_intake = now - dt.timedelta(hours=48)
+    new_intakes = (
+        db.query(Intake)
+        .filter(Intake.created_at >= cutoff_intake)
+        .order_by(Intake.created_at.desc())
+        .all()
+    )
+    # Filter out intakes that already have a matching client email
+    existing_emails = {c.email for c in clients_all}
+    for intake in new_intakes:
+        if intake.email and intake.email.lower() in existing_emails:
+            continue
+        hours_ago = int((now - intake.created_at).total_seconds() // 3600)
+        full_name = f"{intake.first_name} {intake.last_name}".strip() or intake.email or "Unknown"
+        items.append({
+            "type": "new_intake",
+            "priority": "low",
+            "intake_id": intake.id,
+            "name": full_name,
+            "email": intake.email,
+            "hours_ago": hours_ago,
+        })
+
+    # ── Tally by priority ────────────────────────────────────────────────────
+    high   = sum(1 for i in items if i["priority"] == "high")
+    medium = sum(1 for i in items if i["priority"] == "medium")
+    low    = sum(1 for i in items if i["priority"] == "low")
+
+    # Sort: high first, then medium, then low
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    items.sort(key=lambda i: priority_order.get(i["priority"], 9))
+
+    return {"items": items, "total": len(items), "high": high, "medium": medium, "low": low}
+
+
+# ──────────────────────────────────────────────────────────────────────────
 # Static website (served last so /api routes take precedence)
 # ──────────────────────────────────────────────────────────────────────────
 if os.path.isdir(PUBLIC_DIR):

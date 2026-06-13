@@ -479,11 +479,19 @@
         <div class="page-header">
           <div><h1>Action Items</h1><p>What to advise, send, or follow up on — sorted by urgency</p></div>
           <div class="header-actions">
+            <button class="btn-action" onclick="loadActionItems()" title="Refresh alerts">↻ Refresh</button>
             <button class="btn-action" id="toggle-done-btn" onclick="toggleShowDone()">Show completed</button>
             <button class="btn-action solid" onclick="openAddTask()">+ New Item</button>
           </div>
         </div>
-        <div class="content"><div class="ai-list" id="ai-full-list"></div></div>
+        <div class="content">
+          <div style="margin-bottom:20px">
+            <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px">Smart Alerts</div>
+            <div id="ai-smart-list"><div style="padding:24px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div></div>
+          </div>
+          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">Custom Items</div>
+          <div class="ai-list" id="ai-full-list"></div>
+        </div>
       </div>
 
       <!-- CLIENTS -->
@@ -1073,6 +1081,95 @@ function saveTask(){
   const c=loadCustom(); c.push(item); saveCustom(c);
   closeAddTask(); renderActionItems(); toast('Action item added');
   ['at-title','at-client','at-email','at-desc','at-due'].forEach(function(i){document.getElementById(i).value='';});
+}
+
+/* ════════════════════════════════════════════
+   ACTION ITEMS — smart alerts from backend
+   ════════════════════════════════════════════ */
+var _aiRefreshTimer = null;
+var _aiLoaded = false;
+
+async function loadActionItems(){
+  if(!ADMIN_TOKEN) return;
+  const container = document.getElementById('ai-smart-list');
+  if(!container) return;
+  if(!_aiLoaded) container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div>';
+  try {
+    var res = await fetch('/api/admin/action-items', {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    var data = await res.json();
+    _aiLoaded = true;
+    renderSmartActionItems(data);
+    // Update badge counts
+    var navBadge = document.getElementById('nav-ai-count');
+    if(navBadge) navBadge.textContent = data.total;
+    var ovCount = document.getElementById('ov-ai-count');
+    if(ovCount) ovCount.textContent = data.total;
+    var ovBadge = document.getElementById('ov-ai-badge');
+    if(ovBadge) ovBadge.textContent = data.total+' open';
+  } catch(e) {
+    if(!_aiLoaded) container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:.85rem">Failed to load action items.</div>';
+  }
+  // Schedule next refresh in 2 minutes
+  clearTimeout(_aiRefreshTimer);
+  _aiRefreshTimer = setTimeout(function(){
+    if(document.getElementById('panel-urgent') && document.getElementById('panel-urgent').classList.contains('active')){
+      loadActionItems();
+    }
+  }, 120000);
+}
+
+function renderSmartActionItems(data){
+  var container = document.getElementById('ai-smart-list');
+  if(!container) return;
+  if(!data.items || data.items.length === 0){
+    container.innerHTML = '<div class="empty-state"><div class="em-ico">✅</div><div style="color:var(--text)">No urgent action items right now.</div></div>';
+    return;
+  }
+  var highItems   = data.items.filter(function(i){return i.priority==='high';});
+  var medItems    = data.items.filter(function(i){return i.priority==='medium';});
+  var lowItems    = data.items.filter(function(i){return i.priority==='low';});
+
+  function itemHTML(item){
+    var dot = item.priority==='high' ? 'var(--red)' : item.priority==='medium' ? 'var(--gold)' : 'var(--dim)';
+    var icon='', desc='', btnHTML='';
+    if(item.type==='stale_trip'){
+      var days = Math.floor(item.hours/24);
+      icon = '✈';
+      desc = '<strong>'+esc(item.client_name)+'</strong> — '+esc(item.destination)+' stuck in <em>'+esc(item.status.replace(/_/g,' '))+'</em> for '+(days>=1?days+' day'+(days!==1?'s':''): item.hours+' hr'+(item.hours!==1?'s':''));
+      btnHTML = '<button class="btn-action" style="font-size:.75rem;padding:4px 10px" onclick="advanceTrip('+item.trip_id+')">Advance &#x2192;</button>';
+    } else if(item.type==='expiring_points'){
+      icon = '⚠';
+      desc = '<strong>'+esc(item.client_name)+'</strong>\'s <em>'+esc(item.program)+'</em> points expire in <strong>'+item.days_left+' day'+(item.days_left!==1?'s':'')+'</strong>';
+      btnHTML = '<button class="btn-action" style="font-size:.75rem;padding:4px 10px" onclick="switchPanel(\'chat\',navBtnFor(\'chat\'));openThread(\''+esc(item.client_email)+'\')">Message &#x2192;</button>';
+    } else if(item.type==='unread_message'){
+      icon = '💬';
+      desc = '<strong>'+esc(item.client_name)+'</strong> hasn\'t heard back in <strong>'+item.hours_waiting+' hr'+(item.hours_waiting!==1?'s':'')+'</strong>';
+      btnHTML = '<button class="btn-action" style="font-size:.75rem;padding:4px 10px" onclick="switchPanel(\'chat\',navBtnFor(\'chat\'));openThread(\''+esc(item.client_email)+'\')">Reply &#x2192;</button>';
+    } else if(item.type==='new_intake'){
+      icon = '📋';
+      desc = 'New intake from <strong>'+esc(item.name||item.email)+'</strong>'+(item.hours_ago<1?' (just now)':' ('+item.hours_ago+' hr'+(item.hours_ago!==1?'s':'')+' ago)');
+      btnHTML = '<button class="btn-action" style="font-size:.75rem;padding:4px 10px" onclick="switchPanel(\'intake\',navBtnFor(\'intake\'))">Review &#x2192;</button>';
+    }
+    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="width:8px;height:8px;border-radius:50%;background:'+dot+';flex-shrink:0;margin-top:5px"></span>'
+      +'<span style="font-size:1rem;flex-shrink:0">'+icon+'</span>'
+      +'<div style="flex:1;font-size:.84rem;line-height:1.4">'+desc+'</div>'
+      +(btnHTML?'<div style="flex-shrink:0">'+btnHTML+'</div>':'')
+      +'</div>';
+  }
+
+  function sectionHTML(label, color, items){
+    if(!items.length) return '';
+    return '<div style="margin-bottom:18px">'
+      +'<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:'+color+';margin-bottom:4px">'+label+' ('+items.length+')</div>'
+      +items.map(itemHTML).join('')
+      +'</div>';
+  }
+
+  container.innerHTML = sectionHTML('High Priority', 'var(--red)', highItems)
+    + sectionHTML('Medium Priority', 'var(--gold)', medItems)
+    + sectionHTML('Low Priority', 'var(--dim)', lowItems);
 }
 
 /* ════════════════════════════════════════════
@@ -1874,6 +1971,7 @@ function enterAdmin(){
   loadIntakes();
   loadExpiringPoints();
   renderActionItems();
+  loadActionItems();
   renderFees();
   checkAIStatus();
   loadInbox();
@@ -2255,6 +2353,7 @@ function switchPanel(id,btn){
   if(el) el.classList.add('active');
   if(id==='chat')loadInbox();
   if(id==='pipeline'){loadBoard();_startBoardPoll();}else{_stopBoardPoll();}
+  if(id==='urgent')loadActionItems();
 }
 document.addEventListener('visibilitychange',function(){
   if(!document.hidden&&boardTimer)loadBoard();
