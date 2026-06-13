@@ -84,7 +84,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 /* ── PORTAL SHELL ── */
 #portal{display:none}
 .layout{display:flex;min-height:100vh}
-.sidebar{width:230px;flex-shrink:0;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.sidebar{width:230px;flex-shrink:0;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
 .sb-head{padding:22px 20px;border-bottom:1px solid var(--border)}
 .sb-brand{font-size:14px;font-weight:800;line-height:1.3}
 .sb-brand span{color:var(--accent)}
@@ -94,7 +94,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .sb-nav{padding:12px 10px;flex:1;display:flex;flex-direction:column;gap:2px}
 .nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font);font-weight:500;transition:.15s}
 .nav-item:hover{background:var(--card);color:var(--text)}
-.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:600}
+.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:700;border-left:2px solid var(--accent);padding-left:10px}
 .nav-ico{width:18px;text-align:center;flex-shrink:0;font-size:15px}
 .nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px}
 .sb-foot{padding:14px 10px;border-top:1px solid var(--border)}
@@ -121,18 +121,37 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
   background:radial-gradient(ellipse 60% 80% at 80% 50%,rgba(249,115,22,.12) 0%,transparent 65%);
   pointer-events:none;
 }
-.sh-left{position:relative}
-.sh-label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(249,115,22,.7);margin-bottom:8px}
-.sh-amount{
-  font-size:clamp(44px,6vw,68px);font-weight:900;line-height:1;
-  background:linear-gradient(90deg,#f97316,#fbbf24,#f97316);
-  background-size:200% auto;
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  letter-spacing:-3px;font-variant-numeric:tabular-nums;
-  animation:shShimmer 4s linear infinite;
+/* animated shimmer behind the amount */
+.savings-hero::after{
+  content:'';position:absolute;
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  width:340px;height:180px;
+  background:radial-gradient(ellipse 70% 60% at 50% 50%,rgba(74,222,128,.07),transparent 70%);
+  pointer-events:none;
+  animation:heroGlow 3s ease-in-out infinite alternate;
 }
-@keyframes shShimmer{to{background-position:200% center}}
-@media(prefers-reduced-motion:reduce){.sh-amount{animation:none}}
+@keyframes heroGlow{0%{opacity:.5;transform:translate(-50%,-50%) scale(.9)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}}
+@media(prefers-reduced-motion:reduce){.savings-hero::after{animation:none}}
+.sh-left{position:relative;z-index:1}
+.sh-label{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(249,115,22,.65);margin-bottom:8px}
+.sh-amount{
+  font-size:clamp(56px,6vw,72px);font-weight:900;line-height:1;
+  color:#4ade80;
+  text-shadow:0 0 40px rgba(74,222,128,.3);
+  letter-spacing:-3px;font-variant-numeric:tabular-nums;
+  position:relative;
+}
+/* shimmer overlay on the green amount */
+.sh-amount::after{
+  content:attr(data-v);position:absolute;inset:0;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.18) 50%,transparent 65%);
+  background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;
+  animation:shShimmer 3.5s linear infinite;
+  pointer-events:none;
+}
+@keyframes shShimmer{0%{background-position:200% center}100%{background-position:-50% center}}
+@media(prefers-reduced-motion:reduce){.sh-amount::after{animation:none}}
 .sh-tagline{font-size:14px;color:rgba(255,255,255,.5);margin-top:10px;font-weight:500}
 .sh-tagline strong{color:rgba(255,255,255,.8)}
 .sh-right{position:relative;text-align:right}
@@ -189,8 +208,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .msg-plan-link{margin-top:14px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:8px 14px}
 
 /* ── TRIPS (boarding-pass style) ── */
-.trip-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:0;margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden;position:relative;transition:transform .2s,box-shadow .2s}
-.trip-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.09)}
+.trip-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:0;margin-bottom:16px;box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 0 1px rgba(249,115,22,.08);overflow:hidden;position:relative;transition:transform .25s,box-shadow .25s}
+.trip-card:hover{transform:translateY(-4px);box-shadow:0 16px 56px rgba(0,0,0,.45),0 0 0 1px rgba(249,115,22,.18),0 0 32px rgba(249,115,22,.12)}
 .trip-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--accent),#fbbf24)}
 .trip-countdown-row{padding:6px 20px 0}
 .countdown-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.01em}
@@ -199,7 +218,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .countdown-today{background:#ffebee;color:#c62828;animation:pulse-countdown 1s ease-in-out infinite alternate}
 @keyframes pulse-countdown{from{opacity:1}to{opacity:.6}}
 .trip-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:20px 24px 16px}
-.trip-dest{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:3px}
+.trip-dest{font-size:24px;font-weight:900;letter-spacing:-.7px;margin-bottom:3px}
 .trip-route{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px}
 .trip-route .tr-plane{color:var(--accent);font-size:11px}
 .trip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;padding:16px 24px 20px;border-top:2px dashed var(--border);position:relative}
@@ -209,12 +228,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .trip-plan-block{padding:0 24px 20px}
 .trip-field-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:3px}
 .trip-field-val{font-size:14px;font-weight:600}
-.badge{display:inline-block;font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;white-space:nowrap}
-.badge-new{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)}
-.badge-researching{background:#fef9c3;color:#854d0e;border:1px solid #fde68a}
-.badge-options{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
-.badge-booked{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
-.badge-done{background:var(--card);color:var(--muted);border:1px solid var(--border)}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;white-space:nowrap;letter-spacing:.03em;text-transform:uppercase}
+.badge-new{background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3)}
+.badge-new::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#f97316;flex-shrink:0}
+.badge-researching{background:rgba(234,179,8,.15);color:#ca8a04;border:1px solid rgba(234,179,8,.3)}
+.badge-researching::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#ca8a04;flex-shrink:0}
+.badge-options{background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.25)}
+.badge-options::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#16a34a;flex-shrink:0}
+.badge-booked{background:rgba(59,130,246,.12);color:#2563eb;border:1px solid rgba(59,130,246,.25)}
+.badge-booked::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#2563eb;flex-shrink:0}
+.badge-done{background:rgba(168,162,158,.12);color:var(--muted);border:1px solid rgba(168,162,158,.2)}
+.badge-done::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0}
 
 /* ── TRIP STEPPER ── */
 .trip-stepper{padding:12px 24px 18px;border-top:1px solid var(--border)}
@@ -248,18 +272,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 
 /* ── POINTS ── */
 .points-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
-.point-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:22px 24px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
-.point-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.08)}
+.point-card{background:#161210;border:1px solid rgba(249,115,22,.12);border-radius:14px;padding:22px 24px;box-shadow:0 4px 24px rgba(0,0,0,.3);position:relative;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s}
+.point-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 0 1px rgba(249,115,22,.3),0 0 24px rgba(249,115,22,.1);border-color:rgba(249,115,22,.3)}
 .point-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#fbbf24)}
-.point-prog{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
-.point-bal{font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px;font-variant-numeric:tabular-nums}
-.point-unit{font-size:12px;color:var(--dim);font-weight:600;margin-left:4px}
+/* logo highlight area glow on hover */
+.point-card::after{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(249,115,22,.15),transparent 70%);opacity:0;transition:opacity .25s}
+.point-card:hover::after{opacity:1}
+.point-prog{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.45);margin-bottom:10px}
+.point-bal{font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.point-unit{font-size:12px;color:rgba(255,255,255,.35);font-weight:600;margin-left:4px}
 /* ── MILESTONE BADGES ── */
 .milestone-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;margin-bottom:4px}
 .milestone-badge{font-size:14px;font-weight:600;padding:5px 13px;border-radius:20px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
-.milestone-gold{background:#fef9c3;color:#854d0e;border:1px solid #fde68a}
-.milestone-platinum{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
-.milestone-expiring{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+.milestone-gold{background:rgba(234,179,8,.12);color:#fbbf24;border:1px solid rgba(234,179,8,.3)}
+.milestone-platinum{background:rgba(148,163,184,.1);color:#cbd5e1;border:1px solid rgba(148,163,184,.25)}
+.milestone-expiring{background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.3)}
 
 /* ── CHAT ── */
 .chat-wrap{background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:420px;overflow:hidden}
@@ -275,12 +302,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .bubble.adv{background:#fff;border:1px solid var(--border);color:var(--text);border-radius:18px 18px 18px 4px}
 .bubble.me{background:var(--accent);color:#fff;border-radius:18px 18px 4px 18px}
 .bubble-subject{font-weight:700;margin-bottom:3px}
-.bubble-ts{font-size:10px;color:var(--dim);margin-top:4px;padding:0 2px}
+.bubble-ts{font-size:10px;color:var(--dim);opacity:.4;margin-top:4px;padding:0 2px}
 .bubble-row.me .bubble-ts{text-align:right}
-.bubble-receipt{font-size:10px;color:var(--dim);margin-top:2px;padding:0 2px}
+.bubble-receipt{font-size:10px;color:var(--dim);opacity:.4;margin-top:2px;padding:0 2px}
 .bubble-plan{max-width:92%;width:100%}
 .bubble-plan .plan-card{margin-bottom:0;margin-top:8px}
-.chat-day{text-align:center;font-size:11px;color:var(--dim);margin:10px 0 2px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.chat-day{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--dim);margin:14px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.55}
+.chat-day::before,.chat-day::after{content:'';flex:1;height:1px;background:var(--border)}
+/* typing indicator */
+.typing-indicator{display:inline-flex;align-items:center;gap:4px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:18px 18px 18px 4px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.typing-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);opacity:.4;animation:typingBounce 1.2s ease-in-out infinite}
+.typing-dot:nth-child(2){animation-delay:.15s}
+.typing-dot:nth-child(3){animation-delay:.3s}
+@keyframes typingBounce{0%,60%,100%{opacity:.4;transform:translateY(0)}30%{opacity:1;transform:translateY(-5px)}}
+@media(prefers-reduced-motion:reduce){.typing-dot{animation:none;opacity:.6}}
 .chat-compose{display:flex;gap:10px;padding:14px;border-top:1px solid var(--border);background:var(--white);align-items:flex-end}
 .chat-input{flex:1;border:1px solid var(--border2);border-radius:10px;padding:11px 14px;font-size:14px;font-family:var(--font);color:var(--text);resize:none;outline:none;max-height:120px;line-height:1.45;transition:border-color .15s,box-shadow .15s,opacity .15s}
 .chat-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
@@ -423,7 +458,7 @@ body.light-mode{
         <div class="savings-hero" id="savings-hero">
           <div class="sh-left">
             <div class="sh-label">Total Saved with District</div>
-            <div class="sh-amount" id="sh-amount">$0</div>
+            <div class="sh-amount" id="sh-amount" data-shimmer="1" data-v="$0">$0</div>
             <div class="sh-tagline"><strong id="sh-trips-saved">0 trips</strong> · documented &amp; verified</div>
             <div id="sh-trip-milestone"></div>
           </div>
@@ -712,12 +747,14 @@ function animStat(id,target,fmt){
   const from=Number(el.dataset.v||0);
   el.dataset.v=target;
   if(from===target&&el.textContent!=='—'&&el.textContent!=='$0'&&el.textContent!=='0'){el.textContent=fmt(target);return;}
-  if(REDUCED||from===target){el.textContent=fmt(target);return;}
+  if(REDUCED||from===target){const v=fmt(target);el.textContent=v;if(el.dataset.shimmer)el.setAttribute('data-v',v);return;}
   const dur=750;let start=null;
   function step(ts){
     if(!start)start=ts;
     const p=Math.min((ts-start)/dur,1),eased=1-Math.pow(1-p,3);
-    el.textContent=fmt(Math.round(from+(target-from)*eased));
+    const val=fmt(Math.round(from+(target-from)*eased));
+    el.textContent=val;
+    if(el.dataset.shimmer)el.setAttribute('data-v',val);
     if(p<1)requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
@@ -1088,7 +1125,9 @@ function renderPoints(points){
     if(milEl)milEl.innerHTML='';
     return;
   }
-  el.innerHTML='<div class="points-grid">'+points.map(p=>`<div class="point-card"><div class="point-prog">${esc(p.program||p.name||'Program')}</div><div class="point-bal">${fmtNum(p.balance||p.points||0)}<span class="point-unit">pts</span></div></div>`).join('')+'</div>';
+  const total=points.reduce((s,p)=>s+(p.balance||p.points||0),0);
+  const totalHtml=total>0?`<div style="margin-bottom:18px;padding:20px 24px;background:linear-gradient(135deg,#1a0f06,#0f0a07);border:1px solid rgba(249,115,22,.2);border-radius:14px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(249,115,22,.65)">Total Points</div><div style="font-size:32px;font-weight:900;letter-spacing:-1.5px;background:linear-gradient(90deg,#f97316,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-variant-numeric:tabular-nums">${fmtNum(total)}</div></div>`:'';
+  el.innerHTML=totalHtml+'<div class="points-grid">'+points.map(p=>`<div class="point-card"><div class="point-prog">${esc(p.program||p.name||'Program')}</div><div class="point-bal">${fmtNum(p.balance||p.points||0)}<span class="point-unit">pts</span></div></div>`).join('')+'</div>';
   // Milestone badges
   if(milEl){
     const total=points.reduce((s,p)=>s+(p.balance||p.points||0),0);
