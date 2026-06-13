@@ -215,6 +215,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .point-prog{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
 .point-bal{font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px;font-variant-numeric:tabular-nums}
 .point-unit{font-size:12px;color:var(--dim);font-weight:600;margin-left:4px}
+/* ── MILESTONE BADGES ── */
+.milestone-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;margin-bottom:4px}
+.milestone-badge{font-size:14px;font-weight:600;padding:5px 13px;border-radius:20px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+.milestone-gold{background:#fef9c3;color:#854d0e;border:1px solid #fde68a}
+.milestone-platinum{background:#f1f5f9;color:#334155;border:1px solid #cbd5e1}
+.milestone-expiring{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
 
 /* ── CHAT ── */
 .chat-wrap{background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:420px;overflow:hidden}
@@ -391,6 +397,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
       <!-- POINTS -->
       <div class="panel" id="panel-points">
         <div class="phead"><h1>My Points</h1><p>Balances you've shared with us</p></div>
+        <div id="points-milestones"></div>
         <div id="points-container"></div>
       </div>
 
@@ -473,7 +480,7 @@ async function doLogin(){
 
 function logout(){clearToken();stopAutoRefresh();document.getElementById('portal').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('login-email').value='';document.getElementById('login-pass').value='';switchTab('overview');}
 
-function showPortal(c){document.getElementById('login-screen').style.display='none';document.getElementById('portal').style.display='block';renderPortal(c);startAutoRefresh();}
+function showPortal(c){document.getElementById('login-screen').style.display='none';document.getElementById('portal').style.display='block';requestNotifPermission();renderPortal(c);startAutoRefresh();}
 
 function switchTab(id){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -492,6 +499,27 @@ function openChat(prefill){
 }
 
 let currentData=null;
+let lastMsgCount=0;
+let activeNotification=null;
+
+function requestNotifPermission(){
+  if(typeof Notification==='undefined')return;
+  if(Notification.permission==='default')Notification.requestPermission();
+}
+
+function maybeNotify(newCount){
+  if(typeof Notification==='undefined')return;
+  if(Notification.permission!=='granted')return;
+  if(newCount<=lastMsgCount)return;
+  if(!document.hidden)return;
+  if(activeNotification)activeNotification.close();
+  try{
+    const n=new Notification('District Award Travel',{body:'New message from your advisor',icon:'/favicon.ico'});
+    activeNotification=n;
+    n.onclick=function(){window.focus();n.close();activeNotification=null;};
+    n.onclose=function(){if(activeNotification===n)activeNotification=null;};
+  }catch(e){}
+}
 
 function renderPortal(c){
   currentData=c;
@@ -529,6 +557,9 @@ function renderPortal(c){
   const msgs=(c.messages||[]).slice().reverse();
   const unread=msgs.filter(m=>m.unread&&m.sender!=='client').length;
   setUnread(unread);
+  const newCount=(c.messages||[]).length;
+  maybeNotify(newCount);
+  lastMsgCount=newCount;
   renderMessages('ov-messages',msgs.slice(0,3),true);
   renderChat(c.messages||[]);
   // If the chat is already open when a new message lands, mark it read right away
@@ -800,8 +831,28 @@ function renderSavings(rows,totalSave,totalFee,plans){
 
 function renderPoints(points){
   const el=document.getElementById('points-container');
-  if(!points.length){el.innerHTML='<div class="empty"><div class="empty-ico">⬡</div><p>No point balances on file. Share your program balances with your advisor and they\'ll appear here.</p></div>';return;}
+  const milEl=document.getElementById('points-milestones');
+  if(!points.length){
+    el.innerHTML='<div class="empty"><div class="empty-ico">⬡</div><p>No point balances on file. Share your program balances with your advisor and they\'ll appear here.</p></div>';
+    if(milEl)milEl.innerHTML='';
+    return;
+  }
   el.innerHTML='<div class="points-grid">'+points.map(p=>`<div class="point-card"><div class="point-prog">${esc(p.program||p.name||'Program')}</div><div class="point-bal">${fmtNum(p.balance||p.points||0)}<span class="point-unit">pts</span></div></div>`).join('')+'</div>';
+  // Milestone badges
+  if(milEl){
+    const total=points.reduce((s,p)=>s+(p.balance||p.points||0),0);
+    const now=Date.now();
+    const soon90=points.some(p=>{
+      if(!p.expiration_date)return false;
+      const exp=new Date(p.expiration_date).getTime();
+      return !isNaN(exp)&&exp>now&&exp-now<=90*24*60*60*1000;
+    });
+    const badges=[];
+    if(total>=500000)badges.push('<span class="milestone-badge milestone-platinum">&#x1F48E; 500K Elite</span>');
+    else if(total>=100000)badges.push('<span class="milestone-badge milestone-gold">&#x2708; 100K Club</span>');
+    if(soon90)badges.push('<span class="milestone-badge milestone-expiring">&#x26A0; Points Expiring</span>');
+    milEl.innerHTML=badges.length?'<div class="milestone-badges">'+badges.join('')+'</div>':'';
+  }
 }
 
 /* ── SSE + polling ── */
