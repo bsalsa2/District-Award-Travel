@@ -605,6 +605,11 @@
             <div class="setting-row"><div><div class="setting-label">Braden Salcetti</div><div class="setting-sub">Founder &amp; Lead Advisor</div></div><div><span class="badge badge-green">Active</span></div></div>
             <div class="setting-row"><div><div class="setting-label">Invite Team Member</div><div class="setting-sub">Add an advisor when you're ready to hire</div></div><div><button class="btn-sm" onclick="toast('Team invites coming soon')">+ Invite</button></div></div>
           </div>
+          <div class="settings-section">
+            <div class="settings-title">Legal</div>
+            <div class="setting-row"><div><div class="setting-label"><a href="terms.html" target="_blank" style="color:inherit;text-decoration:none">Terms of Service</a></div><div class="setting-sub">Review advisory terms and service agreement</div></div><div><a href="terms.html" target="_blank" class="btn-sm" style="text-decoration:none">View</a></div></div>
+            <div class="setting-row"><div><div class="setting-label"><a href="privacy.html" target="_blank" style="color:inherit;text-decoration:none">Privacy Policy</a></div><div class="setting-sub">How client data is collected and used</div></div><div><a href="privacy.html" target="_blank" class="btn-sm" style="text-decoration:none">View</a></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2482,5 +2487,104 @@ async function saveResearchNotes() {
   </div>
   <div class="drawer-body" id="client-drawer-content"></div>
 </div>
+
+<!-- KEYBOARD SHORTCUTS HELP MODAL -->
+<div id="kb-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeKbModal()">
+  <div style="background:#1e1e2e;color:#e0e0f0;border-radius:12px;padding:32px 40px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.6);font-family:inherit">
+    <div style="font-size:1.15rem;font-weight:700;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:12px">Keyboard Shortcuts</div>
+    <table style="border-collapse:collapse;width:100%">
+      <tbody id="kb-rows"></tbody>
+    </table>
+    <div style="margin-top:18px;text-align:right"><button onclick="closeKbModal()" style="background:#333;color:#e0e0f0;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:.9rem">Close</button></div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+   ════════════════════════════════════════════ */
+(function(){
+  var KB_SHORTCUTS = [
+    {keys:'g o', desc:'Overview'},
+    {keys:'g p', desc:'Pipeline'},
+    {keys:'g c', desc:'Clients'},
+    {keys:'g m', desc:'Messages'},
+    {keys:'g f', desc:'Savings & Fees'},
+    {keys:'?',   desc:'This help'},
+    {keys:'Esc', desc:'Close modals'},
+  ];
+
+  // Populate help modal rows
+  var tbody = document.getElementById('kb-rows');
+  KB_SHORTCUTS.forEach(function(s){
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td style="padding:5px 0;width:90px"><code style="background:#2a2a3e;border-radius:4px;padding:2px 8px;font-size:.88rem;letter-spacing:.04em">'+s.keys+'</code></td>'
+                 +'<td style="padding:5px 0;color:#b0b8d0;font-size:.95rem">'+s.desc+'</td>';
+    tbody.appendChild(tr);
+  });
+
+  function openKbModal(){
+    var el = document.getElementById('kb-overlay');
+    el.style.display = 'flex';
+  }
+  window.closeKbModal = function(){
+    document.getElementById('kb-overlay').style.display = 'none';
+  };
+
+  // Two-key sequence buffer
+  var firstKey = null;
+  var firstKeyTimer = null;
+
+  function clearSeq(){
+    firstKey = null;
+    if(firstKeyTimer){ clearTimeout(firstKeyTimer); firstKeyTimer = null; }
+  }
+
+  document.addEventListener('keydown', function(e){
+    var tag = e.target && e.target.tagName ? e.target.tagName.toUpperCase() : '';
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    var key = e.key;
+
+    // Escape — close any open modal/overlay/drawer
+    if(key === 'Escape'){
+      closeKbModal();
+      // trip detail overlay
+      var tdo = document.getElementById('trip-detail-overlay');
+      if(tdo && tdo.classList.contains('open')) tdo.classList.remove('open');
+      // client drawer
+      if(typeof closeClientDrawer === 'function') closeClientDrawer();
+      clearSeq();
+      return;
+    }
+
+    // ? — show help modal
+    if(key === '?'){
+      openKbModal();
+      clearSeq();
+      return;
+    }
+
+    // g X sequences
+    if(firstKey === 'g'){
+      clearSeq();
+      var panelMap = {o:'overview', p:'pipeline', c:'clients', m:'chat', f:'fees'};
+      var panel = panelMap[key];
+      if(panel){
+        switchPanel(panel, navBtnFor(panel));
+      }
+      return;
+    }
+
+    if(key === 'g'){
+      firstKey = 'g';
+      firstKeyTimer = setTimeout(clearSeq, 1000);
+      return;
+    }
+
+    clearSeq();
+  });
+})();
+</script>
 </body>
 </html>
