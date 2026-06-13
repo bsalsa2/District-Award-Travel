@@ -56,8 +56,24 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .page-h1 em{font-style:normal;background:linear-gradient(95deg,#f97316,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .page-sub{font-size:14px;color:var(--muted)}
 
+/* ── TOP ANIMATED PROGRESS BAR ── */
+.top-progress-bar{width:100%;height:4px;background:var(--border);border-radius:2px;margin-bottom:20px;overflow:hidden}
+.top-progress-fill{height:100%;background:#f97316;border-radius:2px;width:33.33%;transition:width .4s ease}
+
+/* ── DRAFT SAVED INDICATOR ── */
+.draft-saved{
+  position:absolute;top:16px;right:20px;
+  font-size:11px;font-weight:700;color:var(--green);
+  background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);
+  border-radius:20px;padding:4px 10px;
+  opacity:0;transition:opacity .3s;
+  pointer-events:none;
+  white-space:nowrap;
+}
+.draft-saved.visible{opacity:1}
+
 /* ── PROGRESS (with flying plane) ── */
-.progress-wrap{margin-bottom:28px}
+.progress-wrap{margin-bottom:28px;position:relative}
 .progress-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .progress-step{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.07em}
 .progress-pct{font-size:12px;color:var(--dim);font-weight:600}
@@ -178,6 +194,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .field input::placeholder,.field textarea::placeholder,.field-float input::placeholder{color:var(--dim)}
 .field select option{background:var(--bg)}
 .field textarea{resize:vertical;min-height:88px}
+/* ── CHAR COUNTER ── */
+.char-counter{font-size:11px;color:var(--dim);text-align:right;margin-top:3px;font-weight:500}
+.char-counter.warn{color:var(--accent)}
 .field .err-msg{display:none;font-size:11px;color:var(--red);font-weight:500}
 .field.invalid input,.field.invalid select{border-color:var(--red)}
 .field.invalid .err-msg{display:block}
@@ -337,6 +356,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
   </div>
 
   <div class="progress-wrap" id="progress-wrap">
+    <div class="top-progress-bar"><div class="top-progress-fill" id="top-progress-fill"></div></div>
+    <div class="draft-saved" id="draft-saved">&#10003; Draft saved</div>
     <div class="step-indicators" id="step-indicators">
       <div class="step-dot active" id="dot-1">1</div>
       <div class="step-connector" id="conn-1"></div>
@@ -400,7 +421,8 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
           </div>
           <div class="field form-full">
             <label>Anything else about the dream?</label>
-            <textarea name="notes" placeholder="Lie-flat seats, anniversary trip, traveling with kids…"></textarea>
+            <textarea name="notes" placeholder="Lie-flat seats, anniversary trip, traveling with kids…" maxlength="2000" id="textarea-notes"></textarea>
+            <div class="char-counter" id="counter-notes">0 / 2000</div>
           </div>
         </div>
       </div>
@@ -646,6 +668,7 @@ function showStep(n,dir){
   document.getElementById('progress-pct').textContent=Math.round(n/3*100)+'%';
   document.getElementById('progress-fill').style.width=(n/3*100)+'%';
   document.getElementById('progress-plane').style.left=(n/3*100)+'%';
+  document.getElementById('top-progress-fill').style.width=(n/3*100)+'%';
   updateStepDots(n);
   window.scrollTo({top:0,behavior:'smooth'});
   saveDraft();
