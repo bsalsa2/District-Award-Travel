@@ -2608,7 +2608,12 @@ async function _renderClientDrawer(email){
   const savingsDisplay=savingsTotal>0?'$'+(savingsTotal/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'—';
 
   content.innerHTML=
-    '<div class="drawer-stat"><div class="drawer-stat-label">Total Savings Identified</div>'
+    '<div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px">'
+    +'<button id="drawer-tab-overview" onclick="showDrawerTab(\'overview\')" style="flex:1;padding:8px 0;font-size:.8rem;font-weight:700;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);cursor:pointer">Overview</button>'
+    +'<button id="drawer-tab-activity" onclick="showDrawerTab(\'activity\',\''+esc(email)+'\')" style="flex:1;padding:8px 0;font-size:.8rem;font-weight:700;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer">Activity</button>'
+    +'</div>'
+    +'<div id="drawer-panel-overview">'
+    +'<div class="drawer-stat"><div class="drawer-stat-label">Total Savings Identified</div>'
     +'<div class="drawer-stat-value">'+savingsDisplay+'</div></div>'
     +(openTrips>0?'<div class="drawer-stat"><div class="drawer-stat-label">Open Trips</div>'
       +'<div class="drawer-stat-value">'+openTrips+'</div></div>':'')
@@ -2618,7 +2623,58 @@ async function _renderClientDrawer(email){
     +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'chat\',document.querySelector(\'.nav-item[onclick*=chat]\'));openThread(\''+esc(email)+'\')">💬 Message</button>'
     +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'pipeline\',document.querySelector(\'.nav-item[data-tab=pipeline]\'));">✈ New Trip</button>'
     +'<button class="drawer-action-btn" onclick="closeClientDrawer();openAddSaving();setTimeout(function(){var s=document.getElementById(\'sv-client-email\');if(s)s.value=\''+esc(email)+'\';},50)">$ Log Saving</button>'
-    +'</div>';
+    +'</div>'
+    +'</div>'
+    +'<div id="drawer-panel-activity" style="display:none"><div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Loading…</div></div>';
+}
+
+function showDrawerTab(tab, email){
+  var tabs=['overview','activity'];
+  tabs.forEach(function(t){
+    var btn=document.getElementById('drawer-tab-'+t);
+    var panel=document.getElementById('drawer-panel-'+t);
+    if(btn){btn.style.borderBottomColor=t===tab?'var(--accent)':'transparent';btn.style.color=t===tab?'var(--accent)':'var(--muted)';}
+    if(panel){panel.style.display=t===tab?'':'none';}
+  });
+  if(tab==='activity'&&email){
+    _loadDrawerActivity(email);
+  }
+}
+
+var _activityLoaded={};
+async function _loadDrawerActivity(email){
+  if(_activityLoaded[email])return;
+  var panel=document.getElementById('drawer-panel-activity');
+  if(!panel)return;
+  try{
+    var res=await fetch('/api/admin/clients/'+encodeURIComponent(email)+'/activity',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok){panel.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Could not load activity.</div>';return;}
+    var data=await res.json();
+    var items=data.activity||[];
+    if(!items.length){panel.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">No activity yet.</div>';return;}
+    var dotColor={'client_created':'var(--accent)','intake_submitted':'var(--blue,#4a9eff)','trip_created':'var(--gold)','status_changed':'var(--dim)','message_sent':'var(--green)','message_received':'var(--purple,#a78bfa)','saving_logged':'var(--green)'};
+    var now=Date.now();
+    function relTime(ts){
+      var d=new Date(ts);if(isNaN(d))return ts;
+      var diff=Math.floor((now-d)/1000);
+      if(diff<60)return 'just now';
+      if(diff<3600)return Math.floor(diff/60)+'m ago';
+      if(diff<86400)return Math.floor(diff/3600)+'h ago';
+      if(diff<604800)return Math.floor(diff/86400)+'d ago';
+      return d.toLocaleDateString();
+    }
+    panel.innerHTML='<div style="display:flex;flex-direction:column;gap:6px;padding:4px 0">'+
+      items.slice().reverse().map(function(ev){
+        var color=dotColor[ev.type]||'var(--dim)';
+        return '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">'
+          +'<div style="width:8px;height:8px;border-radius:50%;background:'+color+';margin-top:4px;flex-shrink:0"></div>'
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(ev.detail)+'</div>'
+          +'<div style="font-size:.72rem;color:var(--muted);margin-top:1px">'+relTime(ev.timestamp)+'</div>'
+          +'</div></div>';
+      }).join('')+'</div>';
+    _activityLoaded[email]=true;
+  }catch(e){panel.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Error loading activity.</div>';}
 }
 </script>
 
