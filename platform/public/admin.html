@@ -426,6 +426,10 @@
             <div class="metric-card"><div class="metric-label">Intake Queue</div><div class="metric-val" id="ov-intake-count">—</div><div class="metric-delta">New applications</div></div>
             <div class="metric-card"><div class="metric-label">Open Action Items</div><div class="metric-val red" id="ov-ai-count">0</div><div class="metric-delta" id="ov-ai-next">—</div></div>
             <div class="metric-card"><div class="metric-label">Advisory Fees</div><div class="metric-val gold">10%</div><div class="metric-delta">of savings identified</div></div>
+            <div class="metric-card"><div class="metric-label">Total Savings Found</div><div class="metric-val green" id="ov-total-savings">—</div><div class="metric-delta" id="ov-avg-savings">avg per trip: —</div></div>
+            <div class="metric-card"><div class="metric-label">Total Trips</div><div class="metric-val" id="ov-total-trips">—</div><div class="metric-delta" id="ov-active-trips">— active</div></div>
+            <div class="metric-card"><div class="metric-label">Stale Trips</div><div class="metric-val" id="ov-stale-trips">—</div><div class="metric-delta">no update in 7+ days</div></div>
+            <div class="metric-card"><div class="metric-label">New Clients This Week</div><div class="metric-val blue" id="ov-new-clients">—</div><div class="metric-delta">joined last 7 days</div></div>
           </div>
 
           <div class="section-header">
@@ -1751,6 +1755,28 @@ function adminError(msg){
   el.textContent=msg||'Invalid credentials.'; el.style.display='block';
   setTimeout(function(){el.style.display='none';},3500);
 }
+var statsTimer=null;
+async function loadStats(){
+  if(!ADMIN_TOKEN)return;
+  try{
+    const res=await fetch('/api/admin/stats',{headers:{'X-Admin-Token':ADMIN_TOKEN}});
+    if(!res.ok)return;
+    const d=await res.json();
+    const s=function(id,v){const el=document.getElementById(id);if(el)el.textContent=v;};
+    s('ov-total-savings',fmtUsdCents(d.total_savings_cents||0));
+    s('ov-avg-savings','avg per trip: '+fmtUsdCents(d.avg_savings_per_trip_cents||0));
+    s('ov-total-trips',d.total_trips||0);
+    s('ov-active-trips',(d.active_trips||0)+' active');
+    const staleEl=document.getElementById('ov-stale-trips');
+    if(staleEl){
+      const stale=d.trips_stale||0;
+      staleEl.textContent=stale;
+      staleEl.style.color=stale>0?'var(--gold)':'var(--green)';
+    }
+    const nc=d.new_clients_this_week||0;
+    s('ov-new-clients',nc>0?'🆕 '+nc:nc);
+  }catch(e){console.warn('loadStats error',e);}
+}
 function enterAdmin(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('admin').style.display='block';
@@ -1762,7 +1788,9 @@ function enterAdmin(){
   checkAIStatus();
   loadInbox();
   loadBoard();
+  loadStats();
   if(!inboxTimer)inboxTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadInbox();},30000);
+  if(!statsTimer)statsTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadStats();},60000);
 }
 function toggleSetupForm(){
   const form=document.getElementById('setup-form');
