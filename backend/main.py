@@ -2513,6 +2513,83 @@ def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depe
     return {"ok": True}
 
 
+@app.get("/api/admin/export/clients")
+def export_clients(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Export all clients as a CSV file."""
+    import csv
+    import io
+    today = dt.date.today().isoformat()
+    ACTIVE_EXCL = {"closed", "declined", "lost", "booked"}
+    EARNED_STATUSES = {"booked", "invoiced", "paid"}
+
+    clients = db.query(Client).order_by(Client.created_at).all()
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["id", "name", "email", "created_at", "total_trips", "active_trips", "total_savings_dollars"])
+    for c in clients:
+        trips = db.query(TripRequest).filter(TripRequest.client_id == c.id).all()
+        total_trips = len(trips)
+        active_trips = sum(1 for t in trips if t.workflow_status not in ACTIVE_EXCL)
+        savings_recs = db.query(SavingsRecord).filter(
+            SavingsRecord.client_id == c.id,
+            SavingsRecord.status.in_(list(EARNED_STATUSES)),
+        ).all()
+        total_savings_cents = sum(
+            calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+            for r in savings_recs
+        )
+        total_savings_dollars = round(total_savings_cents / 100, 2)
+        created_at = c.created_at.isoformat() if c.created_at else ""
+        writer.writerow([c.id, c.name, c.email, created_at, total_trips, active_trips, total_savings_dollars])
+
+    from fastapi.responses import Response
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="district-clients-{today}.csv"'},
+    )
+
+
+@app.get("/api/admin/export/savings")
+def export_savings(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Export all savings records as a CSV file."""
+    import csv
+    import io
+    today = dt.date.today().isoformat()
+
+    recs = db.query(SavingsRecord).order_by(SavingsRecord.created_at).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow([
+        "id", "client_name", "client_email", "trip_label",
+        "gross_savings_dollars", "fee_dollars", "points_used", "program", "status", "created_at",
+    ])
+    for r in recs:
+        client = client_map.get(r.client_id)
+        gross_cents = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee_cents = calc_fee(gross_cents, r.fee_rate_bps)
+        writer.writerow([
+            r.id,
+            client.name if client else "",
+            client.email if client else "",
+            r.trip_label,
+            round(gross_cents / 100, 2),
+            round(fee_cents / 100, 2),
+            r.points_used,
+            r.points_program,
+            r.status,
+            r.created_at.isoformat() if r.created_at else "",
+        ])
+
+    from fastapi.responses import Response
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="district-savings-{today}.csv"'},
+    )
+
+
 @app.post("/api/admin/savings/import-legacy")
 def import_legacy_savings(body: LegacyImportIn, db: Session = Depends(get_db), admin: dict = Depends(require_admin)):
     """Import savings entries from the old admin localStorage (dat_savings key).

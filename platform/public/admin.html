@@ -261,6 +261,8 @@
   .modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
   .modal-head h2 { font-size:1.1rem; font-weight:700; color:var(--text); }
   .modal-close { background:none; border:none; color:var(--dim); font-size:1.6rem; cursor:pointer; line-height:1; }
+  .td-preset { font-size:.75rem;padding:3px 9px;border-radius:20px;border:1px solid var(--border2);background:var(--off);color:var(--muted);cursor:pointer; }
+  .td-preset:hover { border-color:var(--accent);color:var(--accent); }
   .modal-sub { color:var(--muted); font-size:.83rem; margin-bottom:20px; line-height:1.5; }
 
   /* AI PARSE RESULT */
@@ -489,6 +491,7 @@
         <div class="page-header">
           <div><h1>Clients</h1><p>All portal accounts — click to message</p></div>
           <div class="header-actions">
+            <button class="btn-action" onclick="exportCSV('/api/admin/export/clients','district-clients.csv')">&#8659; Export CSV</button>
             <button class="btn-action ai" onclick="openImportEmail()">✨ Import from Email</button>
             <button class="btn-action solid" onclick="openAddClient()">+ Add Client</button>
           </div>
@@ -556,7 +559,7 @@
       <div class="panel" id="panel-fees">
         <div class="page-header">
           <div><h1>Savings &amp; Fees</h1><p>Track savings you identified and the 10% advisory fee</p></div>
-          <div class="header-actions"><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
+          <div class="header-actions"><button class="btn-action" onclick="exportCSV('/api/admin/export/savings','district-savings.csv')">&#8659; Export CSV</button><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
         </div>
         <div class="content">
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px">
@@ -2397,6 +2400,31 @@ async function _renderClientDrawer(email){
       <button class="modal-close" onclick="closeTripDetail()">&times;</button>
     </div>
     <div id="td-meta" style="font-size:.82rem;color:var(--muted);margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap"></div>
+    <!-- TIME TRACKER -->
+    <div style="margin-bottom:20px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Time Tracked</div>
+        <div id="td-time-display" style="font-size:1rem;font-weight:700;color:var(--text);min-width:56px">0m</div>
+        <button onclick="toggleTimeForm()" style="font-size:.75rem;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--off);color:var(--text);cursor:pointer">＋ Log time</button>
+        <span id="td-time-logged" style="font-size:.78rem;color:var(--green);opacity:0;transition:opacity .4s">&#x2713; Logged</span>
+      </div>
+      <div id="td-time-form" style="display:none;margin-top:10px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <input id="td-time-input" type="number" min="1" max="600" placeholder="30"
+            style="width:70px;padding:5px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--off);color:var(--text);font-size:.84rem;outline:none"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'"
+            onkeydown="if(event.key==='Enter')logTime()">
+          <span style="font-size:.78rem;color:var(--muted)">min</span>
+          <button onclick="setTimePreset(15)" class="td-preset">15m</button>
+          <button onclick="setTimePreset(30)" class="td-preset">30m</button>
+          <button onclick="setTimePreset(45)" class="td-preset">45m</button>
+          <button onclick="setTimePreset(60)" class="td-preset">1h</button>
+          <button onclick="setTimePreset(120)" class="td-preset">2h</button>
+          <button onclick="logTime()" style="font-size:.78rem;padding:4px 12px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-weight:600">Log</button>
+        </div>
+      </div>
+    </div>
+
     <div style="margin-bottom:20px">
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Research Notes</div>
       <textarea id="td-research-notes" rows="6"
@@ -2439,6 +2467,9 @@ function openTripDetail(trip) {
   ta.value = trip.research_notes || '';
   document.getElementById('td-rn-count').textContent = ta.value.length + ' / 10000';
   document.getElementById('td-rn-saved').style.opacity = '0';
+  setTimeDisplay(trip.time_tracked_minutes || 0);
+  document.getElementById('td-time-form').style.display = 'none';
+  document.getElementById('td-time-logged').style.opacity = '0';
   document.getElementById('trip-detail-overlay').classList.add('open');
 }
 
@@ -2470,6 +2501,59 @@ async function saveResearchNotes() {
       var saved = document.getElementById('td-rn-saved');
       saved.style.opacity = '1';
       setTimeout(function(){ saved.style.opacity = '0'; }, 2000);
+    }
+  } catch(e) {}
+}
+
+/* ── TIME TRACKER ── */
+var _tdTrackedMinutes = 0;
+
+function fmtMinutes(m) {
+  if (!m || m <= 0) return '0m';
+  var h = Math.floor(m / 60), rem = m % 60;
+  return h > 0 ? (rem > 0 ? h + 'h ' + rem + 'm' : h + 'h') : rem + 'm';
+}
+
+function setTimeDisplay(mins) {
+  _tdTrackedMinutes = mins || 0;
+  document.getElementById('td-time-display').textContent = fmtMinutes(_tdTrackedMinutes);
+}
+
+function toggleTimeForm() {
+  var form = document.getElementById('td-time-form');
+  var visible = form.style.display !== 'none';
+  form.style.display = visible ? 'none' : 'flex';
+  if (!visible) {
+    var inp = document.getElementById('td-time-input');
+    inp.value = '';
+    inp.focus();
+  }
+}
+
+function setTimePreset(mins) {
+  document.getElementById('td-time-input').value = mins;
+}
+
+async function logTime() {
+  if (!_tdTripId || !ADMIN_TOKEN) return;
+  var mins = parseInt(document.getElementById('td-time-input').value, 10);
+  if (!mins || mins < 1 || mins > 600) {
+    document.getElementById('td-time-input').focus();
+    return;
+  }
+  try {
+    var res = await fetch('/api/admin/trips/' + _tdTripId + '/time', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN, 'Content-Type': 'application/json'},
+      body: JSON.stringify({minutes: mins})
+    });
+    if (res.ok) {
+      var data = await res.json();
+      setTimeDisplay(data.time_tracked_minutes);
+      document.getElementById('td-time-form').style.display = 'none';
+      var badge = document.getElementById('td-time-logged');
+      badge.style.opacity = '1';
+      setTimeout(function(){ badge.style.opacity = '0'; }, 2000);
     }
   } catch(e) {}
 }
