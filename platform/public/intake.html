@@ -29,9 +29,27 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;border:none;font-family:var(--font)}
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
 .btn-ghost:hover{color:var(--text);background:var(--card)}
-.btn-primary{background:var(--accent);color:#fff}
+
+/* ── PRIMARY BUTTON with shine sweep ── */
+.btn-primary{background:var(--accent);color:#fff;position:relative;overflow:hidden}
+.btn-primary::after{
+  content:'';
+  position:absolute;
+  top:0;left:-75%;
+  width:50%;height:100%;
+  background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.38) 50%,transparent 100%);
+  transform:skewX(-20deg);
+  transition:left 0s;
+  pointer-events:none;
+}
+.btn-primary:hover::after{
+  left:135%;
+  transition:left .52s cubic-bezier(.25,.46,.45,.94);
+}
 .btn-primary:hover{background:#ea6c0a;transform:translateY(-1px);box-shadow:0 4px 16px rgba(249,115,22,.3)}
 .btn-primary:disabled{background:var(--dim);color:#fff;transform:none;box-shadow:none;cursor:not-allowed}
+.btn-primary:disabled::after{display:none}
+
 .page{max-width:620px;margin:0 auto;padding:40px 24px 80px}
 .page-header{margin-bottom:28px;text-align:center}
 .page-h1{font-size:30px;font-weight:800;letter-spacing:-.8px;color:var(--text);margin-bottom:8px}
@@ -52,6 +70,39 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 }
 @media(prefers-reduced-motion:reduce){.progress-plane,.progress-fill{transition:none}}
 
+/* ── STEP INDICATORS ── */
+.step-indicators{display:flex;justify-content:center;align-items:center;gap:0;margin-bottom:24px}
+.step-dot{
+  display:flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:50%;
+  font-size:13px;font-weight:800;
+  border:2px solid var(--border2);
+  color:var(--dim);
+  background:var(--bg);
+  transition:all .4s cubic-bezier(.34,1.56,.64,1);
+  position:relative;z-index:1;
+}
+.step-dot.active{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:var(--accent-dim);
+  box-shadow:0 0 0 5px rgba(249,115,22,.12);
+  transform:scale(1.1);
+}
+.step-dot.done{
+  border-color:var(--accent);
+  background:var(--accent);
+  color:#fff;
+  box-shadow:0 2px 10px rgba(249,115,22,.35);
+}
+.step-connector{
+  width:48px;height:2px;
+  background:var(--border);
+  transition:background .4s;
+  position:relative;z-index:0;
+}
+.step-connector.done{background:var(--accent)}
+
 /* ── RESTORE BANNER ── */
 .restore-banner{display:none;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid var(--accent-border);border-radius:12px;padding:14px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .restore-banner.show{display:flex}
@@ -60,20 +111,71 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .btn-sm{padding:7px 14px;font-size:12px}
 
 /* ── STEPS ── */
-.step{display:none;animation:stepIn .35s cubic-bezier(.16,1,.3,1)}
-.step.active{display:block}
-@keyframes stepIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
-.form-card{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px;box-shadow:var(--shadow)}
+.step{display:none}
+.step.active{display:block;animation:slideInRight .38s cubic-bezier(.16,1,.3,1)}
+.step.slide-back{animation:slideInLeft .38s cubic-bezier(.16,1,.3,1)}
+@keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── FORM CARD with noise texture ── */
+.form-card{
+  background:var(--bg);
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='0.03'/></svg>");
+  border:1px solid var(--border);
+  border-radius:14px;padding:28px;margin-bottom:16px;
+  box-shadow:var(--shadow);
+}
 .form-card-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.3px}
 .form-card-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .form-full{grid-column:1/-1}
+
+/* ── FLOATING LABEL FIELDS ── */
 .field{display:flex;flex-direction:column;gap:5px}
 .field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em}
 .field label .req{color:var(--red);margin-left:2px}
-.field input,.field select,.field textarea{background:var(--off);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:11px 13px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);background:var(--bg);box-shadow:0 0 0 3px var(--accent-dim)}
-.field input::placeholder,.field textarea::placeholder{color:var(--dim)}
+
+/* Floating label wrapper */
+.field-float{position:relative;display:flex;flex-direction:column}
+.field-float label{
+  position:absolute;
+  left:13px;top:50%;transform:translateY(-50%);
+  font-size:14px;font-weight:500;color:var(--dim);
+  pointer-events:none;
+  transition:all .18s cubic-bezier(.4,0,.2,1);
+  background:transparent;padding:0 2px;
+  z-index:1;
+  white-space:nowrap;
+}
+.field-float label .req{color:var(--red);margin-left:2px}
+/* Float up when input has content or is focused */
+.field-float input:not(:placeholder-shown) ~ label,
+.field-float input:focus ~ label{
+  top:0;
+  transform:translateY(-50%);
+  font-size:10px;font-weight:700;
+  color:var(--accent);
+  background:var(--bg);
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.field-float input{padding-top:16px;padding-bottom:8px}
+
+.field input,.field select,.field textarea,.field-float input{
+  background:var(--off);
+  border:1.5px solid var(--border);
+  color:var(--text);
+  border-radius:8px;padding:11px 13px;
+  font-size:14px;font-family:inherit;
+  outline:none;
+  transition:border-color .18s,box-shadow .18s,background .18s;
+}
+/* Orange glow on focus */
+.field input:focus,.field select:focus,.field textarea:focus,.field-float input:focus{
+  border-color:var(--accent);
+  background:var(--bg);
+  box-shadow:0 0 0 3px rgba(249,115,22,.13),0 0 12px rgba(249,115,22,.09);
+}
+.field input::placeholder,.field textarea::placeholder,.field-float input::placeholder{color:var(--dim)}
 .field select option{background:var(--bg)}
 .field textarea{resize:vertical;min-height:88px}
 .field .err-msg{display:none;font-size:11px;color:var(--red);font-weight:500}
@@ -128,16 +230,67 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .success-check svg{width:34px;height:34px;color:var(--green)}
 .success-h2{font-size:26px;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:-.6px}
 .success-sub{font-size:15px;color:var(--muted);max-width:440px;margin:0 auto;line-height:1.6}
-/* confirmation ticket */
-.ticket{max-width:440px;margin:28px auto 0;border-radius:16px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.14);text-align:left;animation:pop .55s cubic-bezier(.34,1.56,.64,1) .15s backwards}
+
+/* ── BOARDING PASS TICKET ── */
+.ticket{max-width:440px;margin:28px auto 0;border-radius:16px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.18);text-align:left;animation:pop .55s cubic-bezier(.34,1.56,.64,1) .15s backwards}
 .ticket-top{background:linear-gradient(135deg,#1c0f05,#2d1507);padding:20px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:14px}
 .ticket-brand{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(251,146,60,.85)}
 .ticket-status{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4ade80;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);padding:4px 12px;border-radius:14px;white-space:nowrap}
-.ticket-body{background:var(--bg);border:1px solid var(--border);border-top:none;border-radius:0 0 16px 16px;padding:20px 24px}
+/* Tear line divider */
+.ticket-tear{
+  background:linear-gradient(135deg,#1c0f05,#2d1507);
+  display:flex;align-items:center;
+  padding:0 0 0 24px;
+  gap:0;
+  position:relative;
+}
+.ticket-tear::before{
+  content:'';
+  position:absolute;
+  left:0;right:0;top:50%;
+  height:1px;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.18) 0px,rgba(255,255,255,.18) 6px,transparent 6px,transparent 12px);
+}
+.ticket-tear-circle-l{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--off);
+  flex-shrink:0;
+  position:relative;z-index:1;
+  margin-left:-9px;
+}
+.ticket-tear-circle-r{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--off);
+  flex-shrink:0;
+  position:relative;z-index:1;
+  margin-left:auto;
+  margin-right:-9px;
+}
+.ticket-body{
+  background:var(--bg);
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='0.03'/></svg>");
+  border:1px solid var(--border);border-top:none;
+  padding:20px 24px;
+  display:flex;gap:16px;align-items:flex-start;
+}
+.ticket-fields{flex:1;min-width:0}
 .ticket-row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px}
 .ticket-row:last-child{border-bottom:none}
 .ticket-row span:first-child{color:var(--dim);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding-top:2px}
 .ticket-row span:last-child{font-weight:700;color:var(--text);text-align:right}
+
+/* QR code placeholder — pure CSS/SVG grid */
+.ticket-qr{
+  flex-shrink:0;
+  width:72px;height:72px;
+  background:#1c1917;
+  border-radius:6px;
+  overflow:hidden;
+  position:relative;
+  margin-top:4px;
+}
+.ticket-qr svg{width:100%;height:100%;display:block}
+
 #confetti-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:900}
 .success-next{margin:30px auto 0;max-width:440px;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:22px;text-align:left;box-shadow:var(--shadow)}
 .success-next-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
@@ -154,25 +307,29 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
   .form-grid{grid-template-columns:1fr}
   .form-card{padding:22px 18px}
   .chip-row{grid-template-columns:repeat(2,1fr)}
+  .step-connector{width:28px}
 }
-@media(prefers-reduced-motion:reduce){.step,.success-check,.progress-fill{animation:none;transition:none}}
+@media(prefers-reduced-motion:reduce){
+  .step,.success-check,.progress-fill{animation:none;transition:none}
+  .btn-primary::after{display:none}
+}
 </style>
 </head>
 <body>
 
 <nav>
   <a href="index.html" class="nav-logo">District <span>Award</span> Travel</a>
-  <a href="index.html" class="btn btn-ghost">← Back</a>
+  <a href="index.html" class="btn btn-ghost">&#8592; Back</a>
 </nav>
 
 <div class="page">
   <div class="page-header" id="page-header">
     <h1 class="page-h1">Let's find <em>your flight.</em></h1>
-    <p class="page-sub">Three quick steps · no credit card · pay only after you save</p>
+    <p class="page-sub">Three quick steps &middot; no credit card &middot; pay only after you save</p>
   </div>
 
   <div class="restore-banner" id="restore-banner">
-    <div class="restore-txt">👋 <strong>Welcome back.</strong> We saved your answers from last time.</div>
+    <div class="restore-txt">&#128075; <strong>Welcome back.</strong> We saved your answers from last time.</div>
     <div class="restore-actions">
       <button class="btn btn-primary btn-sm" onclick="restoreDraft()">Resume</button>
       <button class="btn btn-ghost btn-sm" onclick="discardDraft()">Start fresh</button>
@@ -180,21 +337,28 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
   </div>
 
   <div class="progress-wrap" id="progress-wrap">
+    <div class="step-indicators" id="step-indicators">
+      <div class="step-dot active" id="dot-1">1</div>
+      <div class="step-connector" id="conn-1"></div>
+      <div class="step-dot" id="dot-2">2</div>
+      <div class="step-connector" id="conn-2"></div>
+      <div class="step-dot" id="dot-3">3</div>
+    </div>
     <div class="progress-meta">
       <span class="progress-step" id="progress-label">Step 1 of 3 — Your trip</span>
       <span class="progress-pct" id="progress-pct">33%</span>
     </div>
-    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div><span class="progress-plane" id="progress-plane">✈️</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div><span class="progress-plane" id="progress-plane">&#9992;&#65039;</span></div>
   </div>
 
   <form id="intakeForm" novalidate>
     <!-- honeypot: bots fill it, humans never see it -->
     <div class="hp-field" aria-hidden="true"><input type="text" name="hp" tabindex="-1" autocomplete="off"></div>
 
-    <!-- ═══ STEP 1 — YOUR TRIP ═══ -->
+    <!-- STEP 1 — YOUR TRIP -->
     <div class="step active" id="step-1">
       <div class="form-card">
-        <div class="form-card-title">Where are we sending you? ✈️</div>
+        <div class="form-card-title">Where are we sending you? &#9992;&#65039;</div>
         <div class="form-card-sub">Dream big — that's what the points are for.</div>
         <div class="form-grid">
           <div class="field form-full">
@@ -209,10 +373,10 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
           <div class="field form-full">
             <label>Cabin</label>
             <div class="chip-row" id="cabin-chips">
-              <button type="button" class="chip" data-val="economy"><span class="chip-ico">💺</span>Economy</button>
-              <button type="button" class="chip" data-val="premium_economy"><span class="chip-ico">🛋</span>Premium</button>
-              <button type="button" class="chip sel" data-val="business"><span class="chip-ico">🥂</span>Business</button>
-              <button type="button" class="chip" data-val="first"><span class="chip-ico">👑</span>First</button>
+              <button type="button" class="chip" data-val="economy"><span class="chip-ico">&#128186;</span>Economy</button>
+              <button type="button" class="chip" data-val="premium_economy"><span class="chip-ico">&#128715;</span>Premium</button>
+              <button type="button" class="chip sel" data-val="business"><span class="chip-ico">&#129346;</span>Business</button>
+              <button type="button" class="chip" data-val="first"><span class="chip-ico">&#128081;</span>First</button>
             </div>
             <input type="hidden" name="cabin_pref" value="business">
           </div>
@@ -241,64 +405,64 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
         </div>
       </div>
       <div class="step-nav">
-        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(1)">Next — your points →</button>
+        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(1)">Next — your points &#8594;</button>
       </div>
     </div>
 
-    <!-- ═══ STEP 2 — YOUR POINTS ═══ -->
+    <!-- STEP 2 — YOUR POINTS -->
     <div class="step" id="step-2">
       <div class="form-card">
-        <div class="form-card-title">What are you sitting on? ⬡</div>
+        <div class="form-card-title">What are you sitting on? &#11041;</div>
         <div class="form-card-sub">Every program counts — rough estimates are fine. We never ask for passwords.</div>
         <div class="points-rows" id="points-rows">
           <div class="points-row">
             <input type="text" class="pts-prog" placeholder="Program (e.g. Chase UR)">
             <input type="text" class="pts-bal" placeholder="Balance (e.g. 80,000)" inputmode="numeric">
-            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>
+            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">&times;</button>
           </div>
           <div class="points-row">
             <input type="text" class="pts-prog" placeholder="Program (e.g. Amex MR)">
             <input type="text" class="pts-bal" placeholder="Balance (e.g. 150,000)" inputmode="numeric">
-            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>
+            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">&times;</button>
           </div>
         </div>
         <button type="button" class="btn-add-row" onclick="addPtsRow()">+ Add another program</button>
         <div class="pts-skip">Not sure what you have? Skip this — we'll figure it out together.</div>
       </div>
       <div class="step-nav">
-        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(2)">← Back</button>
-        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(2)">Next — about you →</button>
+        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(2)">&#8592; Back</button>
+        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(2)">Next — about you &#8594;</button>
       </div>
     </div>
 
-    <!-- ═══ STEP 3 — ABOUT YOU ═══ -->
+    <!-- STEP 3 — ABOUT YOU -->
     <div class="step" id="step-3">
       <div class="form-card">
-        <div class="form-card-title">Almost there 🎯</div>
+        <div class="form-card-title">Almost there &#127919;</div>
         <div class="form-card-sub">Just enough to reach you with your options.</div>
         <div class="form-grid">
-          <div class="field">
-            <label>First name <span class="req">*</span></label>
-            <input type="text" name="first_name" placeholder="Jordan" autocomplete="given-name">
+          <div class="field-float field">
+            <input type="text" name="first_name" placeholder=" " autocomplete="given-name" id="ff-first_name">
+            <label for="ff-first_name">First name <span class="req">*</span></label>
             <span class="err-msg">Required.</span>
           </div>
-          <div class="field">
-            <label>Last name <span class="req">*</span></label>
-            <input type="text" name="last_name" placeholder="Mills" autocomplete="family-name">
+          <div class="field-float field">
+            <input type="text" name="last_name" placeholder=" " autocomplete="family-name" id="ff-last_name">
+            <label for="ff-last_name">Last name <span class="req">*</span></label>
             <span class="err-msg">Required.</span>
           </div>
-          <div class="field">
-            <label>Email <span class="req">*</span></label>
-            <input type="email" name="email" placeholder="jordan@example.com" autocomplete="email">
+          <div class="field-float field">
+            <input type="email" name="email" placeholder=" " autocomplete="email" id="ff-email">
+            <label for="ff-email">Email <span class="req">*</span></label>
             <span class="err-msg">A valid email is required.</span>
           </div>
-          <div class="field">
-            <label>Phone</label>
-            <input type="tel" name="phone" placeholder="+1 (202) 555-0000" autocomplete="tel">
+          <div class="field-float field">
+            <input type="tel" name="phone" placeholder=" " autocomplete="tel" id="ff-phone">
+            <label for="ff-phone">Phone</label>
           </div>
-          <div class="field">
-            <label>Home airport <span class="req">*</span></label>
-            <input type="text" name="home_airport" placeholder="e.g. IAD – Washington" autocomplete="off">
+          <div class="field-float field">
+            <input type="text" name="home_airport" placeholder=" " autocomplete="off" id="ff-home_airport">
+            <label for="ff-home_airport">Home airport <span class="req">*</span></label>
             <span class="err-msg">Required — where do you fly from?</span>
           </div>
           <div class="field">
@@ -320,9 +484,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
               <option>Other</option>
             </select>
           </div>
-          <div class="field">
-            <label>Referral name (optional)</label>
-            <input type="text" name="referral_name" placeholder="Who sent you?">
+          <div class="field-float field">
+            <input type="text" name="referral_name" placeholder=" " id="ff-referral_name">
+            <label for="ff-referral_name">Referral name (optional)</label>
           </div>
         </div>
       </div>
@@ -347,14 +511,14 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
         </div>
       </div>
       <div class="step-nav" style="margin-top:0">
-        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(3)">← Back</button>
+        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(3)">&#8592; Back</button>
       </div>
     </div>
   </form>
 
   <div id="success">
     <div class="success-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,13 9,18 20,6"/></svg></div>
-    <h2 class="success-h2">You're in. ✈️</h2>
+    <h2 class="success-h2">You're in. &#9992;&#65039;</h2>
     <p class="success-sub">Check your inbox for a confirmation. Your options are usually ready within 24–72 hours.</p>
     <div class="ticket">
       <div class="ticket-top">
@@ -364,11 +528,62 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
         </div>
         <div class="ticket-status">Confirmed</div>
       </div>
+      <div class="ticket-tear">
+        <div class="ticket-tear-circle-l"></div>
+        <div class="ticket-tear-circle-r"></div>
+      </div>
       <div class="ticket-body">
-        <div class="ticket-row"><span>Passenger</span><span id="ticket-name">—</span></div>
-        <div class="ticket-row"><span>Dream destination</span><span id="ticket-dest">—</span></div>
-        <div class="ticket-row"><span>Cabin</span><span id="ticket-cabin">—</span></div>
-        <div class="ticket-row"><span>Options by</span><span id="ticket-eta">—</span></div>
+        <div class="ticket-fields">
+          <div class="ticket-row"><span>Passenger</span><span id="ticket-name">—</span></div>
+          <div class="ticket-row"><span>Dream destination</span><span id="ticket-dest">—</span></div>
+          <div class="ticket-row"><span>Cabin</span><span id="ticket-cabin">—</span></div>
+          <div class="ticket-row"><span>Options by</span><span id="ticket-eta">—</span></div>
+        </div>
+        <div class="ticket-qr" aria-label="Boarding pass QR placeholder">
+          <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+            <!-- outer border squares -->
+            <rect x="2" y="2" width="20" height="20" fill="none" stroke="#f97316" stroke-width="3"/>
+            <rect x="8" y="8" width="8" height="8" fill="#f97316"/>
+            <rect x="50" y="2" width="20" height="20" fill="none" stroke="#f97316" stroke-width="3"/>
+            <rect x="56" y="8" width="8" height="8" fill="#f97316"/>
+            <rect x="2" y="50" width="20" height="20" fill="none" stroke="#f97316" stroke-width="3"/>
+            <rect x="8" y="56" width="8" height="8" fill="#f97316"/>
+            <!-- D letter center -->
+            <rect x="30" y="28" width="4" height="16" fill="#f5f5f4"/>
+            <rect x="34" y="28" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="34" y="40" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="38" y="32" width="4" height="8" fill="#f5f5f4"/>
+            <!-- scattered data bits -->
+            <rect x="26" y="2" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="32" y="2" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="40" y="2" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="44" y="2" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="2" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="2" y="32" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="2" y="40" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="2" y="44" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="66" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="66" y="32" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="66" y="40" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="26" y="66" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="32" y="66" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="44" y="66" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="66" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="56" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="36" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="60" y="40" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="46" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="60" y="50" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="56" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="56" y="60" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="20" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="14" y="32" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="20" y="36" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="14" y="42" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="20" y="46" width="4" height="4" fill="#f5f5f4"/>
+          </svg>
+        </div>
       </div>
     </div>
     <div class="success-next">
@@ -378,12 +593,12 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
       <div class="success-next-item"><span class="success-next-num">3</span><span>You book it yourself with our step-by-step guide — we're with you the whole way.</span></div>
       <div class="success-next-item"><span class="success-next-num">4</span><span>You pay 10% of documented savings. No savings, no fee.</span></div>
     </div>
-    <div style="margin-top:28px"><a href="index.html" class="btn btn-ghost">← Back to site</a></div>
+    <div style="margin-top:28px"><a href="index.html" class="btn btn-ghost">&#8592; Back to site</a></div>
   </div>
 </div>
 
 <script>
-/* ═══ Funnel tracking ═══ */
+/* Funnel tracking */
 function sid(){
   var s=sessionStorage.getItem('dat_sid');
   if(!s){s=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));sessionStorage.setItem('dat_sid',s);}
@@ -403,17 +618,35 @@ track('page_view');
 var formStarted=false;
 function markStart(){if(!formStarted){formStarted=true;track('form_start');}}
 
-/* ═══ Steps ═══ */
+/* Steps */
 var STEP_LABELS={1:'Step 1 of 3 — Your trip',2:'Step 2 of 3 — Your points',3:'Step 3 of 3 — About you'};
-var curStep=1,maxTracked=0;
-function showStep(n){
+var curStep=1,maxTracked=0,lastDir='forward';
+function updateStepDots(n){
+  for(var i=1;i<=3;i++){
+    var dot=document.getElementById('dot-'+i);
+    dot.classList.remove('active','done');
+    if(i<n)dot.classList.add('done');
+    else if(i===n)dot.classList.add('active');
+  }
+  for(var j=1;j<=2;j++){
+    var conn=document.getElementById('conn-'+j);
+    conn.classList.toggle('done',j<n);
+  }
+}
+function showStep(n,dir){
   curStep=n;
-  document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
-  document.getElementById('step-'+n).classList.add('active');
+  lastDir=dir||'forward';
+  document.querySelectorAll('.step').forEach(function(s){
+    s.classList.remove('active','slide-back');
+  });
+  var el=document.getElementById('step-'+n);
+  el.classList.add('active');
+  if(lastDir==='back')el.classList.add('slide-back');
   document.getElementById('progress-label').textContent=STEP_LABELS[n];
   document.getElementById('progress-pct').textContent=Math.round(n/3*100)+'%';
   document.getElementById('progress-fill').style.width=(n/3*100)+'%';
   document.getElementById('progress-plane').style.left=(n/3*100)+'%';
+  updateStepDots(n);
   window.scrollTo({top:0,behavior:'smooth'});
   saveDraft();
 }
@@ -441,11 +674,11 @@ function validateStep(n){
 function nextStep(from){
   if(!validateStep(from))return;
   if(from>maxTracked){maxTracked=from;track('step_'+from+'_complete');}
-  showStep(from+1);
+  showStep(from+1,'forward');
 }
-function prevStep(from){showStep(from-1);}
+function prevStep(from){showStep(from-1,'back');}
 
-/* ═══ Cabin chips ═══ */
+/* Cabin chips */
 document.querySelectorAll('#cabin-chips .chip').forEach(function(c){
   c.addEventListener('click',function(){
     document.querySelectorAll('#cabin-chips .chip').forEach(function(x){x.classList.remove('sel');});
@@ -455,7 +688,7 @@ document.querySelectorAll('#cabin-chips .chip').forEach(function(c){
   });
 });
 
-/* ═══ Points rows ═══ */
+/* Points rows */
 function addPtsRow(prog,bal){
   var row=document.createElement('div');
   row.className='points-row';
@@ -479,14 +712,14 @@ function ptsList(){
   return list;
 }
 
-/* ═══ Agree toggle ═══ */
+/* Agree toggle */
 var agreeCb=document.getElementById('agree');
 agreeCb.addEventListener('change',function(){
   document.getElementById('agree-row').classList.toggle('checked',this.checked);
   document.getElementById('agree-err').style.display='none';
 });
 
-/* ═══ Autosave + restore ═══ */
+/* Autosave + restore */
 var DRAFT_KEY='dat_intake_draft',saveTimer=null,restoring=false;
 function saveDraft(){
   if(restoring)return;
@@ -546,7 +779,7 @@ document.getElementById('intakeForm').addEventListener('keydown',function(e){
   if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA'&&curStep<3){e.preventDefault();nextStep(curStep);}
 });
 
-/* ═══ Submit — reliable: await, retry, never lose the lead ═══ */
+/* Submit — reliable: await, retry, never lose the lead */
 function showSubmitErr(msg){
   var el=document.getElementById('submit-err');
   el.textContent=msg;el.classList.add('show');
@@ -560,8 +793,8 @@ async function postIntake(data){
       if(res.ok)return {ok:true};
       if(res.status===422){var d=await res.json().catch(function(){return{};});return {ok:false,fatal:true,msg:d.detail||'Something in the form was rejected — check your email address.'};}
       if(res.status===429)return {ok:false,fatal:true,msg:'Too many submissions from this network — please try again in an hour.'};
-      // 5xx → retry
-    }catch(e){/* network error → retry */}
+      // 5xx -> retry
+    }catch(e){/* network error -> retry */}
   }
   return {ok:false,fatal:false,msg:'We couldn’t reach our server. Your answers are saved on this device — please try again in a minute.'};
 }
@@ -611,7 +844,7 @@ document.getElementById('intakeForm').addEventListener('submit',async function(e
   }
 });
 
-/* ═══ Confirmation ticket ═══ */
+/* Confirmation ticket */
 var CABIN_LABELS={economy:'Economy',premium_economy:'Premium Economy',business:'Business',first:'First'};
 function fillTicket(data){
   document.getElementById('ticket-name').textContent=((data.first_name||'')+' '+(data.last_name||'')).trim()||'You';
@@ -621,7 +854,7 @@ function fillTicket(data){
   document.getElementById('ticket-eta').textContent=eta.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 }
 
-/* ═══ Confetti — pure canvas, no libs ═══ */
+/* Confetti — pure canvas, no libs */
 function confettiBurst(){
   if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   var canvas=document.createElement('canvas');
