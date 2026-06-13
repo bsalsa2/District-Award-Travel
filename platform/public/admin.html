@@ -110,6 +110,28 @@
   .metric-val.blue{color:var(--blue)} .metric-val.red{color:var(--red)}
   .metric-delta { font-size:.73rem; color:var(--dim); margin-top:4px; }
 
+  /* ACTIVITY HEATMAP */
+  .heatmap-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:24px; overflow-x:auto; }
+  .heatmap-total { font-size:.78rem; color:var(--muted); margin-bottom:12px; }
+  .heatmap-total strong { color:var(--text); }
+  .heatmap-container { display:flex; gap:6px; align-items:flex-start; }
+  .heatmap-day-labels { display:flex; flex-direction:column; gap:2px; padding-top:20px; flex-shrink:0; }
+  .heatmap-day-label { height:10px; font-size:.62rem; color:var(--dim); line-height:10px; text-align:right; padding-right:6px; }
+  .heatmap-day-label.hidden { visibility:hidden; }
+  .heatmap-grid { display:flex; flex-direction:column; gap:0; }
+  .heatmap-month-row { display:flex; gap:2px; margin-bottom:4px; height:14px; }
+  .heatmap-month-label { font-size:.62rem; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:clip; }
+  .heatmap-month-spacer { flex-shrink:0; }
+  .heatmap-cols { display:flex; gap:2px; }
+  .heatmap-col { display:flex; flex-direction:column; gap:2px; }
+  .heatmap-cell { width:10px; height:10px; border-radius:2px; flex-shrink:0; cursor:default; }
+  .heatmap-cell[data-level="0"] { background:rgba(255,255,255,.04); border:1px solid var(--border); }
+  .heatmap-cell[data-level="1"] { background:rgba(249,115,22,.2); }
+  .heatmap-cell[data-level="2"] { background:rgba(249,115,22,.5); }
+  .heatmap-cell[data-level="3"] { background:#f97316; }
+  .heatmap-legend { display:flex; align-items:center; gap:4px; margin-top:10px; font-size:.65rem; color:var(--dim); }
+  .heatmap-legend-cell { width:10px; height:10px; border-radius:2px; }
+
   /* COMMAND PALETTE (Cmd/Ctrl+K) */
   #cmdk{display:none;position:fixed;inset:0;z-index:900;background:rgba(28,25,23,.35);backdrop-filter:blur(2px);align-items:flex-start;justify-content:center;padding:14vh 16px 0}
   #cmdk.open{display:flex}
@@ -632,6 +654,23 @@
             <div style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px;font-weight:500">Funnel stages</div>
             <div id="funnel-bars">
               <div style="color:var(--dim);font-size:.82rem">Loading…</div>
+            </div>
+          </div>
+
+          <!-- ACTIVITY HEATMAP -->
+          <div class="section-header" style="margin-top:8px">
+            <div class="section-title">Recent Activity</div>
+          </div>
+          <div class="heatmap-wrap">
+            <div class="heatmap-total" id="heatmap-total">Loading activity…</div>
+            <div id="activity-heatmap"></div>
+            <div class="heatmap-legend">
+              Less
+              <div class="heatmap-legend-cell" style="background:rgba(255,255,255,.04);border:1px solid var(--border)"></div>
+              <div class="heatmap-legend-cell" style="background:rgba(249,115,22,.2)"></div>
+              <div class="heatmap-legend-cell" style="background:rgba(249,115,22,.5)"></div>
+              <div class="heatmap-legend-cell" style="background:#f97316"></div>
+              More
             </div>
           </div>
 
@@ -1316,6 +1355,24 @@ async function loadActionItems(){
     var data = await res.json();
     _aiLoaded = true;
     renderSmartActionItems(data);
+    // Add notifications for new high-priority items
+    if(data.items && data.items.length){
+      var hp=data.items.filter(function(it){return it.priority==='high'||it.level==='red';});
+      var seenKey='dat_notif_seen_ai';
+      var seen=new Set();try{seen=new Set(JSON.parse(sessionStorage.getItem(seenKey)||'[]'));}catch(e){}
+      hp.forEach(function(it){
+        var uid=it.id||it.type+'_'+it.client_email;
+        if(!seen.has(uid)){
+          var desc=it.title||(it.type==='expiring_points'?it.client_name+' — points expiring soon':
+            it.type==='unread_message'?it.client_name+' — unread message':
+            it.type==='new_intake'?'New intake from '+(it.name||it.email):
+            'High-priority action item');
+          addNotif(desc,'urgent');
+          seen.add(uid);
+        }
+      });
+      try{sessionStorage.setItem(seenKey,JSON.stringify([...seen].slice(0,100)));}catch(e){}
+    }
     // Update badge counts
     var navBadge = document.getElementById('nav-ai-count');
     if(navBadge) navBadge.textContent = data.total;
@@ -1433,7 +1490,9 @@ async function saveSaving(){
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
       body:JSON.stringify(body)});
     if(res.ok){
-      closeAddSaving(); renderFees(); toast('Saving logged ✓');
+      var savAmt=(bench/100).toFixed(2);
+      closeAddSaving(); renderFees(); toast('Saving logged ✓','success');
+      addNotif('Saving logged: $'+savAmt,'fees');
       ['sv-trip','sv-benchmark','sv-taxes','sv-points','sv-program'].forEach(function(i){document.getElementById(i).value='';});
       document.getElementById('sv-client-email').value='';
       updateSvFeePreview();
@@ -2234,6 +2293,7 @@ function adminError(msg){
   setTimeout(function(){el.style.display='none';},3500);
 }
 var statsTimer=null;
+var heatmapTimer=null;
 async function loadStats(){
   if(!ADMIN_TOKEN)return;
   try{
@@ -2269,8 +2329,10 @@ function enterAdmin(){
   loadBoard();
   loadStats();
   loadFunnel();
+  loadHeatmap();
   if(!inboxTimer)inboxTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadInbox();},30000);
   if(!statsTimer)statsTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadStats();},60000);
+  if(!heatmapTimer)heatmapTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadHeatmap();},7*24*60*60*1000);
 }
 async function loadFunnel(days){
   days=days||30;
@@ -2302,6 +2364,61 @@ async function loadFunnel(days){
         +'</div>';
     }).join('');
   }catch(e){console.warn('loadFunnel error',e);}
+}
+async function loadHeatmap(){
+  try{
+    var res=await fetch('/api/admin/activity-heatmap',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok)return;
+    var d=await res.json();
+    var days=d.days||[];
+    var total=days.reduce(function(s,day){return s+day.count;},0);
+    var totalEl=document.getElementById('heatmap-total');
+    if(totalEl)totalEl.innerHTML='<strong>'+total+'</strong> activities in the last 12 weeks';
+    var container=document.getElementById('activity-heatmap');
+    if(!container)return;
+    var firstDate=new Date(days[0].date+'T00:00:00');
+    var firstDow=firstDate.getDay();
+    var padStart=(firstDow+6)%7;
+    var allCells=[];
+    for(var p=0;p<padStart;p++)allCells.push(null);
+    for(var i=0;i<days.length;i++)allCells.push(days[i]);
+    while(allCells.length%7!==0)allCells.push(null);
+    var numCols=allCells.length/7;
+    var monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var monthRow='<div class="heatmap-month-row">';
+    for(var c=0;c<numCols;c++){
+      var mlabel='';
+      for(var r=0;r<7;r++){
+        var mc=allCells[c*7+r];
+        if(mc){var md=new Date(mc.date+'T00:00:00');if(md.getDate()===1||(c===0))mlabel=monthNames[md.getMonth()];break;}
+      }
+      monthRow+='<div style="width:10px;margin-right:2px;font-size:.62rem;color:var(--dim);overflow:hidden;white-space:nowrap">'+mlabel+'</div>';
+    }
+    monthRow+='</div>';
+    var dowLabels=['Mon','','Wed','','Fri','',''];
+    var dayLabelsHtml='<div class="heatmap-day-labels">';
+    for(var r=0;r<7;r++){
+      dayLabelsHtml+='<div class="heatmap-day-label'+(dowLabels[r]?'':' hidden')+'">'+(dowLabels[r]||'')+'</div>';
+    }
+    dayLabelsHtml+='</div>';
+    var colsHtml='<div class="heatmap-cols">';
+    for(var c=0;c<numCols;c++){
+      colsHtml+='<div class="heatmap-col">';
+      for(var r=0;r<7;r++){
+        var cell=allCells[c*7+r];
+        if(cell){
+          var cd=new Date(cell.date+'T00:00:00');
+          var tip=monthNames[cd.getMonth()]+' '+cd.getDate()+': '+cell.count+' '+(cell.count===1?'activity':'activities');
+          colsHtml+='<div class="heatmap-cell" data-level="'+cell.level+'" title="'+tip+'"></div>';
+        }else{
+          colsHtml+='<div class="heatmap-cell" data-level="0" style="visibility:hidden"></div>';
+        }
+      }
+      colsHtml+='</div>';
+    }
+    colsHtml+='</div>';
+    container.innerHTML='<div class="heatmap-container">'+dayLabelsHtml+'<div><div>'+monthRow+colsHtml+'</div></div></div>';
+  }catch(e){console.warn('loadHeatmap error',e);}
 }
 function toggleSetupForm(){
   const form=document.getElementById('setup-form');
@@ -2365,6 +2482,8 @@ function doAdminLogout(){
   document.getElementById('admin-user').value='';
   document.getElementById('admin-pass').value='';
   ADMIN_TOKEN=null; localStorage.removeItem('dat_admin_token'); CLIENTS=[];
+  try{sessionStorage.removeItem('dat_notifs');sessionStorage.removeItem('dat_notif_unread');sessionStorage.removeItem('dat_notif_seen_ai');}catch(e){}
+  NOTIFS=[];_notifUnread=0;
 }
 
 /* ════════════════════════════════════════════
@@ -2700,13 +2819,148 @@ function switchPanel(id,btn){
 document.addEventListener('visibilitychange',function(){
   if(!document.hidden&&boardTimer)loadBoard();
 });
-let toastTimer=null;
-function toast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer=setTimeout(function(){t.classList.remove('show');},2600);
+/* ── TOAST QUEUE ── */
+var _toastQueue=[];
+var TOAST_MAX=3;
+var TOAST_DURATION=3000;
+function toast(msg,type){
+  type=type||'default';
+  var container=document.getElementById('toast-container');
+  if(!container)return;
+  // Remove oldest if at max
+  if(_toastQueue.length>=TOAST_MAX){
+    _dismissToast(_toastQueue[0]);
+  }
+  var id='t'+Date.now()+Math.random();
+  var el=document.createElement('div');
+  el.className='toast-item';
+  el.setAttribute('data-toast-id',id);
+  var dotClass='toast-dot '+(type==='success'||type==='error'||type==='info'?type:'default');
+  el.innerHTML='<span class="'+dotClass+'"></span><span class="toast-msg">'+String(msg||'')+'</span>'
+    +'<button class="toast-close" onclick="_dismissToast(\''+id+'\')">&#x2715;</button>'
+    +'<div class="toast-progress" id="tp-'+id+'"></div>';
+  container.appendChild(el);
+  // Animate in
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      el.classList.add('toast-visible');
+    });
+  });
+  _toastQueue.push(id);
+  // Progress bar animation
+  var prog=document.getElementById('tp-'+id);
+  if(prog){
+    prog.style.transition='width '+TOAST_DURATION+'ms linear';
+    requestAnimationFrame(function(){
+      requestAnimationFrame(function(){
+        prog.style.width='0%';
+      });
+    });
+  }
+  var timer=setTimeout(function(){_dismissToast(id);},TOAST_DURATION);
+  el._toastTimer=timer;
 }
+function _dismissToast(id){
+  var container=document.getElementById('toast-container');
+  if(!container)return;
+  var el=typeof id==='string'?container.querySelector('[data-toast-id="'+id+'"]'):id;
+  if(!el)return;
+  var tid=el.getAttribute?el.getAttribute('data-toast-id'):id;
+  clearTimeout(el._toastTimer);
+  el.classList.remove('toast-visible');
+  el.classList.add('toast-hiding');
+  _toastQueue=_toastQueue.filter(function(x){return x!==tid;});
+  setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},300);
+}
+
+/* ── IN-APP NOTIFICATIONS ── */
+var NOTIFS=[];
+var _notifUnread=0;
+(function(){
+  try{
+    var stored=sessionStorage.getItem('dat_notifs');
+    if(stored){NOTIFS=JSON.parse(stored);}
+    var ur=sessionStorage.getItem('dat_notif_unread');
+    if(ur)_notifUnread=parseInt(ur)||0;
+  }catch(e){}
+  _renderNotifPanel();
+})();
+function _saveNotifs(){
+  try{
+    sessionStorage.setItem('dat_notifs',JSON.stringify(NOTIFS.slice(0,20)));
+    sessionStorage.setItem('dat_notif_unread',String(_notifUnread));
+  }catch(e){}
+}
+function addNotif(desc,panel){
+  var n={id:'n'+Date.now(),desc:desc,panel:panel||null,ts:Date.now(),read:false};
+  NOTIFS.unshift(n);
+  if(NOTIFS.length>20)NOTIFS=NOTIFS.slice(0,20);
+  _notifUnread++;
+  _saveNotifs();
+  _renderNotifPanel();
+}
+function _relTime(ts){
+  var diff=Math.floor((Date.now()-ts)/1000);
+  if(diff<60)return 'just now';
+  if(diff<3600)return Math.floor(diff/60)+' min ago';
+  if(diff<86400)return Math.floor(diff/3600)+' hr ago';
+  return Math.floor(diff/86400)+' d ago';
+}
+function _renderNotifPanel(){
+  var badge=document.getElementById('notif-badge');
+  if(badge){
+    if(_notifUnread>0){badge.textContent=_notifUnread;badge.classList.add('visible');}
+    else{badge.classList.remove('visible');}
+  }
+  var list=document.getElementById('notif-list');
+  if(!list)return;
+  if(NOTIFS.length===0){
+    list.innerHTML='<div class="notif-empty">No notifications yet</div>';return;
+  }
+  list.innerHTML=NOTIFS.map(function(n){
+    var cls='notif-item'+(n.read?'':' unread');
+    var dotCls='notif-item-dot'+(n.read?' read':'');
+    return '<div class="'+cls+'" onclick="_clickNotif(\''+n.id+'\')">'
+      +'<span class="'+dotCls+'"></span>'
+      +'<div class="notif-item-body">'
+      +'<div class="notif-item-desc">'+esc(n.desc)+'</div>'
+      +'<div class="notif-item-time">'+_relTime(n.ts)+'</div>'
+      +'</div></div>';
+  }).join('');
+}
+function _clickNotif(id){
+  var n=NOTIFS.find(function(x){return x.id===id;});
+  if(!n)return;
+  if(!n.read){n.read=true;_notifUnread=Math.max(0,_notifUnread-1);}
+  _saveNotifs();_renderNotifPanel();
+  if(n.panel){
+    toggleNotifPanel();
+    var btns=document.querySelectorAll('.nav-item');
+    var found=null;
+    btns.forEach(function(b){if(b.textContent.toLowerCase().indexOf(n.panel)>=0)found=b;});
+    switchPanel(n.panel,found);
+  }
+}
+function markAllNotifsRead(){
+  NOTIFS.forEach(function(n){n.read=true;});
+  _notifUnread=0;
+  _saveNotifs();_renderNotifPanel();
+}
+function toggleNotifPanel(e){
+  if(e)e.stopPropagation();
+  var panel=document.getElementById('notif-panel');
+  if(!panel)return;
+  var open=panel.classList.contains('open');
+  if(open){panel.classList.remove('open');}
+  else{_renderNotifPanel();panel.classList.add('open');}
+}
+document.addEventListener('click',function(e){
+  var wrap=document.getElementById('notif-bell-wrap');
+  if(wrap&&!wrap.contains(e.target)){
+    var panel=document.getElementById('notif-panel');
+    if(panel)panel.classList.remove('open');
+  }
+});
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function eid(s){ return String(s||'').replace(/'/g,"\\'"); }
 document.querySelectorAll('.overlay').forEach(function(o){
@@ -2792,9 +3046,15 @@ async function advanceTrip(tripId){
   if(!ADMIN_TOKEN)return;
   try{
     var res=await fetch('/api/admin/trips/'+tripId+'/advance',{method:'POST',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
-    if(res.ok){toast('Trip advanced ✓');loadBoard();}
-    else{var d=await res.json().catch(function(){return{};});toast('Cannot advance: '+(d.detail||'unknown error'));}
-  }catch(e){toast('Network error');}
+    if(res.ok){
+      var d2=await res.json().catch(function(){return{};});
+      var newStatus=d2.workflow_status||d2.status||'next stage';
+      toast('Trip advanced ✓','success');
+      addNotif('Trip advanced to '+newStatus,'pipeline');
+      loadBoard();
+    }
+    else{var d=await res.json().catch(function(){return{};});toast('Cannot advance: '+(d.detail||'unknown error'),'error');}
+  }catch(e){toast('Network error','error');}
 }
 async function drawerAdvanceTrip(tripId){
   if(!ADMIN_TOKEN)return;
