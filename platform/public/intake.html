@@ -743,7 +743,13 @@ agreeCb.addEventListener('change',function(){
 });
 
 /* Autosave + restore */
-var DRAFT_KEY='dat_intake_draft',saveTimer=null,restoring=false;
+var DRAFT_KEY='dat_intake_draft',saveTimer=null,draftIndicatorTimer=null,restoring=false;
+function showDraftIndicator(){
+  var el=document.getElementById('draft-saved');
+  el.classList.add('visible');
+  clearTimeout(draftIndicatorTimer);
+  draftIndicatorTimer=setTimeout(function(){el.classList.remove('visible');},3000);
+}
 function saveDraft(){
   if(restoring)return;
   clearTimeout(saveTimer);
@@ -754,15 +760,16 @@ function saveDraft(){
         if(f.name==='hp'||f.type==='checkbox')return;
         fields[f.name]=f.value;
       });
-      localStorage.setItem(DRAFT_KEY,JSON.stringify({fields:fields,points:ptsList(),step:curStep,ts:Date.now()}));
+      sessionStorage.setItem(DRAFT_KEY,JSON.stringify({fields:fields,points:ptsList(),step:curStep,ts:Date.now()}));
+      showDraftIndicator();
     }catch(e){}
-  },350);
+  },1500);
 }
 function loadDraft(){
   try{
-    var raw=localStorage.getItem(DRAFT_KEY);if(!raw)return null;
+    var raw=sessionStorage.getItem(DRAFT_KEY);if(!raw)return null;
     var d=JSON.parse(raw);
-    if(!d||!d.ts||Date.now()-d.ts>7*24*3600*1000)return null;       // 7-day TTL
+    if(!d||!d.ts)return null;
     var hasContent=Object.keys(d.fields||{}).some(function(k){return (d.fields[k]||'').trim()&&k!=='cabin_pref'&&k!=='max_stops'&&k!=='trip_type'&&k!=='comm_pref';})||(d.points||[]).length;
     return hasContent?d:null;
   }catch(e){return null;}
@@ -784,12 +791,14 @@ function restoreDraft(){
     pts.forEach(function(p){addPtsRow(p.program,p.balance);});
     if(pts.length<2)addPtsRow();
   }
+  // update char counters after restore
+  updateAllCharCounters();
   restoring=false;
   document.getElementById('restore-banner').classList.remove('show');
   showStep(Math.min(Math.max(d.step||1,1),3));
 }
 function discardDraft(){
-  try{localStorage.removeItem(DRAFT_KEY);}catch(e){}
+  try{sessionStorage.removeItem(DRAFT_KEY);}catch(e){}
   document.getElementById('restore-banner').classList.remove('show');
 }
 if(loadDraft())document.getElementById('restore-banner').classList.add('show');
@@ -875,6 +884,23 @@ function fillTicket(data){
   document.getElementById('ticket-cabin').textContent=CABIN_LABELS[data.cabin_pref]||'Business';
   var eta=new Date(Date.now()+72*3600*1000);
   document.getElementById('ticket-eta').textContent=eta.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+
+/* Character counters */
+function updateCharCounter(textarea,counterId){
+  var counter=document.getElementById(counterId);
+  if(!counter)return;
+  var len=textarea.value.length,max=parseInt(textarea.getAttribute('maxlength')||'2000',10);
+  counter.textContent=len+' / '+max;
+  counter.classList.toggle('warn',len>1800);
+}
+function updateAllCharCounters(){
+  var notesTA=document.getElementById('textarea-notes');
+  if(notesTA)updateCharCounter(notesTA,'counter-notes');
+}
+var notesTA=document.getElementById('textarea-notes');
+if(notesTA){
+  notesTA.addEventListener('input',function(){updateCharCounter(this,'counter-notes');});
 }
 
 /* Confetti — pure canvas, no libs */
