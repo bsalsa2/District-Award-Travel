@@ -295,6 +295,14 @@ class AIUsage(Base):
     created_at        = Column(DateTime, default=dt.datetime.utcnow)
 
 
+class Waitlist(Base):
+    __tablename__ = "waitlist"
+    id         = Column(Integer, primary_key=True)
+    email      = Column(String, unique=True, nullable=False, index=True)
+    name       = Column(String, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+
+
 Base.metadata.create_all(bind=engine)
 
 # Additive migration: create_all doesn't add columns to existing tables.
@@ -328,6 +336,20 @@ try:
             _conn.execute(_sql_text2(_stmt))
 except Exception as _e:
     print(f"[startup] index migration warning: {_e}")
+
+# Safe waitlist table migration (create_all handles fresh DBs; this covers existing ones)
+try:
+    from sqlalchemy import text as _sql_text_wl
+    with engine.begin() as _conn:
+        _conn.execute(_sql_text_wl(
+            "CREATE TABLE IF NOT EXISTS waitlist "
+            "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "email VARCHAR NOT NULL UNIQUE, "
+            "name VARCHAR DEFAULT '', "
+            "created_at TIMESTAMP)"
+        ))
+except Exception as _e:
+    print(f"[startup] waitlist migration warning: {_e}")
 
 
 def get_db():
@@ -1408,6 +1430,38 @@ districtawardtravel@gmail.com
 EARNED_PROOF_STATUSES = ("booked", "invoiced", "paid")
 
 
+_WAITLIST_EMAIL_RE = __import__("re").compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class WaitlistIn(BaseModel):
+    email: str
+    name: str = Field("", max_length=100)
+
+
+@app.post("/api/waitlist")
+@limiter.limit("3/hour")
+async def join_waitlist(request: Request, body: WaitlistIn, db: Session = Depends(get_db)):
+    """Public endpoint — no auth. Captures email + optional name for the waitlist."""
+    email = body.email.strip().lower()
+    if not _WAITLIST_EMAIL_RE.match(email) or len(email) > 254:
+        raise HTTPException(status_code=422, detail="A valid email address is required")
+    name = body.name.strip()[:100]
+    # Idempotent: already subscribed returns same 200
+    existing = db.query(Waitlist).filter(Waitlist.email == email).first()
+    if existing:
+        return {"ok": True, "message": "Already subscribed!"}
+    row = Waitlist(email=email, name=name)
+    db.add(row)
+    db.commit()
+    # Notify admin
+    display = name if name else email
+    send_email(
+        subject=f"New waitlist signup: {display}",
+        body=f"New waitlist signup:\n  Name: {name or '(not provided)'}\n  Email: {email}\n  Time: {dt.datetime.utcnow().isoformat()} UTC",
+    )
+    return {"ok": True, "message": "You're on the list!"}
+
+
 @app.post("/api/track")
 @limiter.limit("120/hour")
 async def track_event(request: Request, body: TrackIn, db: Session = Depends(get_db)):
@@ -1838,6 +1892,74 @@ def add_client_point(email: str, body: PointEntryIn, _: dict = Depends(require_a
     db.commit()
     bump_client_version(client.email)
     return {"ok": True}
+
+
+@app.get("/api/admin/clients/{email}/activity")
+def client_activity(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Return a chronological activity timeline for a specific client."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    events = []
+
+    # 1. client_created
+    if client.created_at:
+        events.append({"type": "client_created", "timestamp": client.created_at.isoformat(), "detail": "Client joined"})
+
+    # 2. intake submissions for this email
+    intakes = db.query(Intake).filter(Intake.email == client.email).order_by(Intake.created_at).all()
+    for intake in intakes:
+        if intake.created_at:
+            payload = json.loads(intake.payload or "{}")
+            trip_label = payload.get("destination") or payload.get("trip_label") or ""
+            detail = f"Intake: {trip_label}" if trip_label else "Intake submitted"
+            events.append({"type": "intake_submitted", "timestamp": intake.created_at.isoformat(), "detail": detail})
+
+    # 3. trip requests + workflow events
+    trips = db.query(TripRequest).filter(TripRequest.client_id == client.id).order_by(TripRequest.created_at).all()
+    for trip in trips:
+        if trip.created_at:
+            label = trip.destination or trip.notes or "trip"
+            cabin = f" {trip.cabin}" if trip.cabin else ""
+            events.append({"type": "trip_created", "timestamp": trip.created_at.isoformat(),
+                           "detail": f"Trip request: {label}{cabin}"})
+        # workflow events for this trip
+        wf_events = db.query(WorkflowEvent).filter(WorkflowEvent.trip_id == trip.id).order_by(WorkflowEvent.created_at).all()
+        for we in wf_events:
+            if we.created_at:
+                events.append({"type": "status_changed", "timestamp": we.created_at.isoformat(),
+                               "detail": f"{we.from_status} → {we.to_status}"})
+
+    # 4. messages from client data JSON
+    data = json.loads(client.data or "{}")
+    messages = data.get("messages", [])
+    for msg in messages:
+        ts = msg.get("time") or msg.get("timestamp")
+        if not ts:
+            continue
+        sender = msg.get("sender", "advisor")
+        text = msg.get("text", "")
+        char_count = len(text)
+        if sender == "advisor":
+            events.append({"type": "message_sent", "timestamp": ts, "detail": f"Advisor sent message ({char_count} chars)"})
+        else:
+            events.append({"type": "message_received", "timestamp": ts, "detail": f"Client replied ({char_count} chars)"})
+
+    # 5. savings records
+    savings = db.query(SavingsRecord).filter(SavingsRecord.client_id == client.id).order_by(SavingsRecord.created_at).all()
+    for rec in savings:
+        if rec.created_at:
+            gross = (rec.cash_benchmark_cents - rec.award_taxes_fees_cents - rec.other_out_of_pocket_cents) / 100
+            label = rec.trip_label or "trip"
+            events.append({"type": "saving_logged", "timestamp": rec.created_at.isoformat(),
+                           "detail": f"Saving logged: ${gross:,.0f} saved — {label}"})
+
+    # Sort by timestamp, cap at 100 most recent
+    events.sort(key=lambda e: e["timestamp"])
+    events = events[-100:]
+
+    return {"client_name": client.name, "client_email": client.email, "activity": events}
 
 
 @app.delete("/api/admin/clients/{email}")

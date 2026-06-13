@@ -226,6 +226,35 @@
   .btn-sm.green:hover { background:rgba(22,163,74,.1); }
   .btn-sm.ai { border-color:rgba(124,58,237,.3); color:var(--purple); background:rgba(124,58,237,.05); }
   .btn-sm.ai:hover { background:rgba(124,58,237,.1); }
+  .btn-sm.danger { border-color:rgba(220,38,38,.3); color:var(--red); background:rgba(220,38,38,.04); }
+  .btn-sm.danger:hover { background:rgba(220,38,38,.1); }
+
+  /* PLAN BUILDER — option cards */
+  .plan-tpl-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; padding:12px 14px;
+    background:var(--off); border:1px solid var(--border); border-radius:10px; }
+  .plan-tpl-bar-label { width:100%; font-size:.65rem; color:var(--dim); font-weight:600; text-transform:uppercase;
+    letter-spacing:.07em; margin-bottom:4px; }
+  .plan-tpl-btn { padding:7px 13px; border-radius:8px; font-size:.8rem; cursor:pointer; font-family:var(--font);
+    border:1px solid var(--border2); background:var(--surface); color:var(--text); transition:all .15s;
+    font-weight:500; white-space:nowrap; }
+  .plan-tpl-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+  .option-card { background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:16px; margin-bottom:12px; position:relative; }
+  .option-card-head { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .option-card-num { background:var(--accent); color:#fff; font-size:.68rem; font-weight:700;
+    width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .option-card-title { font-size:.82rem; font-weight:700; color:var(--text); flex:1; }
+  .option-card-actions { display:flex; gap:5px; margin-left:auto; }
+  .option-card-actions button { padding:4px 9px; font-size:.72rem; border-radius:6px; cursor:pointer;
+    font-family:var(--font); border:1px solid var(--border2); background:var(--off); color:var(--muted);
+    transition:all .13s; white-space:nowrap; }
+  .option-card-actions button:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+  .option-card-actions button.danger:hover { border-color:var(--red); color:var(--red); background:rgba(220,38,38,.06); }
+  #plan-options-list { margin-top:16px; }
+  .plan-add-btn { width:100%; padding:10px; border-radius:9px; border:1px dashed var(--border2);
+    background:none; color:var(--muted); font-size:.83rem; cursor:pointer; font-family:var(--font);
+    transition:all .15s; margin-bottom:16px; }
+  .plan-add-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 
   /* TABLE */
   .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; overflow-x:auto; margin-bottom:28px; box-shadow:var(--shadow); }
@@ -910,24 +939,23 @@
       <div class="form-group"><label>Destination</label><input type="text" id="plan-dest" placeholder="e.g. Tokyo (NRT/HND)"></div>
       <div class="form-group"><label>Dates</label><input type="text" id="plan-dates" placeholder="e.g. Mar 15-28, 2026"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div class="form-group"><label>Award Program</label><input type="text" id="plan-program" placeholder="e.g. Chase UR to United"></div>
-      <div class="form-group"><label>Points Cost</label><input type="text" id="plan-points" placeholder="e.g. 65,000 pts"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div class="form-group"><label>Estimated Cash Value</label><input type="text" id="plan-value" placeholder="e.g. $1,200"></div>
-      <div class="form-group"><label>Cabin</label>
-        <select id="plan-cabin">
-          <option value="">Select cabin</option>
-          <option value="Economy">Economy</option>
-          <option value="Premium Economy">Premium Economy</option>
-          <option value="Business">Business</option>
-          <option value="First">First</option>
-        </select>
+
+    <!-- OPTION CARDS -->
+    <div style="border-top:1px solid var(--border);margin:4px 0 16px;padding-top:16px">
+      <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:10px">Trip Options</div>
+      <!-- Template skeleton buttons -->
+      <div class="plan-tpl-bar">
+        <div class="plan-tpl-bar-label">Quick templates — click to add a pre-filled option</div>
+        <button class="plan-tpl-btn" onclick="addPlanOption('flight')">✈ Flight Redemption</button>
+        <button class="plan-tpl-btn" onclick="addPlanOption('hotel')">🏨 Hotel Redemption</button>
+        <button class="plan-tpl-btn" onclick="addPlanOption('cash')">💵 Cash Fallback</button>
+        <button class="plan-tpl-btn" onclick="addPlanOption('blank')">+ Blank Option</button>
       </div>
+      <div id="plan-options-list"></div>
+      <button class="plan-add-btn" onclick="addPlanOption('blank')">+ Add Another Option</button>
     </div>
-    <div class="form-group"><label>Your Recommendation & Details</label><textarea id="plan-details" rows="5" placeholder="Why this is perfect for you, what to book, best dates, any risks or limitations..."></textarea></div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">
+
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:4px">
       <button class="btn-primary" onclick="sendPlan()">📤 Send Plan to Client Portal</button>
       <button class="btn-sm" onclick="closePlan()">Cancel</button>
     </div>
