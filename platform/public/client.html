@@ -192,6 +192,21 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .badge-booked{background:#dbeafe;color:#1e40af;border:1px solid #bfdbfe}
 .badge-done{background:var(--card);color:var(--muted);border:1px solid var(--border)}
 
+/* ── TRIP STEPPER ── */
+.trip-stepper{padding:12px 24px 18px;border-top:1px solid var(--border)}
+.stepper-steps{display:flex;align-items:center;gap:0}
+.step-dot{width:14px;height:14px;border-radius:50%;background:#444;border:2px solid #444;flex-shrink:0;transition:background .2s,border-color .2s}
+.step-dot.done{background:#f97316;border-color:#f97316}
+.step-dot.active{background:#f97316;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.2)}
+.step-line{flex:1;height:2px;background:#444}
+.step-line.done{background:#f97316}
+.stepper-labels{display:flex;justify-content:space-between;margin-top:5px;padding:0 1px}
+.step-label{font-size:10px;color:var(--dim);text-align:center;width:14px;white-space:nowrap;transform:translateX(-50%);margin-left:7px}
+.step-label:first-child{margin-left:0;transform:none}
+.step-label:last-child{margin-left:0;transform:translateX(-100%)}
+.stepper-complete{font-size:11px;font-weight:700;color:#f97316;padding:4px 10px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);border-radius:20px;display:inline-block}
+.stepper-skipped{font-size:11px;font-weight:600;color:var(--muted);padding:4px 10px;background:var(--card);border:1px solid var(--border);border-radius:20px;display:inline-block}
+
 /* ── SAVINGS ── */
 .sv-row{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:12px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:16px}
 .sv-label{font-size:14px;font-weight:600;margin-bottom:3px}
@@ -773,6 +788,37 @@ function planForTrip(t,plans){
   return (plans||[]).find(p=>{const pd=(p.dest||'').toLowerCase();return pd&&(pd.includes(d)||d.includes(pd));})||null;
 }
 
+function renderStepper(status){
+  const s=(status||'').toLowerCase();
+  if(s==='closed'||s==='booked'){
+    return `<div class="trip-stepper"><span class="stepper-complete">&#10003; Complete</span></div>`;
+  }
+  if(s==='declined'||s==='lost'){
+    return `<div class="trip-stepper"><span class="stepper-skipped">Not pursued</span></div>`;
+  }
+  const STAGES=['new','researching','options_sent','awaiting_decision','booked'];
+  const LABELS=['New','Research','Options','Decide','Booked'];
+  // map common aliases
+  const alias={researching:'researching',research:'researching',options:'options_sent','options sent':'options_sent','options_sent':'options_sent','awaiting decision':'awaiting_decision','awaiting_decision':'awaiting_decision',decision:'awaiting_decision',booked:'booked',new:'new'};
+  const cur=alias[s]||s;
+  const idx=STAGES.indexOf(cur);
+  const activeIdx=idx>=0?idx:0;
+  let dots='';
+  for(let i=0;i<STAGES.length;i++){
+    if(i>0){
+      const lDone=i<=activeIdx;
+      dots+=`<div class="step-line${lDone?' done':''}"></div>`;
+    }
+    const cls=i<activeIdx?'done':i===activeIdx?'active':'';
+    dots+=`<div class="step-dot${cls?' '+cls:''}"></div>`;
+  }
+  const labels=LABELS.map((l,i)=>{
+    const extra=i===0?'style="margin-left:0;transform:none"':i===LABELS.length-1?'style="margin-left:0;transform:translateX(-100%)"':'';
+    return `<span class="step-label" ${extra}>${l}</span>`;
+  }).join('');
+  return `<div class="trip-stepper"><div class="stepper-steps">${dots}</div><div class="stepper-labels">${labels}</div></div>`;
+}
+
 function renderTrips(trips,plans){
   const el=document.getElementById('trips-container');
   if(!trips.length){el.innerHTML='<div class="empty"><div class="empty-ico">🗺</div><p>Your trips will appear here once your advisor logs them. If you just applied, hang tight — we\'re reviewing your intake.</p></div>';return;}
@@ -791,7 +837,7 @@ function renderTrips(trips,plans){
       <div class="trip-top">
         <div><div class="trip-dest">${esc(t.destination||'Your trip')}</div><div class="trip-route">${route}</div></div>
         <span class="badge ${b[0]}">${b[1]}</span>
-      </div>${grid}${planBlock}</div>`;
+      </div>${renderStepper(t.workflow_status)}${grid}${planBlock}</div>`;
   }).join('');
 }
 
