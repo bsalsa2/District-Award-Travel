@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Portal — District Award Travel</title>
+<meta name="theme-color" content="#f97316">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -17,6 +24,21 @@
   --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
 }
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* ── BOOT SPLASH (shown while a saved session revalidates) ── */
+#boot{display:none;position:fixed;inset:0;z-index:999;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:18px}
+#boot.show{display:flex}
+.boot-mark{width:58px;height:58px;border-radius:16px;background:var(--accent);color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;animation:bootPulse 1.2s ease-in-out infinite}
+@keyframes bootPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(249,115,22,.3)}50%{transform:scale(1.06);box-shadow:0 0 0 14px rgba(249,115,22,0)}}
+.boot-txt{font-size:13px;color:var(--muted);font-weight:500}
+@media(prefers-reduced-motion:reduce){.boot-mark{animation:none}}
+
+/* ── REFERRAL CARD ── */
+.refer-card{background:linear-gradient(135deg,#1c1917,#292524);border-radius:14px;padding:24px 26px;margin-top:28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.refer-title{font-size:16px;font-weight:800;margin-bottom:4px;letter-spacing:-.3px}
+.refer-sub{font-size:13px;color:#d6d3d1;line-height:1.5;max-width:420px}
+.refer-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:background .15s,transform .1s}
+.refer-btn:hover{background:#ea6c0a}.refer-btn:active{transform:scale(.98)}
 
 /* ── LOGIN ── */
 #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
@@ -196,6 +218,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 </head>
 <body>
 
+<!-- BOOT SPLASH -->
+<div id="boot"><div class="boot-mark">D</div><div class="boot-txt">Loading your portal…</div></div>
+
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
@@ -251,6 +276,13 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
         <div id="ov-plan"></div>
         <div class="sec-head">Recent Messages</div>
         <div class="msg-list" id="ov-messages"></div>
+        <div class="refer-card">
+          <div>
+            <div class="refer-title">Know someone sitting on points? 🎁</div>
+            <div class="refer-sub">Most of our clients come from referrals. Send them our way — they'll thank you after their first business-class redemption.</div>
+          </div>
+          <button class="refer-btn" id="refer-btn" onclick="copyReferral()">Copy invite link</button>
+        </div>
       </div>
 
       <!-- TRIPS -->
@@ -370,11 +402,11 @@ function renderPortal(c){
   document.getElementById('ov-greeting').textContent='Hi, '+name+' 👋';
   document.getElementById('ov-sub').textContent=(c.tier?c.tier+' — ':'')+'District Award Travel';
 
-  // Stats
-  document.getElementById('st-savings').textContent=fmtUsd(c.lifetime_savings_cents||0);
-  document.getElementById('st-fee').textContent=fmtUsd(c.total_fee_cents||0);
+  // Stats — count up on change
+  animStat('st-savings',c.lifetime_savings_cents||0,fmtUsd);
+  animStat('st-fee',c.total_fee_cents||0,fmtUsd);
   const trips=c.pipeline_trips||[];
-  document.getElementById('st-trips').textContent=trips.length;
+  animStat('st-trips',trips.length,String);
 
   // Latest trip status bar
   if(trips.length){
@@ -407,6 +439,33 @@ function renderPortal(c){
 
   // Points tab
   renderPoints(c.points||[]);
+}
+
+// Animate a stat from its previous value to `target` (no-op when unchanged)
+const REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function animStat(id,target,fmt){
+  const el=document.getElementById(id);if(!el)return;
+  const from=Number(el.dataset.v||0);
+  el.dataset.v=target;
+  if(from===target&&el.textContent!=='—'&&el.textContent!=='$0'&&el.textContent!=='0'){el.textContent=fmt(target);return;}
+  if(REDUCED||from===target){el.textContent=fmt(target);return;}
+  const dur=750;let start=null;
+  function step(ts){
+    if(!start)start=ts;
+    const p=Math.min((ts-start)/dur,1),eased=1-Math.pow(1-p,3);
+    el.textContent=fmt(Math.round(from+(target-from)*eased));
+    if(p<1)requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function copyReferral(){
+  const name=((currentData&&currentData.name)||'').split(' ')[0].toLowerCase();
+  const url=location.origin+'/?utm_source=referral&utm_medium=client'+(name?'&utm_campaign='+encodeURIComponent(name):'');
+  const btn=document.getElementById('refer-btn');
+  function done(){btn.textContent='✓ Copied — send it!';setTimeout(()=>btn.textContent='Copy invite link',2500);}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(done).catch(()=>prompt('Copy your invite link:',url));}
+  else prompt('Copy your invite link:',url);
 }
 
 function setUnread(n){
@@ -652,8 +711,11 @@ document.addEventListener('visibilitychange',()=>{if(!getToken())return;if(docum
 
 (async function(){
   const token=getToken();if(!token)return;
+  const boot=document.getElementById('boot');
+  boot.classList.add('show');                      // branded splash instead of a login flash
   try{const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
     if(res.ok)showPortal(await res.json());else clearToken();}catch(e){clearToken();}
+  boot.classList.remove('show');
 })();
 </script>
 </body>

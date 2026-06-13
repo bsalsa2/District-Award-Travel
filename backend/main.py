@@ -1203,6 +1203,12 @@ async def submit_intake(request: Request, db: Session = Depends(get_db)):
     except Exception:
         raise HTTPException(status_code=422, detail="Invalid JSON")
     data = validate_intake(raw)
+    # Honeypot: the form has an invisible 'hp' field — humans never fill it,
+    # bots do. Accept silently (so bots don't adapt) but store nothing.
+    if str(data.get("hp", "")).strip():
+        logger.warning("intake honeypot tripped — submission discarded")
+        return {"ok": True, "id": 0}
+    data.pop("hp", None)
     # Funnel: record a submit event if the form sent a session id (stripped from stored payload)
     session_id = str(data.pop("_session_id", "") or "")[:64]
     consent_at = dt.datetime.utcnow() if str(data.get("consent", "")).lower() in ("true", "1", "yes", "on") else None
