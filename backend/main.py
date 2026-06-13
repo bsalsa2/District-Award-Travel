@@ -1696,11 +1696,18 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
     payload["savings_breakdown"] = savings_breakdown
     payload["total_fee_cents"] = total_fee_cents
     payload["trips_count"] = len(trips)
+    # Expose stored preferences (stored inside data JSON under "preferences" key)
+    payload["preferences"] = payload.get("preferences") or {}
     return payload
 
 
 class UpdateClientDataIn(BaseModel):
     data: dict
+
+
+class ClientPreferencesIn(BaseModel):
+    dark_mode: Optional[bool] = None
+    email_notifications: Optional[bool] = None
 
 
 @app.put("/api/client/me")
@@ -1724,6 +1731,27 @@ def update_client_me(body: UpdateClientDataIn, identity: dict = Depends(current_
     client.data = json.dumps(existing)
     db.commit()
     return {"ok": True}
+
+
+@app.patch("/api/client/preferences")
+def update_client_preferences(body: ClientPreferencesIn, identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
+    """Client updates their UI preferences (dark_mode, email_notifications).
+    Stored in the data JSON column under the 'preferences' key."""
+    if identity.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    client = db.query(Client).filter(Client.email == identity["sub"]).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    existing = json.loads(client.data or "{}")
+    prefs = existing.get("preferences") or {}
+    if body.dark_mode is not None:
+        prefs["dark_mode"] = body.dark_mode
+    if body.email_notifications is not None:
+        prefs["email_notifications"] = body.email_notifications
+    existing["preferences"] = prefs
+    client.data = json.dumps(existing)
+    db.commit()
+    return {"ok": True, "preferences": prefs}
 
 
 # ── Admin: client management ──
