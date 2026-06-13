@@ -41,7 +41,7 @@ from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -101,6 +101,8 @@ NOTIFY_EMAIL = os.environ.get("NOTIFY_EMAIL", GMAIL_USER or "districtawardtravel
 PROOF_MIN_SAVINGS_CENTS = int(os.environ.get("PROOF_MIN_SAVINGS_CENTS", "500000"))  # $5,000
 PROOF_MIN_TRIPS = int(os.environ.get("PROOF_MIN_TRIPS", "5"))
 PROOF_MIN_CPP_RECORDS = int(os.environ.get("PROOF_MIN_CPP_RECORDS", "3"))
+
+BASE_URL = os.environ.get("BASE_URL", "https://district-award-travel.onrender.com")
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -213,6 +215,7 @@ class TripRequest(Base):
     savings_record_id    = Column(Integer, ForeignKey("savings_records.id"), nullable=True)
     time_tracked_minutes = Column(Integer, default=0)
     notes                = Column(Text, default="[]")
+    research_notes       = Column(Text, default="")
     created_at           = Column(DateTime, default=dt.datetime.utcnow)
 
 
@@ -292,6 +295,14 @@ class AIUsage(Base):
     created_at        = Column(DateTime, default=dt.datetime.utcnow)
 
 
+class Waitlist(Base):
+    __tablename__ = "waitlist"
+    id         = Column(Integer, primary_key=True)
+    email      = Column(String, unique=True, nullable=False, index=True)
+    name       = Column(String, default="")
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+
+
 Base.metadata.create_all(bind=engine)
 
 # Additive migration: create_all doesn't add columns to existing tables.
@@ -299,6 +310,13 @@ try:
     from sqlalchemy import text as _sql_text
     with engine.begin() as _conn:
         _conn.execute(_sql_text("ALTER TABLE intakes ADD COLUMN consent_at TIMESTAMP"))
+except Exception:
+    pass  # column already exists (or fresh DB where create_all included it)
+
+try:
+    from sqlalchemy import text as _sql_text_rn
+    with engine.begin() as _conn:
+        _conn.execute(_sql_text_rn("ALTER TABLE trip_requests ADD COLUMN research_notes TEXT DEFAULT ''"))
 except Exception:
     pass  # column already exists (or fresh DB where create_all included it)
 
@@ -318,6 +336,20 @@ try:
             _conn.execute(_sql_text2(_stmt))
 except Exception as _e:
     print(f"[startup] index migration warning: {_e}")
+
+# Safe waitlist table migration (create_all handles fresh DBs; this covers existing ones)
+try:
+    from sqlalchemy import text as _sql_text_wl
+    with engine.begin() as _conn:
+        _conn.execute(_sql_text_wl(
+            "CREATE TABLE IF NOT EXISTS waitlist "
+            "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
+            "email VARCHAR NOT NULL UNIQUE, "
+            "name VARCHAR DEFAULT '', "
+            "created_at TIMESTAMP)"
+        ))
+except Exception as _e:
+    print(f"[startup] waitlist migration warning: {_e}")
 
 
 def get_db():
@@ -474,8 +506,10 @@ def _trip_row(trip: TripRequest, client=None, now=None) -> dict:
         "savings_record_id": trip.savings_record_id,
         "time_tracked_minutes": trip.time_tracked_minutes,
         "notes": json.loads(trip.notes or "[]"),
+        "research_notes": trip.research_notes or "",
         "created_at": trip.created_at.isoformat() if trip.created_at else None,
         **flags,
+        "stale": flags.get("level") != "ok" and trip.workflow_status not in {"closed", "declined", "lost", "booked"},
     }
     if client:
         row["client_name"] = client.name
@@ -541,7 +575,8 @@ def _smtp_transport(to: str, subject: str, body: str, reply_to: str = "") -> Non
     msg["Subject"] = subject
     if reply_to:
         msg["Reply-To"] = reply_to
-    msg.attach(MIMEText(body, "plain"))
+    mime_subtype = "html" if body.lstrip().startswith("<") else "plain"
+    msg.attach(MIMEText(body, mime_subtype))
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as server:
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, [to], msg.as_string())
@@ -622,6 +657,66 @@ def send_email(subject: str, body: str, reply_to: str = "") -> bool:
 def send_email_to(to: str, subject: str, body: str, reply_to: str = "") -> bool:
     """Queue a plain-text email to any address (kept for existing call sites)."""
     return queue_email(to, subject, body, reply_to=reply_to)
+
+
+# Status-specific client notification config
+_CLIENT_STATUS_EMAILS = {
+    "options_sent": {
+        "subject": "Your travel options are ready!",
+        "message": "Your advisor has sent travel options for your trip to {destination}. Log in to review them.",
+    },
+    "booked": {
+        "subject": "Your trip has been booked! 🎉",
+        "message": "Great news! Your trip to {destination} has been booked. Check your portal for details.",
+    },
+}
+
+
+def _notify_client_status_change(client_email: str, client_name: str, destination: str, new_status: str) -> None:
+    """Send a branded HTML notification email to the client when a trip reaches a notable status.
+    Swallows all exceptions so the caller's workflow is never interrupted."""
+    cfg = _CLIENT_STATUS_EMAILS.get(new_status)
+    if not cfg:
+        return
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        return
+    if not client_email:
+        return
+    try:
+        first_name = client_name.split()[0] if client_name else "there"
+        portal_url = BASE_URL + "/client.html"
+        message = cfg["message"].format(destination=destination or "your destination")
+        body = f"""<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
+        <tr>
+          <td style="background:#f97316;padding:24px 32px;">
+            <span style="color:#ffffff;font-size:22px;font-weight:bold;">District Award Travel</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;">
+            <p style="font-size:16px;color:#1e293b;margin:0 0 16px;">Hi {first_name},</p>
+            <p style="font-size:16px;color:#1e293b;margin:0 0 24px;">{message}</p>
+            <a href="{portal_url}" style="display:inline-block;background:#f97316;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;">View My Portal</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
+            <p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">District Award Travel &middot; No upfront cost &middot; Proven savings</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+        queue_email(client_email, cfg["subject"], body)
+    except Exception as exc:
+        logger.error("client_status_email.failed", extra={"status": new_status, "error": str(exc)})
 
 
 def format_intake_email(data: dict) -> str:
@@ -804,8 +899,9 @@ ALLOWED_ORIGINS = [
         "https://district-award-travel.onrender.com,https://districtawardtravel.com,https://www.districtawardtravel.com",
     ).split(",") if o.strip()
 ]
-if not IS_PRODUCTION:
-    ALLOWED_ORIGINS += ["http://localhost:8000", "http://127.0.0.1:8000"]
+for _local in ["http://localhost:8000", "http://127.0.0.1:8000"]:
+    if _local not in ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS.append(_local)
 
 from fastapi.middleware.gzip import GZipMiddleware
 
@@ -954,10 +1050,16 @@ class SavingsPatchIn(BaseModel):
     fee_rate_bps: Optional[int] = Field(None, ge=0, le=10000)
     notes: Optional[str] = None
     payment_method: Optional[str] = None
+    status: Optional[str] = None
 
 class StatusAdvanceIn(BaseModel):
     new_status: str
     payment_method: Optional[str] = None  # recorded when transitioning to paid
+
+
+class LegacyImportIn(BaseModel):
+    entries: list
+    client_email: Optional[str] = None  # if omitted, falls back to admin email
 
 
 class TripCreateIn(BaseModel):
@@ -986,6 +1088,10 @@ class WorkflowAdvanceIn(BaseModel):
 
 class TripNoteIn(BaseModel):
     text: str
+
+
+class TripResearchNotesIn(BaseModel):
+    research_notes: str = Field(..., max_length=10000)
 
 
 class TripTimeIn(BaseModel):
@@ -1137,7 +1243,7 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
             parsed = ai_client.call_ai("groq", "parse-email", _do_groq, db_session_factory=SessionLocal)
             return {"ok": True, "source": "groq", "data": parsed}
         except (AIUnavailable, Exception) as e:
-            print(f"[groq] parse failed: {e}")
+            logger.warning("ai.parse-email groq failed", extra={"error": str(e)[:200]})
             # fall through to Gemini
 
     if GEMINI_API_KEY:
@@ -1159,7 +1265,7 @@ async def parse_email(body: ParseEmailIn, _: dict = Depends(require_admin)):
             parsed = ai_client.call_ai("gemini", "parse-email", _do_gemini, db_session_factory=SessionLocal)
             return {"ok": True, "source": "gemini", "data": parsed}
         except (AIUnavailable, Exception) as e:
-            print(f"[gemini] parse failed: {e}")
+            logger.warning("ai.parse-email gemini failed", extra={"error": str(e)[:200]})
 
     # No AI key configured — return empty stub so UI still works
     return {"ok": True, "source": "none", "data": {
@@ -1195,6 +1301,57 @@ def validate_intake(data: dict) -> dict:
     return clean
 
 
+class IntakeIn(BaseModel):
+    """Pydantic model for /api/intake — enforces field types and length caps."""
+
+    model_config = {"extra": "allow"}
+
+    # Core required fields
+    email: EmailStr
+    # Optional named fields with explicit length bounds
+    first_name: str = Field("", max_length=100)
+    last_name: str = Field("", max_length=100)
+    phone: str = Field("", max_length=30)
+    travel_goals: str = Field("", max_length=5000)
+    notes: str = Field("", max_length=5000)
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalise_email(cls, v: object) -> str:
+        v = str(v).strip().lower()
+        if "\n" in v or "\r" in v or len(v) > 254:
+            raise ValueError("invalid email")
+        return v
+
+    @model_validator(mode="after")
+    def cap_extra_fields(self) -> "IntakeIn":
+        """Cap every extra field (trip_*/pts_* etc.) at 500 chars."""
+        extras = self.model_extra or {}
+        capped: dict[str, object] = {}
+        for k, v in extras.items():
+            sv = str(v) if v is not None else ""
+            if len(sv) > 500:
+                raise ValueError(f"Field '{k}' exceeds 500 characters")
+            capped[k] = sv
+        # Replace extra fields in-place with the capped versions
+        for k, v in capped.items():
+            self.__pydantic_extra__[k] = v  # type: ignore[index]
+        return self
+
+    def to_flat_dict(self) -> dict:
+        """Return a flat dict of all fields (named + extra) as strings."""
+        base = {
+            "email": self.email,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "phone": self.phone,
+            "travel_goals": self.travel_goals,
+            "notes": self.notes,
+        }
+        base.update(self.model_extra or {})
+        return base
+
+
 @app.post("/api/intake")
 @limiter.limit("10/hour")
 async def submit_intake(request: Request, db: Session = Depends(get_db)):
@@ -1202,7 +1359,13 @@ async def submit_intake(request: Request, db: Session = Depends(get_db)):
         raw = await request.json()
     except Exception:
         raise HTTPException(status_code=422, detail="Invalid JSON")
-    data = validate_intake(raw)
+    if not isinstance(raw, dict) or len(raw) > INTAKE_MAX_KEYS:
+        raise HTTPException(status_code=422, detail="Invalid submission")
+    try:
+        intake_model = IntakeIn.model_validate(raw)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    data = intake_model.to_flat_dict()
     # Honeypot: the form has an invisible 'hp' field — humans never fill it,
     # bots do. Accept silently (so bots don't adapt) but store nothing.
     if str(data.get("hp", "")).strip():
@@ -1267,6 +1430,38 @@ districtawardtravel@gmail.com
 EARNED_PROOF_STATUSES = ("booked", "invoiced", "paid")
 
 
+_WAITLIST_EMAIL_RE = __import__("re").compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class WaitlistIn(BaseModel):
+    email: str
+    name: str = Field("", max_length=100)
+
+
+@app.post("/api/waitlist")
+@limiter.limit("3/hour")
+async def join_waitlist(request: Request, body: WaitlistIn, db: Session = Depends(get_db)):
+    """Public endpoint — no auth. Captures email + optional name for the waitlist."""
+    email = body.email.strip().lower()
+    if not _WAITLIST_EMAIL_RE.match(email) or len(email) > 254:
+        raise HTTPException(status_code=422, detail="A valid email address is required")
+    name = body.name.strip()[:100]
+    # Idempotent: already subscribed returns same 200
+    existing = db.query(Waitlist).filter(Waitlist.email == email).first()
+    if existing:
+        return {"ok": True, "message": "Already subscribed!"}
+    row = Waitlist(email=email, name=name)
+    db.add(row)
+    db.commit()
+    # Notify admin
+    display = name if name else email
+    send_email(
+        subject=f"New waitlist signup: {display}",
+        body=f"New waitlist signup:\n  Name: {name or '(not provided)'}\n  Email: {email}\n  Time: {dt.datetime.utcnow().isoformat()} UTC",
+    )
+    return {"ok": True, "message": "You're on the list!"}
+
+
 @app.post("/api/track")
 @limiter.limit("120/hour")
 async def track_event(request: Request, body: TrackIn, db: Session = Depends(get_db)):
@@ -1282,7 +1477,7 @@ async def track_event(request: Request, body: TrackIn, db: Session = Depends(get
         ))
         db.commit()
     except Exception as e:
-        print(f"[track] write failed: {e}")
+        logger.warning("funnel.track write failed", extra={"error": str(e)[:200]})
     return {"ok": True}
 
 
@@ -1314,6 +1509,30 @@ def public_proof(request: Request, db: Session = Depends(get_db)):
         "total_savings_cents": total if total >= PROOF_MIN_SAVINGS_CENTS else None,
         "trips_planned": trips if trips >= PROOF_MIN_TRIPS else None,
         "avg_cpp_tenths": avg_cpp_tenths,
+    }
+
+
+@app.get("/api/public/stats")
+@limiter.limit("60/minute")
+def public_stats(request: Request, db: Session = Depends(get_db)):
+    """Public aggregate savings stats — no auth required, no client data exposed."""
+    recs = db.query(SavingsRecord).filter(
+        SavingsRecord.status.in_(["booked", "invoiced", "paid"])
+    ).all()
+    total_savings_cents = 0
+    for rec in recs:
+        gross = calc_gross_savings(
+            rec.cash_benchmark_cents,
+            rec.award_taxes_fees_cents,
+            rec.other_out_of_pocket_cents,
+        )
+        total_savings_cents += max(gross, 0)
+    trips_completed = len(recs)
+    avg_savings_cents = (total_savings_cents // trips_completed) if trips_completed else 0
+    return {
+        "total_savings_cents": total_savings_cents,
+        "trips_completed": trips_completed,
+        "avg_savings_cents": avg_savings_cents,
     }
 
 
@@ -1526,15 +1745,23 @@ def client_me(identity: dict = Depends(current_identity), db: Session = Depends(
             "fee_cents": fee,
             "status": r.status,
             "invoice_number": r.invoice_number,
+            "report_url": f"/api/report/{r.report_token}" if r.report_token else None,
         })
     payload["savings_breakdown"] = savings_breakdown
     payload["total_fee_cents"] = total_fee_cents
     payload["trips_count"] = len(trips)
+    # Expose stored preferences (stored inside data JSON under "preferences" key)
+    payload["preferences"] = payload.get("preferences") or {}
     return payload
 
 
 class UpdateClientDataIn(BaseModel):
     data: dict
+
+
+class ClientPreferencesIn(BaseModel):
+    dark_mode: Optional[bool] = None
+    email_notifications: Optional[bool] = None
 
 
 @app.put("/api/client/me")
@@ -1558,6 +1785,27 @@ def update_client_me(body: UpdateClientDataIn, identity: dict = Depends(current_
     client.data = json.dumps(existing)
     db.commit()
     return {"ok": True}
+
+
+@app.patch("/api/client/preferences")
+def update_client_preferences(body: ClientPreferencesIn, identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
+    """Client updates their UI preferences (dark_mode, email_notifications).
+    Stored in the data JSON column under the 'preferences' key."""
+    if identity.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    client = db.query(Client).filter(Client.email == identity["sub"]).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    existing = json.loads(client.data or "{}")
+    prefs = existing.get("preferences") or {}
+    if body.dark_mode is not None:
+        prefs["dark_mode"] = body.dark_mode
+    if body.email_notifications is not None:
+        prefs["email_notifications"] = body.email_notifications
+    existing["preferences"] = prefs
+    client.data = json.dumps(existing)
+    db.commit()
+    return {"ok": True, "preferences": prefs}
 
 
 # ── Admin: client management ──
@@ -1646,6 +1894,74 @@ def add_client_point(email: str, body: PointEntryIn, _: dict = Depends(require_a
     return {"ok": True}
 
 
+@app.get("/api/admin/clients/{email}/activity")
+def client_activity(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Return a chronological activity timeline for a specific client."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    events = []
+
+    # 1. client_created
+    if client.created_at:
+        events.append({"type": "client_created", "timestamp": client.created_at.isoformat(), "detail": "Client joined"})
+
+    # 2. intake submissions for this email
+    intakes = db.query(Intake).filter(Intake.email == client.email).order_by(Intake.created_at).all()
+    for intake in intakes:
+        if intake.created_at:
+            payload = json.loads(intake.payload or "{}")
+            trip_label = payload.get("destination") or payload.get("trip_label") or ""
+            detail = f"Intake: {trip_label}" if trip_label else "Intake submitted"
+            events.append({"type": "intake_submitted", "timestamp": intake.created_at.isoformat(), "detail": detail})
+
+    # 3. trip requests + workflow events
+    trips = db.query(TripRequest).filter(TripRequest.client_id == client.id).order_by(TripRequest.created_at).all()
+    for trip in trips:
+        if trip.created_at:
+            label = trip.destination or trip.notes or "trip"
+            cabin = f" {trip.cabin}" if trip.cabin else ""
+            events.append({"type": "trip_created", "timestamp": trip.created_at.isoformat(),
+                           "detail": f"Trip request: {label}{cabin}"})
+        # workflow events for this trip
+        wf_events = db.query(WorkflowEvent).filter(WorkflowEvent.trip_id == trip.id).order_by(WorkflowEvent.created_at).all()
+        for we in wf_events:
+            if we.created_at:
+                events.append({"type": "status_changed", "timestamp": we.created_at.isoformat(),
+                               "detail": f"{we.from_status} → {we.to_status}"})
+
+    # 4. messages from client data JSON
+    data = json.loads(client.data or "{}")
+    messages = data.get("messages", [])
+    for msg in messages:
+        ts = msg.get("time") or msg.get("timestamp")
+        if not ts:
+            continue
+        sender = msg.get("sender", "advisor")
+        text = msg.get("text", "")
+        char_count = len(text)
+        if sender == "advisor":
+            events.append({"type": "message_sent", "timestamp": ts, "detail": f"Advisor sent message ({char_count} chars)"})
+        else:
+            events.append({"type": "message_received", "timestamp": ts, "detail": f"Client replied ({char_count} chars)"})
+
+    # 5. savings records
+    savings = db.query(SavingsRecord).filter(SavingsRecord.client_id == client.id).order_by(SavingsRecord.created_at).all()
+    for rec in savings:
+        if rec.created_at:
+            gross = (rec.cash_benchmark_cents - rec.award_taxes_fees_cents - rec.other_out_of_pocket_cents) / 100
+            label = rec.trip_label or "trip"
+            events.append({"type": "saving_logged", "timestamp": rec.created_at.isoformat(),
+                           "detail": f"Saving logged: ${gross:,.0f} saved — {label}"})
+
+    # Sort by timestamp, cap at 100 most recent
+    events.sort(key=lambda e: e["timestamp"])
+    events = events[-100:]
+
+    return {"client_name": client.name, "client_email": client.email, "activity": events}
+
+
 @app.delete("/api/admin/clients/{email}")
 def delete_client(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
     """Permanently delete a client record. Use only for test/duplicate accounts.
@@ -1667,6 +1983,39 @@ def delete_client(email: str, _: dict = Depends(require_admin), db: Session = De
     db.delete(client)
     db.commit()
     return {"ok": True}
+
+
+@app.get("/api/admin/expiring-points")
+def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """All client point balances with an expiration_date, sorted soonest first.
+    Returns rows within 180 days; includes urgency level for the admin UI."""
+    clients = db.query(Client).all()
+    today = dt.date.today()
+    rows = []
+    for c in clients:
+        data = json.loads(c.data or "{}")
+        for p in data.get("points", []):
+            exp_str = p.get("expiration_date") or ""
+            if not exp_str:
+                continue
+            try:
+                exp_date = dt.date.fromisoformat(str(exp_str)[:10])
+            except ValueError:
+                continue
+            days_left = (exp_date - today).days
+            if days_left > 180 or days_left < 0:
+                continue
+            rows.append({
+                "client_name": c.name,
+                "client_email": c.email,
+                "program": p.get("program") or p.get("name") or "Unknown",
+                "balance": p.get("balance") or p.get("points") or 0,
+                "expiration_date": str(exp_date),
+                "days_left": days_left,
+                "urgency": "urgent" if days_left <= 30 else "warning" if days_left <= 90 else "calm",
+            })
+    rows.sort(key=lambda r: r["days_left"])
+    return rows
 
 
 class SendMessageIn(BaseModel):
@@ -1873,7 +2222,7 @@ async def scan_document(body: ScanDocumentIn, _: dict = Depends(require_admin), 
     try:
         extracted = ai_client.call_ai("gemini", "scan-document", _do, db_session_factory=SessionLocal)
     except (AIUnavailable, Exception) as e:
-        print(f"[gemini-vision] scan failed: {e}")
+        logger.warning("ai.scan-document failed", extra={"error": str(e)[:200]})
         return {"ok": False, "error": "AI scanner unavailable — enter balances manually", "manual": True}
 
     saved = False
@@ -1992,7 +2341,7 @@ async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: S
     try:
         recs = ai_client.call_ai("gemini", "sweet-spots", _do, db_session_factory=SessionLocal)
     except (AIUnavailable, Exception) as e:
-        print(f"[gemini] sweet spots failed: {e}")
+        logger.warning("ai.sweet-spots failed", extra={"error": str(e)[:200]})
         return {"ok": False, "error": "AI recommendations unavailable — try again shortly", "manual": True}
 
     # Enrich with seats.aero live award availability
@@ -2035,7 +2384,7 @@ async def sweet_spots(body: SweetSpotIn, _: dict = Depends(require_admin), db: S
                         if avail:
                             rec["next_available_date"] = avail[0].get("Date", "")
                 except Exception as e2:
-                    print(f"[seats.aero] {rec.get('destination')}: {e2}")
+                    logger.warning("seats.aero lookup failed", extra={"destination": rec.get("destination", ""), "error": str(e2)[:200]})
 
     # Save to client profile
     data["recommendations"] = recs
@@ -2140,7 +2489,7 @@ async def parse_threads(body: ParseThreadsIn, _: dict = Depends(require_admin)):
             parsed = ai_client.call_ai("gemini", "parse-threads", _do_gemini, db_session_factory=SessionLocal)
             return {"ok": True, "source": "gemini", "data": parsed}
         except (AIUnavailable, Exception) as e:
-            print(f"[gemini] thread parse failed: {e}")
+            logger.warning("ai.parse-threads gemini failed", extra={"error": str(e)[:200]})
 
     return {"ok": True, "source": "none", "data": {
         "first_name": None, "last_name": None, "email": None, "phone": None,
@@ -2227,9 +2576,15 @@ def update_savings(record_id: int, body: SavingsPatchIn, db: Session = Depends(g
     rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
     if not rec:
         raise HTTPException(404, "Record not found")
-    if rec.status in ("invoiced", "paid"):
-        raise HTTPException(400, "Cannot edit a record in invoiced or paid status")
+    VALID_STATUSES = {"draft", "booked", "invoiced", "paid", "void", "presented"}
     for field, val in body.model_dump(exclude_unset=True).items():
+        if field == "status":
+            if val not in VALID_STATUSES:
+                raise HTTPException(422, f"Invalid status '{val}'")
+            rec.status = val
+            continue
+        if rec.status in ("invoiced", "paid"):
+            raise HTTPException(400, "Cannot edit a record in invoiced or paid status")
         if field == "benchmark_screenshot" and val and len(val) > 2_000_000:
             raise HTTPException(422, "Screenshot too large (max ~1.5 MB)")
         if field == "benchmark_captured_at":
@@ -2285,6 +2640,17 @@ def advance_status(record_id: int, body: StatusAdvanceIn, db: Session = Depends(
     return row
 
 
+@app.get("/api/admin/savings/{record_id}/report")
+def savings_report_url(record_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+    if not rec.report_token:
+        rec.report_token = secrets.token_urlsafe(32)
+        db.commit()
+    return {"report_url": f"/api/report/{rec.report_token}", "token": rec.report_token}
+
+
 @app.delete("/api/admin/savings/{record_id}")
 def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
@@ -2295,6 +2661,348 @@ def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depe
     db.delete(rec)
     db.commit()
     return {"ok": True}
+
+
+@app.get("/api/admin/export/clients")
+def export_clients(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Export all clients as a CSV file."""
+    import csv
+    import io
+    today = dt.date.today().isoformat()
+    ACTIVE_EXCL = {"closed", "declined", "lost", "booked"}
+    EARNED_STATUSES = {"booked", "invoiced", "paid"}
+
+    clients = db.query(Client).order_by(Client.created_at).all()
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["id", "name", "email", "created_at", "total_trips", "active_trips", "total_savings_dollars"])
+    for c in clients:
+        trips = db.query(TripRequest).filter(TripRequest.client_id == c.id).all()
+        total_trips = len(trips)
+        active_trips = sum(1 for t in trips if t.workflow_status not in ACTIVE_EXCL)
+        savings_recs = db.query(SavingsRecord).filter(
+            SavingsRecord.client_id == c.id,
+            SavingsRecord.status.in_(list(EARNED_STATUSES)),
+        ).all()
+        total_savings_cents = sum(
+            calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+            for r in savings_recs
+        )
+        total_savings_dollars = round(total_savings_cents / 100, 2)
+        created_at = c.created_at.isoformat() if c.created_at else ""
+        writer.writerow([c.id, c.name, c.email, created_at, total_trips, active_trips, total_savings_dollars])
+
+    from fastapi.responses import Response
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="district-clients-{today}.csv"'},
+    )
+
+
+@app.get("/api/admin/export/savings")
+def export_savings(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Export all savings records as a CSV file."""
+    import csv
+    import io
+    today = dt.date.today().isoformat()
+
+    recs = db.query(SavingsRecord).order_by(SavingsRecord.created_at).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow([
+        "id", "client_name", "client_email", "trip_label",
+        "gross_savings_dollars", "fee_dollars", "points_used", "program", "status", "created_at",
+    ])
+    for r in recs:
+        client = client_map.get(r.client_id)
+        gross_cents = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee_cents = calc_fee(gross_cents, r.fee_rate_bps)
+        writer.writerow([
+            r.id,
+            client.name if client else "",
+            client.email if client else "",
+            r.trip_label,
+            round(gross_cents / 100, 2),
+            round(fee_cents / 100, 2),
+            r.points_used,
+            r.points_program,
+            r.status,
+            r.created_at.isoformat() if r.created_at else "",
+        ])
+
+    from fastapi.responses import Response
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="district-savings-{today}.csv"'},
+    )
+
+
+@app.post("/api/admin/savings/import-legacy")
+def import_legacy_savings(body: LegacyImportIn, db: Session = Depends(get_db), admin: dict = Depends(require_admin)):
+    """Import savings entries from the old admin localStorage (dat_savings key).
+
+    Idempotent: entries whose trip_label + cash_benchmark_cents (within ±100 cents)
+    already exist in the DB are skipped rather than duplicated.
+    """
+    # Resolve which client record to attach these records to
+    lookup_email = (body.client_email or admin.get("sub", "")).lower()
+    if not lookup_email:
+        raise HTTPException(422, "client_email is required (no admin email in token)")
+    client = db.query(Client).filter(Client.email == lookup_email).first()
+    if not client:
+        raise HTTPException(404, f"Client not found: {lookup_email}")
+
+    imported = 0
+    skipped = 0
+
+    for entry in body.entries:
+        # ── Extract destination ──────────────────────────────────────────────
+        dest = entry.get("dest") or entry.get("destination") or ""
+        dest = dest.strip() if dest else ""
+
+        # ── Extract benchmark ────────────────────────────────────────────────
+        raw_benchmark = entry.get("benchmark") if entry.get("benchmark") is not None else entry.get("cash_benchmark_cents")
+        if raw_benchmark is None:
+            skipped += 1
+            continue
+        try:
+            raw_benchmark = int(raw_benchmark)
+        except (TypeError, ValueError):
+            skipped += 1
+            continue
+
+        if not dest or raw_benchmark <= 0:
+            skipped += 1
+            continue
+
+        # Convert dollars → cents if value looks like dollars (< 100 000 and > 0)
+        if 0 < raw_benchmark < 100000:
+            benchmark_cents = raw_benchmark * 100
+        else:
+            benchmark_cents = raw_benchmark
+
+        # ── Extract taxes ────────────────────────────────────────────────────
+        raw_taxes = entry.get("taxes") if entry.get("taxes") is not None else entry.get("award_taxes_fees_cents", 0)
+        try:
+            raw_taxes = int(raw_taxes)
+        except (TypeError, ValueError):
+            raw_taxes = 0
+        # Convert dollars → cents if value looks like dollars (< 100 000)
+        if 0 < raw_taxes < 100000:
+            taxes_cents = raw_taxes * 100
+        else:
+            taxes_cents = raw_taxes
+
+        # ── Extract points ───────────────────────────────────────────────────
+        raw_pts = entry.get("pts") if entry.get("pts") is not None else entry.get("points_used", 0)
+        try:
+            points_used = int(raw_pts)
+        except (TypeError, ValueError):
+            points_used = 0
+
+        # ── Extract date ─────────────────────────────────────────────────────
+        raw_date = entry.get("date") or entry.get("created_at") or ""
+        created_at = None
+        if raw_date:
+            for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+                try:
+                    created_at = dt.datetime.strptime(str(raw_date)[:26], fmt)
+                    break
+                except ValueError:
+                    pass
+            if created_at is None:
+                try:
+                    created_at = dt.datetime.fromisoformat(str(raw_date)[:26])
+                except ValueError:
+                    created_at = None
+
+        # ── Idempotency check ────────────────────────────────────────────────
+        existing = db.query(SavingsRecord).filter(
+            SavingsRecord.client_id == client.id,
+            SavingsRecord.trip_label == dest,
+        ).all()
+        duplicate = any(abs(r.cash_benchmark_cents - benchmark_cents) < 100 for r in existing)
+        if duplicate:
+            skipped += 1
+            continue
+
+        # ── Create record ────────────────────────────────────────────────────
+        rec = SavingsRecord(
+            client_id=client.id,
+            trip_label=dest,
+            cash_benchmark_cents=benchmark_cents,
+            award_taxes_fees_cents=taxes_cents,
+            points_used=points_used,
+            fee_rate_bps=1000,
+            status="booked",
+            report_token=secrets.token_urlsafe(32),
+        )
+        if created_at is not None:
+            rec.created_at = created_at
+        db.add(rec)
+        imported += 1
+
+    db.commit()
+    return {"imported": imported, "skipped": skipped}
+
+
+@app.get("/api/admin/savings/invoice/{record_id}")
+def savings_invoice(record_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Return a printable HTML invoice for a savings record.
+
+    Auto-assigns invoice_number and invoiced_at if they are empty, then
+    commits those values so subsequent calls return the same invoice number.
+    """
+    from fastapi.responses import HTMLResponse
+
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+
+    client = db.query(Client).filter(Client.id == rec.client_id).first()
+    client_name = client.name if client else "Client"
+
+    # Auto-assign invoice number if missing
+    if not rec.invoice_number:
+        year = dt.datetime.utcnow().year
+        existing = db.query(SavingsRecord).filter(
+            SavingsRecord.invoice_number.like(f"DAT-{year}-%")
+        ).all()
+        nums = []
+        for r in existing:
+            try:
+                nums.append(int(r.invoice_number.split("-")[-1]))
+            except (ValueError, IndexError):
+                pass
+        next_num = max(nums, default=0) + 1
+        rec.invoice_number = f"DAT-{year}-{next_num:04d}"
+        rec.invoiced_at = dt.datetime.utcnow()
+        db.commit()
+        db.refresh(rec)
+
+    gross = calc_gross_savings(rec.cash_benchmark_cents, rec.award_taxes_fees_cents, rec.other_out_of_pocket_cents)
+    fee   = calc_fee(gross, rec.fee_rate_bps)
+
+    issue_date = (rec.invoiced_at or dt.datetime.utcnow()).date()
+    due_date   = issue_date + dt.timedelta(days=30)
+
+    def fmt_usd(cents: int) -> str:
+        sign = "-" if cents < 0 else ""
+        cents = abs(cents)
+        return f"{sign}${cents // 100:,}.{cents % 100:02d}"
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Invoice {rec.invoice_number} — {rec.trip_label or "Trip"}</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f3f4f6; color: #111827; padding: 32px 16px; }}
+  .page {{ background: #fff; max-width: 720px; margin: 0 auto; padding: 48px; border: 1px solid #d1d5db; border-radius: 8px; }}
+  .header {{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }}
+  .brand {{ font-size: 1.25rem; font-weight: 800; color: #d97706; letter-spacing: .02em; }}
+  .brand-sub {{ font-size: .8rem; color: #6b7280; margin-top: 2px; }}
+  .invoice-meta {{ text-align: right; }}
+  .invoice-num {{ font-size: 1.4rem; font-weight: 700; color: #111827; }}
+  .invoice-meta p {{ font-size: .85rem; color: #6b7280; margin-top: 4px; }}
+  .divider {{ border: none; border-top: 2px solid #e5e7eb; margin: 24px 0; }}
+  .parties {{ display: flex; justify-content: space-between; margin-bottom: 32px; }}
+  .party h3 {{ font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; margin-bottom: 6px; }}
+  .party p {{ font-size: .9rem; color: #111827; line-height: 1.5; }}
+  table {{ width: 100%; border-collapse: collapse; margin-bottom: 24px; }}
+  thead th {{ font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; padding: 8px 12px; text-align: left; border-bottom: 2px solid #e5e7eb; }}
+  thead th:last-child {{ text-align: right; }}
+  tbody td {{ padding: 12px 12px; border-bottom: 1px solid #f3f4f6; font-size: .9rem; color: #374151; vertical-align: top; }}
+  tbody td:last-child {{ text-align: right; font-weight: 500; }}
+  .total-row td {{ padding: 14px 12px; font-size: 1rem; font-weight: 700; color: #d97706; border-top: 2px solid #e5e7eb; border-bottom: none; }}
+  .remittance {{ background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 16px 20px; margin-top: 8px; }}
+  .remittance h4 {{ font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: #92400e; margin-bottom: 8px; }}
+  .remittance p {{ font-size: .9rem; color: #78350f; line-height: 1.6; }}
+  .footer {{ margin-top: 32px; font-size: .75rem; color: #9ca3af; text-align: center; }}
+  @media print {{
+    body {{ background: #fff; padding: 0; }}
+    .page {{ border: none; border-radius: 0; padding: 24px; }}
+  }}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="brand">District Award Travel</div>
+      <div class="brand-sub">districtawardtravel@gmail.com</div>
+    </div>
+    <div class="invoice-meta">
+      <div class="invoice-num">INVOICE</div>
+      <p>{rec.invoice_number}</p>
+      <p>Issued: {issue_date.strftime('%B %d, %Y')}</p>
+      <p>Due: {due_date.strftime('%B %d, %Y')}</p>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="parties">
+    <div class="party">
+      <h3>Bill To</h3>
+      <p><strong>{client_name}</strong><br>
+      {'<br>' + client.email if client else ''}</p>
+    </div>
+    <div class="party" style="text-align:right;">
+      <h3>From</h3>
+      <p><strong>District Award Travel</strong><br>
+      districtawardtravel@gmail.com</p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Detail</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>{rec.trip_label or "Award Travel Booking"}</strong><br>
+            <span style="font-size:.8rem;color:#6b7280;">Cash value of award ticket(s)</span></td>
+        <td style="font-size:.85rem;color:#6b7280;">Benchmark</td>
+        <td>{fmt_usd(rec.cash_benchmark_cents)}</td>
+      </tr>
+      {'<tr><td>Award Taxes &amp; Fees</td><td style="font-size:.85rem;color:#6b7280;">Out-of-pocket</td><td style="color:#6b7280;">(' + fmt_usd(rec.award_taxes_fees_cents) + ')</td></tr>' if rec.award_taxes_fees_cents else ''}
+      <tr>
+        <td><strong>Gross Savings</strong></td>
+        <td></td>
+        <td style="color:#059669;font-weight:700;">{fmt_usd(gross)}</td>
+      </tr>
+      <tr class="total-row">
+        <td>District Advisory Fee (10%)</td>
+        <td></td>
+        <td>{fmt_usd(fee)}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="remittance">
+    <h4>Payment Instructions</h4>
+    <p>
+      Please remit <strong>{fmt_usd(fee)}</strong> by {due_date.strftime('%B %d, %Y')}.<br>
+      Pay via <strong>Venmo</strong> @bsalsa2 &nbsp;|&nbsp; <strong>Zelle</strong> bradensalcetti@icloud.com<br>
+      Reference invoice <strong>{rec.invoice_number}</strong> when paying.
+    </p>
+  </div>
+
+  <div class="footer">District Award Travel &mdash; Thank you for flying smarter.</div>
+</div>
+</body>
+</html>"""
+    return HTMLResponse(html)
 
 
 @app.get("/api/report/{token}")
@@ -2320,6 +3028,7 @@ def savings_report(request: Request, token: str, db: Session = Depends(get_db)):
     if rec.benchmark_screenshot:
         screenshot_html = f'<img src="{rec.benchmark_screenshot}" alt="Benchmark screenshot" style="max-width:100%;border:1px solid #e5e7eb;border-radius:6px;margin-top:8px;">'
 
+    date_str = rec.benchmark_captured_at.strftime('%B %d, %Y') if rec.benchmark_captured_at else dt.datetime.utcnow().strftime('%B %d, %Y')
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2327,41 +3036,88 @@ def savings_report(request: Request, token: str, db: Session = Depends(get_db)):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Savings Report — {rec.trip_label or "Trip"}</title>
 <style>
-  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; color: #111827; margin: 0; padding: 24px; }}
-  .card {{ background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 700px; margin: 0 auto; padding: 32px; }}
-  .logo {{ font-size: 1.1rem; font-weight: 700; color: #d97706; letter-spacing: .02em; margin-bottom: 4px; }}
-  h1 {{ font-size: 1.4rem; font-weight: 700; margin: 0 0 4px; }}
-  .sub {{ color: #6b7280; font-size: .9rem; margin-bottom: 24px; }}
-  table {{ width: 100%; border-collapse: collapse; }}
-  td {{ padding: 8px 0; border-bottom: 1px solid #f3f4f6; }}
-  td:first-child {{ color: #6b7280; width: 200px; }}
-  td:last-child {{ font-weight: 500; text-align: right; }}
-  .savings-row td {{ font-size: 1.15rem; font-weight: 700; color: #059669; }}
-  .fee-row td {{ color: #d97706; }}
-  .footer {{ margin-top: 24px; font-size: .8rem; color: #9ca3af; text-align: center; }}
-  @media print {{ body {{ background: #fff; padding: 0; }} }}
+*,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:#f4f3f1;color:#1c1917;-webkit-font-smoothing:antialiased}}
+.page{{max-width:720px;margin:40px auto;padding:0 20px 60px}}
+.card{{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,.10),0 1px 4px rgba(0,0,0,.06)}}
+.rpt-head{{background:#0c0905;padding:32px 36px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}}
+.rpt-brand{{color:#fff;font-size:15px;font-weight:900;letter-spacing:-.3px}}
+.rpt-brand span{{color:#f97316}}
+.rpt-tagline{{color:rgba(255,255,255,.45);font-size:12px;margin-top:3px}}
+.rpt-badge{{background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3);color:#fb923c;font-size:11px;font-weight:700;padding:4px 10px;border-radius:100px;letter-spacing:.06em;white-space:nowrap;align-self:flex-start}}
+.rpt-hero{{padding:32px 36px;border-bottom:1px solid #f3f0ec;display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}}
+.rpt-trip{{font-size:20px;font-weight:800;letter-spacing:-.4px;margin-bottom:4px}}
+.rpt-client{{font-size:13px;color:#78716c}}
+.rpt-amount-block{{text-align:right;flex-shrink:0}}
+.rpt-amount-label{{font-size:11px;font-weight:700;color:#78716c;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}}
+.rpt-amount{{font-size:40px;font-weight:900;color:#059669;letter-spacing:-1.5px;line-height:1}}
+.rpt-cpp{{font-size:12px;color:#78716c;margin-top:4px}}
+.rpt-body{{padding:28px 36px}}
+.rpt-section-label{{font-size:11px;font-weight:700;color:#a8a29e;letter-spacing:.10em;text-transform:uppercase;margin-bottom:14px;margin-top:24px}}
+.rpt-section-label:first-child{{margin-top:0}}
+.rpt-row{{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid #f5f3f0;font-size:14px;gap:16px}}
+.rpt-row:last-of-type{{border-bottom:none}}
+.rpt-row-label{{color:#78716c;flex-shrink:0}}
+.rpt-row-val{{font-weight:500;text-align:right;color:#1c1917;font-variant-numeric:tabular-nums}}
+.rpt-savings-row{{background:linear-gradient(90deg,rgba(5,150,105,.04),rgba(5,150,105,.08));border-radius:10px;padding:14px 16px!important;margin:16px 0;border:none!important}}
+.rpt-savings-row .rpt-row-label{{font-weight:700;color:#065f46;font-size:15px}}
+.rpt-savings-row .rpt-row-val{{font-size:20px;font-weight:900;color:#059669}}
+.rpt-fee-row .rpt-row-val{{color:#d97706}}
+.rpt-screenshot{{margin-top:20px}}
+.rpt-screenshot img{{max-width:100%;border-radius:10px;border:1px solid #e7e5e4}}
+.rpt-option{{background:#fafaf9;border:1px solid #e7e5e4;border-radius:10px;padding:16px;margin-top:4px;font-size:13px;color:#1c1917;line-height:1.6;white-space:pre-wrap;font-family:inherit}}
+.rpt-foot{{background:#fafaf9;border-top:1px solid #f0ece8;padding:20px 36px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}}
+.rpt-foot-brand{{font-size:13px;font-weight:700;color:#a8a29e}}
+.rpt-foot-brand span{{color:#f97316}}
+.rpt-foot-note{{font-size:12px;color:#a8a29e;text-align:right;line-height:1.5}}
+.rpt-print-btn{{display:inline-flex;align-items:center;gap:6px;background:#f97316;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px}}
+.rpt-print-btn:hover{{background:#ea6c0a}}
+@media print{{body{{background:#fff}}.page{{margin:0;padding:0}}.card{{box-shadow:none;border-radius:0}}.rpt-print-btn{{display:none}}}}
+@media(max-width:600px){{.rpt-head,.rpt-hero,.rpt-body,.rpt-foot{{padding:20px}}.rpt-amount{{font-size:32px}}.rpt-trip{{font-size:16px}}}}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">District Award Travel</div>
-  <h1>{rec.trip_label or "Savings Report"}</h1>
-  <div class="sub">Prepared for {client_name} &middot; {rec.benchmark_captured_at.strftime('%B %d, %Y') if rec.benchmark_captured_at else ''}</div>
-  <table>
-    <tr><td>Cash Benchmark</td><td>{fmt_usd(rec.cash_benchmark_cents)}</td></tr>
-    {'<tr><td>Benchmark Source</td><td>' + rec.benchmark_source + '</td></tr>' if rec.benchmark_source else ''}
-    {'<tr><td>Assumptions</td><td style="font-size:.85rem;text-align:right;white-space:pre-wrap;">' + rec.benchmark_assumptions + '</td></tr>' if rec.benchmark_assumptions else ''}
-    <tr><td>Option Booked</td><td style="text-align:right;white-space:pre-wrap;">{rec.option_booked or '—'}</td></tr>
-    {'<tr><td>Points Used</td><td>' + f"{rec.points_used:,} {rec.points_program}".strip() + '</td></tr>' if rec.points_used else ''}
-    {'<tr><td>Award Taxes + Fees</td><td>' + fmt_usd(rec.award_taxes_fees_cents) + '</td></tr>' if rec.award_taxes_fees_cents else ''}
-    {'<tr><td>Other Out-of-Pocket</td><td>' + fmt_usd(rec.other_out_of_pocket_cents) + '</td></tr>' if rec.other_out_of_pocket_cents else ''}
-    {'<tr><td>Cents per Point</td><td>' + cpp_display + '</td></tr>' if rec.points_used else ''}
-    <tr class="savings-row"><td>Gross Savings</td><td>{fmt_usd(gross)}</td></tr>
-    <tr class="fee-row"><td>District Fee (10%)</td><td>{fmt_usd(fee)}</td></tr>
-    {'<tr><td>Invoice</td><td>' + rec.invoice_number + '</td></tr>' if rec.invoice_number else ''}
-  </table>
-  {screenshot_html}
-  <div class="footer">District Award Travel &mdash; districtawardtravel@gmail.com</div>
+<div class="page">
+  <div class="card">
+    <div class="rpt-head">
+      <div>
+        <div class="rpt-brand">District <span>Award</span> Travel</div>
+        <div class="rpt-tagline">Award travel advisory · districtawardtravel@gmail.com</div>
+      </div>
+      <div class="rpt-badge">SAVINGS PROOF</div>
+    </div>
+    <div class="rpt-hero">
+      <div>
+        <div class="rpt-trip">{rec.trip_label or "Trip"}</div>
+        <div class="rpt-client">Prepared for {client_name} · {date_str}</div>
+      </div>
+      <div class="rpt-amount-block">
+        <div class="rpt-amount-label">You Saved</div>
+        <div class="rpt-amount">{fmt_usd(gross)}</div>
+        {'<div class="rpt-cpp">' + cpp_display + ' · ' + f"{rec.points_used:,}" + ' pts</div>' if rec.points_used else ''}
+      </div>
+    </div>
+    <div class="rpt-body">
+      <div class="rpt-section-label">Cash Benchmark</div>
+      <div class="rpt-row"><span class="rpt-row-label">Cash price (verified)</span><span class="rpt-row-val">{fmt_usd(rec.cash_benchmark_cents)}</span></div>
+      {'<div class="rpt-row"><span class="rpt-row-label">Source</span><span class="rpt-row-val" style="font-size:12px">' + rec.benchmark_source + '</span></div>' if rec.benchmark_source else ''}
+      {'<div class="rpt-row"><span class="rpt-row-label">Assumptions</span><span class="rpt-row-val" style="font-size:12px;white-space:pre-wrap">' + rec.benchmark_assumptions + '</span></div>' if rec.benchmark_assumptions else ''}
+      {('<div class="rpt-screenshot">' + screenshot_html + '</div>') if screenshot_html else ''}
+      <div class="rpt-section-label">What You Paid</div>
+      {'<div class="rpt-row"><span class="rpt-row-label">Points used</span><span class="rpt-row-val">' + f"{rec.points_used:,} {rec.points_program}".strip() + '</span></div>' if rec.points_used else ''}
+      {'<div class="rpt-row"><span class="rpt-row-label">Award taxes + fees</span><span class="rpt-row-val">' + fmt_usd(rec.award_taxes_fees_cents) + '</span></div>' if rec.award_taxes_fees_cents else ''}
+      {'<div class="rpt-row"><span class="rpt-row-label">Other out-of-pocket</span><span class="rpt-row-val">' + fmt_usd(rec.other_out_of_pocket_cents) + '</span></div>' if rec.other_out_of_pocket_cents else ''}
+      {'<div class="rpt-section-label">Option Booked</div><div class="rpt-option">' + rec.option_booked + '</div>' if rec.option_booked else ''}
+      <div class="rpt-row rpt-savings-row"><span class="rpt-row-label">Gross Savings</span><span class="rpt-row-val">{fmt_usd(gross)}</span></div>
+      <div class="rpt-row rpt-fee-row"><span class="rpt-row-label">District Advisory Fee (10%)</span><span class="rpt-row-val">{fmt_usd(fee)}</span></div>
+      {'<div class="rpt-row" style="font-weight:700"><span class="rpt-row-label">Invoice #</span><span class="rpt-row-val">' + rec.invoice_number + '</span></div>' if rec.invoice_number else ''}
+      <button class="rpt-print-btn" onclick="window.print()">&#9113; Print / Save PDF</button>
+    </div>
+    <div class="rpt-foot">
+      <div class="rpt-foot-brand">District <span>Award</span> Travel</div>
+      <div class="rpt-foot-note">Benchmarks timestamped at research time. Savings = verified cash price − your out-of-pocket.<br>Advisory fee = 10% of gross savings, payable after booking.</div>
+    </div>
+  </div>
 </div>
 </body>
 </html>"""
@@ -2428,6 +3184,62 @@ def get_board(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
             seen.add(r["id"])
             deduped.append(r)
     return {"columns": columns, "needs_attention": deduped}
+
+
+@app.get("/api/admin/stats")
+def admin_stats(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    now = dt.datetime.utcnow()
+    stale_cutoff = now - dt.timedelta(hours=48)
+    week_ago = now - dt.timedelta(days=7)
+    terminal = {"closed", "declined", "lost", "booked"}
+
+    trips = db.query(TripRequest).all()
+
+    trips_by_status: dict = {}
+    total_trips = 0
+    active_trips = 0
+    trips_stale = 0
+    for t in trips:
+        total_trips += 1
+        s = t.workflow_status or "new"
+        trips_by_status[s] = trips_by_status.get(s, 0) + 1
+        if s not in terminal:
+            active_trips += 1
+            updated = t.last_activity_at or t.created_at
+            if updated and updated < stale_cutoff:
+                trips_stale += 1
+
+    total_clients = db.query(Client).count()
+    new_clients_this_week = db.query(Client).filter(Client.created_at >= week_ago).count()
+
+    savings_recs = db.query(SavingsRecord).filter(
+        SavingsRecord.status.in_(["booked", "invoiced", "paid"])
+    ).all()
+    total_savings_cents = 0
+    total_fees_cents = 0
+    for rec in savings_recs:
+        gross = calc_gross_savings(
+            rec.cash_benchmark_cents,
+            rec.award_taxes_fees_cents,
+            rec.other_out_of_pocket_cents,
+        )
+        total_savings_cents += max(gross, 0)
+        total_fees_cents += calc_fee(gross, rec.fee_rate_bps)
+
+    n_savings = len(savings_recs)
+    avg_savings_per_trip_cents = (total_savings_cents // n_savings) if n_savings else 0
+
+    return {
+        "trips_by_status": trips_by_status,
+        "total_clients": total_clients,
+        "total_trips": total_trips,
+        "active_trips": active_trips,
+        "total_savings_cents": total_savings_cents,
+        "total_fees_cents": total_fees_cents,
+        "avg_savings_per_trip_cents": avg_savings_per_trip_cents,
+        "trips_stale": trips_stale,
+        "new_clients_this_week": new_clients_this_week,
+    }
 
 
 @app.get("/api/admin/trips")
@@ -2501,10 +3313,64 @@ def advance_trip_status(trip_id: int, body: WorkflowAdvanceIn, db: Session = Dep
     return result
 
 
+NEXT_STATUS = {
+    "new": "researching",
+    "researching": "options_sent",
+    "options_sent": "awaiting_decision",
+    "awaiting_decision": "booked",
+    "booked": "closed",
+}
+
+
+@app.post("/api/admin/trips/{trip_id}/advance")
+def advance_trip_one_step(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Advance a trip to the next logical status (kanban one-click advance)."""
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    next_s = NEXT_STATUS.get(trip.workflow_status)
+    if not next_s:
+        raise HTTPException(400, f"No automatic next step from '{trip.workflow_status}'")
+    old_status = trip.workflow_status
+    trip.workflow_status = next_s
+    trip.stage_entered_at = dt.datetime.utcnow()
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.add(WorkflowEvent(trip_id=trip.id, from_status=old_status, to_status=next_s, note="Advanced via kanban"))
+    db.commit()
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    result = _trip_row(trip, client)
+    if next_s == "booked":
+        result["prompt_savings_record"] = True
+    logger.info("trip.advance", extra={"trip_id": trip_id, "from": old_status, "to": next_s})
+    if client and next_s in _CLIENT_STATUS_EMAILS:
+        try:
+            _notify_client_status_change(
+                client_email=client.email or "",
+                client_name=client.name or "",
+                destination=trip.destination or "",
+                new_status=next_s,
+            )
+        except Exception as exc:
+            logger.error("trip.advance.notify_client.failed", extra={"trip_id": trip_id, "error": str(exc)})
+    return result
+
+
 @app.get("/api/admin/trips/{trip_id}/events")
 def trip_events(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     events = db.query(WorkflowEvent).filter(WorkflowEvent.trip_id == trip_id).order_by(WorkflowEvent.created_at.desc()).all()
     return [{"id": e.id, "from_status": e.from_status, "to_status": e.to_status, "note": e.note, "created_at": e.created_at.isoformat()} for e in events]
+
+
+@app.patch("/api/admin/trips/{trip_id}/research-notes")
+def update_trip_research_notes(trip_id: int, body: TripResearchNotesIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    trip.research_notes = body.research_notes
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    return _trip_row(trip, client)
 
 
 @app.post("/api/admin/trips/{trip_id}/notes")
@@ -2886,6 +3752,142 @@ def cron_digest(key: str = "", db: Session = Depends(get_db)):
     lines.append(f"Workflow events in last 24h: {digest['workflow_events_24h']}")
     sent = send_email("DAT Daily Digest", "\n".join(lines))
     return {"ok": True, "sent": sent}
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# Action Items — smart alerts aggregated for the admin
+# ──────────────────────────────────────────────────────────────────────────
+
+TERMINAL_STATUSES = {"closed", "declined", "lost", "booked"}
+
+
+@app.get("/api/admin/action-items")
+def get_action_items(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Return prioritised action items: stale trips, expiring points, new intakes."""
+    now = dt.datetime.utcnow()
+    today = dt.date.today()
+    items: list[dict] = []
+
+    # ── 1. Stale trips (>48 h in same non-terminal status) ──────────────────
+    cutoff_trip = now - dt.timedelta(hours=48)
+    stale_trips = (
+        db.query(TripRequest)
+        .filter(
+            TripRequest.workflow_status.notin_(TERMINAL_STATUSES),
+            TripRequest.last_activity_at < cutoff_trip,
+        )
+        .all()
+    )
+    for trip in stale_trips:
+        hours_stale = int((now - trip.last_activity_at).total_seconds() // 3600)
+        client = db.query(Client).filter(Client.id == trip.client_id).first()
+        client_name = client.name if client else "Unknown"
+        client_email = client.email if client else ""
+        items.append({
+            "type": "stale_trip",
+            "priority": "high",
+            "trip_id": trip.id,
+            "client_name": client_name,
+            "client_email": client_email,
+            "destination": trip.destination or "Unknown destination",
+            "status": trip.workflow_status,
+            "hours": hours_stale,
+        })
+
+    # ── 2. Expiring points (<90 days) ────────────────────────────────────────
+    clients_all = db.query(Client).all()
+    for c in clients_all:
+        data = json.loads(c.data or "{}")
+        for p in data.get("points", []):
+            exp_str = p.get("expiration_date") or ""
+            if not exp_str:
+                continue
+            try:
+                exp_date = dt.date.fromisoformat(str(exp_str)[:10])
+            except ValueError:
+                continue
+            days_left = (exp_date - today).days
+            if days_left < 0 or days_left > 90:
+                continue
+            priority = "high" if days_left <= 30 else "medium"
+            items.append({
+                "type": "expiring_points",
+                "priority": priority,
+                "client_name": c.name,
+                "client_email": c.email,
+                "program": p.get("program") or p.get("name") or "Unknown",
+                "days_left": days_left,
+            })
+
+    # ── 3. Unread client messages (>24 h without admin reply) ────────────────
+    cutoff_msg = now - dt.timedelta(hours=24)
+    for c in clients_all:
+        data = json.loads(c.data or "{}")
+        messages = data.get("messages", [])
+        # Find the most recent client message
+        client_msgs = [m for m in messages if m.get("sender") == "client"]
+        if not client_msgs:
+            continue
+        # Sort by time descending
+        client_msgs_sorted = sorted(client_msgs, key=lambda m: m.get("time", ""), reverse=True)
+        latest_client_msg = client_msgs_sorted[0]
+        try:
+            latest_time = dt.datetime.fromisoformat(latest_client_msg["time"])
+        except (KeyError, ValueError):
+            continue
+        if latest_time > cutoff_msg:
+            # Client sent a message recently (>24h ago check fails) — not stale yet
+            continue
+        # Check if there's an advisor reply after this client message
+        later_advisor = any(
+            m.get("sender") == "advisor" and m.get("time", "") > latest_client_msg.get("time", "")
+            for m in messages
+        )
+        if later_advisor:
+            continue
+        hours_waiting = int((now - latest_time).total_seconds() // 3600)
+        items.append({
+            "type": "unread_message",
+            "priority": "high",
+            "client_name": c.name,
+            "client_email": c.email,
+            "hours_waiting": hours_waiting,
+        })
+
+    # ── 4. New intakes (<48 h old, not yet converted) ────────────────────────
+    cutoff_intake = now - dt.timedelta(hours=48)
+    new_intakes = (
+        db.query(Intake)
+        .filter(Intake.created_at >= cutoff_intake)
+        .order_by(Intake.created_at.desc())
+        .all()
+    )
+    # Filter out intakes that already have a matching client email
+    existing_emails = {c.email for c in clients_all}
+    for intake in new_intakes:
+        if intake.email and intake.email.lower() in existing_emails:
+            continue
+        hours_ago = int((now - intake.created_at).total_seconds() // 3600)
+        full_name = f"{intake.first_name} {intake.last_name}".strip() or intake.email or "Unknown"
+        items.append({
+            "type": "new_intake",
+            "priority": "low",
+            "intake_id": intake.id,
+            "name": full_name,
+            "email": intake.email,
+            "hours_ago": hours_ago,
+        })
+
+    # ── Tally by priority ────────────────────────────────────────────────────
+    high   = sum(1 for i in items if i["priority"] == "high")
+    medium = sum(1 for i in items if i["priority"] == "medium")
+    low    = sum(1 for i in items if i["priority"] == "low")
+
+    # Sort: high first, then medium, then low
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    items.sort(key=lambda i: priority_order.get(i["priority"], 9))
+
+    return {"items": items, "total": len(items), "high": high, "medium": medium, "low": low}
 
 
 # ──────────────────────────────────────────────────────────────────────────

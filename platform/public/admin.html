@@ -164,8 +164,31 @@
   .achat-send { background:var(--accent); color:#fff; border:none; border-radius:9px; padding:10px 18px;
     font-weight:700; font-size:.85rem; cursor:pointer; font-family:var(--font); }
   .achat-send:disabled { opacity:.5; cursor:not-allowed; }
+  .achat-tpl-wrap { position:relative; flex-shrink:0; }
+  .achat-tpl-btn { background:var(--surface); color:var(--text); border:1px solid var(--border2); border-radius:9px; padding:10px 13px;
+    font-weight:600; font-size:.82rem; cursor:pointer; font-family:var(--font); white-space:nowrap; }
+  .achat-tpl-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .achat-tpl-menu { display:none; position:absolute; bottom:calc(100% + 6px); left:0; min-width:210px; background:var(--surface);
+    border:1px solid var(--border2); border-radius:10px; box-shadow:0 4px 20px rgba(0,0,0,.35); z-index:200; overflow:hidden; }
+  .achat-tpl-menu.open { display:block; }
+  .achat-tpl-item { padding:9px 14px; font-size:.84rem; cursor:pointer; color:var(--text); }
+  .achat-tpl-item:hover { background:var(--accent-dim); color:var(--accent); }
   .chat-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--dim); font-size:.85rem; padding:40px; text-align:center; }
   @media(max-width:880px){ .chat-layout{grid-template-columns:1fr;} .chat-list{display:none;} .chat-layout.show-list .chat-list{display:block;} .chat-layout.show-list .chat-pane{display:none;} }
+  .chat-sidebar { display:flex; flex-direction:column; border-right:1px solid var(--border); background:var(--surface); overflow:hidden; }
+  .chat-sidebar .chat-list { border-right:none; flex:1; overflow-y:auto; }
+  .inbox-toolbar { padding:10px 12px 8px; border-bottom:1px solid var(--border); display:flex; flex-direction:column; gap:7px; flex-shrink:0; }
+  .inbox-search { width:100%; box-sizing:border-box; border:1px solid var(--border2); border-radius:8px; padding:7px 10px;
+    font-size:.82rem; font-family:var(--font); color:var(--text); background:var(--off); outline:none; }
+  .inbox-search:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-dim); }
+  .inbox-chips { display:flex; gap:6px; }
+  .inbox-chip { font-size:.73rem; font-weight:600; padding:3px 10px; border-radius:20px; border:1px solid var(--border2);
+    background:var(--surface); color:var(--muted); cursor:pointer; transition:all .12s; white-space:nowrap; }
+  .inbox-chip.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .conv-star { background:none; border:none; font-size:.95rem; cursor:pointer; padding:0 2px; color:var(--dim); line-height:1;
+    flex-shrink:0; opacity:.7; transition:opacity .12s; }
+  .conv-star:hover { opacity:1; }
+  mark { background:rgba(var(--accent-rgb,99,102,241),.18); color:inherit; border-radius:2px; }
 
   /* BADGES */
   .section-header { display:flex; align-items:center; justify-content:space-between; margin:0 0 14px; }
@@ -203,6 +226,35 @@
   .btn-sm.green:hover { background:rgba(22,163,74,.1); }
   .btn-sm.ai { border-color:rgba(124,58,237,.3); color:var(--purple); background:rgba(124,58,237,.05); }
   .btn-sm.ai:hover { background:rgba(124,58,237,.1); }
+  .btn-sm.danger { border-color:rgba(220,38,38,.3); color:var(--red); background:rgba(220,38,38,.04); }
+  .btn-sm.danger:hover { background:rgba(220,38,38,.1); }
+
+  /* PLAN BUILDER — option cards */
+  .plan-tpl-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; padding:12px 14px;
+    background:var(--off); border:1px solid var(--border); border-radius:10px; }
+  .plan-tpl-bar-label { width:100%; font-size:.65rem; color:var(--dim); font-weight:600; text-transform:uppercase;
+    letter-spacing:.07em; margin-bottom:4px; }
+  .plan-tpl-btn { padding:7px 13px; border-radius:8px; font-size:.8rem; cursor:pointer; font-family:var(--font);
+    border:1px solid var(--border2); background:var(--surface); color:var(--text); transition:all .15s;
+    font-weight:500; white-space:nowrap; }
+  .plan-tpl-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+  .option-card { background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:16px; margin-bottom:12px; position:relative; }
+  .option-card-head { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .option-card-num { background:var(--accent); color:#fff; font-size:.68rem; font-weight:700;
+    width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .option-card-title { font-size:.82rem; font-weight:700; color:var(--text); flex:1; }
+  .option-card-actions { display:flex; gap:5px; margin-left:auto; }
+  .option-card-actions button { padding:4px 9px; font-size:.72rem; border-radius:6px; cursor:pointer;
+    font-family:var(--font); border:1px solid var(--border2); background:var(--off); color:var(--muted);
+    transition:all .13s; white-space:nowrap; }
+  .option-card-actions button:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+  .option-card-actions button.danger:hover { border-color:var(--red); color:var(--red); background:rgba(220,38,38,.06); }
+  #plan-options-list { margin-top:16px; }
+  .plan-add-btn { width:100%; padding:10px; border-radius:9px; border:1px dashed var(--border2);
+    background:none; color:var(--muted); font-size:.83rem; cursor:pointer; font-family:var(--font);
+    transition:all .15s; margin-bottom:16px; }
+  .plan-add-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
 
   /* TABLE */
   .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; overflow-x:auto; margin-bottom:28px; box-shadow:var(--shadow); }
@@ -252,6 +304,8 @@
   .modal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
   .modal-head h2 { font-size:1.1rem; font-weight:700; color:var(--text); }
   .modal-close { background:none; border:none; color:var(--dim); font-size:1.6rem; cursor:pointer; line-height:1; }
+  .td-preset { font-size:.75rem;padding:3px 9px;border-radius:20px;border:1px solid var(--border2);background:var(--off);color:var(--muted);cursor:pointer; }
+  .td-preset:hover { border-color:var(--accent);color:var(--accent); }
   .modal-sub { color:var(--muted); font-size:.83rem; margin-bottom:20px; line-height:1.5; }
 
   /* AI PARSE RESULT */
@@ -308,6 +362,52 @@
   @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,1fr)} .deal-cards-grid{grid-template-columns:1fr 1fr} }
   @media(max-width:800px){ .sidebar{display:none} .content{padding:16px} .page-header{padding:16px}
     .metrics-grid{grid-template-columns:repeat(2,1fr)} .intake-card{grid-template-columns:1fr} .deal-cards-grid{grid-template-columns:1fr} }
+
+  /* ── KANBAN ── */
+  .kanban-wrap{overflow-x:auto;padding-bottom:8px}
+  .kanban-board{display:flex;gap:16px;min-width:max-content;padding:4px 2px}
+  .kb-col{width:240px;flex-shrink:0;background:var(--surface,#12100d);border-radius:12px;border:1px solid var(--border,rgba(255,255,255,.07));overflow:hidden}
+  .kb-col-head{padding:12px 14px;border-bottom:1px solid var(--border,rgba(255,255,255,.07));display:flex;align-items:center;justify-content:space-between}
+  .kb-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,rgba(250,248,243,.55))}
+  .kb-col-count{font-size:11px;font-weight:700;background:rgba(255,255,255,.07);color:var(--muted,rgba(250,248,243,.55));border-radius:100px;padding:2px 7px}
+  .kb-cards{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:80px}
+  .kb-card{background:var(--card,#1a1814);border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.07));padding:10px 12px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .kb-card:hover{border-color:rgba(249,115,22,.3);box-shadow:0 2px 12px rgba(249,115,22,.08)}
+  .kb-card.stale{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)}
+  .kb-card.critical{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
+  .kb-card-dest{font-size:13px;font-weight:700;color:var(--text,#faf8f3);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kb-card-client{font-size:11px;color:var(--muted,rgba(250,248,243,.55))}
+  .kb-card-meta{margin-top:8px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .kb-card-hours{font-size:10px;color:var(--dim,rgba(250,248,243,.3))}
+  .kb-card-stale{font-size:10px;background:rgba(245,158,11,.15);color:#fbbf24;border-radius:4px;padding:1px 5px;font-weight:700}
+  .kb-card-crit{font-size:10px;background:rgba(239,68,68,.15);color:#f87171;border-radius:4px;padding:1px 5px;font-weight:700}
+  .kb-advance-btn{display:inline-flex;align-items:center;justify-content:center;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.2);color:#f97316;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
+  .kb-advance-btn:hover{background:rgba(249,115,22,.2)}
+  .kb-empty{padding:20px 12px;text-align:center;font-size:12px;color:var(--dim,rgba(250,248,243,.3))}
+  .kb-attention{background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.15);border-radius:10px;padding:12px 16px;margin-bottom:16px}
+  .kb-attention-title{font-size:12px;font-weight:700;color:#fb923c;margin-bottom:8px}
+  .kb-attention-list{display:flex;flex-direction:column;gap:4px}
+  .kb-attn-item{font-size:13px;color:var(--text,#faf8f3);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .kb-attn-item-sub{font-size:11px;color:var(--muted,rgba(250,248,243,.55))}
+
+  /* CLIENT DETAIL DRAWER */
+  .client-drawer{position:fixed;right:0;top:0;height:100vh;width:400px;background:var(--surface,#fff);border-left:1px solid var(--border);z-index:200;transform:translateX(100%);transition:transform .3s ease;overflow-y:auto;display:flex;flex-direction:column}
+  .client-drawer.open{transform:translateX(0)}
+  .drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:199;display:none}
+  .drawer-overlay.open{display:block}
+  .drawer-header{display:flex;align-items:flex-start;justify-content:space-between;padding:24px 20px 16px;border-bottom:1px solid var(--border);gap:12px}
+  .drawer-close{background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--muted);padding:0;line-height:1;flex-shrink:0}
+  .drawer-close:hover{color:var(--text)}
+  .drawer-body{padding:20px;flex:1;display:flex;flex-direction:column;gap:20px}
+  .drawer-stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+  .drawer-stat-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:4px}
+  .drawer-stat-value{font-size:1.4rem;font-weight:700;color:var(--text)}
+  .drawer-stat-sub{font-size:.8rem;color:var(--muted);margin-top:2px}
+  .drawer-actions{display:flex;flex-direction:column;gap:8px}
+  .drawer-action-btn{width:100%;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:.88rem;font-weight:600;cursor:pointer;text-align:left;transition:background .15s}
+  .drawer-action-btn:hover{background:var(--card)}
+  .drawer-snippet{font-size:.83rem;color:var(--muted);background:var(--card);border-radius:8px;padding:10px 14px;border:1px solid var(--border);font-style:italic;line-height:1.5}
+  @media(max-width:640px){.client-drawer{width:100%}}
 </style>
 </head>
 <body>
@@ -345,8 +445,9 @@
       </div>
       <nav class="sidebar-nav">
         <button class="nav-item active" onclick="switchPanel('overview',this)"><span class="nav-icon">◉</span> Overview</button>
+        <button class="nav-item" data-tab="pipeline" onclick="switchPanel('pipeline',this)"><span class="nav-icon">◉</span> Pipeline <span class="nav-badge" id="nav-pipeline-count" style="display:none">0</span></button>
         <button class="nav-item" onclick="switchPanel('urgent',this)"><span class="nav-icon">⚡</span> Action Items <span class="nav-badge" id="nav-ai-count">0</span></button>
-        <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span></button>
+        <button class="nav-item" onclick="switchPanel('clients',this)"><span class="nav-icon">👤</span> Clients <span class="nav-badge blue" id="nav-client-count">0</span><span class="nav-badge" id="nav-expiring-count" style="display:none" title="Expiring points alerts">0</span></button>
         <button class="nav-item" onclick="switchPanel('intake',this)"><span class="nav-icon">📋</span> Intake Queue <span class="nav-badge muted" id="nav-intake-count">0</span></button>
         <button class="nav-item" onclick="switchPanel('chat',this)"><span class="nav-icon">💬</span> Messages <span class="nav-badge" id="nav-chat-count" style="display:none">0</span></button>
         <button class="nav-item" onclick="switchPanel('fees',this)"><span class="nav-icon">$</span> Savings &amp; Fees</button>
@@ -379,6 +480,10 @@
             <div class="metric-card"><div class="metric-label">Intake Queue</div><div class="metric-val" id="ov-intake-count">—</div><div class="metric-delta">New applications</div></div>
             <div class="metric-card"><div class="metric-label">Open Action Items</div><div class="metric-val red" id="ov-ai-count">0</div><div class="metric-delta" id="ov-ai-next">—</div></div>
             <div class="metric-card"><div class="metric-label">Advisory Fees</div><div class="metric-val gold">10%</div><div class="metric-delta">of savings identified</div></div>
+            <div class="metric-card"><div class="metric-label">Total Savings Found</div><div class="metric-val green" id="ov-total-savings">—</div><div class="metric-delta" id="ov-avg-savings">avg per trip: —</div></div>
+            <div class="metric-card"><div class="metric-label">Total Trips</div><div class="metric-val" id="ov-total-trips">—</div><div class="metric-delta" id="ov-active-trips">— active</div></div>
+            <div class="metric-card"><div class="metric-label">Stale Trips</div><div class="metric-val" id="ov-stale-trips">—</div><div class="metric-delta">no update in 7+ days</div></div>
+            <div class="metric-card"><div class="metric-label">New Clients This Week</div><div class="metric-val blue" id="ov-new-clients">—</div><div class="metric-delta">joined last 7 days</div></div>
           </div>
 
           <div class="section-header">
@@ -397,16 +502,39 @@
         </div>
       </div>
 
+      <!-- PIPELINE (Kanban) -->
+      <div class="panel" id="panel-pipeline">
+        <div class="page-header">
+          <div><h1>Pipeline</h1><p>Drag or click &#x2192; to advance trips through the workflow</p></div>
+        </div>
+        <div class="content">
+          <div id="kanban-attention" style="display:none"></div>
+          <div class="kanban-wrap">
+            <div class="kanban-board" id="kanban-board">
+              <div style="padding:40px;text-align:center;color:var(--muted)">Loading pipeline&#x2026;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ACTION ITEMS -->
       <div class="panel" id="panel-urgent">
         <div class="page-header">
           <div><h1>Action Items</h1><p>What to advise, send, or follow up on — sorted by urgency</p></div>
           <div class="header-actions">
+            <button class="btn-action" onclick="loadActionItems()" title="Refresh alerts">↻ Refresh</button>
             <button class="btn-action" id="toggle-done-btn" onclick="toggleShowDone()">Show completed</button>
             <button class="btn-action solid" onclick="openAddTask()">+ New Item</button>
           </div>
         </div>
-        <div class="content"><div class="ai-list" id="ai-full-list"></div></div>
+        <div class="content">
+          <div style="margin-bottom:20px">
+            <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px">Smart Alerts</div>
+            <div id="ai-smart-list"><div style="padding:24px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div></div>
+          </div>
+          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:8px">Custom Items</div>
+          <div class="ai-list" id="ai-full-list"></div>
+        </div>
       </div>
 
       <!-- CLIENTS -->
@@ -414,11 +542,32 @@
         <div class="page-header">
           <div><h1>Clients</h1><p>All portal accounts — click to message</p></div>
           <div class="header-actions">
+            <button class="btn-action" onclick="exportCSV('/api/admin/export/clients','district-clients.csv')">&#8659; Export CSV</button>
             <button class="btn-action ai" onclick="openImportEmail()">✨ Import from Email</button>
             <button class="btn-action solid" onclick="openAddClient()">+ Add Client</button>
           </div>
         </div>
         <div class="content">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+            <div style="position:relative;flex:1;min-width:200px">
+              <input type="search" id="client-search" placeholder="Search by name or email…"
+                oninput="filterClients()"
+                style="width:100%;padding:8px 32px 8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:.875rem;box-sizing:border-box;outline:none">
+              <button id="client-search-clear" onclick="document.getElementById('client-search').value='';filterClients()"
+                style="display:none;position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:1rem;line-height:1;padding:0">×</button>
+            </div>
+            <select id="client-status-filter" onchange="filterClients()"
+              style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:.875rem;cursor:pointer">
+              <option value="">All statuses</option>
+              <option value="New">New</option>
+              <option value="Researching">Researching</option>
+              <option value="Options Sent">Options Sent</option>
+              <option value="Awaiting Decision">Awaiting Decision</option>
+              <option value="Booked">Booked</option>
+              <option value="Closed">Closed</option>
+            </select>
+            <div id="client-count-indicator" style="font-size:.82rem;color:var(--muted);white-space:nowrap"></div>
+          </div>
           <div id="clients-table-wrap">
             <div style="padding:32px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div>
           </div>
@@ -450,13 +599,34 @@
         </div>
         <div class="content">
           <div class="chat-layout show-list" id="chat-layout">
-            <div class="chat-list" id="chat-list">
-              <div class="chat-empty">Loading conversations…</div>
+            <div class="chat-sidebar">
+              <div class="inbox-toolbar">
+                <input type="search" class="inbox-search" id="inbox-search" placeholder="Search conversations…" oninput="renderInbox()" onsearch="renderInbox()">
+                <div class="inbox-chips">
+                  <span class="inbox-chip active" id="chip-all" onclick="setInboxFilter('all')">All</span>
+                  <span class="inbox-chip" id="chip-starred" onclick="setInboxFilter('starred')">⭐ Starred</span>
+                </div>
+              </div>
+              <div class="chat-list" id="chat-list">
+                <div class="chat-empty">Loading conversations…</div>
+              </div>
             </div>
             <div class="chat-pane">
               <div class="chat-pane-head" id="chat-pane-head">Select a conversation</div>
               <div class="achat-scroll" id="achat-scroll"><div class="chat-empty">Pick a client on the left to see your conversation.</div></div>
               <div class="achat-compose" id="achat-compose" style="display:none">
+                <div class="achat-tpl-wrap">
+                  <button class="achat-tpl-btn" onclick="toggleChatTplMenu(event)" title="Insert template">&#128203; Templates</button>
+                  <div class="achat-tpl-menu" id="achat-tpl-menu">
+                    <div class="achat-tpl-item" onclick="insertChatTpl('options_ready')">Options Ready</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_nudge')">Nudge</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_invoice')">Invoice</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_checkin')">Check-in</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_recommend')">Recommendation Ready</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_balances')">Request Balances</div>
+                    <div class="achat-tpl-item" onclick="insertChatTpl('chat_deadline')">Deadline Alert</div>
+                  </div>
+                </div>
                 <textarea class="achat-input" id="achat-input" rows="1" placeholder="Type a reply…" onkeydown="achatKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"></textarea>
                 <button class="achat-send" id="achat-send" onclick="sendAdminChat()">Send</button>
               </div>
@@ -469,7 +639,7 @@
       <div class="panel" id="panel-fees">
         <div class="page-header">
           <div><h1>Savings &amp; Fees</h1><p>Track savings you identified and the 10% advisory fee</p></div>
-          <div class="header-actions"><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
+          <div class="header-actions"><button class="btn-action" onclick="exportCSV('/api/admin/export/savings','district-savings.csv')">&#8659; Export CSV</button><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
         </div>
         <div class="content">
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px">
@@ -517,6 +687,11 @@
             <div class="settings-title">Team</div>
             <div class="setting-row"><div><div class="setting-label">Braden Salcetti</div><div class="setting-sub">Founder &amp; Lead Advisor</div></div><div><span class="badge badge-green">Active</span></div></div>
             <div class="setting-row"><div><div class="setting-label">Invite Team Member</div><div class="setting-sub">Add an advisor when you're ready to hire</div></div><div><button class="btn-sm" onclick="toast('Team invites coming soon')">+ Invite</button></div></div>
+          </div>
+          <div class="settings-section">
+            <div class="settings-title">Legal</div>
+            <div class="setting-row"><div><div class="setting-label"><a href="terms.html" target="_blank" style="color:inherit;text-decoration:none">Terms of Service</a></div><div class="setting-sub">Review advisory terms and service agreement</div></div><div><a href="terms.html" target="_blank" class="btn-sm" style="text-decoration:none">View</a></div></div>
+            <div class="setting-row"><div><div class="setting-label"><a href="privacy.html" target="_blank" style="color:inherit;text-decoration:none">Privacy Policy</a></div><div class="setting-sub">How client data is collected and used</div></div><div><a href="privacy.html" target="_blank" class="btn-sm" style="text-decoration:none">View</a></div></div>
           </div>
         </div>
       </div>
@@ -687,18 +862,24 @@
 <div id="addsaving-overlay" class="overlay">
   <div class="modal">
     <div class="modal-head"><h2>Log a Saving</h2><button class="modal-close" onclick="closeAddSaving()">&times;</button></div>
-    <p class="modal-sub">Record a savings option you identified. The advisory fee (10%) is calculated automatically.</p>
-    <div class="form-group"><label>Client Name</label><input type="text" id="sv-client" placeholder="Client name"></div>
-    <div class="form-group"><label>Trip / Recommendation</label><input type="text" id="sv-trip" placeholder="e.g. Tokyo — JAL Business"></div>
-    <div class="form-group"><label>Strategy</label><input type="text" id="sv-strategy" placeholder="e.g. 35K AA miles + $5.60"></div>
+    <p class="modal-sub">Record a documented saving. The advisory fee (10%) is calculated automatically.</p>
+    <div class="form-group"><label>Client</label>
+      <select id="sv-client-email"><option value="">Select a client…</option></select>
+    </div>
+    <div class="form-group"><label>Trip Label</label><input type="text" id="sv-trip" placeholder="e.g. IAD → Tokyo, JAL Business"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <div class="form-group"><label>Savings Amount ($)</label><input type="number" id="sv-savings" placeholder="777" min="0"></div>
-      <div class="form-group"><label>Status</label>
-        <select id="sv-status"><option value="Recommended">Recommended</option><option value="Accepted">Accepted</option><option value="Pending">Pending</option><option value="Researching">Researching</option></select>
-      </div>
+      <div class="form-group"><label>Cash Benchmark ($)</label><input type="number" id="sv-benchmark" placeholder="4300" min="0" step="0.01" oninput="updateSvFeePreview()"></div>
+      <div class="form-group"><label>Award Taxes+Fees ($)</label><input type="number" id="sv-taxes" placeholder="112" min="0" step="0.01" oninput="updateSvFeePreview()"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Points Used</label><input type="number" id="sv-points" placeholder="75000" min="0"></div>
+      <div class="form-group"><label>Program</label><input type="text" id="sv-program" placeholder="Chase UR, AA miles…"></div>
+    </div>
+    <div class="form-group"><label>Status</label>
+      <select id="sv-status"><option value="draft">Draft</option><option value="booked" selected>Booked</option><option value="invoiced">Invoiced</option><option value="paid">Paid</option></select>
     </div>
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;font-size:.83rem;color:var(--muted)">
-      Advisory fee: <strong style="color:var(--gold)" id="sv-fee-preview">$0</strong> (10% of savings)
+      Net savings: <strong style="color:var(--green)" id="sv-net-preview">$0</strong> · Advisory fee: <strong style="color:var(--gold)" id="sv-fee-preview">$0</strong>
     </div>
     <button class="btn-primary" onclick="saveSaving()">Log Entry</button>
   </div>
@@ -758,24 +939,23 @@
       <div class="form-group"><label>Destination</label><input type="text" id="plan-dest" placeholder="e.g. Tokyo (NRT/HND)"></div>
       <div class="form-group"><label>Dates</label><input type="text" id="plan-dates" placeholder="e.g. Mar 15-28, 2026"></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div class="form-group"><label>Award Program</label><input type="text" id="plan-program" placeholder="e.g. Chase UR to United"></div>
-      <div class="form-group"><label>Points Cost</label><input type="text" id="plan-points" placeholder="e.g. 65,000 pts"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div class="form-group"><label>Estimated Cash Value</label><input type="text" id="plan-value" placeholder="e.g. $1,200"></div>
-      <div class="form-group"><label>Cabin</label>
-        <select id="plan-cabin">
-          <option value="">Select cabin</option>
-          <option value="Economy">Economy</option>
-          <option value="Premium Economy">Premium Economy</option>
-          <option value="Business">Business</option>
-          <option value="First">First</option>
-        </select>
+
+    <!-- OPTION CARDS -->
+    <div style="border-top:1px solid var(--border);margin:4px 0 16px;padding-top:16px">
+      <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:10px">Trip Options</div>
+      <!-- Template skeleton buttons -->
+      <div class="plan-tpl-bar">
+        <div class="plan-tpl-bar-label">Quick templates — click to add a pre-filled option</div>
+        <button class="plan-tpl-btn" onclick="addPlanOption('flight')">✈ Flight Redemption</button>
+        <button class="plan-tpl-btn" onclick="addPlanOption('hotel')">🏨 Hotel Redemption</button>
+        <button class="plan-tpl-btn" onclick="addPlanOption('cash')">💵 Cash Fallback</button>
+        <button class="plan-tpl-btn" onclick="addPlanOption('blank')">+ Blank Option</button>
       </div>
+      <div id="plan-options-list"></div>
+      <button class="plan-add-btn" onclick="addPlanOption('blank')">+ Add Another Option</button>
     </div>
-    <div class="form-group"><label>Your Recommendation & Details</label><textarea id="plan-details" rows="5" placeholder="Why this is perfect for you, what to book, best dates, any risks or limitations..."></textarea></div>
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px">
+
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:4px">
       <button class="btn-primary" onclick="sendPlan()">📤 Send Plan to Client Portal</button>
       <button class="btn-sm" onclick="closePlan()">Cancel</button>
     </div>
@@ -819,6 +999,19 @@
 'use strict';
 let ADMIN_TOKEN = null;
 let CLIENTS = [];
+
+async function exportCSV(url, filename) {
+  if(!ADMIN_TOKEN){toast('Not logged in');return;}
+  try{
+    const res = await fetch(url, {headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN}});
+    if(!res.ok){toast('Export failed: ' + res.status);return;}
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  }catch(e){toast('Export error');}
+}
 
 /* ════════════════════════════════════════════
    ACTION ITEMS — localStorage persistence
@@ -942,49 +1135,192 @@ function saveTask(){
 }
 
 /* ════════════════════════════════════════════
+   ACTION ITEMS — smart alerts from backend
+   ════════════════════════════════════════════ */
+var _aiRefreshTimer = null;
+var _aiLoaded = false;
+
+async function loadActionItems(){
+  if(!ADMIN_TOKEN) return;
+  const container = document.getElementById('ai-smart-list');
+  if(!container) return;
+  if(!_aiLoaded) container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:.85rem">Loading…</div>';
+  try {
+    var res = await fetch('/api/admin/action-items', {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    var data = await res.json();
+    _aiLoaded = true;
+    renderSmartActionItems(data);
+    // Update badge counts
+    var navBadge = document.getElementById('nav-ai-count');
+    if(navBadge) navBadge.textContent = data.total;
+    var ovCount = document.getElementById('ov-ai-count');
+    if(ovCount) ovCount.textContent = data.total;
+    var ovBadge = document.getElementById('ov-ai-badge');
+    if(ovBadge) ovBadge.textContent = data.total+' open';
+  } catch(e) {
+    if(!_aiLoaded) container.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted);font-size:.85rem">Failed to load action items.</div>';
+  }
+  // Schedule next refresh in 2 minutes
+  clearTimeout(_aiRefreshTimer);
+  _aiRefreshTimer = setTimeout(function(){
+    if(document.getElementById('panel-urgent') && document.getElementById('panel-urgent').classList.contains('active')){
+      loadActionItems();
+    }
+  }, 120000);
+}
+
+function renderSmartActionItems(data){
+  var container = document.getElementById('ai-smart-list');
+  if(!container) return;
+  if(!data.items || data.items.length === 0){
+    container.innerHTML = '<div class="empty-state"><div class="em-ico">✅</div><div style="color:var(--text)">No urgent action items right now.</div></div>';
+    return;
+  }
+  var highItems   = data.items.filter(function(i){return i.priority==='high';});
+  var medItems    = data.items.filter(function(i){return i.priority==='medium';});
+  var lowItems    = data.items.filter(function(i){return i.priority==='low';});
+
+  function itemHTML(item){
+    var dot = item.priority==='high' ? 'var(--red)' : item.priority==='medium' ? 'var(--gold)' : 'var(--dim)';
+    var icon='', desc='', btnHTML='';
+    if(item.type==='stale_trip'){
+      var days = Math.floor(item.hours/24);
+      icon = '✈';
+      desc = '<strong>'+esc(item.client_name)+'</strong> — '+esc(item.destination)+' stuck in <em>'+esc(item.status.replace(/_/g,' '))+'</em> for '+(days>=1?days+' day'+(days!==1?'s':''): item.hours+' hr'+(item.hours!==1?'s':''));
+      btnHTML = '<button class="btn-action" style="font-size:.75rem;padding:4px 10px" onclick="advanceTrip('+item.trip_id+')">Advance &#x2192;</button>';
+    } else if(item.type==='expiring_points'){
+      icon = '⚠';
+      desc = '<strong>'+esc(item.client_name)+'</strong>\'s <em>'+esc(item.program)+'</em> points expire in <strong>'+item.days_left+' day'+(item.days_left!==1?'s':'')+'</strong>';
+      btnHTML = '<button class="btn-action" style="font-size:.75rem;padding:4px 10px" onclick="switchPanel(\'chat\',navBtnFor(\'chat\'));openThread(\''+esc(item.client_email)+'\')">Message &#x2192;</button>';
+    } else if(item.type==='unread_message'){
+      icon = '💬';
+      desc = '<strong>'+esc(item.client_name)+'</strong> hasn\'t heard back in <strong>'+item.hours_waiting+' hr'+(item.hours_waiting!==1?'s':'')+'</strong>';
+      btnHTML = '<button class="btn-action" style="font-size:.75rem;padding:4px 10px" onclick="switchPanel(\'chat\',navBtnFor(\'chat\'));openThread(\''+esc(item.client_email)+'\')">Reply &#x2192;</button>';
+    } else if(item.type==='new_intake'){
+      icon = '📋';
+      desc = 'New intake from <strong>'+esc(item.name||item.email)+'</strong>'+(item.hours_ago<1?' (just now)':' ('+item.hours_ago+' hr'+(item.hours_ago!==1?'s':'')+' ago)');
+      btnHTML = '<button class="btn-action" style="font-size:.75rem;padding:4px 10px" onclick="switchPanel(\'intake\',navBtnFor(\'intake\'))">Review &#x2192;</button>';
+    }
+    return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="width:8px;height:8px;border-radius:50%;background:'+dot+';flex-shrink:0;margin-top:5px"></span>'
+      +'<span style="font-size:1rem;flex-shrink:0">'+icon+'</span>'
+      +'<div style="flex:1;font-size:.84rem;line-height:1.4">'+desc+'</div>'
+      +(btnHTML?'<div style="flex-shrink:0">'+btnHTML+'</div>':'')
+      +'</div>';
+  }
+
+  function sectionHTML(label, color, items){
+    if(!items.length) return '';
+    return '<div style="margin-bottom:18px">'
+      +'<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:'+color+';margin-bottom:4px">'+label+' ('+items.length+')</div>'
+      +items.map(itemHTML).join('')
+      +'</div>';
+  }
+
+  container.innerHTML = sectionHTML('High Priority', 'var(--red)', highItems)
+    + sectionHTML('Medium Priority', 'var(--gold)', medItems)
+    + sectionHTML('Low Priority', 'var(--dim)', lowItems);
+}
+
+/* ════════════════════════════════════════════
    SAVINGS / FEES  (localStorage)
    ════════════════════════════════════════════ */
-function loadSavings(){ try{return JSON.parse(localStorage.getItem('dat_savings')||'[]');}catch(e){return[];} }
-function saveSavingsData(a){ localStorage.setItem('dat_savings',JSON.stringify(a)); }
+function updateSvFeePreview(){
+  var bench=Math.round((parseFloat(document.getElementById('sv-benchmark').value)||0)*100);
+  var taxes=Math.round((parseFloat(document.getElementById('sv-taxes').value)||0)*100);
+  var net=Math.max(0,bench-taxes);
+  var fee=Math.round(net*0.1);
+  document.getElementById('sv-net-preview').textContent='$'+(net/100).toFixed(2);
+  document.getElementById('sv-fee-preview').textContent='$'+(fee/100).toFixed(2);
+}
 
-document.getElementById('sv-savings').addEventListener('input', function(){
-  const v=parseFloat(this.value)||0;
-  document.getElementById('sv-fee-preview').textContent='$'+(v*0.1).toFixed(2);
-});
-
-function openAddSaving(){ document.getElementById('addsaving-overlay').classList.add('open'); }
+function openAddSaving(){
+  var sel=document.getElementById('sv-client-email');
+  sel.innerHTML='<option value="">Select a client…</option>'+(CLIENTS||[]).map(function(c){
+    return '<option value="'+esc(c.email)+'">'+esc(c.name)+' ('+esc(c.email)+')</option>';
+  }).join('');
+  document.getElementById('addsaving-overlay').classList.add('open');
+}
 function closeAddSaving(){ document.getElementById('addsaving-overlay').classList.remove('open'); }
-function saveSaving(){
-  const savings=parseFloat(document.getElementById('sv-savings').value)||0;
-  const entry={id:'s'+Date.now(),client:document.getElementById('sv-client').value.trim()||'Unknown',
-    trip:document.getElementById('sv-trip').value.trim(),strategy:document.getElementById('sv-strategy').value.trim(),
-    savings:savings,fee:+(savings*0.1).toFixed(2),status:document.getElementById('sv-status').value};
-  const all=loadSavings(); all.push(entry); saveSavingsData(all);
-  closeAddSaving(); renderFees(); toast('Saving logged ✓');
-  ['sv-client','sv-trip','sv-strategy','sv-savings'].forEach(function(i){document.getElementById(i).value='';});
+async function saveSaving(){
+  if(!ADMIN_TOKEN)return;
+  var clientEmail=document.getElementById('sv-client-email').value;
+  if(!clientEmail){toast('Select a client first');return;}
+  var client=CLIENTS.find(function(c){return c.email===clientEmail;});
+  if(!client){toast('Client not found');return;}
+  var bench=Math.round((parseFloat(document.getElementById('sv-benchmark').value)||0)*100);
+  if(!bench){toast('Enter a cash benchmark');return;}
+  var taxes=Math.round((parseFloat(document.getElementById('sv-taxes').value)||0)*100);
+  var pts=parseInt(document.getElementById('sv-points').value)||0;
+  var body={
+    client_id:client.id,
+    trip_label:document.getElementById('sv-trip').value.trim()||'Trip',
+    cash_benchmark_cents:bench,
+    award_taxes_fees_cents:taxes,
+    points_used:pts,
+    points_program:document.getElementById('sv-program').value.trim(),
+    status:document.getElementById('sv-status').value,
+    fee_rate_bps:1000
+  };
+  try{
+    var res=await fetch('/api/admin/savings',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify(body)});
+    if(res.ok){
+      closeAddSaving(); renderFees(); toast('Saving logged ✓');
+      ['sv-trip','sv-benchmark','sv-taxes','sv-points','sv-program'].forEach(function(i){document.getElementById(i).value='';});
+      document.getElementById('sv-client-email').value='';
+      updateSvFeePreview();
+    }else{var d=await res.json().catch(function(){return{};});toast('Save failed: '+(d.detail||'unknown'));}
+  }catch(e){toast('Network error');}
 }
-function deleteSaving(id){
-  saveSavingsData(loadSavings().filter(function(x){return x.id!==id;}));
-  renderFees(); toast('Entry removed');
+async function deleteSaving(id){
+  if(!ADMIN_TOKEN||!confirm('Delete this savings record?'))return;
+  try{
+    var res=await fetch('/api/admin/savings/'+id,{method:'DELETE',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(res.ok){renderFees();toast('Entry removed');}
+    else{var d=await res.json().catch(function(){return{};});toast('Cannot delete: '+(d.detail||'unknown'));}
+  }catch(e){toast('Network error');}
 }
-function renderFees(){
-  const entries=loadSavings();
-  const total=entries.reduce(function(a,b){return a+b.savings;},0);
-  const fees=entries.reduce(function(a,b){return a+b.fee;},0);
-  document.getElementById('fees-total-savings').textContent='$'+total.toLocaleString();
-  document.getElementById('fees-total-fees').textContent='$'+fees.toFixed(2);
-  document.getElementById('fees-count').textContent=entries.length;
-  const STATUS_BADGE={Recommended:'gold',Accepted:'green',Pending:'blue',Researching:'muted'};
-  document.getElementById('fees-tbody').innerHTML = entries.length
-    ? entries.map(function(e){
-        return '<tr><td><div class="client-name">'+esc(e.client)+'</div></td><td>'+esc(e.trip)+'</td><td style="font-size:.79rem;color:var(--muted)">'+esc(e.strategy)+'</td>'
-          +'<td style="color:var(--green);font-weight:600">$'+e.savings.toLocaleString()+'</td>'
-          +'<td style="color:var(--gold);font-weight:600">$'+e.fee.toFixed(2)+'</td>'
-          +'<td><span class="badge badge-'+(STATUS_BADGE[e.status]||'muted')+'">'+esc(e.status)+'</span></td>'
-          +'<td><button class="btn-sm" onclick="deleteSaving(\''+eid(e.id)+'\')">Remove</button></td></tr>';
+async function renderFees(){
+  if(!ADMIN_TOKEN)return;
+  try{
+    var res=await fetch('/api/admin/savings',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok)return;
+    var entries=await res.json();
+    var sumRes=await fetch('/api/admin/savings/summary',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    var summary=sumRes.ok?await sumRes.json():{total_gross_cents:0,total_fee_cents:0,count:0};
+    document.getElementById('fees-total-savings').textContent='$'+Math.floor((summary.total_gross_cents||0)/100).toLocaleString();
+    document.getElementById('fees-total-fees').textContent='$'+Math.floor((summary.total_fee_cents||0)/100).toLocaleString();
+    document.getElementById('fees-count').textContent=entries.length;
+    var STATUS_BADGE={draft:'muted',booked:'green',invoiced:'gold',paid:'blue',void:'muted'};
+    document.getElementById('fees-tbody').innerHTML=entries.length
+      ?entries.map(function(e){
+        var gross=e.gross_savings_cents||0;
+        var fee=e.fee_cents||0;
+        var reportBtn=e.report_token?'<a href="/api/report/'+esc(e.report_token)+'" target="_blank"><button class="btn-sm" style="border-color:rgba(249,115,22,.3);color:var(--accent)">&#9113; Report</button></a> ':' ';
+        var invoiceBtn=(e.status==='booked'||e.status==='invoiced'||e.status==='paid')?'<a href="/api/admin/savings/invoice/'+e.id+'" target="_blank"><button class="btn-sm">Invoice</button></a> ':' ';
+        return '<tr>'
+          +'<td><div class="client-name">'+esc(e.client_name||'—')+'</div><div style="font-size:.75rem;color:var(--muted)">'+esc(e.client_email||'')+'</div></td>'
+          +'<td>'+esc(e.trip_label||'—')+'</td>'
+          +'<td style="font-size:.79rem;color:var(--muted)">'+fmtUsdCents(gross-fee)+'</td>'
+          +'<td style="color:var(--green);font-weight:600">'+fmtUsdCents(gross)+'</td>'
+          +'<td style="color:var(--gold);font-weight:600">'+fmtUsdCents(fee)+'</td>'
+          +'<td><select class="sv-status-sel" data-id="'+e.id+'" style="font-size:.78rem;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 6px;cursor:pointer"><option value="draft"'+(e.status==='draft'?' selected':'')+'>draft</option><option value="booked"'+(e.status==='booked'?' selected':'')+'>booked</option><option value="invoiced"'+(e.status==='invoiced'?' selected':'')+'>invoiced</option><option value="paid"'+(e.status==='paid'?' selected':'')+'>paid</option><option value="void"'+(e.status==='void'?' selected':'')+'>void</option></select><span class="sv-saved-flash" id="sv-flash-'+e.id+'" style="font-size:.72rem;color:var(--green);margin-left:4px;opacity:0;transition:opacity .3s"></span></td>'
+          +'<td style="display:flex;gap:4px;flex-wrap:wrap">'+reportBtn+invoiceBtn+'<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteSaving('+e.id+')">🗑</button></td></tr>';
       }).join('')
-    : '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
+      :'<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
+  }catch(err){}
 }
+function fmtUsdCents(c){return '$'+Math.floor(c/100).toLocaleString()+'.'+(Math.abs(c)%100<10?'0':'')+(Math.abs(c)%100);}
+document.addEventListener('change',async function(e){
+  if(!e.target.classList.contains('sv-status-sel'))return;
+  var id=e.target.dataset.id; var st=e.target.value;
+  var res=await fetch('/api/admin/savings/'+id,{method:'PATCH',headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({status:st})});
+  var flash=document.getElementById('sv-flash-'+id);
+  if(res.ok&&flash){flash.textContent='✓ Saved';flash.style.opacity='1';setTimeout(function(){flash.style.opacity='0';},2000);}
+});
 
 /* ════════════════════════════════════════════
    CLIENTS — dynamic from backend
@@ -1008,15 +1344,42 @@ function updateClientMetrics(){
   const nb=document.getElementById('nav-client-count');
   if(nb) nb.textContent=CLIENTS.length;
 }
-function renderClientsTable(){
-  const html = CLIENTS.length
+let clientFilter = {q: '', status: ''};
+function filterClients(){
+  const searchEl = document.getElementById('client-search');
+  const clearBtn = document.getElementById('client-search-clear');
+  const statusEl = document.getElementById('client-status-filter');
+  clientFilter.q = (searchEl ? searchEl.value : '').toLowerCase().trim();
+  clientFilter.status = statusEl ? statusEl.value : '';
+  if(clearBtn) clearBtn.style.display = clientFilter.q ? 'block' : 'none';
+  var filtered = CLIENTS.filter(function(c){
+    var matchesSearch = !clientFilter.q ||
+      (c.name && c.name.toLowerCase().indexOf(clientFilter.q) !== -1) ||
+      (c.email && c.email.toLowerCase().indexOf(clientFilter.q) !== -1);
+    var matchesStatus = !clientFilter.status || (function(){
+      var trips = c.trips && c.trips.length ? c.trips : null;
+      var status = trips ? trips[trips.length-1].workflow_status : (c.workflow_status || '');
+      return status === clientFilter.status;
+    })();
+    return matchesSearch && matchesStatus;
+  });
+  var countEl = document.getElementById('client-count-indicator');
+  if(countEl) countEl.textContent = 'Showing ' + filtered.length + ' of ' + CLIENTS.length + ' clients';
+  renderClientsTable(filtered);
+}
+function renderClientsTable(clientsToRender){
+  var list = clientsToRender !== undefined ? clientsToRender : CLIENTS;
+  var countEl = document.getElementById('client-count-indicator');
+  if(countEl && clientsToRender === undefined) countEl.textContent = 'Showing ' + CLIENTS.length + ' of ' + CLIENTS.length + ' clients';
+  const html = list.length
     ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Added</th><th></th></tr></thead><tbody>'
-      + CLIENTS.map(function(c){
-          return '<tr><td><div class="client-name">'+esc(c.name)+'</div></td>'
+      + list.map(function(c){
+          return '<tr style="cursor:pointer" onclick="openClientDrawer(\''+esc(c.email)+'\')">'
+            +'<td><div class="client-name">'+esc(c.name)+'</div></td>'
             +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
             +'<td><span class="badge badge-blue">'+esc(c.tier)+'</span></td>'
             +'<td><div class="client-sub">'+(c.created_at||'').slice(0,10)+'</div></td>'
-            +'<td><div style="display:flex;gap:5px;flex-wrap:wrap">'
+            +'<td onclick="event.stopPropagation()"><div style="display:flex;gap:5px;flex-wrap:wrap">'
             +'<button class="btn-sm" onclick="composeTo(\''+esc(c.name)+'\',\''+esc(c.email)+'\')">✉</button>'
             +'<button class="btn-sm" style="border-color:rgba(69,179,255,.4);color:var(--blue)" onclick="openScanDoc(\''+esc(c.email)+'\')">📄 Scan</button>'
             +'<button class="btn-sm primary" onclick="runSweetSpots(\''+esc(c.email)+'\',\''+esc(c.name)+'\')">✨ Sweet Spots</button>'
@@ -1026,8 +1389,10 @@ function renderClientsTable(){
       + '</tbody></table>'
     : '<div style="padding:40px;text-align:center;color:var(--muted)">'
       +'<div style="font-size:1.5rem;margin-bottom:10px">👤</div>'
-      +'<div style="color:var(--text);margin-bottom:6px">No clients yet</div>'
-      +'<div style="font-size:.83rem">Add a client manually or use <strong style="color:var(--purple)">✨ Import from Email</strong> to create one from a forwarded email.</div></div>';
+      +(CLIENTS.length && list.length===0
+        ? '<div style="color:var(--text);margin-bottom:6px">No clients match your filters</div><div style="font-size:.83rem">Try adjusting the search or status filter.</div>'
+        : '<div style="color:var(--text);margin-bottom:6px">No clients yet</div><div style="font-size:.83rem">Add a client manually or use <strong style="color:var(--purple)">✨ Import from Email</strong> to create one from a forwarded email.</div>')
+      +'</div>';
   const wrap1=document.getElementById('ov-clients-table');
   const wrap2=document.getElementById('clients-table-wrap');
   const tableWrap='<div class="table-wrap">'+html+'</div>';
@@ -1628,6 +1993,28 @@ function adminError(msg){
   el.textContent=msg||'Invalid credentials.'; el.style.display='block';
   setTimeout(function(){el.style.display='none';},3500);
 }
+var statsTimer=null;
+async function loadStats(){
+  if(!ADMIN_TOKEN)return;
+  try{
+    const res=await fetch('/api/admin/stats',{headers:{'X-Admin-Token':ADMIN_TOKEN}});
+    if(!res.ok)return;
+    const d=await res.json();
+    const s=function(id,v){const el=document.getElementById(id);if(el)el.textContent=v;};
+    s('ov-total-savings',fmtUsdCents(d.total_savings_cents||0));
+    s('ov-avg-savings','avg per trip: '+fmtUsdCents(d.avg_savings_per_trip_cents||0));
+    s('ov-total-trips',d.total_trips||0);
+    s('ov-active-trips',(d.active_trips||0)+' active');
+    const staleEl=document.getElementById('ov-stale-trips');
+    if(staleEl){
+      const stale=d.trips_stale||0;
+      staleEl.textContent=stale;
+      staleEl.style.color=stale>0?'var(--gold)':'var(--green)';
+    }
+    const nc=d.new_clients_this_week||0;
+    s('ov-new-clients',nc>0?'🆕 '+nc:nc);
+  }catch(e){console.warn('loadStats error',e);}
+}
 function enterAdmin(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('admin').style.display='block';
@@ -1635,10 +2022,14 @@ function enterAdmin(){
   loadIntakes();
   loadExpiringPoints();
   renderActionItems();
+  loadActionItems();
   renderFees();
   checkAIStatus();
   loadInbox();
+  loadBoard();
+  loadStats();
   if(!inboxTimer)inboxTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadInbox();},30000);
+  if(!statsTimer)statsTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadStats();},60000);
 }
 function toggleSetupForm(){
   const form=document.getElementById('setup-form');
@@ -1708,6 +2099,11 @@ function doAdminLogout(){
    MESSAGES — two-way chat with clients
    ════════════════════════════════════════════ */
 let INBOX=[],CHAT_EMAIL=null,CHAT_MSGS=[],inboxTimer=null,markingRead=false;
+let STARRED_THREADS=(function(){try{return new Set(JSON.parse(localStorage.getItem('dat_starred')||'[]'));}catch(e){return new Set();}}());
+let INBOX_FILTER='all';
+function saveStarred(){try{localStorage.setItem('dat_starred',JSON.stringify([...STARRED_THREADS]));}catch(e){}}
+function toggleStar(email,ev){ev.stopPropagation();if(STARRED_THREADS.has(email)){STARRED_THREADS.delete(email);}else{STARRED_THREADS.add(email);}saveStarred();renderInbox();}
+function setInboxFilter(f){INBOX_FILTER=f;document.getElementById('chip-all').classList.toggle('active',f==='all');document.getElementById('chip-starred').classList.toggle('active',f==='starred');renderInbox();}
 
 async function loadInbox(){
   if(!ADMIN_TOKEN)return;
@@ -1735,15 +2131,29 @@ function chatTime(s){
     :d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
 }
 
+function hlMatch(text,q){if(!q)return esc(text);var s=esc(text),eq=esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return s.replace(new RegExp('('+eq+')','gi'),'<mark>$1</mark>');}
 function renderInbox(){
   const el=document.getElementById('chat-list');
   if(!INBOX.length){el.innerHTML='<div class="chat-empty">No clients yet — conversations appear here once you add clients.</div>';return;}
-  el.innerHTML=INBOX.map(function(r){
+  const q=(document.getElementById('inbox-search')||{}).value||'';
+  const ql=q.toLowerCase();
+  let rows=INBOX.slice();
+  // sort starred to top
+  rows.sort(function(a,b){const as=STARRED_THREADS.has(a.email)?1:0,bs=STARRED_THREADS.has(b.email)?1:0;return bs-as;});
+  // filter by search
+  if(ql)rows=rows.filter(function(r){return (r.name||'').toLowerCase().includes(ql)||(r.email||'').toLowerCase().includes(ql);});
+  // filter by starred chip
+  if(INBOX_FILTER==='starred')rows=rows.filter(function(r){return STARRED_THREADS.has(r.email);});
+  if(!rows.length){el.innerHTML='<div class="chat-empty">No results.</div>';return;}
+  el.innerHTML=rows.map(function(r){
     const prev=r.last?((r.last.sender==='client'?'':'You: ')+r.last.text):'No messages yet';
+    const starred=STARRED_THREADS.has(r.email);
     return '<div class="conv '+(CHAT_EMAIL===r.email?'active':'')+'" onclick="openThread(\''+eid(r.email)+'\')">'+
-      '<div class="conv-top"><div class="conv-name">'+esc(r.name)+'</div>'+
-      '<div style="display:flex;align-items:center;gap:6px">'+(r.unread?'<span class="conv-unread">'+r.unread+'</span>':'')+
-      '<span class="conv-time">'+chatTime(r.last&&r.last.time)+'</span></div></div>'+
+      '<div class="conv-top"><div class="conv-name">'+hlMatch(r.name,q)+'</div>'+
+      '<div style="display:flex;align-items:center;gap:4px">'+(r.unread?'<span class="conv-unread">'+r.unread+'</span>':'')+
+      '<span class="conv-time">'+chatTime(r.last&&r.last.time)+'</span>'+
+      '<button class="conv-star" onclick="toggleStar(\''+eid(r.email)+'\',event)" title="'+(starred?'Unstar':'Star')+'">'+(starred?'★':'☆')+'</button>'+
+      '</div></div>'+
       '<div class="conv-prev '+(r.unread?'unread':'')+'">'+esc(prev)+'</div></div>';
   }).join('');
 }
@@ -1809,6 +2219,59 @@ function chatShowList(){
   document.getElementById('chat-layout').classList.add('show-list');
   document.getElementById('chat-back-btn').style.display='none';
 }
+/* ── Chat template quick-insert ── */
+const CHAT_TEMPLATES={
+  options_ready:"Hi [name], I've put together some travel options for your trip! Take a look and let me know what you think.",
+  chat_nudge:"Hi [name], just checking in on those travel options I sent over. Any questions?",
+  chat_invoice:"Hi [name], attaching your advisory fee invoice for the [destination] booking. Thanks for choosing District!",
+  chat_checkin:"Hi [name], how's everything going with your upcoming trip? Let me know if you need anything!",
+  chat_recommend:"Hi [name], your award travel recommendation is ready! Log into your portal to check it out, and let me know if you have any questions.",
+  chat_balances:"Hi [name], to map the best strategy for your trip I need your current points balances. A quick screenshot works great!",
+  chat_deadline:"Hi [name], heads-up — there's a time-sensitive award window I want to make sure you don't miss. Can we connect soon?"
+};
+function chatTplFirstName(){
+  if(!CHAT_EMAIL) return '';
+  const c=CLIENTS.find(function(c){return c.email===CHAT_EMAIL;});
+  if(c&&c.name) return c.name.split(' ')[0];
+  const row=INBOX.find(function(r){return r.email===CHAT_EMAIL;});
+  if(row&&row.name) return row.name.split(' ')[0];
+  return '';
+}
+function chatTplDestination(){
+  if(!CHAT_EMAIL) return '[destination]';
+  const c=CLIENTS.find(function(c){return c.email===CHAT_EMAIL;});
+  if(c&&Array.isArray(c.trips)&&c.trips.length){
+    const t=c.trips[c.trips.length-1];
+    if(t.destination) return t.destination;
+    if(t.dest) return t.dest;
+  }
+  return '[destination]';
+}
+function insertChatTpl(key){
+  const raw=CHAT_TEMPLATES[key]||'';
+  const firstName=chatTplFirstName()||'[name]';
+  const dest=chatTplDestination();
+  const text=raw.replace(/\[name\]/g,firstName).replace(/\[destination\]/g,dest);
+  const ta=document.getElementById('achat-input');
+  ta.value=text;
+  ta.style.height='auto';
+  ta.style.height=Math.min(ta.scrollHeight,110)+'px';
+  closeChatTplMenu();
+  ta.focus();
+}
+function toggleChatTplMenu(e){
+  e.stopPropagation();
+  const m=document.getElementById('achat-tpl-menu');
+  m.classList.toggle('open');
+}
+function closeChatTplMenu(){
+  const m=document.getElementById('achat-tpl-menu');
+  if(m) m.classList.remove('open');
+}
+document.addEventListener('click',function(e){
+  const wrap=e.target.closest('.achat-tpl-wrap');
+  if(!wrap) closeChatTplMenu();
+});
 function achatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAdminChat();}}
 
 async function sendAdminChat(){
@@ -1944,6 +2407,14 @@ document.addEventListener('keydown',function(e){
 /* ════════════════════════════════════════════
    NAV / UTILS
    ════════════════════════════════════════════ */
+var boardTimer=null;
+function _startBoardPoll(){
+  if(boardTimer)return;
+  boardTimer=setInterval(function(){if(ADMIN_TOKEN&&!document.hidden)loadBoard();},30000);
+}
+function _stopBoardPoll(){
+  clearInterval(boardTimer);boardTimer=null;
+}
 function switchPanel(id,btn){
   document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active');});
   document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
@@ -1951,7 +2422,12 @@ function switchPanel(id,btn){
   const el=document.getElementById('panel-'+id);
   if(el) el.classList.add('active');
   if(id==='chat')loadInbox();
+  if(id==='pipeline'){loadBoard();_startBoardPoll();}else{_stopBoardPoll();}
+  if(id==='urgent')loadActionItems();
 }
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&boardTimer)loadBoard();
+});
 let toastTimer=null;
 function toast(msg){
   const t=document.getElementById('toast');
@@ -1964,6 +2440,465 @@ function eid(s){ return String(s||'').replace(/'/g,"\\'"); }
 document.querySelectorAll('.overlay').forEach(function(o){
   o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('open');});
 });
+
+/* ════════════════════════════════════════════
+   KANBAN PIPELINE
+   ════════════════════════════════════════════ */
+var KB_COLS=[
+  {key:'new',label:'New'},
+  {key:'researching',label:'Researching'},
+  {key:'options_sent',label:'Options Sent'},
+  {key:'awaiting_decision',label:'Awaiting Decision'},
+  {key:'booked',label:'Booked'},
+  {key:'closed',label:'Closed'}
+];
+
+async function loadBoard(){
+  if(!ADMIN_TOKEN)return;
+  try{
+    var res=await fetch('/api/admin/board',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok)return;
+    var data=await res.json();
+    renderBoard(data);
+  }catch(e){}
+}
+
+var _TRIP_MAP={};
+
+function renderBoard(data){
+  var cols=data.columns||{};
+  var attn=data.needs_attention||[];
+  // Build trip lookup map for detail modal
+  Object.keys(cols).forEach(function(k){(cols[k]||[]).forEach(function(t){_TRIP_MAP[t.id]=t;});});
+  attn.forEach(function(t){_TRIP_MAP[t.id]=t;});
+  // Attention strip
+  var attnEl=document.getElementById('kanban-attention');
+  if(attn.length){
+    attnEl.style.display='block';
+    attnEl.innerHTML='<div class="kb-attention"><div class="kb-attention-title">&#x26A0; Needs attention ('+attn.length+')</div>'+
+      '<div class="kb-attention-list">'+attn.slice(0,5).map(function(t){
+        return '<div class="kb-attn-item"><div><div>'+esc(t.destination||'Trip')+'</div><div class="kb-attn-item-sub">'+esc(t.client_name||t.client_email||'')+'</div></div>'+
+          '<button class="kb-advance-btn" onclick="advanceTrip('+t.id+')">Advance &#x2192;</button></div>';
+      }).join('')+'</div></div>';
+  }else{attnEl.style.display='none';}
+  // Count badge
+  var badge=document.getElementById('nav-pipeline-count');
+  if(badge){if(attn.length){badge.textContent=attn.length;badge.style.display='';}else{badge.style.display='none';}}
+  // Board columns
+  var board=document.getElementById('kanban-board');
+  board.innerHTML=KB_COLS.map(function(col){
+    var cards=(cols[col.key]||[]);
+    var cardHtml=cards.length?cards.map(function(t){
+      var cls='kb-card'+(t.level==='red'?' critical':t.stale?' stale':'');
+      var staleTag=t.level==='red'?'<span class="kb-card-crit">&#x2691; Overdue</span>':t.stale?'<span class="kb-card-stale">&#x2690; Stale</span>':'';
+      var hrs=t.hours_in_stage?Math.round(t.hours_in_stage)+'h':'';
+      var advBtn=(!['closed','declined','lost','booked'].includes(t.workflow_status))?
+        '<button class="kb-advance-btn" onclick="event.stopPropagation();advanceTrip('+t.id+')">&#x2192;</button>':'';
+      return '<div class="'+cls+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer">'+
+        '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+'</div>'+
+        '<div class="kb-card-client">'+esc(t.client_name||t.client_email||'')+'</div>'+
+        '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+advBtn+'</div></div>';
+    }).join(''):'<div class="kb-empty">&#x2014;</div>';
+    return '<div class="kb-col"><div class="kb-col-head"><span class="kb-col-title">'+col.label+'</span>'+
+      '<span class="kb-col-count">'+cards.length+'</span></div><div class="kb-cards">'+cardHtml+'</div></div>';
+  }).join('');
+}
+
+async function advanceTrip(tripId){
+  if(!ADMIN_TOKEN)return;
+  try{
+    var res=await fetch('/api/admin/trips/'+tripId+'/advance',{method:'POST',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(res.ok){toast('Trip advanced ✓');loadBoard();}
+    else{var d=await res.json().catch(function(){return{};});toast('Cannot advance: '+(d.detail||'unknown error'));}
+  }catch(e){toast('Network error');}
+}
+
+function openClientByTrip(email){
+  if(!email)return;
+  switchPanel('clients',document.querySelector('.nav-item[data-tab="clients"]'));
+  if(typeof openClientDetail==='function')openClientDetail(email);
+}
+
+/* ════════════════════════════════════════════
+   EXPIRING POINTS
+   ════════════════════════════════════════════ */
+async function loadExpiringPoints(){
+  if(!ADMIN_TOKEN)return;
+  try{
+    const res=await fetch('/api/admin/expiring-points',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok)return;
+    const rows=await res.json();
+    // Update expiring points badge on Clients nav item
+    const urgentCount=rows.filter(function(r){return r.urgency==='urgent'||r.urgency==='warning';}).length;
+    const expBadge=document.getElementById('nav-expiring-count');
+    if(expBadge){if(urgentCount>0){expBadge.textContent=urgentCount;expBadge.style.display='';}else{expBadge.style.display='none';}}
+    const el=document.getElementById('expiring-list');
+    if(!el)return;
+    if(!rows.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">No points expiring within 180 days.</div>';return;}
+    el.innerHTML='<div class="expiring-list">'+rows.map(function(r){
+      const daysLabel=r.days_left===0?'Today':r.days_left===1?'Tomorrow':r.days_left+' days';
+      return '<div class="expiring-row '+r.urgency+'">'+
+        '<div style="flex:1">'+
+          '<div style="font-size:13px;font-weight:700">'+esc(r.program)+' · '+esc(r.client_name)+'</div>'+
+          '<div style="font-size:12px;color:var(--muted)">'+Number(r.balance).toLocaleString()+' pts · expires '+r.expiration_date+'</div>'+
+        '</div>'+
+        '<div style="font-size:12px;font-weight:700;color:'+(r.urgency==='urgent'?'var(--red)':r.urgency==='warning'?'var(--gold)':'var(--dim)')+'">'+daysLabel+'</div>'+
+      '</div>';
+    }).join('')+'</div>';
+  }catch(e){}
+}
+
+
+/* ════════════════════════════════════════════
+   CLIENT DETAIL DRAWER
+   ════════════════════════════════════════════ */
+let _drawerEmail=null;
+function openClientDrawer(email){
+  _drawerEmail=email;
+  const overlay=document.getElementById('client-drawer-overlay');
+  const drawer=document.getElementById('client-drawer');
+  const content=document.getElementById('client-drawer-content');
+  const client=CLIENTS.find(function(c){return c.email===email;});
+  const nameEl=document.getElementById('client-drawer-name');
+  const emailEl=document.getElementById('client-drawer-email');
+  if(nameEl) nameEl.textContent=client?client.name:'';
+  if(emailEl) emailEl.textContent=email;
+  overlay.classList.add('open');
+  drawer.classList.add('open');
+  content.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Loading…</div>';
+  _renderClientDrawer(email);
+}
+function closeClientDrawer(){
+  document.getElementById('client-drawer-overlay').classList.remove('open');
+  document.getElementById('client-drawer').classList.remove('open');
+  _drawerEmail=null;
+}
+async function _renderClientDrawer(email){
+  const content=document.getElementById('client-drawer-content');
+  const client=CLIENTS.find(function(c){return c.email===email;});
+  if(!client){content.innerHTML='<div style="padding:20px;color:var(--muted)">Client not found.</div>';return;}
+
+  // fetch savings
+  let savingsTotal=0;
+  try{
+    const sRes=await fetch('/api/admin/savings?client_email='+encodeURIComponent(email),
+      {headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(sRes.ok){
+      const sData=await sRes.json();
+      const items=Array.isArray(sData)?sData:(sData.savings||[]);
+      savingsTotal=items.reduce(function(sum,s){return sum+(s.gross_savings_cents||0);},0);
+    }
+  }catch(e){}
+
+  // latest message from INBOX if available
+  let msgSnippet='';
+  if(typeof INBOX!=='undefined'){
+    const thread=INBOX.find(function(t){return t.email===email;});
+    if(thread&&thread.last&&thread.last.text){
+      msgSnippet=thread.last.text.slice(0,80)+(thread.last.text.length>80?'…':'');
+    }
+  }
+
+  // open trips from client data
+  const trips=Array.isArray(client.trips)?client.trips:[];
+  const openTrips=trips.filter(function(t){return t.workflow_status!=='closed'&&t.workflow_status!=='declined';}).length;
+  const latestTrip=trips[trips.length-1];
+  const statusBadge=latestTrip&&latestTrip.workflow_status?latestTrip.workflow_status:'active';
+
+  const savingsDisplay=savingsTotal>0?'$'+(savingsTotal/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'—';
+
+  content.innerHTML=
+    '<div class="drawer-stat"><div class="drawer-stat-label">Total Savings Identified</div>'
+    +'<div class="drawer-stat-value">'+savingsDisplay+'</div></div>'
+    +(openTrips>0?'<div class="drawer-stat"><div class="drawer-stat-label">Open Trips</div>'
+      +'<div class="drawer-stat-value">'+openTrips+'</div></div>':'')
+    +(msgSnippet?'<div><div class="drawer-stat-label" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px">Latest Message</div>'
+      +'<div class="drawer-snippet">"'+msgSnippet+'"</div></div>':'')
+    +'<div class="drawer-actions">'
+    +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'chat\',document.querySelector(\'.nav-item[onclick*=chat]\'));openThread(\''+esc(email)+'\')">💬 Message</button>'
+    +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'pipeline\',document.querySelector(\'.nav-item[data-tab=pipeline]\'));">✈ New Trip</button>'
+    +'<button class="drawer-action-btn" onclick="closeClientDrawer();openAddSaving();setTimeout(function(){var s=document.getElementById(\'sv-client-email\');if(s)s.value=\''+esc(email)+'\';},50)">$ Log Saving</button>'
+    +'</div>';
+}
+</script>
+
+<!-- TRIP DETAIL MODAL -->
+<div id="trip-detail-overlay" class="overlay" onclick="if(event.target===this)closeTripDetail()">
+  <div class="modal wide">
+    <div class="modal-head">
+      <h2 id="td-title">Trip Detail</h2>
+      <button class="modal-close" onclick="closeTripDetail()">&times;</button>
+    </div>
+    <div id="td-meta" style="font-size:.82rem;color:var(--muted);margin-bottom:16px;display:flex;gap:16px;flex-wrap:wrap"></div>
+    <!-- TIME TRACKER -->
+    <div style="margin-bottom:20px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Time Tracked</div>
+        <div id="td-time-display" style="font-size:1rem;font-weight:700;color:var(--text);min-width:56px">0m</div>
+        <button onclick="toggleTimeForm()" style="font-size:.75rem;padding:3px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--off);color:var(--text);cursor:pointer">＋ Log time</button>
+        <span id="td-time-logged" style="font-size:.78rem;color:var(--green);opacity:0;transition:opacity .4s">&#x2713; Logged</span>
+      </div>
+      <div id="td-time-form" style="display:none;margin-top:10px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <input id="td-time-input" type="number" min="1" max="600" placeholder="30"
+            style="width:70px;padding:5px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--off);color:var(--text);font-size:.84rem;outline:none"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border2)'"
+            onkeydown="if(event.key==='Enter')logTime()">
+          <span style="font-size:.78rem;color:var(--muted)">min</span>
+          <button onclick="setTimePreset(15)" class="td-preset">15m</button>
+          <button onclick="setTimePreset(30)" class="td-preset">30m</button>
+          <button onclick="setTimePreset(45)" class="td-preset">45m</button>
+          <button onclick="setTimePreset(60)" class="td-preset">1h</button>
+          <button onclick="setTimePreset(120)" class="td-preset">2h</button>
+          <button onclick="logTime()" style="font-size:.78rem;padding:4px 12px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-weight:600">Log</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Research Notes</div>
+      <textarea id="td-research-notes" rows="6"
+        placeholder="Add research notes, award availability, transfer options..."
+        style="width:100%;box-sizing:border-box;background:var(--off);border:1px solid var(--border2);color:var(--text);
+               border-radius:8px;padding:10px 12px;font-size:.84rem;font-family:var(--font);resize:vertical;outline:none;line-height:1.5"
+        oninput="onResearchNotesInput()"
+        onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 2px var(--accent-dim)'"
+        onblur="this.style.borderColor='var(--border2)';this.style.boxShadow='none'"
+      ></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
+        <span id="td-rn-saved" style="font-size:.75rem;color:var(--green);opacity:0;transition:opacity .4s">&#x2713; Saved</span>
+        <span id="td-rn-count" style="font-size:.75rem;color:var(--muted)">0 / 10000</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   TRIP DETAIL MODAL
+   ════════════════════════════════════════════ */
+var _tdTripId = null;
+var _tdSaveTimer = null;
+
+function openTripDetail(trip) {
+  _tdTripId = trip.id;
+  document.getElementById('td-title').textContent =
+    (trip.destination || '(no destination)') + (trip.client_name ? ' — ' + trip.client_name : '');
+  var metaParts = [];
+  if (trip.origin) metaParts.push('From: ' + trip.origin);
+  if (trip.dates) metaParts.push('Dates: ' + trip.dates);
+  if (trip.cabin) metaParts.push('Cabin: ' + trip.cabin);
+  if (trip.passengers) metaParts.push('Pax: ' + trip.passengers);
+  if (trip.workflow_status) metaParts.push('Status: ' + trip.workflow_status);
+  document.getElementById('td-meta').innerHTML = metaParts.map(function(p){
+    return '<span style="background:var(--card);border:1px solid var(--border);border-radius:20px;padding:2px 10px">'+esc(p)+'</span>';
+  }).join('');
+  var ta = document.getElementById('td-research-notes');
+  ta.value = trip.research_notes || '';
+  document.getElementById('td-rn-count').textContent = ta.value.length + ' / 10000';
+  document.getElementById('td-rn-saved').style.opacity = '0';
+  setTimeDisplay(trip.time_tracked_minutes || 0);
+  document.getElementById('td-time-form').style.display = 'none';
+  document.getElementById('td-time-logged').style.opacity = '0';
+  document.getElementById('trip-detail-overlay').classList.add('open');
+}
+
+function closeTripDetail() {
+  document.getElementById('trip-detail-overlay').classList.remove('open');
+  if (_tdSaveTimer) { clearTimeout(_tdSaveTimer); _tdSaveTimer = null; }
+  _tdTripId = null;
+}
+
+function onResearchNotesInput() {
+  var ta = document.getElementById('td-research-notes');
+  var len = ta.value.length;
+  document.getElementById('td-rn-count').textContent = len + ' / 10000';
+  document.getElementById('td-rn-saved').style.opacity = '0';
+  if (_tdSaveTimer) clearTimeout(_tdSaveTimer);
+  _tdSaveTimer = setTimeout(saveResearchNotes, 2000);
+}
+
+async function saveResearchNotes() {
+  if (!_tdTripId || !ADMIN_TOKEN) return;
+  var text = document.getElementById('td-research-notes').value;
+  try {
+    var res = await fetch('/api/admin/trips/' + _tdTripId + '/research-notes', {
+      method: 'PATCH',
+      headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN, 'Content-Type': 'application/json'},
+      body: JSON.stringify({research_notes: text})
+    });
+    if (res.ok) {
+      var saved = document.getElementById('td-rn-saved');
+      saved.style.opacity = '1';
+      setTimeout(function(){ saved.style.opacity = '0'; }, 2000);
+    }
+  } catch(e) {}
+}
+
+/* ── TIME TRACKER ── */
+var _tdTrackedMinutes = 0;
+
+function fmtMinutes(m) {
+  if (!m || m <= 0) return '0m';
+  var h = Math.floor(m / 60), rem = m % 60;
+  return h > 0 ? (rem > 0 ? h + 'h ' + rem + 'm' : h + 'h') : rem + 'm';
+}
+
+function setTimeDisplay(mins) {
+  _tdTrackedMinutes = mins || 0;
+  document.getElementById('td-time-display').textContent = fmtMinutes(_tdTrackedMinutes);
+}
+
+function toggleTimeForm() {
+  var form = document.getElementById('td-time-form');
+  var visible = form.style.display !== 'none';
+  form.style.display = visible ? 'none' : 'flex';
+  if (!visible) {
+    var inp = document.getElementById('td-time-input');
+    inp.value = '';
+    inp.focus();
+  }
+}
+
+function setTimePreset(mins) {
+  document.getElementById('td-time-input').value = mins;
+}
+
+async function logTime() {
+  if (!_tdTripId || !ADMIN_TOKEN) return;
+  var mins = parseInt(document.getElementById('td-time-input').value, 10);
+  if (!mins || mins < 1 || mins > 600) {
+    document.getElementById('td-time-input').focus();
+    return;
+  }
+  try {
+    var res = await fetch('/api/admin/trips/' + _tdTripId + '/time', {
+      method: 'POST',
+      headers: {'Authorization': 'Bearer ' + ADMIN_TOKEN, 'Content-Type': 'application/json'},
+      body: JSON.stringify({minutes: mins})
+    });
+    if (res.ok) {
+      var data = await res.json();
+      setTimeDisplay(data.time_tracked_minutes);
+      document.getElementById('td-time-form').style.display = 'none';
+      var badge = document.getElementById('td-time-logged');
+      badge.style.opacity = '1';
+      setTimeout(function(){ badge.style.opacity = '0'; }, 2000);
+    }
+  } catch(e) {}
+}
+</script>
+
+<!-- CLIENT DETAIL DRAWER -->
+<div class="drawer-overlay" id="client-drawer-overlay" onclick="closeClientDrawer()"></div>
+<div class="client-drawer" id="client-drawer">
+  <div class="drawer-header" id="client-drawer-header">
+    <div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text)" id="client-drawer-name"></div>
+      <div style="font-size:.82rem;color:var(--muted);margin-top:3px" id="client-drawer-email"></div>
+    </div>
+    <button class="drawer-close" onclick="closeClientDrawer()">×</button>
+  </div>
+  <div class="drawer-body" id="client-drawer-content"></div>
+</div>
+
+<!-- KEYBOARD SHORTCUTS HELP MODAL -->
+<div id="kb-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeKbModal()">
+  <div style="background:#1e1e2e;color:#e0e0f0;border-radius:12px;padding:32px 40px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.6);font-family:inherit">
+    <div style="font-size:1.15rem;font-weight:700;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:12px">Keyboard Shortcuts</div>
+    <table style="border-collapse:collapse;width:100%">
+      <tbody id="kb-rows"></tbody>
+    </table>
+    <div style="margin-top:18px;text-align:right"><button onclick="closeKbModal()" style="background:#333;color:#e0e0f0;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:.9rem">Close</button></div>
+  </div>
+</div>
+
+<script>
+/* ════════════════════════════════════════════
+   KEYBOARD SHORTCUTS
+   ════════════════════════════════════════════ */
+(function(){
+  var KB_SHORTCUTS = [
+    {keys:'g o', desc:'Overview'},
+    {keys:'g p', desc:'Pipeline'},
+    {keys:'g c', desc:'Clients'},
+    {keys:'g m', desc:'Messages'},
+    {keys:'g f', desc:'Savings & Fees'},
+    {keys:'?',   desc:'This help'},
+    {keys:'Esc', desc:'Close modals'},
+  ];
+
+  // Populate help modal rows
+  var tbody = document.getElementById('kb-rows');
+  KB_SHORTCUTS.forEach(function(s){
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td style="padding:5px 0;width:90px"><code style="background:#2a2a3e;border-radius:4px;padding:2px 8px;font-size:.88rem;letter-spacing:.04em">'+s.keys+'</code></td>'
+                 +'<td style="padding:5px 0;color:#b0b8d0;font-size:.95rem">'+s.desc+'</td>';
+    tbody.appendChild(tr);
+  });
+
+  function openKbModal(){
+    var el = document.getElementById('kb-overlay');
+    el.style.display = 'flex';
+  }
+  window.closeKbModal = function(){
+    document.getElementById('kb-overlay').style.display = 'none';
+  };
+
+  // Two-key sequence buffer
+  var firstKey = null;
+  var firstKeyTimer = null;
+
+  function clearSeq(){
+    firstKey = null;
+    if(firstKeyTimer){ clearTimeout(firstKeyTimer); firstKeyTimer = null; }
+  }
+
+  document.addEventListener('keydown', function(e){
+    var tag = e.target && e.target.tagName ? e.target.tagName.toUpperCase() : '';
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+    var key = e.key;
+
+    // Escape — close any open modal/overlay/drawer
+    if(key === 'Escape'){
+      closeKbModal();
+      // trip detail overlay
+      var tdo = document.getElementById('trip-detail-overlay');
+      if(tdo && tdo.classList.contains('open')) tdo.classList.remove('open');
+      // client drawer
+      if(typeof closeClientDrawer === 'function') closeClientDrawer();
+      clearSeq();
+      return;
+    }
+
+    // ? — show help modal
+    if(key === '?'){
+      openKbModal();
+      clearSeq();
+      return;
+    }
+
+    // g X sequences
+    if(firstKey === 'g'){
+      clearSeq();
+      var panelMap = {o:'overview', p:'pipeline', c:'clients', m:'chat', f:'fees'};
+      var panel = panelMap[key];
+      if(panel){
+        switchPanel(panel, navBtnFor(panel));
+      }
+      return;
+    }
+
+    if(key === 'g'){
+      firstKey = 'g';
+      firstKeyTimer = setTimeout(clearSeq, 1000);
+      return;
+    }
+
+    clearSeq();
+  });
+})();
 </script>
 </body>
 </html>

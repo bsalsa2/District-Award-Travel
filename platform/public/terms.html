@@ -4,120 +4,745 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Terms of Service — District Award Travel</title>
-<meta name="description" content="Terms of Service for District Award Travel advisory services.">
+<meta name="description" content="Terms of Service for District Award Travel — advisory-only award travel research. 10% of documented savings, $0 upfront.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0a0805;--surface:#12100d;--card:#1a1814;--border:#2a2620;
-  --orange:#ff8a1e;--orange-dim:rgba(255,138,30,.1);
-  --gold:#ffb347;--text:#faf8f3;--muted:#a89a8f;--dim:#6b6159;
+  --bg:#0a0805;
+  --surface:#0f0d0a;
+  --card:#151210;
+  --card2:#1c1814;
+  --border:rgba(255,255,255,.07);
+  --border2:rgba(255,255,255,.04);
+  --accent:#f97316;
+  --accent-dim:rgba(249,115,22,.1);
+  --accent-border:rgba(249,115,22,.22);
+  --gold:#fbbf24;
+  --gold-dim:rgba(251,191,36,.12);
+  --text:#faf8f3;
+  --muted:rgba(250,248,243,.55);
+  --dim:rgba(250,248,243,.3);
+  --green:#4ade80;
   --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
-nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:64px;background:rgba(10,8,5,.92);border-bottom:2px solid var(--orange)}
-.nav-logo{font-size:15px;font-weight:800;color:var(--text)}
-.nav-logo span{color:var(--orange)}
-.nav-link{padding:12px 16px;border-radius:7px;color:var(--muted);transition:all .15s}
-.nav-link:hover{color:var(--gold)}
-.page{max-width:720px;margin:0 auto;padding:60px 24px 80px}
-.draft-banner{background:rgba(255,193,7,.1);border:1px solid rgba(255,193,7,.3);border-radius:10px;padding:14px 16px;margin-bottom:32px;color:var(--muted);font-size:13px;text-align:center}
-.page-h1{font-size:28px;font-weight:800;color:var(--text);margin-bottom:32px}
-section{margin-bottom:40px}
-h2{font-size:18px;font-weight:700;color:var(--gold);margin-bottom:12px;margin-top:24px}
-h3{font-size:15px;font-weight:600;color:var(--text);margin-bottom:8px;margin-top:16px}
-p{margin-bottom:12px;color:var(--text);line-height:1.7}
-strong{color:var(--gold)}
-ul{margin-left:20px;margin-bottom:12px;color:var(--text)}
-li{margin-bottom:8px}
-.footer-links{margin-top:60px;padding-top:24px;border-top:1px solid var(--border);text-align:center;font-size:13px;color:var(--muted)}
-.footer-links a{color:var(--orange);text-decoration:none}
-.footer-links a:hover{text-decoration:underline}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+a{text-decoration:none;color:inherit}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 48px;height:60px;
+  background:rgba(10,8,5,.85);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(249,115,22,.18);
+}
+.nav-logo{
+  font-size:15px;font-weight:900;color:var(--text);
+  letter-spacing:-.4px;
+}
+.nav-logo span{color:var(--accent)}
+.nav-links{display:flex;align-items:center;gap:2px}
+.nav-link{
+  padding:7px 13px;border-radius:6px;
+  font-size:13px;font-weight:500;
+  color:var(--muted);transition:all .15s;
+}
+.nav-link:hover{color:var(--text);background:rgba(255,255,255,.07)}
+.nav-cta{display:flex;align-items:center;gap:8px}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-height:36px;padding:8px 18px;border-radius:8px;
+  font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .18s;border:none;font-family:var(--font);
+}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 20px rgba(249,115,22,.35)}
+.btn-primary:hover{background:#ea6c0a;transform:translateY(-1px);box-shadow:0 8px 28px rgba(249,115,22,.45)}
+.btn-ghost{background:rgba(255,255,255,.07);color:var(--muted);border:1px solid rgba(255,255,255,.12)}
+.btn-ghost:hover{background:rgba(255,255,255,.12);color:var(--text)}
+
+/* ── PAGE LAYOUT ── */
+.page-wrap{max-width:760px;margin:0 auto;padding:100px 24px 100px}
+
+/* ── DRAFT BANNER ── */
+.draft-banner{
+  display:flex;align-items:flex-start;gap:12px;
+  background:rgba(251,191,36,.06);
+  border:1px solid rgba(251,191,36,.22);
+  border-radius:12px;padding:16px 20px;
+  margin-bottom:40px;
+  font-size:13px;color:rgba(251,191,36,.8);line-height:1.6;
+}
+.draft-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+
+/* ── HERO / PAGE HEADER ── */
+.page-header{margin-bottom:56px}
+.page-eyebrow{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.22);
+  color:#fb923c;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  padding:6px 16px;border-radius:24px;margin-bottom:20px;
+}
+.page-eyebrow-dot{width:6px;height:6px;border-radius:50%;background:#f97316;box-shadow:0 0 8px #f97316;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 8px #f97316}50%{opacity:.25;box-shadow:none}}
+.page-h1{
+  font-size:clamp(30px,5vw,46px);font-weight:900;
+  letter-spacing:-1.5px;line-height:1.08;
+  color:var(--text);margin-bottom:14px;
+}
+.page-h1 em{
+  font-style:normal;
+  background:linear-gradient(95deg,#f97316 0%,#fb923c 50%,#fbbf24 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+}
+.page-sub{font-size:15px;color:var(--muted);line-height:1.7;max-width:560px}
+.page-meta{margin-top:20px;font-size:12px;color:var(--dim);display:flex;gap:20px;flex-wrap:wrap}
+
+/* ── TOC ── */
+.toc{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;padding:24px 28px;
+  margin-bottom:48px;
+}
+.toc-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-bottom:14px}
+.toc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:4px 20px}
+.toc-link{font-size:13px;color:var(--muted);padding:5px 0;border-radius:4px;transition:color .12s;display:flex;align-items:center;gap:8px}
+.toc-link:hover{color:var(--accent)}
+.toc-link-num{font-size:11px;font-weight:700;color:var(--accent);opacity:.7;min-width:18px}
+
+/* ── SECTIONS ── */
+.section{
+  margin-bottom:48px;
+  padding-bottom:48px;
+  border-bottom:1px solid var(--border2);
+}
+.section:last-of-type{border-bottom:none}
+.section-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:20px}
+.section-num{
+  flex-shrink:0;
+  width:32px;height:32px;border-radius:8px;
+  background:var(--accent-dim);border:1px solid var(--accent-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;color:var(--accent);
+  margin-top:2px;
+}
+.section-h2{
+  font-size:20px;font-weight:800;
+  color:var(--text);letter-spacing:-.4px;line-height:1.2;
+}
+p{margin-bottom:14px;color:var(--muted);line-height:1.75;font-size:15px}
+p:last-child{margin-bottom:0}
+strong{color:var(--text);font-weight:700}
+em.accent{color:var(--accent);font-style:normal}
+
+/* ── LISTS ── */
+ul,ol{padding-left:0;margin-bottom:14px;list-style:none;display:flex;flex-direction:column;gap:8px}
+li{
+  display:flex;align-items:flex-start;gap:10px;
+  color:var(--muted);font-size:15px;line-height:1.7;
+}
+li::before{
+  content:'—';color:var(--accent);flex-shrink:0;
+  font-size:12px;font-weight:700;margin-top:4px;
+}
+li strong{color:var(--text)}
+
+/* ── CALLOUT CARDS ── */
+.callout{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;padding:20px 22px;
+  margin:20px 0;
+}
+.callout.accent-border{border-color:var(--accent-border);background:rgba(249,115,22,.04)}
+.callout.warn{border-color:rgba(251,191,36,.2);background:rgba(251,191,36,.04)}
+.callout.green{border-color:rgba(74,222,128,.2);background:rgba(74,222,128,.04)}
+.callout-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
+.callout.warn .callout-title{color:var(--gold)}
+.callout.green .callout-title{color:var(--green)}
+.callout p{margin:0;font-size:14px}
+.callout ul{margin:0}
+.callout li{font-size:14px}
+
+/* ── FEE FORMULA ── */
+.formula{
+  background:linear-gradient(135deg,#1a0e05,#120c04);
+  border:1px solid rgba(249,115,22,.25);
+  border-radius:14px;padding:28px 28px;
+  margin:24px 0;text-align:center;
+}
+.formula-label{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(249,115,22,.6);margin-bottom:12px}
+.formula-eq{
+  font-size:clamp(13px,2.2vw,16px);font-weight:700;
+  color:rgba(250,248,243,.85);line-height:1.8;
+}
+.formula-eq .op{color:rgba(250,248,243,.35);margin:0 8px;font-weight:400}
+.formula-eq .val{
+  background:rgba(249,115,22,.14);border:1px solid rgba(249,115,22,.24);
+  border-radius:6px;padding:3px 10px;color:#fb923c;
+  white-space:nowrap;
+}
+.formula-eq .result{
+  display:inline-block;margin-top:8px;
+  background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.22);
+  border-radius:6px;padding:4px 14px;color:#4ade80;font-size:17px;
+  font-weight:900;letter-spacing:-.5px;
+}
+.formula-note{font-size:12px;color:var(--dim);margin-top:12px}
+
+/* ── NEVER DO TABLE ── */
+.never-grid{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:12px;margin:20px 0;
+}
+.never-card{
+  background:rgba(220,38,38,.04);border:1px solid rgba(220,38,38,.15);
+  border-radius:10px;padding:16px 18px;
+  display:flex;align-items:flex-start;gap:10px;
+}
+.never-x{
+  width:20px;height:20px;border-radius:50%;
+  background:rgba(220,38,38,.15);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;margin-top:1px;
+  font-size:11px;color:rgba(239,68,68,.9);font-weight:800;
+}
+.never-text{font-size:13px;color:var(--muted);line-height:1.5}
+.never-text strong{color:var(--text);display:block;margin-bottom:2px;font-size:13px}
+
+/* ── FOOTER ── */
+footer{
+  background:var(--surface);
+  border-top:1px solid var(--border);
+  padding:36px 48px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:20px;
+}
+.f-logo{font-size:14px;font-weight:800;color:var(--text)}
+.f-logo span{color:var(--accent)}
+.f-sub{font-size:12px;color:var(--dim);margin-top:3px}
+.f-links{display:flex;gap:2px;flex-wrap:wrap}
+.f-link{
+  font-size:12px;color:var(--dim);
+  padding:7px 10px;border-radius:6px;transition:.15s;
+}
+.f-link:hover{color:var(--text);background:rgba(255,255,255,.06)}
+.f-right{font-size:12px;color:var(--dim);text-align:right;line-height:1.7}
+
+/* ── RESPONSIVE ── */
 @media(max-width:640px){
-  nav{padding:0 20px}
-  .page{padding:40px 16px 60px}
-  .page-h1{font-size:22px}
-  h2{font-size:16px}
+  nav{padding:0 16px}
+  .nav-links{display:none}
+  .page-wrap{padding:88px 16px 80px}
+  .page-h1{font-size:clamp(26px,7vw,36px)}
+  .toc-grid{grid-template-columns:1fr}
+  .never-grid{grid-template-columns:1fr}
+  .formula{padding:20px 16px}
+  footer{padding:28px 20px;flex-direction:column;align-items:flex-start}
+  .f-right{text-align:left}
+}
+@media(prefers-reduced-motion:reduce){
+  .page-eyebrow-dot{animation:none;box-shadow:none}
 }
 </style>
 </head>
 <body>
+
 <nav>
-  <div class="nav-logo">✈ District <span>Award Travel</span></div>
-  <div><a href="index.html" class="nav-link">← Back</a></div>
+  <a href="index.html" class="nav-logo">District <span>Award</span> Travel</a>
+  <div class="nav-links">
+    <a href="index.html#how-it-works" class="nav-link">How It Works</a>
+    <a href="index.html#pricing" class="nav-link">Pricing</a>
+    <a href="index.html#faq" class="nav-link">FAQ</a>
+    <a href="privacy.html" class="nav-link">Privacy</a>
+  </div>
+  <div class="nav-cta">
+    <a href="client.html" class="btn btn-ghost">Client Login</a>
+    <a href="intake.html" class="btn btn-primary">Apply free</a>
+  </div>
 </nav>
 
-<div class="page">
-  <div class="draft-banner">⚠ DRAFT — pending legal review. These terms are not yet final.</div>
-  <h1 class="page-h1">Terms of Service</h1>
+<div class="page-wrap">
 
-  <section>
-    <h2>1. What We Do</h2>
-    <p>District Award Travel ("we," "us," or "the Service") provides advisory services to help you find valuable award travel redemptions using your loyalty program points. We:</p>
-    <ul>
-      <li>Research available award space and transfer partners for your travel goals</li>
-      <li>Generate recommendations for you to evaluate</li>
-      <li>Provide guidance on booking your chosen award</li>
-    </ul>
-    <p><strong>You always book your own travel.</strong> We never access your accounts, never hold your passwords, and never execute bookings on your behalf.</p>
-  </section>
-
-  <section>
-    <h2>2. What You Do</h2>
-    <p>When you use the Service, you:</p>
-    <ul>
-      <li>Provide accurate information about your travel goals, dates, and loyalty program balances</li>
-      <li>Review the recommendations we provide</li>
-      <li>Make your own decision about which option (if any) to book</li>
-      <li>Execute the booking yourself in your own accounts</li>
-      <li>Confirm your actual savings before paying our fee</li>
-    </ul>
-  </section>
-
-  <section>
-    <h2>3. Our Fee</h2>
-    <p>Our fee is always <strong>10% of the documented savings</strong> we generate for you.</p>
-    <p><strong>Savings = Cash price (timestamped benchmark) − Everything you pay out of pocket (award taxes + fees).</strong></p>
-    <p>If we cannot beat the cash price or if you choose not to book, <strong>you pay zero.</strong> There are no upfront fees, booking fees, or hidden costs.</p>
-    <p>Our invoice is issued after your booking is confirmed and your savings are documented. Payment is due within 14 days of invoice.</p>
-  </section>
-
-  <section>
-    <h2>4. Award Availability</h2>
-    <p>Award space on airlines and hotels changes constantly. Availability we identify may disappear before you book. <strong>We cannot guarantee that a specific award will be available at booking time.</strong> If your preferred option sells out, we will help you identify alternatives.</p>
-  </section>
-
-  <section>
-    <h2>5. Affiliations & Disclosures</h2>
-    <p>We are <strong>not affiliated with, endorsed by, or acting on behalf of</strong> any airline, hotel, bank, credit card issuer, or loyalty program. We do not receive commissions from any program. Our only source of revenue is the fee we earn from documented client savings.</p>
-  </section>
-
-  <section>
-    <h2>6. Limitation of Liability</h2>
-    <p>Our recommendations are provided in good faith based on available data. <strong>We are not responsible for:</strong></p>
-    <ul>
-      <li>Program devaluations, award chart changes, or airline/hotel policy changes after we provide our recommendations</li>
-      <li>Errors in your booking (you execute bookings yourself)</li>
-      <li>Denied or cancelled bookings due to your account status or program rules</li>
-      <li>Changes in award availability or pricing</li>
-    </ul>
-    <p><strong>Our total liability is capped at the fees you have paid us.</strong> We provide no guarantees of specific savings amounts or award availability.</p>
-  </section>
-
-  <section>
-    <h2>7. Governing Law</h2>
-    <p>These terms are governed by the laws of the State of Maryland, USA, without regard to its conflict-of-law principles.</p>
-  </section>
-
-  <section>
-    <h2>8. Contact</h2>
-    <p>Questions about these terms? Contact us at <strong>districtawardtravel@gmail.com</strong></p>
-  </section>
-
-  <div class="footer-links">
-    <a href="index.html">Home</a> · <a href="privacy.html">Privacy Policy</a>
+  <div class="draft-banner">
+    <span class="draft-icon">⚠</span>
+    <span>
+      <strong style="color:rgba(251,191,36,.95)">Draft — under review.</strong>
+      These terms are not yet finalized. They do not constitute legal advice.
+      If you have questions before the final version is published, email us at
+      <strong style="color:rgba(251,191,36,.95)">districtawardtravel@gmail.com</strong>.
+    </span>
   </div>
-</div>
+
+  <div class="page-header">
+    <div class="page-eyebrow"><span class="page-eyebrow-dot"></span>Legal</div>
+    <h1 class="page-h1">Terms of <em>Service</em></h1>
+    <p class="page-sub">
+      Plain language. No surprises. We're an advisory service — you stay in
+      complete control of every account and every booking.
+    </p>
+    <div class="page-meta">
+      <span>Effective: June 2026 (draft)</span>
+      <span>Service: District Award Travel</span>
+      <span>Governing law: Virginia, USA</span>
+    </div>
+  </div>
+
+  <!-- TABLE OF CONTENTS -->
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <div class="toc-grid">
+      <a href="#service" class="toc-link"><span class="toc-link-num">1</span>Service Description</a>
+      <a href="#fees" class="toc-link"><span class="toc-link-num">2</span>Fees &amp; Payment</a>
+      <a href="#never" class="toc-link"><span class="toc-link-num">3</span>What We Never Do</a>
+      <a href="#availability" class="toc-link"><span class="toc-link-num">4</span>Award Availability</a>
+      <a href="#obligations" class="toc-link"><span class="toc-link-num">5</span>Client Obligations</a>
+      <a href="#refunds" class="toc-link"><span class="toc-link-num">6</span>No Refunds</a>
+      <a href="#liability" class="toc-link"><span class="toc-link-num">7</span>Limitation of Liability</a>
+      <a href="#affiliations" class="toc-link"><span class="toc-link-num">8</span>Affiliations</a>
+      <a href="#governing" class="toc-link"><span class="toc-link-num">9</span>Governing Law</a>
+      <a href="#student" class="toc-link"><span class="toc-link-num">10</span>Student Disclaimer</a>
+      <a href="#contact" class="toc-link"><span class="toc-link-num">11</span>Contact</a>
+    </div>
+  </div>
+
+  <!-- 1. SERVICE DESCRIPTION -->
+  <div class="section" id="service">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <h2 class="section-h2">Service Description</h2>
+    </div>
+
+    <p>
+      District Award Travel ("we," "us," "DAT," or "the Service") is an <strong>advisory-only</strong>
+      service. We research available award flight redemptions using the loyalty program points and
+      travel goals you share with us, then present options for you to evaluate and book yourself.
+    </p>
+
+    <div class="callout accent-border">
+      <div class="callout-title">What We Do</div>
+      <ul>
+        <li>Search available award space across airlines and transfer partners for your travel goals</li>
+        <li>Identify redemptions that beat the lowest publicly available cash price for the same routing</li>
+        <li>Benchmark each option with a timestamped screenshot of the cash equivalent</li>
+        <li>Deliver a step-by-step booking guide so you can complete the booking in your own accounts</li>
+        <li>Answer follow-up questions throughout the booking process</li>
+      </ul>
+    </div>
+
+    <p>
+      <strong>You always book your own travel.</strong> We research and advise — we do not book on
+      your behalf, we do not access your accounts, and we do not hold your login credentials at any
+      point. Think of us as a knowledgeable navigator: we plan the route; you fly the plane.
+    </p>
+    <p>
+      By submitting an intake form or communicating with us about a booking, you agree to these terms.
+    </p>
+  </div>
+
+  <!-- 2. FEES AND PAYMENT -->
+  <div class="section" id="fees">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <h2 class="section-h2">Fees &amp; Payment</h2>
+    </div>
+
+    <p>
+      Our fee is always <strong>10% of documented savings</strong>. There are no upfront fees,
+      retainer fees, subscription fees, or commissions from any airline, hotel, or card issuer.
+    </p>
+
+    <div class="formula">
+      <div class="formula-label">How Savings Are Calculated</div>
+      <div class="formula-eq">
+        <span class="val">Lowest public cash price</span>
+        <span class="op">−</span>
+        <span class="val">Taxes &amp; fees you actually paid</span>
+        <span class="op">=</span>
+        <span class="result">Your Documented Savings</span>
+      </div>
+      <div class="formula-note">
+        Our fee = 10% of Documented Savings &nbsp;·&nbsp;
+        Cash price benchmarked by screenshot at time of research &nbsp;·&nbsp;
+        Points used are treated as having no dollar cost for fee-calculation purposes
+      </div>
+    </div>
+
+    <p>
+      <strong>"Lowest publicly available cash price"</strong> means the lowest price visible to a
+      general traveler on the airline's own website or a major OTA (e.g., Google Flights, Kayak)
+      for the same origin, destination, dates, and cabin class at the time we conduct our research.
+      We document this with a timestamped screenshot.
+    </p>
+    <p>
+      <strong>"Taxes and fees actually paid"</strong> means the total out-of-pocket cash you paid
+      at the time of booking the award — typically the carrier-imposed fees and government taxes
+      required to ticket the award. The points redeemed are not counted as a cash cost.
+    </p>
+
+    <div class="callout green">
+      <div class="callout-title">Zero Fee Scenarios</div>
+      <ul>
+        <li>We cannot find an award redemption that beats the cash price — you pay $0</li>
+        <li>You review our options and choose not to book any of them — you pay $0</li>
+        <li>Award space disappears before you can book — you pay $0</li>
+      </ul>
+    </div>
+
+    <p>
+      Fees are invoiced after your booking is confirmed and you provide us with confirmation details
+      so we can calculate the exact savings. <strong>Payment is due within 14 calendar days of the
+      invoice date.</strong> We accept payment via the methods listed in the invoice.
+    </p>
+    <p>
+      If the documented savings calculation is disputed, contact us at districtawardtravel@gmail.com
+      within 14 days of the invoice and we will review the benchmark together.
+    </p>
+  </div>
+
+  <!-- 3. WHAT WE NEVER DO -->
+  <div class="section" id="never">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <h2 class="section-h2">What We Never Do</h2>
+    </div>
+
+    <p>
+      We want to be completely transparent about the limits of our service. Some of these are
+      policies; others are simply not part of how award travel advisory works.
+    </p>
+
+    <div class="never-grid">
+      <div class="never-card">
+        <div class="never-x">✕</div>
+        <div class="never-text">
+          <strong>Ask for passwords</strong>
+          We never request login credentials to your loyalty accounts, email, or any other account.
+        </div>
+      </div>
+      <div class="never-card">
+        <div class="never-x">✕</div>
+        <div class="never-text">
+          <strong>Book on your behalf</strong>
+          You execute every booking yourself. We supply the guide; you control the transaction.
+        </div>
+      </div>
+      <div class="never-card">
+        <div class="never-x">✕</div>
+        <div class="never-text">
+          <strong>Sell your data</strong>
+          Your information is used solely to research options for you. We do not sell, license, or
+          share it with third parties for marketing. See our Privacy Policy.
+        </div>
+      </div>
+      <div class="never-card">
+        <div class="never-x">✕</div>
+        <div class="never-text">
+          <strong>Guarantee award availability</strong>
+          Award space is controlled by airlines and programs, not by us. We present what is
+          available at research time; we cannot hold it.
+        </div>
+      </div>
+      <div class="never-card">
+        <div class="never-x">✕</div>
+        <div class="never-text">
+          <strong>Charge upfront</strong>
+          There is no retainer or application fee. You owe us only after a documented saving is
+          achieved and you complete a booking.
+        </div>
+      </div>
+      <div class="never-card">
+        <div class="never-x">✕</div>
+        <div class="never-text">
+          <strong>Accept commissions</strong>
+          We have no affiliate relationship with any airline, hotel, bank, or loyalty program.
+          Our only revenue is the fee you pay.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. AWARD AVAILABILITY -->
+  <div class="section" id="availability">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <h2 class="section-h2">Award Availability</h2>
+    </div>
+
+    <p>
+      Award space on airlines and hotel programs changes constantly — sometimes within minutes.
+      Seats and rooms are controlled entirely by the carrier or property, and availability can
+      open or disappear at any time without notice.
+    </p>
+
+    <div class="callout warn">
+      <div class="callout-title">Important</div>
+      <p>
+        We <strong>cannot guarantee</strong> that an award we identify at research time will still
+        be available when you attempt to book. We present options that are available <em>at the
+        time of our research</em>. It is possible — and not uncommon — for availability to change
+        between when we send you the options and when you click "Book."
+      </p>
+    </div>
+
+    <p>
+      When a specific option disappears before booking, we will make reasonable efforts to find
+      an alternative redemption at no additional research charge. However, if no comparable
+      alternative exists, no fee is owed because no savings have been documented.
+    </p>
+    <p>
+      We also cannot control or predict program devaluations, transfer partner changes, routing
+      rule adjustments, or award chart modifications. We research based on the rules in effect at
+      the time of our work.
+    </p>
+  </div>
+
+  <!-- 5. CLIENT OBLIGATIONS -->
+  <div class="section" id="obligations">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <h2 class="section-h2">Client Obligations</h2>
+    </div>
+
+    <p>To receive the Service, you agree to:</p>
+
+    <ul>
+      <li>
+        <strong>Provide accurate information.</strong>
+        Share honest and up-to-date loyalty program balances, travel preferences, and constraints.
+        Inaccurate balance information will affect the quality of our research and may result in
+        options that cannot actually be booked.
+      </li>
+      <li>
+        <strong>Use our instructions to complete the booking.</strong>
+        Follow the step-by-step booking guide we provide. We are not responsible for booking errors
+        resulting from deviations from our instructions or from booking through a different method.
+      </li>
+      <li>
+        <strong>Notify us when you complete a booking.</strong>
+        After booking one of our recommended options, send us your booking confirmation so we can
+        calculate and issue the correct invoice. Withholding confirmation to avoid a fee is a
+        material breach of these terms.
+      </li>
+      <li>
+        <strong>Pay the fee within 14 days of the invoice.</strong>
+        Fees are due within 14 calendar days of the invoice date. Late fees may be applied at our
+        discretion for accounts more than 30 days overdue.
+      </li>
+      <li>
+        <strong>Keep your account in good standing.</strong>
+        Ensure your loyalty program account is in good standing at the time of transfer or booking.
+        We are not responsible for transfers or bookings blocked due to program flags on your account.
+      </li>
+    </ul>
+  </div>
+
+  <!-- 6. REFUNDS -->
+  <div class="section" id="refunds">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <h2 class="section-h2">No Refunds</h2>
+    </div>
+
+    <p>
+      Because District Award Travel is an advisory service, our work product is delivered when we
+      send you research results and a booking guide. Once options have been delivered to you,
+      <strong>no refunds are issued</strong> — the service has been rendered.
+    </p>
+    <p>
+      We structure our fee model to avoid situations where you pay before receiving value: you owe
+      nothing until you have booked a confirmed trip using our options. If you receive options and
+      choose not to book any of them, you owe nothing. There is nothing to refund because no fee
+      was charged.
+    </p>
+    <p>
+      If you believe you were invoiced incorrectly — for example, if the cash price benchmark was
+      inaccurate — contact us within 14 days of the invoice and we will review and correct any
+      error in good faith.
+    </p>
+  </div>
+
+  <!-- 7. LIMITATION OF LIABILITY -->
+  <div class="section" id="liability">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <h2 class="section-h2">Limitation of Liability</h2>
+    </div>
+
+    <p>
+      Our recommendations are provided in good faith based on publicly available data at the time
+      of research. We make no warranties, express or implied, about award space, program valuations,
+      or future availability.
+    </p>
+
+    <div class="callout">
+      <div class="callout-title">We Are Not Responsible For</div>
+      <ul>
+        <li>
+          <strong>Disappearing award space.</strong>
+          Award inventory is controlled by airlines and programs. If space is gone when you try
+          to book, that is not a failure of our service.
+        </li>
+        <li>
+          <strong>Program devaluations or rule changes.</strong>
+          Loyalty programs change award charts, transfer ratios, and routing rules. We research
+          based on rules in effect at the time of research.
+        </li>
+        <li>
+          <strong>Booking errors made by you.</strong>
+          You execute bookings yourself. Errors made during the booking process — wrong dates,
+          wrong cabin, wrong passenger name — are your responsibility.
+        </li>
+        <li>
+          <strong>Denied or cancelled bookings.</strong>
+          Bookings cancelled or denied by the airline or program due to your account status, fraud
+          flags, or program policy are outside our control.
+        </li>
+        <li>
+          <strong>Transfer reversals or delays.</strong>
+          Point transfers between programs are generally irreversible. We identify when a transfer
+          is needed; you are responsible for initiating it and for any transfer delays.
+        </li>
+        <li>
+          <strong>Consequential damages.</strong>
+          We are not liable for indirect, incidental, or consequential damages of any kind, including
+          but not limited to missed travel, lost deposits, or accommodation costs.
+        </li>
+      </ul>
+    </div>
+
+    <p>
+      <strong>Our total aggregate liability to you for any claim arising from the Service is capped
+      at the total fees you have paid us in the 12 months preceding the claim.</strong>
+    </p>
+    <p>
+      Some jurisdictions do not allow the limitation of certain types of liability. Where such laws
+      apply, the limitations above apply to the fullest extent permitted.
+    </p>
+  </div>
+
+  <!-- 8. AFFILIATIONS -->
+  <div class="section" id="affiliations">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <h2 class="section-h2">Affiliations &amp; Independence</h2>
+    </div>
+
+    <p>
+      District Award Travel is <strong>not affiliated with, endorsed by, or acting as an agent of</strong>
+      any airline, hotel chain, bank, credit card issuer, or loyalty program. We do not receive
+      referral fees, kickbacks, or commissions from any program.
+    </p>
+    <p>
+      Our sole source of revenue is the fee paid by clients when a documented saving is achieved.
+      This structure aligns our incentives entirely with yours: we succeed only when you save.
+    </p>
+  </div>
+
+  <!-- 9. GOVERNING LAW -->
+  <div class="section" id="governing">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <h2 class="section-h2">Governing Law</h2>
+    </div>
+
+    <p>
+      These Terms of Service are governed by and construed in accordance with the laws of the
+      <strong>Commonwealth of Virginia, United States</strong>, without regard to its
+      conflict-of-law provisions.
+    </p>
+    <p>
+      Any disputes arising from or related to these terms or the Service shall be resolved first
+      by good-faith communication between the parties. If resolution cannot be reached informally,
+      disputes shall be submitted to binding arbitration in Fairfax County, Virginia, under the
+      rules of the American Arbitration Association, except that either party may bring a small
+      claims court action if the claim qualifies.
+    </p>
+    <p>
+      You agree not to bring any class action or representative action against District Award Travel.
+    </p>
+  </div>
+
+  <!-- 10. STUDENT DISCLAIMER -->
+  <div class="section" id="student">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <h2 class="section-h2">Student Disclaimer</h2>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-title">Plain Language Disclosure</div>
+      <p>
+        District Award Travel is a <strong>student-run business</strong> founded by Braden Salcetti,
+        a student in the Washington, DC Metro area. We are thorough, careful, and genuinely
+        invested in your results — but we are not licensed financial advisors, licensed travel
+        agents, attorneys, or credentialed professionals of any kind.
+      </p>
+    </div>
+
+    <p>
+      Our advice is based on publicly available information about loyalty programs, award charts,
+      and booking practices. Nothing in our recommendations constitutes financial, tax, or legal
+      advice. You should make your own informed decisions about how to use your points.
+    </p>
+    <p>
+      We do not accept responsibility for decisions you make based on our research beyond the
+      scope of liability described in Section 7.
+    </p>
+  </div>
+
+  <!-- 11. CONTACT -->
+  <div class="section" id="contact">
+    <div class="section-header">
+      <div class="section-num">11</div>
+      <h2 class="section-h2">Contact</h2>
+    </div>
+
+    <p>
+      Questions about these terms, disputes, or requests to exercise any rights should be directed to:
+    </p>
+
+    <div class="callout accent-border">
+      <div class="callout-title">District Award Travel</div>
+      <p>
+        <strong>Email:</strong> districtawardtravel@gmail.com<br>
+        <strong>Location:</strong> Washington, DC Metro Area, Virginia<br>
+        <strong>Response time:</strong> We aim to respond within 2 business days.
+      </p>
+    </div>
+
+    <p style="margin-top:20px">
+      We reserve the right to update these terms at any time. Changes will be posted on this page
+      with an updated effective date. Continued use of the Service after a change constitutes
+      acceptance of the revised terms.
+    </p>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<footer>
+  <div>
+    <div class="f-logo">District <span>Award</span> Travel</div>
+    <div class="f-sub">Built by Braden Salcetti · Washington, DC Metro Area</div>
+  </div>
+  <div class="f-links">
+    <a href="index.html" class="f-link">Home</a>
+    <a href="intake.html" class="f-link">Apply</a>
+    <a href="client.html" class="f-link">Client Login</a>
+    <a href="privacy.html" class="f-link">Privacy Policy</a>
+    <a href="terms.html" class="f-link">Terms of Service</a>
+  </div>
+  <div class="f-right">
+    &copy; 2026 District Award Travel<br>
+    <span>Not affiliated with any airline, hotel, or loyalty program.</span>
+  </div>
+</footer>
+
 </body>
 </html>

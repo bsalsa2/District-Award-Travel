@@ -29,21 +29,95 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;border:none;font-family:var(--font)}
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
 .btn-ghost:hover{color:var(--text);background:var(--card)}
-.btn-primary{background:var(--accent);color:#fff}
+
+/* ── PRIMARY BUTTON with shine sweep ── */
+.btn-primary{background:var(--accent);color:#fff;position:relative;overflow:hidden}
+.btn-primary::after{
+  content:'';
+  position:absolute;
+  top:0;left:-75%;
+  width:50%;height:100%;
+  background:linear-gradient(120deg,transparent 0%,rgba(255,255,255,.38) 50%,transparent 100%);
+  transform:skewX(-20deg);
+  transition:left 0s;
+  pointer-events:none;
+}
+.btn-primary:hover::after{
+  left:135%;
+  transition:left .52s cubic-bezier(.25,.46,.45,.94);
+}
 .btn-primary:hover{background:#ea6c0a;transform:translateY(-1px);box-shadow:0 4px 16px rgba(249,115,22,.3)}
 .btn-primary:disabled{background:var(--dim);color:#fff;transform:none;box-shadow:none;cursor:not-allowed}
+.btn-primary:disabled::after{display:none}
+
 .page{max-width:620px;margin:0 auto;padding:40px 24px 80px}
 .page-header{margin-bottom:28px;text-align:center}
-.page-h1{font-size:28px;font-weight:800;letter-spacing:-.7px;color:var(--text);margin-bottom:8px}
+.page-h1{font-size:30px;font-weight:800;letter-spacing:-.8px;color:var(--text);margin-bottom:8px}
+.page-h1 em{font-style:normal;background:linear-gradient(95deg,#f97316,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .page-sub{font-size:14px;color:var(--muted)}
 
-/* ── PROGRESS ── */
-.progress-wrap{margin-bottom:24px}
-.progress-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+/* ── TOP ANIMATED PROGRESS BAR ── */
+.top-progress-bar{width:100%;height:4px;background:var(--border);border-radius:2px;margin-bottom:20px;overflow:hidden}
+.top-progress-fill{height:100%;background:#f97316;border-radius:2px;width:33.33%;transition:width .4s ease}
+
+/* ── DRAFT SAVED INDICATOR ── */
+.draft-saved{
+  position:absolute;top:16px;right:20px;
+  font-size:11px;font-weight:700;color:var(--green);
+  background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.25);
+  border-radius:20px;padding:4px 10px;
+  opacity:0;transition:opacity .3s;
+  pointer-events:none;
+  white-space:nowrap;
+}
+.draft-saved.visible{opacity:1}
+
+/* ── PROGRESS (with flying plane) ── */
+.progress-wrap{margin-bottom:28px;position:relative}
+.progress-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .progress-step{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.07em}
 .progress-pct{font-size:12px;color:var(--dim);font-weight:600}
-.progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden}
-.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#fb923c);border-radius:3px;width:33%;transition:width .45s cubic-bezier(.16,1,.3,1)}
+.progress-bar{height:6px;background:var(--border);border-radius:3px;position:relative}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#fb923c);border-radius:3px;width:33%;transition:width .55s cubic-bezier(.16,1,.3,1);box-shadow:0 0 10px rgba(249,115,22,.35)}
+.progress-plane{
+  position:absolute;top:50%;left:33%;transform:translate(-50%,-54%);
+  font-size:17px;line-height:1;transition:left .55s cubic-bezier(.16,1,.3,1);
+  filter:drop-shadow(0 2px 5px rgba(249,115,22,.45));z-index:1;
+}
+@media(prefers-reduced-motion:reduce){.progress-plane,.progress-fill{transition:none}}
+
+/* ── STEP INDICATORS ── */
+.step-indicators{display:flex;justify-content:center;align-items:center;gap:0;margin-bottom:24px}
+.step-dot{
+  display:flex;align-items:center;justify-content:center;
+  width:36px;height:36px;border-radius:50%;
+  font-size:13px;font-weight:800;
+  border:2px solid var(--border2);
+  color:var(--dim);
+  background:var(--bg);
+  transition:all .4s cubic-bezier(.34,1.56,.64,1);
+  position:relative;z-index:1;
+}
+.step-dot.active{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:var(--accent-dim);
+  box-shadow:0 0 0 5px rgba(249,115,22,.12);
+  transform:scale(1.1);
+}
+.step-dot.done{
+  border-color:var(--accent);
+  background:var(--accent);
+  color:#fff;
+  box-shadow:0 2px 10px rgba(249,115,22,.35);
+}
+.step-connector{
+  width:48px;height:2px;
+  background:var(--border);
+  transition:background .4s;
+  position:relative;z-index:0;
+}
+.step-connector.done{background:var(--accent)}
 
 /* ── RESTORE BANNER ── */
 .restore-banner{display:none;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid var(--accent-border);border-radius:12px;padding:14px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -53,22 +127,76 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .btn-sm{padding:7px 14px;font-size:12px}
 
 /* ── STEPS ── */
-.step{display:none;animation:stepIn .35s cubic-bezier(.16,1,.3,1)}
-.step.active{display:block}
-@keyframes stepIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
-.form-card{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:16px;box-shadow:var(--shadow)}
+.step{display:none}
+.step.active{display:block;animation:slideInRight .38s cubic-bezier(.16,1,.3,1)}
+.step.slide-back{animation:slideInLeft .38s cubic-bezier(.16,1,.3,1)}
+@keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── FORM CARD with noise texture ── */
+.form-card{
+  background:var(--bg);
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='0.03'/></svg>");
+  border:1px solid var(--border);
+  border-radius:14px;padding:28px;margin-bottom:16px;
+  box-shadow:var(--shadow);
+}
 .form-card-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.3px}
 .form-card-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .form-full{grid-column:1/-1}
+
+/* ── FLOATING LABEL FIELDS ── */
 .field{display:flex;flex-direction:column;gap:5px}
 .field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em}
 .field label .req{color:var(--red);margin-left:2px}
-.field input,.field select,.field textarea{background:var(--off);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:11px 13px;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s,box-shadow .15s}
-.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);background:var(--bg);box-shadow:0 0 0 3px var(--accent-dim)}
-.field input::placeholder,.field textarea::placeholder{color:var(--dim)}
+
+/* Floating label wrapper */
+.field-float{position:relative;display:flex;flex-direction:column}
+.field-float label{
+  position:absolute;
+  left:13px;top:50%;transform:translateY(-50%);
+  font-size:14px;font-weight:500;color:var(--dim);
+  pointer-events:none;
+  transition:all .18s cubic-bezier(.4,0,.2,1);
+  background:transparent;padding:0 2px;
+  z-index:1;
+  white-space:nowrap;
+}
+.field-float label .req{color:var(--red);margin-left:2px}
+/* Float up when input has content or is focused */
+.field-float input:not(:placeholder-shown) ~ label,
+.field-float input:focus ~ label{
+  top:0;
+  transform:translateY(-50%);
+  font-size:10px;font-weight:700;
+  color:var(--accent);
+  background:var(--bg);
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.field-float input{padding-top:16px;padding-bottom:8px}
+
+.field input,.field select,.field textarea,.field-float input{
+  background:var(--off);
+  border:1.5px solid var(--border);
+  color:var(--text);
+  border-radius:8px;padding:11px 13px;
+  font-size:14px;font-family:inherit;
+  outline:none;
+  transition:border-color .18s,box-shadow .18s,background .18s;
+}
+/* Orange glow on focus */
+.field input:focus,.field select:focus,.field textarea:focus,.field-float input:focus{
+  border-color:var(--accent);
+  background:var(--bg);
+  box-shadow:0 0 0 3px rgba(249,115,22,.13),0 0 12px rgba(249,115,22,.09);
+}
+.field input::placeholder,.field textarea::placeholder,.field-float input::placeholder{color:var(--dim)}
 .field select option{background:var(--bg)}
 .field textarea{resize:vertical;min-height:88px}
+/* ── CHAR COUNTER ── */
+.char-counter{font-size:11px;color:var(--dim);text-align:right;margin-top:3px;font-weight:500}
+.char-counter.warn{color:var(--accent)}
 .field .err-msg{display:none;font-size:11px;color:var(--red);font-weight:500}
 .field.invalid input,.field.invalid select{border-color:var(--red)}
 .field.invalid .err-msg{display:block}
@@ -121,6 +249,68 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .success-check svg{width:34px;height:34px;color:var(--green)}
 .success-h2{font-size:26px;font-weight:800;color:var(--text);margin-bottom:10px;letter-spacing:-.6px}
 .success-sub{font-size:15px;color:var(--muted);max-width:440px;margin:0 auto;line-height:1.6}
+
+/* ── BOARDING PASS TICKET ── */
+.ticket{max-width:440px;margin:28px auto 0;border-radius:16px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.18);text-align:left;animation:pop .55s cubic-bezier(.34,1.56,.64,1) .15s backwards}
+.ticket-top{background:linear-gradient(135deg,#1c0f05,#2d1507);padding:20px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.ticket-brand{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(251,146,60,.85)}
+.ticket-status{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#4ade80;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);padding:4px 12px;border-radius:14px;white-space:nowrap}
+/* Tear line divider */
+.ticket-tear{
+  background:linear-gradient(135deg,#1c0f05,#2d1507);
+  display:flex;align-items:center;
+  padding:0 0 0 24px;
+  gap:0;
+  position:relative;
+}
+.ticket-tear::before{
+  content:'';
+  position:absolute;
+  left:0;right:0;top:50%;
+  height:1px;
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.18) 0px,rgba(255,255,255,.18) 6px,transparent 6px,transparent 12px);
+}
+.ticket-tear-circle-l{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--off);
+  flex-shrink:0;
+  position:relative;z-index:1;
+  margin-left:-9px;
+}
+.ticket-tear-circle-r{
+  width:18px;height:18px;border-radius:50%;
+  background:var(--off);
+  flex-shrink:0;
+  position:relative;z-index:1;
+  margin-left:auto;
+  margin-right:-9px;
+}
+.ticket-body{
+  background:var(--bg);
+  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='0.03'/></svg>");
+  border:1px solid var(--border);border-top:none;
+  padding:20px 24px;
+  display:flex;gap:16px;align-items:flex-start;
+}
+.ticket-fields{flex:1;min-width:0}
+.ticket-row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.ticket-row:last-child{border-bottom:none}
+.ticket-row span:first-child{color:var(--dim);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding-top:2px}
+.ticket-row span:last-child{font-weight:700;color:var(--text);text-align:right}
+
+/* QR code placeholder — pure CSS/SVG grid */
+.ticket-qr{
+  flex-shrink:0;
+  width:72px;height:72px;
+  background:#1c1917;
+  border-radius:6px;
+  overflow:hidden;
+  position:relative;
+  margin-top:4px;
+}
+.ticket-qr svg{width:100%;height:100%;display:block}
+
+#confetti-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:900}
 .success-next{margin:30px auto 0;max-width:440px;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:22px;text-align:left;box-shadow:var(--shadow)}
 .success-next-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
 .success-next-item{display:flex;gap:10px;font-size:13px;color:var(--muted);margin-bottom:9px;align-items:flex-start}
@@ -136,25 +326,29 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
   .form-grid{grid-template-columns:1fr}
   .form-card{padding:22px 18px}
   .chip-row{grid-template-columns:repeat(2,1fr)}
+  .step-connector{width:28px}
 }
-@media(prefers-reduced-motion:reduce){.step,.success-check,.progress-fill{animation:none;transition:none}}
+@media(prefers-reduced-motion:reduce){
+  .step,.success-check,.progress-fill{animation:none;transition:none}
+  .btn-primary::after{display:none}
+}
 </style>
 </head>
 <body>
 
 <nav>
   <a href="index.html" class="nav-logo">District <span>Award</span> Travel</a>
-  <a href="index.html" class="btn btn-ghost">← Back</a>
+  <a href="index.html" class="btn btn-ghost">&#8592; Back</a>
 </nav>
 
 <div class="page">
   <div class="page-header" id="page-header">
-    <h1 class="page-h1">Let's find your flight.</h1>
-    <p class="page-sub">Three quick steps · no credit card · pay only after you save</p>
+    <h1 class="page-h1">Let's find <em>your flight.</em></h1>
+    <p class="page-sub">Three quick steps &middot; no credit card &middot; pay only after you save</p>
   </div>
 
   <div class="restore-banner" id="restore-banner">
-    <div class="restore-txt">👋 <strong>Welcome back.</strong> We saved your answers from last time.</div>
+    <div class="restore-txt">&#128075; <strong>Welcome back.</strong> We saved your answers from last time.</div>
     <div class="restore-actions">
       <button class="btn btn-primary btn-sm" onclick="restoreDraft()">Resume</button>
       <button class="btn btn-ghost btn-sm" onclick="discardDraft()">Start fresh</button>
@@ -162,21 +356,30 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
   </div>
 
   <div class="progress-wrap" id="progress-wrap">
+    <div class="top-progress-bar"><div class="top-progress-fill" id="top-progress-fill"></div></div>
+    <div class="draft-saved" id="draft-saved">&#10003; Draft saved</div>
+    <div class="step-indicators" id="step-indicators">
+      <div class="step-dot active" id="dot-1">1</div>
+      <div class="step-connector" id="conn-1"></div>
+      <div class="step-dot" id="dot-2">2</div>
+      <div class="step-connector" id="conn-2"></div>
+      <div class="step-dot" id="dot-3">3</div>
+    </div>
     <div class="progress-meta">
       <span class="progress-step" id="progress-label">Step 1 of 3 — Your trip</span>
       <span class="progress-pct" id="progress-pct">33%</span>
     </div>
-    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div><span class="progress-plane" id="progress-plane">&#9992;&#65039;</span></div>
   </div>
 
   <form id="intakeForm" novalidate>
     <!-- honeypot: bots fill it, humans never see it -->
     <div class="hp-field" aria-hidden="true"><input type="text" name="hp" tabindex="-1" autocomplete="off"></div>
 
-    <!-- ═══ STEP 1 — YOUR TRIP ═══ -->
+    <!-- STEP 1 — YOUR TRIP -->
     <div class="step active" id="step-1">
       <div class="form-card">
-        <div class="form-card-title">Where are we sending you? ✈️</div>
+        <div class="form-card-title">Where are we sending you? &#9992;&#65039;</div>
         <div class="form-card-sub">Dream big — that's what the points are for.</div>
         <div class="form-grid">
           <div class="field form-full">
@@ -191,10 +394,10 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
           <div class="field form-full">
             <label>Cabin</label>
             <div class="chip-row" id="cabin-chips">
-              <button type="button" class="chip" data-val="economy"><span class="chip-ico">💺</span>Economy</button>
-              <button type="button" class="chip" data-val="premium_economy"><span class="chip-ico">🛋</span>Premium</button>
-              <button type="button" class="chip sel" data-val="business"><span class="chip-ico">🥂</span>Business</button>
-              <button type="button" class="chip" data-val="first"><span class="chip-ico">👑</span>First</button>
+              <button type="button" class="chip" data-val="economy"><span class="chip-ico">&#128186;</span>Economy</button>
+              <button type="button" class="chip" data-val="premium_economy"><span class="chip-ico">&#128715;</span>Premium</button>
+              <button type="button" class="chip sel" data-val="business"><span class="chip-ico">&#129346;</span>Business</button>
+              <button type="button" class="chip" data-val="first"><span class="chip-ico">&#128081;</span>First</button>
             </div>
             <input type="hidden" name="cabin_pref" value="business">
           </div>
@@ -218,69 +421,70 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
           </div>
           <div class="field form-full">
             <label>Anything else about the dream?</label>
-            <textarea name="notes" placeholder="Lie-flat seats, anniversary trip, traveling with kids…"></textarea>
+            <textarea name="notes" placeholder="Lie-flat seats, anniversary trip, traveling with kids…" maxlength="2000" id="textarea-notes"></textarea>
+            <div class="char-counter" id="counter-notes">0 / 2000</div>
           </div>
         </div>
       </div>
       <div class="step-nav">
-        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(1)">Next — your points →</button>
+        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(1)">Next — your points &#8594;</button>
       </div>
     </div>
 
-    <!-- ═══ STEP 2 — YOUR POINTS ═══ -->
+    <!-- STEP 2 — YOUR POINTS -->
     <div class="step" id="step-2">
       <div class="form-card">
-        <div class="form-card-title">What are you sitting on? ⬡</div>
+        <div class="form-card-title">What are you sitting on? &#11041;</div>
         <div class="form-card-sub">Every program counts — rough estimates are fine. We never ask for passwords.</div>
         <div class="points-rows" id="points-rows">
           <div class="points-row">
             <input type="text" class="pts-prog" placeholder="Program (e.g. Chase UR)">
             <input type="text" class="pts-bal" placeholder="Balance (e.g. 80,000)" inputmode="numeric">
-            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>
+            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">&times;</button>
           </div>
           <div class="points-row">
             <input type="text" class="pts-prog" placeholder="Program (e.g. Amex MR)">
             <input type="text" class="pts-bal" placeholder="Balance (e.g. 150,000)" inputmode="numeric">
-            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>
+            <button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">&times;</button>
           </div>
         </div>
         <button type="button" class="btn-add-row" onclick="addPtsRow()">+ Add another program</button>
         <div class="pts-skip">Not sure what you have? Skip this — we'll figure it out together.</div>
       </div>
       <div class="step-nav">
-        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(2)">← Back</button>
-        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(2)">Next — about you →</button>
+        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(2)">&#8592; Back</button>
+        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(2)">Next — about you &#8594;</button>
       </div>
     </div>
 
-    <!-- ═══ STEP 3 — ABOUT YOU ═══ -->
+    <!-- STEP 3 — ABOUT YOU -->
     <div class="step" id="step-3">
       <div class="form-card">
-        <div class="form-card-title">Almost there 🎯</div>
+        <div class="form-card-title">Almost there &#127919;</div>
         <div class="form-card-sub">Just enough to reach you with your options.</div>
         <div class="form-grid">
-          <div class="field">
-            <label>First name <span class="req">*</span></label>
-            <input type="text" name="first_name" placeholder="Jordan" autocomplete="given-name">
+          <div class="field-float field">
+            <input type="text" name="first_name" placeholder=" " autocomplete="given-name" id="ff-first_name">
+            <label for="ff-first_name">First name <span class="req">*</span></label>
             <span class="err-msg">Required.</span>
           </div>
-          <div class="field">
-            <label>Last name <span class="req">*</span></label>
-            <input type="text" name="last_name" placeholder="Mills" autocomplete="family-name">
+          <div class="field-float field">
+            <input type="text" name="last_name" placeholder=" " autocomplete="family-name" id="ff-last_name">
+            <label for="ff-last_name">Last name <span class="req">*</span></label>
             <span class="err-msg">Required.</span>
           </div>
-          <div class="field">
-            <label>Email <span class="req">*</span></label>
-            <input type="email" name="email" placeholder="jordan@example.com" autocomplete="email">
+          <div class="field-float field">
+            <input type="email" name="email" placeholder=" " autocomplete="email" id="ff-email">
+            <label for="ff-email">Email <span class="req">*</span></label>
             <span class="err-msg">A valid email is required.</span>
           </div>
-          <div class="field">
-            <label>Phone</label>
-            <input type="tel" name="phone" placeholder="+1 (202) 555-0000" autocomplete="tel">
+          <div class="field-float field">
+            <input type="tel" name="phone" placeholder=" " autocomplete="tel" id="ff-phone">
+            <label for="ff-phone">Phone</label>
           </div>
-          <div class="field">
-            <label>Home airport <span class="req">*</span></label>
-            <input type="text" name="home_airport" placeholder="e.g. IAD – Washington" autocomplete="off">
+          <div class="field-float field">
+            <input type="text" name="home_airport" placeholder=" " autocomplete="off" id="ff-home_airport">
+            <label for="ff-home_airport">Home airport <span class="req">*</span></label>
             <span class="err-msg">Required — where do you fly from?</span>
           </div>
           <div class="field">
@@ -302,9 +506,9 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
               <option>Other</option>
             </select>
           </div>
-          <div class="field">
-            <label>Referral name (optional)</label>
-            <input type="text" name="referral_name" placeholder="Who sent you?">
+          <div class="field-float field">
+            <input type="text" name="referral_name" placeholder=" " id="ff-referral_name">
+            <label for="ff-referral_name">Referral name (optional)</label>
           </div>
         </div>
       </div>
@@ -329,15 +533,81 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
         </div>
       </div>
       <div class="step-nav" style="margin-top:0">
-        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(3)">← Back</button>
+        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(3)">&#8592; Back</button>
       </div>
     </div>
   </form>
 
   <div id="success">
     <div class="success-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,13 9,18 20,6"/></svg></div>
-    <h2 class="success-h2">You're in.</h2>
+    <h2 class="success-h2">You're in. &#9992;&#65039;</h2>
     <p class="success-sub">Check your inbox for a confirmation. Your options are usually ready within 24–72 hours.</p>
+    <div class="ticket">
+      <div class="ticket-top">
+        <div>
+          <div class="ticket-brand">District Award Travel</div>
+          <div style="font-size:16px;font-weight:800;margin-top:4px;letter-spacing:-.3px">Application received</div>
+        </div>
+        <div class="ticket-status">Confirmed</div>
+      </div>
+      <div class="ticket-tear">
+        <div class="ticket-tear-circle-l"></div>
+        <div class="ticket-tear-circle-r"></div>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-fields">
+          <div class="ticket-row"><span>Passenger</span><span id="ticket-name">—</span></div>
+          <div class="ticket-row"><span>Dream destination</span><span id="ticket-dest">—</span></div>
+          <div class="ticket-row"><span>Cabin</span><span id="ticket-cabin">—</span></div>
+          <div class="ticket-row"><span>Options by</span><span id="ticket-eta">—</span></div>
+        </div>
+        <div class="ticket-qr" aria-label="Boarding pass QR placeholder">
+          <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+            <!-- outer border squares -->
+            <rect x="2" y="2" width="20" height="20" fill="none" stroke="#f97316" stroke-width="3"/>
+            <rect x="8" y="8" width="8" height="8" fill="#f97316"/>
+            <rect x="50" y="2" width="20" height="20" fill="none" stroke="#f97316" stroke-width="3"/>
+            <rect x="56" y="8" width="8" height="8" fill="#f97316"/>
+            <rect x="2" y="50" width="20" height="20" fill="none" stroke="#f97316" stroke-width="3"/>
+            <rect x="8" y="56" width="8" height="8" fill="#f97316"/>
+            <!-- D letter center -->
+            <rect x="30" y="28" width="4" height="16" fill="#f5f5f4"/>
+            <rect x="34" y="28" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="34" y="40" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="38" y="32" width="4" height="8" fill="#f5f5f4"/>
+            <!-- scattered data bits -->
+            <rect x="26" y="2" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="32" y="2" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="40" y="2" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="44" y="2" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="2" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="2" y="32" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="2" y="40" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="2" y="44" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="66" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="66" y="32" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="66" y="40" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="26" y="66" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="32" y="66" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="44" y="66" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="66" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="56" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="36" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="60" y="40" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="46" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="60" y="50" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="50" y="56" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="56" y="60" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="20" y="26" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="14" y="32" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="20" y="36" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="14" y="42" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="20" y="46" width="4" height="4" fill="#f5f5f4"/>
+          </svg>
+        </div>
+      </div>
+    </div>
     <div class="success-next">
       <div class="success-next-title">What happens next</div>
       <div class="success-next-item"><span class="success-next-num">1</span><span>We search transfer partners and sweet spots for your route.</span></div>
@@ -345,12 +615,12 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
       <div class="success-next-item"><span class="success-next-num">3</span><span>You book it yourself with our step-by-step guide — we're with you the whole way.</span></div>
       <div class="success-next-item"><span class="success-next-num">4</span><span>You pay 10% of documented savings. No savings, no fee.</span></div>
     </div>
-    <div style="margin-top:28px"><a href="index.html" class="btn btn-ghost">← Back to site</a></div>
+    <div style="margin-top:28px"><a href="index.html" class="btn btn-ghost">&#8592; Back to site</a></div>
   </div>
 </div>
 
 <script>
-/* ═══ Funnel tracking ═══ */
+/* Funnel tracking */
 function sid(){
   var s=sessionStorage.getItem('dat_sid');
   if(!s){s=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));sessionStorage.setItem('dat_sid',s);}
@@ -370,16 +640,36 @@ track('page_view');
 var formStarted=false;
 function markStart(){if(!formStarted){formStarted=true;track('form_start');}}
 
-/* ═══ Steps ═══ */
+/* Steps */
 var STEP_LABELS={1:'Step 1 of 3 — Your trip',2:'Step 2 of 3 — Your points',3:'Step 3 of 3 — About you'};
-var curStep=1,maxTracked=0;
-function showStep(n){
+var curStep=1,maxTracked=0,lastDir='forward';
+function updateStepDots(n){
+  for(var i=1;i<=3;i++){
+    var dot=document.getElementById('dot-'+i);
+    dot.classList.remove('active','done');
+    if(i<n)dot.classList.add('done');
+    else if(i===n)dot.classList.add('active');
+  }
+  for(var j=1;j<=2;j++){
+    var conn=document.getElementById('conn-'+j);
+    conn.classList.toggle('done',j<n);
+  }
+}
+function showStep(n,dir){
   curStep=n;
-  document.querySelectorAll('.step').forEach(function(s){s.classList.remove('active');});
-  document.getElementById('step-'+n).classList.add('active');
+  lastDir=dir||'forward';
+  document.querySelectorAll('.step').forEach(function(s){
+    s.classList.remove('active','slide-back');
+  });
+  var el=document.getElementById('step-'+n);
+  el.classList.add('active');
+  if(lastDir==='back')el.classList.add('slide-back');
   document.getElementById('progress-label').textContent=STEP_LABELS[n];
   document.getElementById('progress-pct').textContent=Math.round(n/3*100)+'%';
   document.getElementById('progress-fill').style.width=(n/3*100)+'%';
+  document.getElementById('progress-plane').style.left=(n/3*100)+'%';
+  document.getElementById('top-progress-fill').style.width=(n/3*100)+'%';
+  updateStepDots(n);
   window.scrollTo({top:0,behavior:'smooth'});
   saveDraft();
 }
@@ -407,11 +697,11 @@ function validateStep(n){
 function nextStep(from){
   if(!validateStep(from))return;
   if(from>maxTracked){maxTracked=from;track('step_'+from+'_complete');}
-  showStep(from+1);
+  showStep(from+1,'forward');
 }
-function prevStep(from){showStep(from-1);}
+function prevStep(from){showStep(from-1,'back');}
 
-/* ═══ Cabin chips ═══ */
+/* Cabin chips */
 document.querySelectorAll('#cabin-chips .chip').forEach(function(c){
   c.addEventListener('click',function(){
     document.querySelectorAll('#cabin-chips .chip').forEach(function(x){x.classList.remove('sel');});
@@ -421,7 +711,7 @@ document.querySelectorAll('#cabin-chips .chip').forEach(function(c){
   });
 });
 
-/* ═══ Points rows ═══ */
+/* Points rows */
 function addPtsRow(prog,bal){
   var row=document.createElement('div');
   row.className='points-row';
@@ -445,15 +735,21 @@ function ptsList(){
   return list;
 }
 
-/* ═══ Agree toggle ═══ */
+/* Agree toggle */
 var agreeCb=document.getElementById('agree');
 agreeCb.addEventListener('change',function(){
   document.getElementById('agree-row').classList.toggle('checked',this.checked);
   document.getElementById('agree-err').style.display='none';
 });
 
-/* ═══ Autosave + restore ═══ */
-var DRAFT_KEY='dat_intake_draft',saveTimer=null,restoring=false;
+/* Autosave + restore */
+var DRAFT_KEY='dat_intake_draft',saveTimer=null,draftIndicatorTimer=null,restoring=false;
+function showDraftIndicator(){
+  var el=document.getElementById('draft-saved');
+  el.classList.add('visible');
+  clearTimeout(draftIndicatorTimer);
+  draftIndicatorTimer=setTimeout(function(){el.classList.remove('visible');},3000);
+}
 function saveDraft(){
   if(restoring)return;
   clearTimeout(saveTimer);
@@ -464,15 +760,16 @@ function saveDraft(){
         if(f.name==='hp'||f.type==='checkbox')return;
         fields[f.name]=f.value;
       });
-      localStorage.setItem(DRAFT_KEY,JSON.stringify({fields:fields,points:ptsList(),step:curStep,ts:Date.now()}));
+      sessionStorage.setItem(DRAFT_KEY,JSON.stringify({fields:fields,points:ptsList(),step:curStep,ts:Date.now()}));
+      showDraftIndicator();
     }catch(e){}
-  },350);
+  },1500);
 }
 function loadDraft(){
   try{
-    var raw=localStorage.getItem(DRAFT_KEY);if(!raw)return null;
+    var raw=sessionStorage.getItem(DRAFT_KEY);if(!raw)return null;
     var d=JSON.parse(raw);
-    if(!d||!d.ts||Date.now()-d.ts>7*24*3600*1000)return null;       // 7-day TTL
+    if(!d||!d.ts)return null;
     var hasContent=Object.keys(d.fields||{}).some(function(k){return (d.fields[k]||'').trim()&&k!=='cabin_pref'&&k!=='max_stops'&&k!=='trip_type'&&k!=='comm_pref';})||(d.points||[]).length;
     return hasContent?d:null;
   }catch(e){return null;}
@@ -494,12 +791,14 @@ function restoreDraft(){
     pts.forEach(function(p){addPtsRow(p.program,p.balance);});
     if(pts.length<2)addPtsRow();
   }
+  // update char counters after restore
+  updateAllCharCounters();
   restoring=false;
   document.getElementById('restore-banner').classList.remove('show');
   showStep(Math.min(Math.max(d.step||1,1),3));
 }
 function discardDraft(){
-  try{localStorage.removeItem(DRAFT_KEY);}catch(e){}
+  try{sessionStorage.removeItem(DRAFT_KEY);}catch(e){}
   document.getElementById('restore-banner').classList.remove('show');
 }
 if(loadDraft())document.getElementById('restore-banner').classList.add('show');
@@ -512,7 +811,7 @@ document.getElementById('intakeForm').addEventListener('keydown',function(e){
   if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA'&&curStep<3){e.preventDefault();nextStep(curStep);}
 });
 
-/* ═══ Submit — reliable: await, retry, never lose the lead ═══ */
+/* Submit — reliable: await, retry, never lose the lead */
 function showSubmitErr(msg){
   var el=document.getElementById('submit-err');
   el.textContent=msg;el.classList.add('show');
@@ -526,8 +825,8 @@ async function postIntake(data){
       if(res.ok)return {ok:true};
       if(res.status===422){var d=await res.json().catch(function(){return{};});return {ok:false,fatal:true,msg:d.detail||'Something in the form was rejected — check your email address.'};}
       if(res.status===429)return {ok:false,fatal:true,msg:'Too many submissions from this network — please try again in an hour.'};
-      // 5xx → retry
-    }catch(e){/* network error → retry */}
+      // 5xx -> retry
+    }catch(e){/* network error -> retry */}
   }
   return {ok:false,fatal:false,msg:'We couldn’t reach our server. Your answers are saved on this device — please try again in a minute.'};
 }
@@ -568,12 +867,96 @@ document.getElementById('intakeForm').addEventListener('submit',async function(e
     document.getElementById('page-header').style.display='none';
     document.getElementById('progress-wrap').style.display='none';
     document.getElementById('success').style.display='block';
+    fillTicket(data);
     window.scrollTo({top:0,behavior:'smooth'});
+    confettiBurst();
   }else{
     btn.disabled=false;btn.textContent='Submit — it’s free';
     showSubmitErr(result.msg);
   }
 });
+
+/* Confirmation ticket */
+var CABIN_LABELS={economy:'Economy',premium_economy:'Premium Economy',business:'Business',first:'First'};
+function fillTicket(data){
+  document.getElementById('ticket-name').textContent=((data.first_name||'')+' '+(data.last_name||'')).trim()||'You';
+  document.getElementById('ticket-dest').textContent=(data.travel_goals||'Anywhere').slice(0,40);
+  document.getElementById('ticket-cabin').textContent=CABIN_LABELS[data.cabin_pref]||'Business';
+  var eta=new Date(Date.now()+72*3600*1000);
+  document.getElementById('ticket-eta').textContent=eta.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+}
+
+/* Character counters */
+function updateCharCounter(textarea,counterId){
+  var counter=document.getElementById(counterId);
+  if(!counter)return;
+  var len=textarea.value.length,max=parseInt(textarea.getAttribute('maxlength')||'2000',10);
+  counter.textContent=len+' / '+max;
+  counter.classList.toggle('warn',len>1800);
+}
+function updateAllCharCounters(){
+  var notesTA=document.getElementById('textarea-notes');
+  if(notesTA)updateCharCounter(notesTA,'counter-notes');
+}
+var notesTA=document.getElementById('textarea-notes');
+if(notesTA){
+  notesTA.addEventListener('input',function(){updateCharCounter(this,'counter-notes');});
+}
+
+/* Confetti — pure canvas, no libs */
+function confettiBurst(){
+  if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  var canvas=document.createElement('canvas');
+  canvas.id='confetti-canvas';
+  document.body.appendChild(canvas);
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  canvas.width=window.innerWidth*dpr;canvas.height=window.innerHeight*dpr;
+  var ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
+  var W=window.innerWidth,H=window.innerHeight;
+  var COLORS=['#f97316','#fb923c','#fbbf24','#4ade80','#ffffff','#fde68a'];
+  var pieces=[];
+  for(var i=0;i<140;i++){
+    var fromLeft=i%2===0;
+    pieces.push({
+      x:fromLeft?-10:W+10,
+      y:H*0.25+Math.random()*H*0.2,
+      vx:(fromLeft?1:-1)*(Math.random()*7+4),
+      vy:-(Math.random()*7+3),
+      w:Math.random()*8+4,h:Math.random()*5+3,
+      rot:Math.random()*Math.PI*2,vr:(Math.random()-.5)*.3,
+      color:COLORS[i%COLORS.length],
+      drag:Math.random()*.01+.985
+    });
+  }
+  var start=null;
+  function frame(ts){
+    if(!start)start=ts;
+    var t=ts-start;
+    ctx.clearRect(0,0,W,H);
+    var alive=false;
+    pieces.forEach(function(p){
+      p.vx*=p.drag;p.vy=p.vy*p.drag+.22;   /* gravity */
+      p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;
+      if(p.y<H+30){alive=true;}
+      ctx.save();
+      ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+      ctx.globalAlpha=Math.max(0,1-t/3200);
+      ctx.fillStyle=p.color;
+      ctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.restore();
+    });
+    if(alive&&t<3400)requestAnimationFrame(frame);
+    else canvas.remove();
+  }
+  requestAnimationFrame(frame);
+}
 </script>
+
+<footer style="background:#0a0908;border-top:1px solid rgba(255,255,255,.07);padding:28px 20px;text-align:center;font-size:12px;color:rgba(255,255,255,.35)">
+  &copy; 2026 District Award Travel &nbsp;&middot;&nbsp;
+  <a href="terms.html" style="color:rgba(255,255,255,.45);text-decoration:none" onmouseover="this.style.color='rgba(255,255,255,.8)'" onmouseout="this.style.color='rgba(255,255,255,.45)'">Terms</a>
+  &nbsp;&middot;&nbsp;
+  <a href="privacy.html" style="color:rgba(255,255,255,.45);text-decoration:none" onmouseover="this.style.color='rgba(255,255,255,.8)'" onmouseout="this.style.color='rgba(255,255,255,.45)'">Privacy</a>
+</footer>
 </body>
 </html>
