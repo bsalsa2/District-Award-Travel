@@ -26,12 +26,16 @@
 body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
 
 /* ── BOOT SPLASH (shown while a saved session revalidates) ── */
-#boot{display:none;position:fixed;inset:0;z-index:999;background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:18px}
+#boot{display:none;position:fixed;inset:0;z-index:999;background:#0c0905;align-items:center;justify-content:center;flex-direction:column;gap:20px}
 #boot.show{display:flex}
-.boot-mark{width:58px;height:58px;border-radius:16px;background:var(--accent);color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;animation:bootPulse 1.2s ease-in-out infinite}
-@keyframes bootPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(249,115,22,.3)}50%{transform:scale(1.06);box-shadow:0 0 0 14px rgba(249,115,22,0)}}
-.boot-txt{font-size:13px;color:var(--muted);font-weight:500}
-@media(prefers-reduced-motion:reduce){.boot-mark{animation:none}}
+#boot::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(249,115,22,.14),transparent 65%);pointer-events:none}
+.boot-mark{position:relative;width:60px;height:60px;border-radius:17px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;animation:bootPulse 1.2s ease-in-out infinite;box-shadow:0 8px 32px rgba(249,115,22,.4)}
+@keyframes bootPulse{0%,100%{transform:scale(1);box-shadow:0 8px 32px rgba(249,115,22,.4),0 0 0 0 rgba(249,115,22,.35)}50%{transform:scale(1.05);box-shadow:0 8px 32px rgba(249,115,22,.4),0 0 0 16px rgba(249,115,22,0)}}
+.boot-trail{position:relative;width:180px;height:18px;border-bottom:1px dashed rgba(249,115,22,.25)}
+.boot-plane{position:absolute;bottom:-8px;left:0;font-size:14px;animation:bootFly 2s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(249,115,22,.5))}
+@keyframes bootFly{0%{left:-8%;opacity:0}18%{opacity:1}82%{opacity:1}100%{left:100%;opacity:0}}
+.boot-txt{position:relative;font-size:13px;color:rgba(255,255,255,.55);font-weight:500}
+@media(prefers-reduced-motion:reduce){.boot-mark,.boot-plane{animation:none}}
 
 /* ── REFERRAL CARD ── */
 .refer-card{background:linear-gradient(135deg,#1c1917,#292524);border-radius:14px;padding:24px 26px;margin-top:28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
@@ -40,12 +44,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .refer-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:background .15s,transform .1s}
 .refer-btn:hover{background:#ea6c0a}.refer-btn:active{transform:scale(.98)}
 
-/* ── LOGIN ── */
-#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
-.login-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:var(--shadow)}
+/* ── LOGIN (dark cinematic, matches landing hero) ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:#0c0905;position:relative;overflow:hidden}
+#login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 55% at 50% 25%,rgba(249,115,22,.16),transparent 65%),radial-gradient(ellipse 45% 40% at 15% 80%,rgba(249,115,22,.07),transparent 60%);pointer-events:none}
+.login-paths{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.login-card{position:relative;background:var(--white);border:1px solid rgba(249,115,22,.25);border-radius:18px;padding:40px;width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,.55),0 0 80px rgba(249,115,22,.1)}
 .login-brand{font-size:18px;font-weight:800;margin-bottom:4px}
 .login-brand span{color:var(--accent)}
 .login-sub{font-size:13px;color:var(--muted);margin-bottom:32px}
+@media(prefers-reduced-motion:reduce){.login-paths{display:none}}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
 .field input{width:100%;border:1px solid var(--border2);border-radius:8px;padding:11px 14px;font-size:14px;font-family:var(--font);color:var(--text);background:var(--white);outline:none;transition:border-color .15s,box-shadow .15s}
@@ -100,10 +107,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .sh-label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(249,115,22,.7);margin-bottom:8px}
 .sh-amount{
   font-size:clamp(44px,6vw,68px);font-weight:900;line-height:1;
-  background:linear-gradient(90deg,#f97316,#fbbf24);
+  background:linear-gradient(90deg,#f97316,#fbbf24,#f97316);
+  background-size:200% auto;
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
   letter-spacing:-3px;font-variant-numeric:tabular-nums;
+  animation:shShimmer 4s linear infinite;
 }
+@keyframes shShimmer{to{background-position:200% center}}
+@media(prefers-reduced-motion:reduce){.sh-amount{animation:none}}
 .sh-tagline{font-size:14px;color:rgba(255,255,255,.5);margin-top:10px;font-weight:500}
 .sh-tagline strong{color:rgba(255,255,255,.8)}
 .sh-right{position:relative;text-align:right}
@@ -159,12 +170,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .plan-field-val.green{color:var(--green)}.plan-field-val.blue{color:var(--blue)}
 .msg-plan-link{margin-top:14px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:8px 14px}
 
-/* ── TRIPS ── */
-.trip-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 24px;margin-bottom:14px;box-shadow:var(--shadow)}
-.trip-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:14px}
-.trip-dest{font-size:18px;font-weight:700;margin-bottom:3px}
-.trip-route{font-size:13px;color:var(--muted)}
-.trip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;padding-top:14px;border-top:1px solid var(--border)}
+/* ── TRIPS (boarding-pass style) ── */
+.trip-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:0;margin-bottom:16px;box-shadow:var(--shadow);overflow:hidden;position:relative;transition:transform .2s,box-shadow .2s}
+.trip-card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.09)}
+.trip-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--accent),#fbbf24)}
+.trip-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:20px 24px 16px}
+.trip-dest{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:3px}
+.trip-route{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px}
+.trip-route .tr-plane{color:var(--accent);font-size:11px}
+.trip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;padding:16px 24px 20px;border-top:2px dashed var(--border);position:relative}
+.trip-grid::before,.trip-grid::after{content:'';position:absolute;top:-9px;width:18px;height:18px;border-radius:50%;background:var(--bg);border:1px solid var(--border)}
+.trip-grid::before{left:-10px}
+.trip-grid::after{right:-10px}
+.trip-plan-block{padding:0 24px 20px}
 .trip-field-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:3px}
 .trip-field-val{font-size:14px;font-weight:600}
 .badge{display:inline-block;font-size:11px;font-weight:600;padding:4px 11px;border-radius:20px;white-space:nowrap}
@@ -191,9 +209,12 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 
 /* ── POINTS ── */
 .points-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
-.point-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 22px;box-shadow:var(--shadow)}
-.point-prog{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px}
-.point-bal{font-size:24px;font-weight:800;color:var(--blue);letter-spacing:-.5px}
+.point-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:22px 24px;box-shadow:var(--shadow);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s}
+.point-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.08)}
+.point-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#fbbf24)}
+.point-prog{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.point-bal{font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.point-unit{font-size:12px;color:var(--dim);font-weight:600;margin-left:4px}
 
 /* ── CHAT ── */
 .chat-wrap{background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:420px;overflow:hidden}
@@ -249,10 +270,28 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 <body>
 
 <!-- BOOT SPLASH -->
-<div id="boot"><div class="boot-mark">D</div><div class="boot-txt">Loading your portal…</div></div>
+<div id="boot">
+  <div class="boot-mark">D</div>
+  <div class="boot-trail"><span class="boot-plane">✈️</span></div>
+  <div class="boot-txt">Loading your portal…</div>
+</div>
 
 <!-- LOGIN -->
 <div id="login-screen">
+  <svg class="login-paths" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <path id="lp1" d="M-80,700 C220,580 520,420 800,280 C960,200 1100,140 1300,90" fill="none"/>
+    <path d="M-80,700 C220,580 520,420 800,280 C960,200 1100,140 1300,90" fill="none" stroke="rgba(249,115,22,.16)" stroke-width="1.5" stroke-dasharray="3 11" stroke-linecap="round"/>
+    <g opacity=".55">
+      <path d="M-2,-5 L12,0 L-2,5 L1.5,0 Z" fill="#f97316"/>
+      <animateMotion dur="30s" repeatCount="indefinite" rotate="auto"><mpath href="#lp1"/></animateMotion>
+    </g>
+    <path id="lp2" d="M-60,300 C300,280 620,200 900,120 C1040,80 1180,50 1320,30" fill="none"/>
+    <path d="M-60,300 C300,280 620,200 900,120 C1040,80 1180,50 1320,30" fill="none" stroke="rgba(249,115,22,.08)" stroke-width="1" stroke-dasharray="2 14" stroke-linecap="round"/>
+    <g opacity=".3">
+      <path d="M-1.5,-4 L10,0 L-1.5,4 L1,0 Z" fill="#fb923c"/>
+      <animateMotion dur="46s" repeatCount="indefinite" rotate="auto"><mpath href="#lp2"/></animateMotion>
+    </g>
+  </svg>
   <div class="login-card">
     <div class="login-brand">District <span>Award</span> Travel</div>
     <div class="login-sub">Client Portal</div>
@@ -695,10 +734,11 @@ function renderTrips(trips,plans){
     if(t.origin)fields.push(['From',esc(t.origin)]);
     const grid=fields.length?`<div class="trip-grid">${fields.map(f=>`<div><div class="trip-field-label">${f[0]}</div><div class="trip-field-val">${f[1]}</div></div>`).join('')}</div>`:'';
     const p=planForTrip(t,plans);
-    const planBlock=p?`<div style="padding-top:16px;margin-top:4px">${renderPlanCard(p,true)}</div>`:'';
+    const planBlock=p?`<div class="trip-plan-block">${renderPlanCard(p,true)}</div>`:'';
+    const route=t.origin?`${esc(t.origin)} <span class="tr-plane">✈</span> ${esc(t.destination||'')}`:esc(t.destination||'');
     return `<div class="trip-card">
       <div class="trip-top">
-        <div><div class="trip-dest">${esc(t.destination||'Your trip')}</div><div class="trip-route">${t.origin?esc(t.origin)+' → ':''}${esc(t.destination||'')}</div></div>
+        <div><div class="trip-dest">${esc(t.destination||'Your trip')}</div><div class="trip-route">${route}</div></div>
         <span class="badge ${b[0]}">${b[1]}</span>
       </div>${grid}${planBlock}</div>`;
   }).join('');
@@ -737,7 +777,7 @@ function renderSavings(rows,totalSave,totalFee,plans){
 function renderPoints(points){
   const el=document.getElementById('points-container');
   if(!points.length){el.innerHTML='<div class="empty"><div class="empty-ico">⬡</div><p>No point balances on file. Share your program balances with your advisor and they\'ll appear here.</p></div>';return;}
-  el.innerHTML='<div class="points-grid">'+points.map(p=>`<div class="point-card"><div class="point-prog">${esc(p.program||p.name||'Program')}</div><div class="point-bal">${fmtNum(p.balance||p.points||0)}</div></div>`).join('')+'</div>';
+  el.innerHTML='<div class="points-grid">'+points.map(p=>`<div class="point-card"><div class="point-prog">${esc(p.program||p.name||'Program')}</div><div class="point-bal">${fmtNum(p.balance||p.points||0)}<span class="point-unit">pts</span></div></div>`).join('')+'</div>';
 }
 
 /* ── SSE + polling ── */
