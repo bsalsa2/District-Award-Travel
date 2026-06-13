@@ -215,6 +215,7 @@ class TripRequest(Base):
     savings_record_id    = Column(Integer, ForeignKey("savings_records.id"), nullable=True)
     time_tracked_minutes = Column(Integer, default=0)
     notes                = Column(Text, default="[]")
+    research_notes       = Column(Text, default="")
     created_at           = Column(DateTime, default=dt.datetime.utcnow)
 
 

@@ -858,26 +858,41 @@ window.addEventListener('scroll',function(){document.getElementById('main-nav').
   }catch(e){}
 })();
 function fmtUsd(cents){return '$'+Math.floor(cents/100).toLocaleString('en-US')}
-function countUp(el,target,fmt){var start=null,dur=1200;function step(ts){if(!start)start=ts;var p=Math.min((ts-start)/dur,1),eased=1-Math.pow(1-p,3);el.textContent=fmt(Math.round(target*eased));if(p<1)requestAnimationFrame(step);}requestAnimationFrame(step);}
-/* live proof strip */
-fetch('/api/public/proof').then(function(r){return r.json()}).then(function(d){
-  var stats=[];
-  if(d.total_savings_cents!=null)stats.push({val:d.total_savings_cents,fmt:fmtUsd,label:'Documented savings'});
-  if(d.trips_planned!=null)stats.push({val:d.trips_planned,fmt:function(n){return n.toLocaleString('en-US')},label:'Trips planned'});
-  if(d.avg_cpp_tenths!=null)stats.push({val:d.avg_cpp_tenths,fmt:function(n){return (Math.floor(n/10))+'.'+(n%10)+'¢'},label:'Avg value per point'});
-  if(!stats.length)return;
-  var strip=document.getElementById('proof-strip'),inner=document.getElementById('proof-inner');
-  stats.forEach(function(s){var div=document.createElement('div');div.className='proof-stat';div.innerHTML='<div class="proof-val"></div><div class="proof-label"></div>';div.querySelector('.proof-label').textContent=s.label;inner.insertBefore(div,inner.firstChild);s.el=div.querySelector('.proof-val');});
-  strip.style.display='block';
-  stats.forEach(function(s){countUp(s.el,s.val,s.fmt)});
-  /* hero counter */
+function fmtSaved(cents){return fmtUsd(cents)+' saved'}
+function countUp(el,target,fmt,dur){var start=null,d=dur||1500;function step(ts){if(!start)start=ts;var p=Math.min((ts-start)/d,1),eased=1-Math.pow(1-p,3);el.textContent=fmt(Math.round(target*eased));if(p<1)requestAnimationFrame(step);}requestAnimationFrame(step);}
+/* live savings counter — /api/public/stats (no auth, 3s timeout) */
+(function(){
+  var FALLBACK='$12,000+ documented';
   var hcTotal=document.getElementById('hc-total'),hcTrips=document.getElementById('hc-trips'),hcEl=document.getElementById('hero-counter');
-  if(hcEl&&(d.total_savings_cents>0||d.trips_planned>0)){
-    hcEl.style.display='flex';
-    if(d.total_savings_cents>0)countUp(hcTotal,d.total_savings_cents,fmtUsd);
-    if(d.trips_planned>0)countUp(hcTrips,d.trips_planned,function(n){return n.toLocaleString('en-US');});
+  var strip=document.getElementById('proof-strip'),inner=document.getElementById('proof-inner');
+  function showFallback(){
+    if(hcEl&&hcTotal){hcTotal.textContent=FALLBACK;hcEl.style.display='flex';}
   }
-}).catch(function(){});
+  var ctrl=new (window.AbortController||function(){this.signal=undefined;this.abort=function(){}})();
+  var tid=setTimeout(function(){try{ctrl.abort();}catch(e){}showFallback();},3000);
+  fetch('/api/public/stats',{signal:ctrl.signal}).then(function(r){return r.json();}).then(function(d){
+    clearTimeout(tid);
+    var total=d.total_savings_cents||0,trips=d.trips_completed||0,avg=d.avg_savings_cents||0;
+    /* hero counter */
+    if(hcEl&&total>0){
+      hcEl.style.display='flex';
+      if(hcTotal)countUp(hcTotal,total,fmtSaved,1500);
+      if(hcTrips&&trips>0)countUp(hcTrips,trips,function(n){return n.toLocaleString('en-US');},1500);
+    } else if(total<=0){
+      showFallback();
+    }
+    /* proof strip */
+    var stats=[];
+    if(total>0)stats.push({val:total,fmt:fmtUsd,label:'Documented savings'});
+    if(trips>0)stats.push({val:trips,fmt:function(n){return n.toLocaleString('en-US');},label:'Trips completed'});
+    if(avg>0)stats.push({val:avg,fmt:fmtUsd,label:'Avg savings/trip'});
+    if(stats.length){
+      stats.forEach(function(s){var div=document.createElement('div');div.className='proof-stat';div.innerHTML='<div class="proof-val"></div><div class="proof-label"></div>';div.querySelector('.proof-label').textContent=s.label;inner.insertBefore(div,inner.firstChild);s.el=div.querySelector('.proof-val');});
+      strip.style.display='block';
+      stats.forEach(function(s){countUp(s.el,s.val,s.fmt,1500);});
+    }
+  }).catch(function(){clearTimeout(tid);showFallback();});
+})();
 /* savings departures board */
 fetch('/api/public/examples').then(function(r){return r.json()}).then(function(rows){
   if(!Array.isArray(rows)||!rows.length)return;
