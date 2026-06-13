@@ -102,6 +102,8 @@ PROOF_MIN_SAVINGS_CENTS = int(os.environ.get("PROOF_MIN_SAVINGS_CENTS", "500000"
 PROOF_MIN_TRIPS = int(os.environ.get("PROOF_MIN_TRIPS", "5"))
 PROOF_MIN_CPP_RECORDS = int(os.environ.get("PROOF_MIN_CPP_RECORDS", "3"))
 
+BASE_URL = os.environ.get("BASE_URL", "https://district-award-travel.onrender.com")
+
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 SEATS_AERO_API_KEY = os.environ.get("SEATS_AERO_API_KEY", "")
@@ -542,7 +544,8 @@ def _smtp_transport(to: str, subject: str, body: str, reply_to: str = "") -> Non
     msg["Subject"] = subject
     if reply_to:
         msg["Reply-To"] = reply_to
-    msg.attach(MIMEText(body, "plain"))
+    mime_subtype = "html" if body.lstrip().startswith("<") else "plain"
+    msg.attach(MIMEText(body, mime_subtype))
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as server:
         server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
         server.sendmail(GMAIL_USER, [to], msg.as_string())
@@ -623,6 +626,66 @@ def send_email(subject: str, body: str, reply_to: str = "") -> bool:
 def send_email_to(to: str, subject: str, body: str, reply_to: str = "") -> bool:
     """Queue a plain-text email to any address (kept for existing call sites)."""
     return queue_email(to, subject, body, reply_to=reply_to)
+
+
+# Status-specific client notification config
+_CLIENT_STATUS_EMAILS = {
+    "options_sent": {
+        "subject": "Your travel options are ready!",
+        "message": "Your advisor has sent travel options for your trip to {destination}. Log in to review them.",
+    },
+    "booked": {
+        "subject": "Your trip has been booked! 🎉",
+        "message": "Great news! Your trip to {destination} has been booked. Check your portal for details.",
+    },
+}
+
+
+def _notify_client_status_change(client_email: str, client_name: str, destination: str, new_status: str) -> None:
+    """Send a branded HTML notification email to the client when a trip reaches a notable status.
+    Swallows all exceptions so the caller's workflow is never interrupted."""
+    cfg = _CLIENT_STATUS_EMAILS.get(new_status)
+    if not cfg:
+        return
+    if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+        return
+    if not client_email:
+        return
+    try:
+        first_name = client_name.split()[0] if client_name else "there"
+        portal_url = BASE_URL + "/client.html"
+        message = cfg["message"].format(destination=destination or "your destination")
+        body = f"""<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
+        <tr>
+          <td style="background:#f97316;padding:24px 32px;">
+            <span style="color:#ffffff;font-size:22px;font-weight:bold;">District Award Travel</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;">
+            <p style="font-size:16px;color:#1e293b;margin:0 0 16px;">Hi {first_name},</p>
+            <p style="font-size:16px;color:#1e293b;margin:0 0 24px;">{message}</p>
+            <a href="{portal_url}" style="display:inline-block;background:#f97316;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:6px;font-weight:bold;">View My Portal</a>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
+            <p style="font-size:12px;color:#94a3b8;margin:0;text-align:center;">District Award Travel &middot; No upfront cost &middot; Proven savings</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
+        queue_email(client_email, cfg["subject"], body)
+    except Exception as exc:
+        logger.error("client_status_email.failed", extra={"status": new_status, "error": str(exc)})
 
 
 def format_intake_email(data: dict) -> str:
@@ -2958,6 +3021,16 @@ def advance_trip_one_step(trip_id: int, db: Session = Depends(get_db), _: dict =
     if next_s == "booked":
         result["prompt_savings_record"] = True
     logger.info("trip.advance", extra={"trip_id": trip_id, "from": old_status, "to": next_s})
+    if client and next_s in _CLIENT_STATUS_EMAILS:
+        try:
+            _notify_client_status_change(
+                client_email=client.email or "",
+                client_name=client.name or "",
+                destination=trip.destination or "",
+                new_status=next_s,
+            )
+        except Exception as exc:
+            logger.error("trip.advance.notify_client.failed", extra={"trip_id": trip_id, "error": str(exc)})
     return result
 
 
