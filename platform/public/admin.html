@@ -256,6 +256,25 @@
     background:none; color:var(--muted); font-size:.83rem; cursor:pointer; font-family:var(--font);
     transition:all .15s; margin-bottom:16px; }
   .plan-add-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
+  /* option inline preview */
+  .opt-preview { background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); border-radius:10px; padding:14px 16px;
+    margin-top:10px; color:#fff; font-size:.78rem; display:none; }
+  .opt-preview.visible { display:block; }
+  .opt-preview-label { font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:rgba(255,255,255,.5); margin-bottom:8px; }
+  .opt-preview-title { font-size:.95rem; font-weight:700; margin-bottom:6px; color:#fff; }
+  .opt-preview-row { display:flex; gap:20px; margin-bottom:4px; }
+  .opt-preview-stat { }
+  .opt-preview-stat-label { font-size:.6rem; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.06em; }
+  .opt-preview-stat-value { font-size:.88rem; font-weight:700; color:#facc15; margin-top:1px; }
+  .opt-preview-note { font-size:.68rem; color:rgba(255,255,255,.4); margin-top:8px; border-top:1px solid rgba(255,255,255,.1);
+    padding-top:6px; font-style:italic; }
+  /* research notes badge */
+  .notes-badge { display:inline-block; font-size:.8rem; cursor:default; position:relative; }
+  .notes-badge[title]:hover::after { content:attr(data-tip); position:absolute; left:50%; transform:translateX(-50%);
+    bottom:calc(100% + 6px); background:#1e293b; color:#e2e8f0; font-size:.72rem; white-space:normal; width:220px;
+    padding:7px 10px; border-radius:7px; border:1px solid rgba(255,255,255,.1); z-index:500;
+    line-height:1.4; pointer-events:none; }
 
   /* TABLE */
   .table-wrap { background:var(--surface); border:1px solid var(--border); border-radius:12px; overflow:hidden; overflow-x:auto; margin-bottom:28px; box-shadow:var(--shadow); }
@@ -1913,11 +1932,78 @@ function openPlan(){ document.getElementById('plan-overlay').classList.add('open
 function closePlan(){ document.getElementById('plan-overlay').classList.remove('open'); }
 function resetPlan(){
   ['plan-client','plan-title','plan-overview','plan-dest','plan-dates','plan-program','plan-points','plan-value','plan-cabin','plan-details']
-    .forEach(id => document.getElementById(id).value='');
+    .forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
+  var ol=document.getElementById('plan-options-list');
+  if(ol)ol.innerHTML='';
+  _optCounter=0;
 }
 function planSyncEmail(){
   const v=document.getElementById('plan-client').value.split('|');
   // email not needed in this version, but we could use it
+}
+
+/* ── Option cards ── */
+let _optCounter=0;
+const _OPT_TEMPLATES={
+  flight:{title:'✈ Flight Redemption',program:'Chase Ultimate Rewards',points:'60,000',value:'$1,200',type:'flight'},
+  hotel:{title:'🏨 Hotel Redemption',program:'Marriott Bonvoy',points:'50,000',value:'$750',type:'hotel'},
+  cash:{title:'💵 Cash / Revenue Fallback',program:'N/A',points:'—',value:'$900',type:'cash'},
+  blank:{title:'Option',program:'',points:'',value:'',type:''},
+};
+function addPlanOption(tpl){
+  const tmpl=_OPT_TEMPLATES[tpl]||_OPT_TEMPLATES.blank;
+  const n=++_optCounter;
+  const id='opt-'+n;
+  const div=document.createElement('div');
+  div.className='option-card';
+  div.id=id;
+  div.innerHTML=
+    '<div class="option-card-head">'
+    +'<div class="option-card-num">'+n+'</div>'
+    +'<div class="option-card-title" id="'+id+'-label">'+tmpl.title+'</div>'
+    +'<div class="option-card-actions">'
+    +'<button onclick="_toggleOptPreview(\''+id+'\')">👁 Preview</button>'
+    +'<button class="danger" onclick="document.getElementById(\''+id+'\').remove()">✕ Remove</button>'
+    +'</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
+    +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Option Title</label>'
+    +'<input type="text" id="'+id+'-title" value="'+esc(tmpl.title)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. Business Class via ANA"></div>'
+    +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Program</label>'
+    +'<input type="text" id="'+id+'-program" value="'+esc(tmpl.program)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. Chase UR"></div>'
+    +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Points Required</label>'
+    +'<input type="text" id="'+id+'-points" value="'+esc(tmpl.points)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. 60,000"></div>'
+    +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Cash Equivalent</label>'
+    +'<input type="text" id="'+id+'-value" value="'+esc(tmpl.value)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. $1,200"></div>'
+    +'</div>'
+    +'<div class="form-group" style="margin-top:10px;margin-bottom:0"><label style="font-size:.7rem">Notes / Details</label>'
+    +'<textarea id="'+id+'-notes" rows="2" oninput="_refreshOptPreview(\''+id+'\')" placeholder="Routing, availability, caveats…"></textarea></div>'
+    +'<div class="opt-preview" id="'+id+'-preview">'
+    +'<div class="opt-preview-label">✦ This is what the client sees</div>'
+    +'<div class="opt-preview-title" id="'+id+'-pv-title">'+esc(tmpl.title)+'</div>'
+    +'<div class="opt-preview-row">'
+    +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Points</div><div class="opt-preview-stat-value" id="'+id+'-pv-points">'+esc(tmpl.points||'—')+'</div></div>'
+    +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Program</div><div class="opt-preview-stat-value" id="'+id+'-pv-program">'+esc(tmpl.program||'—')+'</div></div>'
+    +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Cash Value</div><div class="opt-preview-stat-value" id="'+id+'-pv-value">'+esc(tmpl.value||'—')+'</div></div>'
+    +'</div>'
+    +'<div class="opt-preview-note">Sent directly to your client portal · District Award Travel</div>'
+    +'</div>';
+  document.getElementById('plan-options-list').appendChild(div);
+}
+function _toggleOptPreview(id){
+  const pv=document.getElementById(id+'-preview');
+  if(!pv)return;
+  _refreshOptPreview(id);
+  pv.classList.toggle('visible');
+}
+function _refreshOptPreview(id){
+  var t=function(f){var el=document.getElementById(id+'-'+f);return el?el.value.trim():'';};
+  var set=function(f,v){var el=document.getElementById(id+'-pv-'+f);if(el)el.textContent=v||'—';};
+  set('title',t('title'));
+  set('points',t('points'));
+  set('program',t('program'));
+  set('value',t('value'));
+  var lbl=document.getElementById(id+'-label');
+  if(lbl)lbl.textContent=t('title')||'Option';
 }
 function sendPlan(){
   const client_email=document.getElementById('plan-client').value.split('|')[1];
@@ -2582,9 +2668,14 @@ function renderBoard(data){
       var hrs=t.hours_in_stage?Math.round(t.hours_in_stage)+'h':'';
       var advBtn=(!['closed','declined','lost','booked'].includes(t.workflow_status))?
         '<button class="kb-advance-btn" onclick="event.stopPropagation();advanceTrip('+t.id+')">&#x2192;</button>':'';
+      var notesBadge='';
+      if(t.research_notes&&t.research_notes.trim()){
+        var tip=t.research_notes.trim().slice(0,100)+(t.research_notes.trim().length>100?'…':'');
+        notesBadge='<span class="notes-badge" data-tip="'+esc(tip)+'" title=" ">&#x1F4DD;</span>';
+      }
       var idx=cardIndex++;
       return '<div class="'+cls+'" data-kb-idx="'+idx+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer">'+
-        '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+'</div>'+
+        '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+notesBadge+'</div>'+
         '<div class="kb-card-client">'+esc(t.client_name||t.client_email||'')+'</div>'+
         '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+advBtn+'</div></div>';
     }).join(''):'<div class="kb-empty">&#x2708;<br>No trips here</div>';
