@@ -961,6 +961,11 @@ class StatusAdvanceIn(BaseModel):
     payment_method: Optional[str] = None  # recorded when transitioning to paid
 
 
+class LegacyImportIn(BaseModel):
+    entries: list
+    client_email: Optional[str] = None  # if omitted, falls back to admin email
+
+
 class TripCreateIn(BaseModel):
     client_email: str
     destination: str = ""
@@ -2307,6 +2312,271 @@ def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depe
     db.delete(rec)
     db.commit()
     return {"ok": True}
+
+
+@app.post("/api/admin/savings/import-legacy")
+def import_legacy_savings(body: LegacyImportIn, db: Session = Depends(get_db), admin: dict = Depends(require_admin)):
+    """Import savings entries from the old admin localStorage (dat_savings key).
+
+    Idempotent: entries whose trip_label + cash_benchmark_cents (within ±100 cents)
+    already exist in the DB are skipped rather than duplicated.
+    """
+    # Resolve which client record to attach these records to
+    lookup_email = (body.client_email or admin.get("sub", "")).lower()
+    if not lookup_email:
+        raise HTTPException(422, "client_email is required (no admin email in token)")
+    client = db.query(Client).filter(Client.email == lookup_email).first()
+    if not client:
+        raise HTTPException(404, f"Client not found: {lookup_email}")
+
+    imported = 0
+    skipped = 0
+
+    for entry in body.entries:
+        # ── Extract destination ──────────────────────────────────────────────
+        dest = entry.get("dest") or entry.get("destination") or ""
+        dest = dest.strip() if dest else ""
+
+        # ── Extract benchmark ────────────────────────────────────────────────
+        raw_benchmark = entry.get("benchmark") if entry.get("benchmark") is not None else entry.get("cash_benchmark_cents")
+        if raw_benchmark is None:
+            skipped += 1
+            continue
+        try:
+            raw_benchmark = int(raw_benchmark)
+        except (TypeError, ValueError):
+            skipped += 1
+            continue
+
+        if not dest or raw_benchmark <= 0:
+            skipped += 1
+            continue
+
+        # Convert dollars → cents if value looks like dollars (< 100 000 and > 0)
+        if 0 < raw_benchmark < 100000:
+            benchmark_cents = raw_benchmark * 100
+        else:
+            benchmark_cents = raw_benchmark
+
+        # ── Extract taxes ────────────────────────────────────────────────────
+        raw_taxes = entry.get("taxes") if entry.get("taxes") is not None else entry.get("award_taxes_fees_cents", 0)
+        try:
+            raw_taxes = int(raw_taxes)
+        except (TypeError, ValueError):
+            raw_taxes = 0
+        # Convert dollars → cents if value looks like dollars (< 100 000)
+        if 0 < raw_taxes < 100000:
+            taxes_cents = raw_taxes * 100
+        else:
+            taxes_cents = raw_taxes
+
+        # ── Extract points ───────────────────────────────────────────────────
+        raw_pts = entry.get("pts") if entry.get("pts") is not None else entry.get("points_used", 0)
+        try:
+            points_used = int(raw_pts)
+        except (TypeError, ValueError):
+            points_used = 0
+
+        # ── Extract date ─────────────────────────────────────────────────────
+        raw_date = entry.get("date") or entry.get("created_at") or ""
+        created_at = None
+        if raw_date:
+            for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f"):
+                try:
+                    created_at = dt.datetime.strptime(str(raw_date)[:26], fmt)
+                    break
+                except ValueError:
+                    pass
+            if created_at is None:
+                try:
+                    created_at = dt.datetime.fromisoformat(str(raw_date)[:26])
+                except ValueError:
+                    created_at = None
+
+        # ── Idempotency check ────────────────────────────────────────────────
+        existing = db.query(SavingsRecord).filter(
+            SavingsRecord.client_id == client.id,
+            SavingsRecord.trip_label == dest,
+        ).all()
+        duplicate = any(abs(r.cash_benchmark_cents - benchmark_cents) < 100 for r in existing)
+        if duplicate:
+            skipped += 1
+            continue
+
+        # ── Create record ────────────────────────────────────────────────────
+        rec = SavingsRecord(
+            client_id=client.id,
+            trip_label=dest,
+            cash_benchmark_cents=benchmark_cents,
+            award_taxes_fees_cents=taxes_cents,
+            points_used=points_used,
+            fee_rate_bps=1000,
+            status="booked",
+            report_token=secrets.token_urlsafe(32),
+        )
+        if created_at is not None:
+            rec.created_at = created_at
+        db.add(rec)
+        imported += 1
+
+    db.commit()
+    return {"imported": imported, "skipped": skipped}
+
+
+@app.get("/api/admin/savings/invoice/{record_id}")
+def savings_invoice(record_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Return a printable HTML invoice for a savings record.
+
+    Auto-assigns invoice_number and invoiced_at if they are empty, then
+    commits those values so subsequent calls return the same invoice number.
+    """
+    from fastapi.responses import HTMLResponse
+
+    rec = db.query(SavingsRecord).filter(SavingsRecord.id == record_id).first()
+    if not rec:
+        raise HTTPException(404, "Record not found")
+
+    client = db.query(Client).filter(Client.id == rec.client_id).first()
+    client_name = client.name if client else "Client"
+
+    # Auto-assign invoice number if missing
+    if not rec.invoice_number:
+        year = dt.datetime.utcnow().year
+        existing = db.query(SavingsRecord).filter(
+            SavingsRecord.invoice_number.like(f"DAT-{year}-%")
+        ).all()
+        nums = []
+        for r in existing:
+            try:
+                nums.append(int(r.invoice_number.split("-")[-1]))
+            except (ValueError, IndexError):
+                pass
+        next_num = max(nums, default=0) + 1
+        rec.invoice_number = f"DAT-{year}-{next_num:04d}"
+        rec.invoiced_at = dt.datetime.utcnow()
+        db.commit()
+        db.refresh(rec)
+
+    gross = calc_gross_savings(rec.cash_benchmark_cents, rec.award_taxes_fees_cents, rec.other_out_of_pocket_cents)
+    fee   = calc_fee(gross, rec.fee_rate_bps)
+
+    issue_date = (rec.invoiced_at or dt.datetime.utcnow()).date()
+    due_date   = issue_date + dt.timedelta(days=30)
+
+    def fmt_usd(cents: int) -> str:
+        sign = "-" if cents < 0 else ""
+        cents = abs(cents)
+        return f"{sign}${cents // 100:,}.{cents % 100:02d}"
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Invoice {rec.invoice_number} — {rec.trip_label or "Trip"}</title>
+<style>
+  * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+  body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f3f4f6; color: #111827; padding: 32px 16px; }}
+  .page {{ background: #fff; max-width: 720px; margin: 0 auto; padding: 48px; border: 1px solid #d1d5db; border-radius: 8px; }}
+  .header {{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }}
+  .brand {{ font-size: 1.25rem; font-weight: 800; color: #d97706; letter-spacing: .02em; }}
+  .brand-sub {{ font-size: .8rem; color: #6b7280; margin-top: 2px; }}
+  .invoice-meta {{ text-align: right; }}
+  .invoice-num {{ font-size: 1.4rem; font-weight: 700; color: #111827; }}
+  .invoice-meta p {{ font-size: .85rem; color: #6b7280; margin-top: 4px; }}
+  .divider {{ border: none; border-top: 2px solid #e5e7eb; margin: 24px 0; }}
+  .parties {{ display: flex; justify-content: space-between; margin-bottom: 32px; }}
+  .party h3 {{ font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; margin-bottom: 6px; }}
+  .party p {{ font-size: .9rem; color: #111827; line-height: 1.5; }}
+  table {{ width: 100%; border-collapse: collapse; margin-bottom: 24px; }}
+  thead th {{ font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; color: #6b7280; padding: 8px 12px; text-align: left; border-bottom: 2px solid #e5e7eb; }}
+  thead th:last-child {{ text-align: right; }}
+  tbody td {{ padding: 12px 12px; border-bottom: 1px solid #f3f4f6; font-size: .9rem; color: #374151; vertical-align: top; }}
+  tbody td:last-child {{ text-align: right; font-weight: 500; }}
+  .total-row td {{ padding: 14px 12px; font-size: 1rem; font-weight: 700; color: #d97706; border-top: 2px solid #e5e7eb; border-bottom: none; }}
+  .remittance {{ background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 16px 20px; margin-top: 8px; }}
+  .remittance h4 {{ font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: #92400e; margin-bottom: 8px; }}
+  .remittance p {{ font-size: .9rem; color: #78350f; line-height: 1.6; }}
+  .footer {{ margin-top: 32px; font-size: .75rem; color: #9ca3af; text-align: center; }}
+  @media print {{
+    body {{ background: #fff; padding: 0; }}
+    .page {{ border: none; border-radius: 0; padding: 24px; }}
+  }}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="brand">District Award Travel</div>
+      <div class="brand-sub">districtawardtravel@gmail.com</div>
+    </div>
+    <div class="invoice-meta">
+      <div class="invoice-num">INVOICE</div>
+      <p>{rec.invoice_number}</p>
+      <p>Issued: {issue_date.strftime('%B %d, %Y')}</p>
+      <p>Due: {due_date.strftime('%B %d, %Y')}</p>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <div class="parties">
+    <div class="party">
+      <h3>Bill To</h3>
+      <p><strong>{client_name}</strong><br>
+      {'<br>' + client.email if client else ''}</p>
+    </div>
+    <div class="party" style="text-align:right;">
+      <h3>From</h3>
+      <p><strong>District Award Travel</strong><br>
+      districtawardtravel@gmail.com</p>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Detail</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>{rec.trip_label or "Award Travel Booking"}</strong><br>
+            <span style="font-size:.8rem;color:#6b7280;">Cash value of award ticket(s)</span></td>
+        <td style="font-size:.85rem;color:#6b7280;">Benchmark</td>
+        <td>{fmt_usd(rec.cash_benchmark_cents)}</td>
+      </tr>
+      {'<tr><td>Award Taxes &amp; Fees</td><td style="font-size:.85rem;color:#6b7280;">Out-of-pocket</td><td style="color:#6b7280;">(' + fmt_usd(rec.award_taxes_fees_cents) + ')</td></tr>' if rec.award_taxes_fees_cents else ''}
+      <tr>
+        <td><strong>Gross Savings</strong></td>
+        <td></td>
+        <td style="color:#059669;font-weight:700;">{fmt_usd(gross)}</td>
+      </tr>
+      <tr class="total-row">
+        <td>District Advisory Fee (10%)</td>
+        <td></td>
+        <td>{fmt_usd(fee)}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="remittance">
+    <h4>Payment Instructions</h4>
+    <p>
+      Please remit <strong>{fmt_usd(fee)}</strong> by {due_date.strftime('%B %d, %Y')}.<br>
+      Pay via <strong>Venmo</strong> @bsalsa2 &nbsp;|&nbsp; <strong>Zelle</strong> bradensalcetti@icloud.com<br>
+      Reference invoice <strong>{rec.invoice_number}</strong> when paying.
+    </p>
+  </div>
+
+  <div class="footer">District Award Travel &mdash; Thank you for flying smarter.</div>
+</div>
+</body>
+</html>"""
+    return HTMLResponse(html)
 
 
 @app.get("/api/report/{token}")
