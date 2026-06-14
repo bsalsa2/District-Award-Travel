@@ -1404,10 +1404,50 @@ async def submit_intake(request: Request, db: Session = Depends(get_db)):
         ))
     db.commit()
     name = f"{data.get('first_name','')} {data.get('last_name','')}".strip() or "Someone"
-    # Notify admin
+    # Notify admin — rich HTML email
+    destination = (
+        data.get("trip1_dest") or data.get("destination") or data.get("travel_goals", "")[:40] or "—"
+    )
+    _pts_programs = ", ".join(
+        k.replace("pts_", "").replace("_", " ").title()
+        for k, v in data.items()
+        if k.startswith("pts_") and str(v).strip()
+    ) or "—"
+    _goals_raw = data.get("travel_goals", "") or data.get("notes", "")
+    _goals = (_goals_raw[:500] + "…") if len(_goals_raw) > 500 else _goals_raw
+    _dates = data.get("trip1_dates") or data.get("dates") or "—"
+    _cabin = data.get("cabin_pref") or "—"
+    _intake_html = f"""<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
+        <tr><td style="background:#f97316;padding:20px 32px;">
+          <span style="color:#ffffff;font-size:20px;font-weight:bold;">🚀 New DAT Intake</span>
+        </td></tr>
+        <tr><td style="padding:28px 32px;">
+          <table width="100%" cellpadding="6" cellspacing="0">
+            <tr><td style="color:#64748b;width:160px;">Name</td><td style="color:#1e293b;font-weight:bold;">{name}</td></tr>
+            <tr><td style="color:#64748b;">Email</td><td style="color:#1e293b;">{data.get('email','')}</td></tr>
+            <tr><td style="color:#64748b;">Destination</td><td style="color:#1e293b;">{destination}</td></tr>
+            <tr><td style="color:#64748b;">Dates</td><td style="color:#1e293b;">{_dates}</td></tr>
+            <tr><td style="color:#64748b;">Cabin</td><td style="color:#1e293b;">{_cabin}</td></tr>
+            <tr><td style="color:#64748b;">Points Programs</td><td style="color:#1e293b;">{_pts_programs}</td></tr>
+            <tr><td style="color:#64748b;vertical-align:top;">Goals / Notes</td><td style="color:#1e293b;">{_goals or '—'}</td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
+          <p style="font-size:12px;color:#94a3b8;margin:0;">Received {dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC &middot; Reply-To: {data.get('email','')}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
     send_email(
-        subject=f"New DAT Intake: {name}",
-        body=format_intake_email(data),
+        subject=f"🚀 New DAT Intake — {name} ({destination})",
+        body=_intake_html,
         reply_to=data.get("email", ""),
     )
     # Confirmation email to client
@@ -2219,6 +2259,42 @@ def admin_inbox(_: dict = Depends(require_admin), db: Session = Depends(get_db))
         })
     rows.sort(key=lambda r: (r["last"]["time"] if r["last"] else ""), reverse=True)
     return rows
+
+
+class AdminClientMessageIn(BaseModel):
+    subject: str = ""
+    body: str
+
+
+@app.post("/api/admin/clients/{email}/message")
+def admin_send_client_message(email: str, msg_in: AdminClientMessageIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Admin sends a direct message to a client by email path param.
+    Saves to their messages JSON and bumps SSE version for real-time delivery."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    data = json.loads(client.data or "{}")
+    messages = data.get("messages", [])
+    message = {
+        "from": "Braden — DAT",
+        "sender": "advisor",
+        "time": dt.datetime.utcnow().isoformat(),
+        "subject": msg_in.subject,
+        "text": msg_in.body,
+        "unread": True,
+    }
+    messages.append(message)
+    data["messages"] = messages
+    client.data = json.dumps(data)
+    db.commit()
+    bump_client_version(client.email)
+    email_subject = f"New message: {msg_in.subject}" if msg_in.subject.strip() else "New message from Braden — District Award Travel"
+    send_email_to(
+        client.email,
+        email_subject,
+        f"Hi {client.name.split()[0]},\n\n{msg_in.body}\n\nLog in to your portal to view this message.\n\nBest,\nBraden\nDistrict Award Travel",
+    )
+    return {"ok": True, "message_id": len(messages) - 1}
 
 
 @app.post("/api/admin/clients/{email}/messages/read")
@@ -3380,6 +3456,18 @@ def create_trip(body: TripCreateIn, db: Session = Depends(get_db), _: dict = Dep
     return _trip_row(trip, client)
 
 
+@app.get("/api/admin/trips/{trip_id}")
+def get_trip(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Return full details for a single trip including research_notes, workflow_status,
+    stage_entered_at, last_activity_at, time_tracked_minutes, and notes (parsed as JSON)."""
+    now = dt.datetime.utcnow()
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    return _trip_row(trip, client, now)
+
+
 @app.patch("/api/admin/trips/{trip_id}")
 def update_trip(trip_id: int, body: TripPatchIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
@@ -3521,6 +3609,46 @@ def add_trip_time(trip_id: int, body: TripTimeIn, db: Session = Depends(get_db),
     trip.time_tracked_minutes = (trip.time_tracked_minutes or 0) + body.minutes
     db.commit()
     return {"ok": True, "time_tracked_minutes": trip.time_tracked_minutes}
+
+
+class LogTimeIn(BaseModel):
+    minutes: int = Field(..., ge=1, le=480)
+
+
+@app.post("/api/admin/trips/{trip_id}/log-time")
+def log_trip_time(trip_id: int, body: LogTimeIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Add minutes to a trip's time_tracked_minutes total. Validates 1–480 (max 8 hrs per log)."""
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    trip.time_tracked_minutes = (trip.time_tracked_minutes or 0) + body.minutes
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True, "time_tracked_minutes": trip.time_tracked_minutes}
+
+
+class TripNoteAddIn(BaseModel):
+    text: str
+
+
+@app.post("/api/admin/trips/{trip_id}/note")
+def add_trip_note_singular(trip_id: int, body: TripNoteAddIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Append a note to a trip's notes JSON array.
+    Each note stores text, created_at (ISO), and author='admin'."""
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    notes = json.loads(trip.notes or "[]")
+    note_entry = {
+        "text": body.text,
+        "created_at": dt.datetime.utcnow().isoformat(),
+        "author": "admin",
+    }
+    notes.append(note_entry)
+    trip.notes = json.dumps(notes)
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True, "notes": notes}
 
 
 @app.get("/api/admin/trips/{trip_id}/cockpit")
