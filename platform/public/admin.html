@@ -4647,6 +4647,11 @@ async function tdSendQuickMsg() {
   function openDrop(){drop.classList.add('open');}
   function closeDrop(){drop.classList.remove('open');}
   function showSpinner(){drop.innerHTML='<div class="gsearch-spinner">Searching&#x2026;</div>';openDrop();}
+  function hlSearch(text,q){
+    if(!q)return text;
+    var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+    return text.replace(re,'<mark style="background:rgba(249,115,22,.3);border-radius:2px;">$1</mark>');
+  }
   function renderResults(data,q){
     var html='';
     var clients=data.clients||[];var trips=data.trips||[];var savings=data.savings||[];
@@ -4658,8 +4663,8 @@ async function tdSendQuickMsg() {
       clients.forEach(function(c){
         html+='<div class="gsearch-item" onmousedown="event.preventDefault();gsearchPickClient(\''+esc(c.email)+'\')">'
           +'<span class="gsearch-item-ico">&#x1F464;</span><div>'
-          +'<div class="gsearch-item-main">'+esc(c.name)+'</div>'
-          +'<div class="gsearch-item-sub">'+esc(c.email)+'</div></div></div>';
+          +'<div class="gsearch-item-main">'+hlSearch(esc(c.name),q)+'</div>'
+          +'<div class="gsearch-item-sub">'+hlSearch(esc(c.email),q)+'</div></div></div>';
       });
       html+='</div>';
     }
@@ -4668,8 +4673,8 @@ async function tdSendQuickMsg() {
       trips.forEach(function(t){
         html+='<div class="gsearch-item" onmousedown="event.preventDefault();gsearchPickTrip()">'
           +'<span class="gsearch-item-ico">&#x2708;</span><div>'
-          +'<div class="gsearch-item-main">'+esc(t.destination||'(no destination)')+'</div>'
-          +'<div class="gsearch-item-sub">'+esc(t.client_name||t.client_email)+' &middot; '+esc(t.status)+'</div></div></div>';
+          +'<div class="gsearch-item-main">'+hlSearch(esc(t.destination||'(no destination)'),q)+'</div>'
+          +'<div class="gsearch-item-sub">'+hlSearch(esc(t.client_name||t.client_email),q)+' &middot; '+esc(t.status)+'</div></div></div>';
       });
       html+='</div>';
     }
@@ -4679,8 +4684,8 @@ async function tdSendQuickMsg() {
         var dollars=s.gross_savings_cents?'$'+(s.gross_savings_cents/100).toLocaleString('en-US',{maximumFractionDigits:0}):'';
         html+='<div class="gsearch-item" onmousedown="event.preventDefault();gsearchPickSaving()">'
           +'<span class="gsearch-item-ico">&#x1F4B0;</span><div>'
-          +'<div class="gsearch-item-main">'+esc(s.trip_label||'Savings Record')+'</div>'
-          +'<div class="gsearch-item-sub">'+esc(s.client_email)+(dollars?' &middot; '+dollars:'')+'</div></div></div>';
+          +'<div class="gsearch-item-main">'+hlSearch(esc(s.trip_label||'Savings Record'),q)+'</div>'
+          +'<div class="gsearch-item-sub">'+hlSearch(esc(s.client_email),q)+(dollars?' &middot; '+dollars:'')+'</div></div></div>';
       });
       html+='</div>';
     }
