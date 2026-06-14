@@ -167,6 +167,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 }
 @keyframes shShimmer{0%{background-position:200% center}100%{background-position:-50% center}}
 @media(prefers-reduced-motion:reduce){.sh-amount::after{animation:none}}
+/* confetti burst */
+.confetti-dot{position:absolute;width:7px;height:7px;border-radius:50%;pointer-events:none;animation:confettiFly 1.2s ease-out forwards}
+@keyframes confettiFly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--cx),var(--cy)) scale(.4);opacity:0}}
+@media(prefers-reduced-motion:reduce){.confetti-dot{display:none}}
 .sh-tagline{font-size:14px;color:rgba(255,255,255,.5);margin-top:10px;font-weight:500}
 .sh-tagline strong{color:rgba(255,255,255,.8)}
 .sh-right{position:relative;text-align:right}
@@ -177,8 +181,9 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 
 /* ── STAT CARDS ── */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
-.stat{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 24px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
-.stat:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.08)}
+.stat{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 24px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--accent);border-radius:12px 0 0 12px}
+.stat:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.1),0 0 0 1px var(--accent-border),0 0 16px rgba(249,115,22,.08)}
 .stat-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
 .stat-val{font-size:28px;font-weight:900;letter-spacing:-1.5px;line-height:1}
 .stat-val.green{color:var(--green)}.stat-val.orange{color:var(--accent)}.stat-val.blue{color:var(--blue)}
@@ -260,9 +265,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .stepper-steps{display:flex;align-items:center;gap:0}
 .step-dot{width:14px;height:14px;border-radius:50%;background:#444;border:2px solid #444;flex-shrink:0;transition:background .2s,border-color .2s}
 .step-dot.done{background:#f97316;border-color:#f97316}
-.step-dot.active{background:#f97316;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.2)}
+.step-dot.active{background:#f97316;border-color:#f97316;box-shadow:0 0 0 4px rgba(249,115,22,.3),0 0 0 8px rgba(249,115,22,.1);animation:stepPulse 1.8s ease-in-out infinite}
+@keyframes stepPulse{0%,100%{box-shadow:0 0 0 4px rgba(249,115,22,.3),0 0 0 8px rgba(249,115,22,.1)}50%{box-shadow:0 0 0 6px rgba(249,115,22,.4),0 0 0 12px rgba(249,115,22,.15)}}
+@media(prefers-reduced-motion:reduce){.step-dot.active{animation:none}}
 .step-line{flex:1;height:2px;background:#444}
-.step-line.done{background:#f97316}
+.step-line.done{background:#f97316;box-shadow:0 0 6px rgba(249,115,22,.5)}
 .stepper-labels{display:flex;justify-content:space-between;margin-top:5px;padding:0 1px}
 .step-label{font-size:10px;color:var(--dim);text-align:center;width:14px;white-space:nowrap;transform:translateX(-50%);margin-left:7px}
 .step-label:first-child{margin-left:0;transform:none}
@@ -322,8 +329,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .bubble-receipt{font-size:10px;color:var(--dim);opacity:.4;margin-top:2px;padding:0 2px}
 .bubble-plan{max-width:92%;width:100%}
 .bubble-plan .plan-card{margin-bottom:0;margin-top:8px}
-.chat-day{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--dim);margin:14px 0 4px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.55}
-.chat-day::before,.chat-day::after{content:'';flex:1;height:1px;background:var(--border)}
+.chat-day{display:flex;align-items:center;justify-content:center;margin:14px 0 4px}
+.chat-day-pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);background:rgba(255,255,255,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(0,0,0,.08);border-radius:20px;padding:3px 12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.chat-day::before,.chat-day::after{display:none}
+.bubble-avatar{width:28px;height:28px;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.bubble-avatar.adv{background:var(--accent);color:#fff;letter-spacing:.02em}
+.bubble-avatar.me{background:#e7e5e4;color:var(--muted)}
+.bubble-with-avatar{display:flex;align-items:flex-start;gap:8px}
+.bubble-row.me .bubble-with-avatar{flex-direction:row-reverse}
 /* typing indicator */
 .typing-indicator{display:inline-flex;align-items:center;gap:4px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:18px 18px 18px 4px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .typing-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);opacity:.4;animation:typingBounce 1.2s ease-in-out infinite}
@@ -730,13 +743,31 @@ function renderPortal(c){
   const lifetimeSavings=c.lifetime_savings_cents||0;
   const lifetimeFee=c.total_fee_cents||0;
   const hero=document.getElementById('savings-hero');
+  const prevSavings=Number(hero.dataset.prevSavings||0);
   if(lifetimeSavings>0){
     hero.classList.add('has-savings');
     animStat('sh-amount',lifetimeSavings,fmtUsd);
     animStat('sh-fee',lifetimeFee,fmtUsd);
     const tripCount=(c.savings_breakdown||[]).length;
     document.getElementById('sh-trips-saved').textContent=tripCount+' trip'+(tripCount!==1?'s':'');
+    // Fire confetti once when savings first appear
+    if(prevSavings===0&&lifetimeSavings>0&&!REDUCED){
+      const colors=['#f97316','#fbbf24','#4ade80','#60a5fa','#f472b6','#a78bfa','#fb923c','#34d399'];
+      const amount=document.getElementById('sh-amount');
+      if(amount){
+        colors.forEach((col,i)=>{
+          const dot=document.createElement('div');
+          dot.className='confetti-dot';
+          const angle=((i/colors.length)*360)*(Math.PI/180);
+          const dist=60+Math.random()*60;
+          dot.style.cssText=`background:${col};left:50%;top:50%;--cx:${Math.cos(angle)*dist}px;--cy:${Math.sin(angle)*dist-80}px;animation-delay:${i*0.05}s`;
+          hero.appendChild(dot);
+          setTimeout(()=>dot.remove(),1400+i*50);
+        });
+      }
+    }
   }else{hero.classList.remove('has-savings')}
+  hero.dataset.prevSavings=lifetimeSavings;
 
   // Stats — count up on change
   animStat('st-savings',lifetimeSavings,fmtUsd);
@@ -991,7 +1022,7 @@ function renderChat(msgs){
   msgs.forEach(m=>{
     const mine=m.sender==='client';
     const day=dayLabel(m.time||m.ts);
-    if(day&&day!==lastDay){html+=`<div class="chat-day">${esc(day)}</div>`;lastDay=day;}
+    if(day&&day!==lastDay){html+=`<div class="chat-day"><span class="chat-day-pill">${esc(day)}</span></div>`;lastDay=day;}
     const pd=m.plan||m.plan_details;
     const hasPlan=pd&&(pd.title||pd.dest||pd.overview);
     const subj=(!mine&&m.subject)?`<div class="bubble-subject">${esc(m.subject)}</div>`:'';
@@ -1003,11 +1034,20 @@ function renderChat(msgs){
       const fname=m.attachment.filename?esc(m.attachment.filename):'image';
       attachHtml=`<img class="bubble-img" src="${esc(m.attachment.data)}" alt="${fname}" onclick="window.open(this.src,'_blank')" loading="lazy">`;
     }
+    const clientName=(currentData&&currentData.name)||'';
+    const clientInitial=clientName?clientName.trim()[0].toUpperCase():'C';
+    const advAvatar=`<div class="bubble-avatar adv">DAT</div>`;
+    const meAvatar=`<div class="bubble-avatar me">${clientInitial}</div>`;
+    const checkmark=`<span style="color:rgba(255,255,255,.6);font-size:10px;margin-left:4px">&#10003;</span>`;
     html+=`<div class="bubble-row ${mine?'me':''} ${hasPlan?'bubble-plan':''}">
-      <div class="bubble ${mine?'me':'adv'}">${subj}${esc(m.text||m.body||'')}${attachHtml}</div>
-      ${hasPlan?renderPlanCard(pd,false):''}
-      <div class="bubble-ts">${ts}</div>
-      ${receipt}
+      <div class="bubble-with-avatar">
+        ${mine?meAvatar:advAvatar}
+        <div>
+          <div class="bubble ${mine?'me':'adv'}">${subj}${esc(m.text||m.body||'')}${attachHtml}${mine?checkmark:''}</div>
+          ${hasPlan?renderPlanCard(pd,false):''}
+        </div>
+      </div>
+      <div class="bubble-ts" style="padding-left:${mine?'0':'36px'}">${ts}</div>
     </div>`;
   });
   el.innerHTML=html;
@@ -1218,7 +1258,15 @@ function tripCountdownBadge(datesStr,workflowStatus){
 
 function renderTrips(trips,plans){
   const el=document.getElementById('trips-container');
-  if(!trips.length){el.innerHTML='<div class="empty"><div class="empty-ico">🗺</div><p>Your trips will appear here once your advisor logs them. If you just applied, hang tight — we\'re reviewing your intake.</p></div>';return;}
+  if(!trips.length){
+    el.innerHTML=`<div style="text-align:center;padding:72px 24px 56px">
+      <div style="font-size:64px;color:#f97316;margin-bottom:20px;filter:drop-shadow(0 0 24px rgba(249,115,22,.35))">&#x2708;</div>
+      <h2 style="font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:8px;color:var(--text)">Your first trip is waiting</h2>
+      <p style="font-size:14px;color:var(--muted);max-width:340px;margin:0 auto 24px;line-height:1.65">Share your points balances with your advisor and we'll find you an award redemption worth writing home about.</p>
+      <button onclick="switchTab('messages')" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:13px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s;box-shadow:0 4px 16px rgba(249,115,22,.35)" onmouseover="this.style.background='#ea6c0a'" onmouseout="this.style.background='var(--accent)'">Message your advisor ✈</button>
+    </div>`;
+    return;
+  }
   el.innerHTML=trips.map(t=>{
     const b=BADGE[t.workflow_status]||BADGE.new;
     const fields=[];
@@ -1283,10 +1331,34 @@ function renderPoints(points){
   }
   const total=points.reduce((s,p)=>s+(p.balance||p.points||0),0);
   const totalHtml=total>0?`<div style="margin-bottom:18px;padding:20px 24px;background:linear-gradient(135deg,#1a0f06,#0f0a07);border:1px solid rgba(249,115,22,.2);border-radius:14px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(249,115,22,.65)">Total Points</div><div style="font-size:32px;font-weight:900;letter-spacing:-1.5px;background:linear-gradient(90deg,#f97316,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-variant-numeric:tabular-nums">${fmtNum(total)}</div></div>`:'';
-  el.innerHTML=totalHtml+'<div class="points-grid">'+points.map(p=>`<div class="point-card"><div class="point-prog">${esc(p.program||p.name||'Program')}</div><div class="point-bal">${fmtNum(p.balance||p.points||0)}<span class="point-unit">pts</span></div></div>`).join('')+'</div>';
+  // Per-program premium cards with bar and color coding
+  const THRESHOLDS=[25000,50000,100000,150000];
+  const MAX_BAR=150000;
+  const cardHtml=points.map(p=>{
+    const bal=p.balance||p.points||0;
+    const prog=p.program||p.name||'Program';
+    const pct=Math.min(bal/MAX_BAR,1)*100;
+    let barColor='rgba(168,162,158,.4)'; // muted <25k
+    let balColor='rgba(168,162,158,.7)';
+    if(bal>=50000){barColor='#16a34a';balColor='#4ade80';}
+    else if(bal>=25000){barColor='#ca8a04';balColor='#fbbf24';}
+    const clubBadge=bal>=100000?`<div style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(234,179,8,.12);color:#fbbf24;border:1px solid rgba(234,179,8,.3);margin-top:10px">&#x1F48E; 100K+ Club</div>`:'';
+    // mini threshold markers
+    const markers=THRESHOLDS.map(t=>{const x=Math.min(t/MAX_BAR,1)*100;return `<div style="position:absolute;left:${x}%;top:-2px;width:1px;height:8px;background:rgba(255,255,255,.15)"></div>`;}).join('');
+    return `<div class="point-card">
+      <div class="point-prog" style="font-size:13px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.6);margin-bottom:12px">${esc(prog)}</div>
+      <div style="font-size:34px;font-weight:900;letter-spacing:-1.5px;color:${balColor};font-variant-numeric:tabular-nums;line-height:1">${fmtNum(bal)}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.3);font-weight:600;margin-top:2px">points</div>
+      <div style="position:relative;height:4px;background:rgba(255,255,255,.08);border-radius:4px;margin:14px 0 4px;overflow:visible">${markers}<div style="position:absolute;left:0;top:0;height:4px;width:${pct}%;background:${barColor};border-radius:4px;transition:width .6s ease;box-shadow:0 0 8px ${barColor}66"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.2);font-weight:600">
+        <span>0</span><span>25K</span><span>50K</span><span>100K</span><span>150K</span>
+      </div>
+      ${clubBadge}
+    </div>`;
+  }).join('');
+  el.innerHTML=totalHtml+'<div class="points-grid">'+cardHtml+'</div>';
   // Milestone badges
   if(milEl){
-    const total=points.reduce((s,p)=>s+(p.balance||p.points||0),0);
     const now=Date.now();
     const soon90=points.some(p=>{
       if(!p.expiration_date)return false;

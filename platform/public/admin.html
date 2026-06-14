@@ -3280,14 +3280,49 @@ async function drawerAdvanceTrip(tripId){
       msg.textContent='✓ Advanced to '+esc(d.workflow_status||d.status||'next stage');
       msg.style.display='block';
       loadBoard();
-      // refresh drawer to show updated status
-      if(_drawerEmail){await loadClients();_renderClientDrawer(_drawerEmail);}
+      if(_drawerEmail){await loadClients();_activityLoaded={};_renderClientDrawer(_drawerEmail);}
     }else if(msg){
       msg.textContent='✗ '+(d.detail||'Cannot advance');
       msg.style.color='var(--red)';
       msg.style.display='block';
     }
   }catch(e){toast('Network error');}
+}
+
+async function drawerAdvanceTripCard(tripId, btn){
+  if(!ADMIN_TOKEN||!btn)return;
+  btn.disabled=true; btn.textContent='…';
+  try{
+    var res=await fetch('/api/admin/trips/'+tripId+'/advance',{method:'POST',headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    var d=await res.json().catch(function(){return{};});
+    if(res.ok){
+      loadBoard();
+      if(_drawerEmail){await loadClients();_activityLoaded={};_renderClientDrawer(_drawerEmail);}
+    }else{
+      toast('Cannot advance: '+(d.detail||'error'));
+      btn.disabled=false; btn.textContent='Advance →';
+    }
+  }catch(e){toast('Network error');btn.disabled=false;btn.textContent='Advance →';}
+}
+
+async function drawerSendQuickReply(){
+  var inp=document.getElementById('drawer-reply-input');
+  var sentEl=document.getElementById('drawer-reply-sent');
+  if(!inp||!_drawerEmail)return;
+  var text=inp.value.trim();
+  if(!text)return;
+  inp.disabled=true;
+  try{
+    var res=await fetch('/api/admin/send-message',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
+      body:JSON.stringify({client_email:_drawerEmail,subject:'',body:text})});
+    if(res.ok){
+      inp.value=''; inp.style.height='auto';
+      if(sentEl){sentEl.style.display='';setTimeout(function(){if(sentEl)sentEl.style.display='none';},2500);}
+      loadInbox();
+    }else{var d=await res.json().catch(function(){return{};});toast(d.detail||'Send failed');}
+  }catch(e){toast('Network error');}
+  inp.disabled=false; inp.focus();
 }
 
 function openClientByTrip(email){
@@ -3340,6 +3375,9 @@ function openClientDrawer(email){
   const emailEl=document.getElementById('client-drawer-email');
   if(nameEl) nameEl.textContent=client?client.name:'';
   if(emailEl) emailEl.textContent=email;
+  // show quick-reply bar
+  var qr=document.getElementById('client-drawer-quick-reply');
+  if(qr){qr.style.display='';var ri=document.getElementById('drawer-reply-input');if(ri)ri.value='';var rs=document.getElementById('drawer-reply-sent');if(rs)rs.style.display='none';}
   overlay.classList.add('open');
   drawer.classList.add('open');
   content.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted)">Loading…</div>';
@@ -3382,39 +3420,84 @@ async function _renderClientDrawer(email){
     }
   }
 
-  // open trips from client data
+  // trips from client data
   const trips=Array.isArray(client.trips)?client.trips:[];
-  const openTrips=trips.filter(function(t){return t.workflow_status!=='closed'&&t.workflow_status!=='declined';}).length;
+  const openTrips=trips.filter(function(t){return t.workflow_status!=='closed'&&t.workflow_status!=='declined';});
+  const allTripsCount=trips.length;
   const latestTrip=trips[trips.length-1];
-  const statusBadge=latestTrip&&latestTrip.workflow_status?latestTrip.workflow_status:'active';
 
-  const savingsDisplay=savingsTotal>0?'$'+(savingsTotal/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'—';
+  // point programs
+  const programs=Array.isArray(client.point_programs)?client.point_programs:(client.point_programs?[client.point_programs]:[]);
+
+  const savingsDisplay=savingsTotal>0?'$'+(savingsTotal/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0}):'$0';
+
+  // populate mini stats in header
+  var dmsTrips=document.getElementById('dms-trips');
+  var dmsPrograms=document.getElementById('dms-programs');
+  var dmsSavings=document.getElementById('dms-savings');
+  var miniStats=document.getElementById('client-drawer-mini-stats');
+  if(dmsTrips) dmsTrips.textContent=allTripsCount||'0';
+  if(dmsPrograms) dmsPrograms.textContent=programs.length||'0';
+  if(dmsSavings) dmsSavings.textContent=savingsDisplay;
+  if(miniStats) miniStats.style.display='';
+
+  // status color helper
+  function statusColor(s){
+    if(!s)return'var(--dim)';
+    if(s==='booked')return'var(--green)';
+    if(s==='closed'||s==='declined'||s==='lost')return'var(--red)';
+    if(s==='quoted'||s==='proposal')return'var(--blue,#4a9eff)';
+    return'var(--gold)';
+  }
+  function statusBg(s){
+    if(!s)return'rgba(168,162,158,.12)';
+    if(s==='booked')return'rgba(22,163,74,.12)';
+    if(s==='closed'||s==='declined'||s==='lost')return'rgba(220,38,38,.1)';
+    if(s==='quoted'||s==='proposal')return'rgba(37,99,235,.1)';
+    return'rgba(217,119,6,.12)';
+  }
+
+  // trip cards for active trips
+  var tripCardsHTML='';
+  if(openTrips.length>0){
+    tripCardsHTML='<div><div class="drawer-stat-label" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px">Active Trips</div>'
+      +'<div style="display:flex;flex-direction:column;gap:6px">'
+      +openTrips.map(function(trip){
+        var dest=esc(trip.destination||trip.title||('Trip #'+trip.id));
+        var st=trip.workflow_status||'active';
+        var canAdvance=!['closed','declined','lost','booked'].includes(st);
+        return '<div class="drawer-trip-card">'
+          +'<div class="drawer-trip-card-info">'
+          +'<div class="drawer-trip-dest">'+dest+'</div>'
+          +'<span class="drawer-trip-status" style="color:'+statusColor(st)+';background:'+statusBg(st)+'">'+esc(st)+'</span>'
+          +'</div>'
+          +(canAdvance?'<button class="drawer-trip-advance" onclick="drawerAdvanceTripCard('+trip.id+',this)">Advance →</button>':'')
+          +'</div>';
+      }).join('')
+      +'</div></div>';
+  }
 
   content.innerHTML=
-    '<div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px">'
+    '<div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:12px">'
     +'<button id="drawer-tab-overview" onclick="showDrawerTab(\'overview\')" style="flex:1;padding:8px 0;font-size:.8rem;font-weight:700;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);cursor:pointer">Overview</button>'
     +'<button id="drawer-tab-activity" onclick="showDrawerTab(\'activity\',\''+esc(email)+'\')" style="flex:1;padding:8px 0;font-size:.8rem;font-weight:700;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer">Activity</button>'
     +'</div>'
     +'<div id="drawer-panel-overview">'
     +'<div class="drawer-stat"><div class="drawer-stat-label">Total Savings Identified</div>'
     +'<div class="drawer-stat-value">'+savingsDisplay+'</div></div>'
-    +(openTrips>0?'<div class="drawer-stat"><div class="drawer-stat-label">Open Trips</div>'
-      +'<div class="drawer-stat-value">'+openTrips+'</div></div>':'')
+    +tripCardsHTML
     +(msgSnippet?'<div><div class="drawer-stat-label" style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:6px">Latest Message</div>'
       +'<div class="drawer-snippet">"'+msgSnippet+'"</div></div>':'')
-    +(latestTrip&&latestTrip.id&&!['closed','declined','lost','booked'].includes(latestTrip.workflow_status)?
-      '<div id="drawer-advance-wrap" style="margin-bottom:0">'
-      +'<button class="drawer-action-btn" style="border-color:rgba(69,179,255,.4);color:var(--blue,#4a9eff)" onclick="drawerAdvanceTrip('+latestTrip.id+')">Advance Trip &#x2192;</button>'
-      +'<div id="drawer-advance-msg" style="display:none;font-size:.75rem;color:var(--green,#22c55e);padding:4px 2px;font-weight:600"></div>'
-      +'</div>':''
-    )
     +'<div class="drawer-actions">'
-    +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'chat\',document.querySelector(\'.nav-item[onclick*=chat]\'));openThread(\''+esc(email)+'\')">💬 Message</button>'
+    +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'chat\',document.querySelector(\'.nav-item[onclick*=chat]\'));openThread(\''+esc(email)+'\')">💬 Open Chat Thread</button>'
     +'<button class="drawer-action-btn" onclick="closeClientDrawer();switchPanel(\'pipeline\',document.querySelector(\'.nav-item[data-tab=pipeline]\'));">✈ New Trip</button>'
     +'<button class="drawer-action-btn" onclick="closeClientDrawer();openAddSaving();setTimeout(function(){var s=document.getElementById(\'sv-client-email\');if(s)s.value=\''+esc(email)+'\';},50)">$ Log Saving</button>'
     +'</div>'
     +'</div>'
     +'<div id="drawer-panel-activity" style="display:none"><div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Loading…</div></div>';
+
+  // preload activity when drawer opens
+  _loadDrawerActivity(email);
 }
 
 function showDrawerTab(tab, email){
@@ -3437,11 +3520,23 @@ async function _loadDrawerActivity(email){
   if(!panel)return;
   try{
     var res=await fetch('/api/admin/clients/'+encodeURIComponent(email)+'/activity',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
-    if(!res.ok){panel.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Could not load activity.</div>';return;}
+    if(!res.ok){
+      // 404 or missing endpoint — show placeholder
+      panel.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">No activity yet.</div>';
+      return;
+    }
     var data=await res.json();
-    var items=data.activity||[];
+    var items=(data.activity||[]).slice().reverse().slice(0,20);
     if(!items.length){panel.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">No activity yet.</div>';return;}
-    var dotColor={'client_created':'var(--accent)','intake_submitted':'var(--blue,#4a9eff)','trip_created':'var(--gold)','status_changed':'var(--dim)','message_sent':'var(--green)','message_received':'var(--purple,#a78bfa)','saving_logged':'var(--green)'};
+    var dotColor={
+      'client_created':'var(--accent)',
+      'intake_submitted':'var(--blue,#4a9eff)',
+      'trip_created':'var(--gold)',
+      'status_changed':'var(--dim)',
+      'message_sent':'var(--green)',
+      'message_received':'var(--purple,#a78bfa)',
+      'saving_logged':'var(--green,#16a34a)'
+    };
     var now=Date.now();
     function relTime(ts){
       var d=new Date(ts);if(isNaN(d))return ts;
@@ -3452,18 +3547,18 @@ async function _loadDrawerActivity(email){
       if(diff<604800)return Math.floor(diff/86400)+'d ago';
       return d.toLocaleDateString();
     }
-    panel.innerHTML='<div style="display:flex;flex-direction:column;gap:6px;padding:4px 0">'+
-      items.slice().reverse().map(function(ev){
+    panel.innerHTML='<div style="display:flex;flex-direction:column;padding:4px 0">'+
+      items.map(function(ev){
         var color=dotColor[ev.type]||'var(--dim)';
-        return '<div style="display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">'
-          +'<div style="width:8px;height:8px;border-radius:50%;background:'+color+';margin-top:4px;flex-shrink:0"></div>'
+        return '<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">'
+          +'<div style="width:9px;height:9px;border-radius:50%;background:'+color+';margin-top:3px;flex-shrink:0;box-shadow:0 0 0 2px var(--surface)"></div>'
           +'<div style="flex:1;min-width:0">'
-          +'<div style="font-size:.78rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(ev.detail)+'</div>'
-          +'<div style="font-size:.72rem;color:var(--muted);margin-top:1px">'+relTime(ev.timestamp)+'</div>'
+          +'<div style="font-size:.8rem;color:var(--text);line-height:1.35">'+esc(ev.detail||ev.type)+'</div>'
+          +'<div style="font-size:.71rem;color:var(--muted);margin-top:2px">'+relTime(ev.timestamp||ev.created_at)+'</div>'
           +'</div></div>';
       }).join('')+'</div>';
     _activityLoaded[email]=true;
-  }catch(e){panel.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Error loading activity.</div>';}
+  }catch(e){panel.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">No activity yet.</div>';}
 }
 </script>
 
