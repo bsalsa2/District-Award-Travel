@@ -268,6 +268,27 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .dep-checklist-item label{cursor:pointer;line-height:1.5;color:var(--text)}
 .dep-checklist-item.checked label{text-decoration:line-through;color:var(--dim)}
 
+/* ── SAVINGS HERO POP animation ── */
+@keyframes savingsPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
+.sh-amount.pop{animation:savingsPop .5s ease-out}
+@media(prefers-reduced-motion:reduce){.sh-amount.pop{animation:none}}
+
+/* ── ACTIVITY TIMELINE ── */
+.activity-timeline{display:flex;flex-direction:column;gap:0}
+.activity-item{display:flex;gap:14px;position:relative;padding-bottom:18px}
+.activity-item:last-child{padding-bottom:0}
+.activity-item:not(:last-child)::before{content:'';position:absolute;left:7px;top:20px;bottom:0;width:1px;background:var(--border)}
+.activity-dot{width:15px;height:15px;border-radius:50%;flex-shrink:0;margin-top:2px;border:2px solid var(--bg);box-shadow:0 0 0 1px var(--border)}
+.activity-dot.trip{background:var(--accent)}
+.activity-dot.savings{background:var(--green)}
+.activity-dot.message{background:var(--blue)}
+.activity-body{flex:1;min-width:0}
+.activity-desc{font-size:13px;color:var(--text);line-height:1.5}
+.activity-time{font-size:11px;color:var(--dim);margin-top:2px}
+
+/* ── POINTS COMPACT LINE ── */
+.sh-points-line{font-size:12px;color:rgba(255,255,255,.4);margin-top:8px;font-weight:500}
+
 /* ── EMPTY STATE float animation ── */
 @keyframes floatPlane{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-12px) rotate(2deg)}}
 .empty-float-plane{animation:floatPlane 3s ease-in-out infinite;display:inline-block}
@@ -561,6 +582,7 @@ body.light-mode{
             <div class="sh-amount" id="sh-amount" data-shimmer="1" data-v="$0">$0</div>
             <div class="sh-tagline"><strong id="sh-trips-saved">0 trips</strong> · documented &amp; verified</div>
             <div id="sh-trip-milestone"></div>
+            <div class="sh-points-line" id="sh-points-line" style="display:none"></div>
           </div>
           <div class="sh-right">
             <div class="sh-fee-label">Advisory fee</div>
@@ -579,8 +601,23 @@ body.light-mode{
         </div>
         <div id="ov-help"></div>
         <div id="ov-plan"></div>
+        <div id="ov-empty-cta" style="display:none;margin-bottom:28px">
+          <div style="background:var(--accent);border-radius:16px;padding:28px 32px;position:relative;overflow:hidden">
+            <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 80% 50%,rgba(255,255,255,.1),transparent 65%);pointer-events:none"></div>
+            <div style="position:relative;z-index:1">
+              <div style="font-size:28px;margin-bottom:10px">🚀</div>
+              <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-.4px;margin-bottom:6px">Start Your First Trip</div>
+              <div style="font-size:14px;color:rgba(255,255,255,.82);margin-bottom:20px;line-height:1.55">Tell us where you want to go →</div>
+              <button onclick="openChat()" style="background:#fff;color:var(--accent);border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:opacity .15s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">Message my advisor</button>
+            </div>
+          </div>
+        </div>
         <div class="sec-head">Recent Messages</div>
         <div class="msg-list" id="ov-messages"></div>
+        <div id="ov-activity" style="display:none">
+          <div class="sec-head">Recent Activity</div>
+          <div class="activity-timeline" id="ov-activity-list"></div>
+        </div>
         <div class="refer-card">
           <div>
             <div class="refer-title">🎁 Refer a Friend</div>
@@ -841,6 +878,11 @@ function renderPortal(c){
     animStat('sh-fee',lifetimeFee,fmtUsd);
     const tripCount=(c.savings_breakdown||[]).length;
     document.getElementById('sh-trips-saved').textContent=tripCount+' trip'+(tripCount!==1?'s':'');
+    // Scale pop animation on first render with savings > 0
+    if(prevSavings===0&&lifetimeSavings>0){
+      const amtEl=document.getElementById('sh-amount');
+      if(amtEl){amtEl.classList.remove('pop');void amtEl.offsetWidth;amtEl.classList.add('pop');setTimeout(()=>amtEl.classList.remove('pop'),600);}
+    }
     // Fire confetti once when savings first appear
     if(prevSavings===0&&lifetimeSavings>0&&!REDUCED){
       const colors=['#f97316','#fbbf24','#4ade80','#60a5fa','#f472b6','#a78bfa','#fb923c','#34d399'];
@@ -904,6 +946,24 @@ function renderPortal(c){
   // Referral share card (post-booking) + trip milestone badge
   renderShareCard(c.savings_breakdown||[]);
   renderTripMilestoneBadge(c.savings_breakdown||[]);
+
+  // Points total compact line in savings hero
+  const pointsArr=c.points||[];
+  const ptsTotalLine=document.getElementById('sh-points-line');
+  if(ptsTotalLine){
+    const ptsTotal=pointsArr.reduce((s,p)=>s+(p.balance||p.points||0),0);
+    if(ptsTotal>0&&lifetimeSavings>0){
+      ptsTotalLine.textContent=fmtNum(ptsTotal)+' total points across '+pointsArr.length+' program'+(pointsArr.length!==1?'s':'');
+      ptsTotalLine.style.display='block';
+    }else{ptsTotalLine.style.display='none';}
+  }
+
+  // Empty CTA if no trips
+  const emptyCta=document.getElementById('ov-empty-cta');
+  if(emptyCta)emptyCta.style.display=trips.length===0?'block':'none';
+
+  // Activity timeline
+  renderActivityTimeline(c);
 
   // Points tab
   renderPoints(c.points||[]);
@@ -1100,6 +1160,65 @@ function renderMessages(elId,msgs,preview){
       ${m.subject&&!preview?`<div class="sv-label" style="margin-bottom:6px">${esc(m.subject)}</div>`:''}
       <div class="msg-body">${shown}</div>${plan}</div>`;
   }).join('');
+}
+
+function buildActivityTimeline(c){
+  const items=[];
+  const now=Date.now();
+  // Trip workflow transitions — approximate with current status
+  const trips=c.pipeline_trips||[];
+  trips.forEach(t=>{
+    const dest=t.destination||'your trip';
+    const status=(t.workflow_status||'new');
+    const statusLabels={new:'Intake received',researching:'Research started',options_sent:'Options sent to you',awaiting_decision:'Awaiting your decision',booked:'Booked',invoiced:'Invoiced',closed:'Complete'};
+    const label=statusLabels[status]||status;
+    const ts=t.updated_at||t.created_at||null;
+    items.push({type:'trip',desc:'Your '+esc(dest)+' trip moved to: <strong>'+esc(label)+'</strong>',time:ts,sort:ts?new Date(ts).getTime():0});
+  });
+  // Savings events
+  const savings=c.savings_breakdown||[];
+  savings.forEach(r=>{
+    if(!(r.gross_savings_cents>0))return;
+    const label=r.trip_label||r.destination||'your trip';
+    const ts=r.booked_at||r.updated_at||r.created_at||null;
+    items.push({type:'savings',desc:'Your advisor documented <strong>'+esc(fmtUsd(r.gross_savings_cents))+'</strong> in savings on '+esc(label),time:ts,sort:ts?new Date(ts).getTime():0});
+  });
+  // Unread messages from advisor
+  const msgs=(c.messages||[]).filter(m=>m.unread&&m.sender!=='client');
+  msgs.forEach(m=>{
+    const ts=m.time||m.ts||null;
+    items.push({type:'message',desc:'New message from your advisor',time:ts,sort:ts?new Date(ts).getTime():0});
+  });
+  // Sort newest first, take max 5
+  items.sort((a,b)=>b.sort-a.sort);
+  return items.slice(0,5);
+}
+
+function fmtTimeAgo(s){
+  if(!s)return '';
+  const d=new Date(s);if(isNaN(d))return esc(s);
+  const diff=Math.round((Date.now()-d.getTime())/1000);
+  if(diff<60)return 'just now';
+  if(diff<3600)return Math.floor(diff/60)+'m ago';
+  if(diff<86400)return Math.floor(diff/3600)+'h ago';
+  if(diff<7*86400)return Math.floor(diff/86400)+'d ago';
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+function renderActivityTimeline(c){
+  const wrap=document.getElementById('ov-activity');
+  const list=document.getElementById('ov-activity-list');
+  if(!wrap||!list)return;
+  const items=buildActivityTimeline(c);
+  if(!items.length){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  list.innerHTML=items.map(it=>`<div class="activity-item">
+    <div class="activity-dot ${it.type}"></div>
+    <div class="activity-body">
+      <div class="activity-desc">${it.desc}</div>
+      ${it.time?`<div class="activity-time">${fmtTimeAgo(it.time)}</div>`:''}
+    </div>
+  </div>`).join('');
 }
 
 /* ── CHAT (WhatsApp-style thread with the advisor) ── */
