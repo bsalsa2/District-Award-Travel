@@ -449,7 +449,7 @@
   .kb-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,rgba(250,248,243,.55))}
   .kb-col-count{font-size:11px;font-weight:700;background:rgba(249,115,22,.18);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:100px;padding:2px 7px}
   .kb-cards{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:80px}
-  .kb-card{background:var(--card,#1a1814);border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.07));padding:10px 12px;cursor:pointer}
+  .kb-card{background:var(--card,#1a1814);border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.07));padding:10px 12px;cursor:pointer;position:relative}
   .kb-card:hover{border-color:rgba(249,115,22,.3);box-shadow:0 2px 12px rgba(249,115,22,.08)}
   .kb-card.stale{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)}
   .kb-card.critical{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
@@ -770,6 +770,10 @@
     border-radius:8px; padding:14px 16px; color:#ef4444;
     font-size:.87rem;
   }
+  @keyframes warn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .stale-badge{animation:warn-pulse 1.5s infinite;position:absolute;top:8px;right:8px;background:rgba(249,115,22,.2);color:var(--accent);border-radius:4px;padding:2px 6px;font-size:11px;}
+  @keyframes card-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .kb-card{animation:card-in .2s ease;}
 </style>
 </head>
 <body>
@@ -887,6 +891,13 @@
             <div class="metric-card"><div class="metric-label">New This Week</div><div class="metric-val" id="ov-new-clients">—</div><div class="metric-delta">joined last 7 days</div></div>
             <div class="metric-card"><div class="metric-label">Booking Rate</div><div class="metric-val" id="ov-booking-rate">—</div><div class="metric-delta">booked / total trips</div></div>
             <div class="metric-card" id="waitlist-card" style="cursor:pointer" onclick="loadWaitlist()" title="Click to view waitlist"><div class="metric-label">Waitlist</div><div class="metric-val purple" id="ov-waitlist-count">—</div><div class="metric-delta">emails captured</div></div>
+          </div>
+
+          <!-- QUICK ACTIONS BAR -->
+          <div style="display:flex;gap:10px;margin:0 0 20px;flex-wrap:wrap;">
+            <button onclick="openPlan()" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--accent);cursor:pointer;font-size:13px;" onmouseover="this.style.background='rgba(249,115,22,.1)'" onmouseout="this.style.background='var(--card)'">📋 New Trip</button>
+            <button onclick="document.querySelector('[data-panel=inbox]').click()" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--accent);cursor:pointer;font-size:13px;" onmouseover="this.style.background='rgba(249,115,22,.1)'" onmouseout="this.style.background='var(--card)'">✉ Broadcast</button>
+            <a href="/api/admin/clients/export" id="export-csv-btn" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--accent);cursor:pointer;font-size:13px;text-decoration:none;display:inline-block;" onmouseover="this.style.background='rgba(249,115,22,.1)'" onmouseout="this.style.background='var(--card)'">📊 Export CSV</a>
           </div>
 
           <!-- FUNNEL SECTION -->
@@ -3675,19 +3686,42 @@ function renderBoard(data){
         timeBadge='<span class="kb-card-time-badge">'+timeLbl+'</span>';
       }
       var watermark='<div class="kb-card-watermark">'+esc((t.destination||'').split(',')[0].trim().slice(0,16))+'</div>';
-      return '<div class="'+cls+'" data-kb-idx="'+idx+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer;padding-bottom:'+(timeBadge?'28px':'10px')+'">'+
+      var staleBadge=(t.hours_in_stage>48)?'<span class="stale-badge">&#x26A0; stale</span>':'';
+      return '<div class="'+cls+'" data-kb-idx="'+idx+'" data-trip-id="'+t.id+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer;padding-bottom:'+(timeBadge?'28px':'10px')+'">'+
+        staleBadge+
         '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+notesBadge+'</div>'+
         '<div class="kb-card-client">'+esc(t.client_name||t.client_email||'')+'</div>'+
         '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+buildBtn+advBtn+'</div>'+
         watermark+timeBadge+'</div>';
     }).join(''):'<div class="kb-empty">&#x2708;<br>No trips here</div>';
-    return '<div class="kb-col"><div class="kb-col-head"><span class="kb-col-title"><span class="kb-status-dot"></span>'+col.label+'</span>'+
+    return '<div class="kb-col" data-status="'+col.key+'"><div class="kb-col-head"><span class="kb-col-title"><span class="kb-status-dot"></span>'+col.label+'</span>'+
       '<span class="kb-col-count">'+cards.length+'</span></div><div class="kb-cards">'+cardHtml+'</div></div>';
   }).join('');
   // Staggered entrance animation
   board.querySelectorAll('.kb-card').forEach(function(el){
     var delay=(parseInt(el.getAttribute('data-kb-idx'),10)||0)*40;
     setTimeout(function(){el.classList.add('kb-card-visible');},delay);
+  });
+  initKanbanDrag();
+}
+
+function initKanbanDrag(){
+  document.querySelectorAll('.kb-card').forEach(function(card){
+    card.setAttribute('draggable','true');
+    card.addEventListener('dragstart',function(e){e.dataTransfer.setData('text/plain',card.dataset.tripId||'');card.style.opacity='.4';});
+    card.addEventListener('dragend',function(){card.style.opacity='1';});
+  });
+  document.querySelectorAll('.kb-col').forEach(function(col){
+    col.addEventListener('dragover',function(e){e.preventDefault();col.style.background='rgba(249,115,22,.08)';});
+    col.addEventListener('dragleave',function(){col.style.background='';});
+    col.addEventListener('drop',async function(e){
+      e.preventDefault();col.style.background='';
+      var tripId=e.dataTransfer.getData('text/plain');
+      var newStatus=col.dataset.status;
+      if(!tripId||!newStatus)return;
+      var res=await fetch('/api/admin/trips/'+tripId+'/status',{method:'PATCH',headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({status:newStatus})});
+      if(res.ok){toast('Moved to '+newStatus,'success');loadBoard();}else{toast('Move failed','error');}
+    });
   });
 }
 
