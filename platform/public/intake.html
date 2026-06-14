@@ -13,22 +13,22 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#ffffff;--off:#fafaf9;--card:#f5f5f4;
-  --text:#1c1917;--muted:#78716c;--dim:#a8a29e;
-  --accent:#f97316;--accent-dim:rgba(249,115,22,.08);--accent-border:rgba(249,115,22,.2);
-  --border:#e7e5e4;--border2:#d6d3d1;--red:#ef4444;--green:#16a34a;
-  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --bg:#1a1409;--off:#0e0b08;--card:#1a1409;
+  --text:#f5f0ea;--muted:rgba(245,240,234,.55);--dim:rgba(245,240,234,.35);
+  --accent:#f97316;--accent-dim:rgba(249,115,22,.10);--accent-border:rgba(249,115,22,.2);
+  --border:rgba(249,115,22,.12);--border2:rgba(255,255,255,.12);--red:#ef4444;--green:#4ade80;
+  --shadow:0 8px 40px rgba(0,0,0,.4);
   --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 html{scroll-behavior:smooth}
-body{background:var(--off);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+body{background:#0e0b08;color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
 a{text-decoration:none;color:inherit}
-nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:60px;background:var(--bg);border-bottom:1px solid var(--border)}
+nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:60px;background:#0e0b08;border-bottom:1px solid rgba(249,115,22,.12)}
 .nav-logo{font-size:15px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:6px}
 .nav-logo span{color:var(--accent)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;border:none;font-family:var(--font)}
-.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border2)}
-.btn-ghost:hover{color:var(--text);background:var(--card)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,.14)}
+.btn-ghost:hover{color:var(--text);background:rgba(255,255,255,.06)}
 
 /* ── PRIMARY BUTTON with shine sweep ── */
 .btn-primary{background:var(--accent);color:#fff;position:relative;overflow:hidden}
@@ -56,10 +56,6 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .page-h1 em{font-style:normal;background:linear-gradient(95deg,#f97316,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .page-sub{font-size:14px;color:var(--muted)}
 
-/* ── TOP ANIMATED PROGRESS BAR ── */
-.top-progress-bar{width:100%;height:4px;background:var(--border);border-radius:2px;margin-bottom:20px;overflow:hidden}
-.top-progress-fill{height:100%;background:#f97316;border-radius:2px;width:33.33%;transition:width .4s ease}
-
 /* ── DRAFT SAVED INDICATOR ── */
 .draft-saved{
   position:absolute;top:16px;right:20px;
@@ -72,12 +68,74 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 }
 .draft-saved.visible{opacity:1}
 
-/* ── PROGRESS (with flying plane) ── */
-.progress-wrap{margin-bottom:28px;position:relative}
-.progress-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+/* ── WIZARD PROGRESS BAR ── */
+.wizard-progress{
+  margin-bottom:32px;
+  position:relative;
+}
+.wizard-track{
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+  padding:0 16px;
+}
+/* lines between dots */
+.wizard-line{
+  flex:1;height:2px;
+  background:rgba(255,255,255,.1);
+  transition:background .4s ease;
+  position:relative;z-index:0;
+}
+.wizard-line.done{background:var(--accent)}
+/* dot nodes */
+.wizard-dot-wrap{
+  display:flex;flex-direction:column;align-items:center;
+  position:relative;z-index:1;
+  flex-shrink:0;
+}
+.wizard-dot{
+  width:36px;height:36px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:800;
+  border:2px solid rgba(255,255,255,.15);
+  color:var(--dim);
+  background:#1a1409;
+  transition:all .35s cubic-bezier(.34,1.56,.64,1);
+}
+.wizard-dot.active{
+  border-color:var(--accent);
+  color:var(--accent);
+  background:var(--accent-dim);
+  box-shadow:0 0 0 5px rgba(249,115,22,.12);
+  transform:scale(1.12);
+}
+.wizard-dot.done{
+  border-color:var(--accent);
+  background:var(--accent);
+  color:#fff;
+  box-shadow:0 2px 10px rgba(249,115,22,.35);
+}
+.wizard-dot-label{
+  margin-top:7px;
+  font-size:11px;font-weight:600;
+  color:var(--dim);
+  text-transform:uppercase;letter-spacing:.06em;
+  white-space:nowrap;
+  transition:color .3s;
+}
+.wizard-dot-label.active{color:var(--accent)}
+.wizard-dot-label.done{color:var(--muted)}
+/* hide labels on narrow mobile, keep dots visible */
+@media(max-width:375px){
+  .wizard-dot-label{display:none}
+}
+
+/* progress meta row */
+.progress-meta{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
 .progress-step{font-size:12px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.07em}
 .progress-pct{font-size:12px;color:var(--dim);font-weight:600}
-.progress-bar{height:6px;background:var(--border);border-radius:3px;position:relative}
+
+/* flying-plane bar */
+.progress-bar{height:6px;background:rgba(255,255,255,.08);border-radius:3px;position:relative;margin-top:10px}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),#fb923c);border-radius:3px;width:33%;transition:width .55s cubic-bezier(.16,1,.3,1);box-shadow:0 0 10px rgba(249,115,22,.35)}
 .progress-plane{
   position:absolute;top:50%;left:33%;transform:translate(-50%,-54%);
@@ -86,60 +144,27 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 }
 @media(prefers-reduced-motion:reduce){.progress-plane,.progress-fill{transition:none}}
 
-/* ── STEP INDICATORS ── */
-.step-indicators{display:flex;justify-content:center;align-items:center;gap:0;margin-bottom:24px}
-.step-dot{
-  display:flex;align-items:center;justify-content:center;
-  width:36px;height:36px;border-radius:50%;
-  font-size:13px;font-weight:800;
-  border:2px solid var(--border2);
-  color:var(--dim);
-  background:var(--bg);
-  transition:all .4s cubic-bezier(.34,1.56,.64,1);
-  position:relative;z-index:1;
-}
-.step-dot.active{
-  border-color:var(--accent);
-  color:var(--accent);
-  background:var(--accent-dim);
-  box-shadow:0 0 0 5px rgba(249,115,22,.12);
-  transform:scale(1.1);
-}
-.step-dot.done{
-  border-color:var(--accent);
-  background:var(--accent);
-  color:#fff;
-  box-shadow:0 2px 10px rgba(249,115,22,.35);
-}
-.step-connector{
-  width:48px;height:2px;
-  background:var(--border);
-  transition:background .4s;
-  position:relative;z-index:0;
-}
-.step-connector.done{background:var(--accent)}
-
 /* ── RESTORE BANNER ── */
-.restore-banner{display:none;background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid var(--accent-border);border-radius:12px;padding:14px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.restore-banner{display:none;background:linear-gradient(135deg,rgba(249,115,22,.08),rgba(249,115,22,.04));border:1px solid var(--accent-border);border-radius:12px;padding:14px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .restore-banner.show{display:flex}
 .restore-txt{font-size:13px;line-height:1.5}
 .restore-actions{display:flex;gap:8px;flex-shrink:0}
 .btn-sm{padding:7px 14px;font-size:12px}
 
 /* ── STEPS ── */
-.step{display:none}
-.step.active{display:block;animation:slideInRight .38s cubic-bezier(.16,1,.3,1)}
-.step.slide-back{animation:slideInLeft .38s cubic-bezier(.16,1,.3,1)}
-@keyframes slideInRight{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
-@keyframes slideInLeft{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
+.step{display:none;animation:none}
+.step.active{display:block}
+.step.entering-forward{animation:slideInRight .3s ease both}
+.step.entering-back{animation:slideInLeft .3s ease both}
+@keyframes slideInRight{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
 
 /* ── FORM CARD with noise texture ── */
 .form-card{
-  background:var(--bg);
-  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='0.03'/></svg>");
-  border:1px solid var(--border);
+  background:#1a1409;
+  border:1px solid rgba(249,115,22,.12);
   border-radius:14px;padding:28px;margin-bottom:16px;
-  box-shadow:var(--shadow);
+  box-shadow:0 8px 40px rgba(0,0,0,.4);
 }
 .form-card-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;letter-spacing:-.3px}
 .form-card-sub{font-size:13px;color:var(--muted);margin-bottom:22px}
@@ -148,7 +173,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 
 /* ── FLOATING LABEL FIELDS ── */
 .field{display:flex;flex-direction:column;gap:5px}
-.field label{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em}
+.field label{font-size:12px;font-weight:600;color:rgba(245,240,234,.65);letter-spacing:.03em}
 .field label .req{color:var(--red);margin-left:2px}
 
 /* Floating label wrapper */
@@ -156,7 +181,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .field-float label{
   position:absolute;
   left:13px;top:50%;transform:translateY(-50%);
-  font-size:14px;font-weight:500;color:var(--dim);
+  font-size:14px;font-weight:500;color:rgba(245,240,234,.4);
   pointer-events:none;
   transition:all .18s cubic-bezier(.4,0,.2,1);
   background:transparent;padding:0 2px;
@@ -171,15 +196,15 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
   transform:translateY(-50%);
   font-size:10px;font-weight:700;
   color:var(--accent);
-  background:var(--bg);
+  background:#1a1409;
   letter-spacing:.04em;text-transform:uppercase;
 }
 .field-float input{padding-top:16px;padding-bottom:8px}
 
 .field input,.field select,.field textarea,.field-float input{
-  background:var(--off);
-  border:1.5px solid var(--border);
-  color:var(--text);
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  color:#f5f0ea;
   border-radius:8px;padding:11px 13px;
   font-size:14px;font-family:inherit;
   outline:none;
@@ -187,23 +212,23 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 }
 /* Orange glow on focus */
 .field input:focus,.field select:focus,.field textarea:focus,.field-float input:focus{
-  border-color:var(--accent);
-  background:var(--bg);
-  box-shadow:0 0 0 3px rgba(249,115,22,.13),0 0 12px rgba(249,115,22,.09);
+  border-color:rgba(249,115,22,.5);
+  background:rgba(255,255,255,.06);
+  box-shadow:0 0 0 3px rgba(249,115,22,.1);
 }
-.field input::placeholder,.field textarea::placeholder,.field-float input::placeholder{color:var(--dim)}
-.field select option{background:var(--bg)}
+.field input::placeholder,.field textarea::placeholder,.field-float input::placeholder{color:rgba(245,240,234,.3)}
+.field select option{background:#1a1409;color:#f5f0ea}
 .field textarea{resize:vertical;min-height:88px}
 /* ── CHAR COUNTER ── */
 .char-counter{font-size:11px;color:var(--dim);text-align:right;margin-top:3px;font-weight:500}
 .char-counter.warn{color:var(--accent)}
-.field .err-msg{display:none;font-size:11px;color:var(--red);font-weight:500}
+.field .err-msg{display:none;font-size:11px;color:var(--red);font-weight:500;margin-top:2px}
 .field.invalid input,.field.invalid select{border-color:var(--red)}
 .field.invalid .err-msg{display:block}
 
 /* ── CABIN CHIPS ── */
 .chip-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.chip{border:1px solid var(--border);background:var(--off);border-radius:8px;padding:10px 6px;text-align:center;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s;font-family:var(--font)}
+.chip{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);border-radius:8px;padding:10px 6px;text-align:center;font-size:12px;font-weight:600;color:rgba(245,240,234,.55);cursor:pointer;transition:all .15s;font-family:var(--font)}
 .chip:hover{border-color:var(--accent-border)}
 .chip.sel{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
 .chip .chip-ico{display:block;font-size:16px;margin-bottom:3px}
@@ -211,14 +236,18 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 /* ── POINTS ROWS ── */
 .points-rows{display:flex;flex-direction:column;gap:8px;margin-top:4px}
 .points-row{display:grid;grid-template-columns:1.3fr 1fr auto;gap:8px;align-items:center}
-.points-row input{background:var(--off);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
-.points-row input:focus{border-color:var(--accent);background:var(--bg)}
-.points-row input::placeholder{color:var(--dim)}
+.points-row input{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:#f5f0ea;border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;transition:border-color .15s}
+.points-row input:focus{border-color:rgba(249,115,22,.5);background:rgba(255,255,255,.06)}
+.points-row input::placeholder{color:rgba(245,240,234,.3)}
 .btn-remove{background:none;border:none;color:var(--dim);cursor:pointer;font-size:16px;line-height:1;padding:6px;border-radius:4px;transition:color .15s}
 .btn-remove:hover{color:var(--red)}
-.btn-add-row{background:none;border:1px dashed var(--border2);color:var(--muted);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;width:100%;font-family:var(--font);margin-top:10px}
+.btn-add-row{background:none;border:1px dashed rgba(255,255,255,.15);color:rgba(245,240,234,.55);padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;width:100%;font-family:var(--font);margin-top:10px}
 .btn-add-row:hover{border-color:var(--accent);color:var(--accent)}
 .pts-skip{margin-top:14px;font-size:12px;color:var(--dim);text-align:center}
+
+/* ── TIP BOX ── */
+.tip-box{display:none;background:rgba(249,115,22,.07);border:1px solid var(--accent-border);border-radius:10px;padding:12px 16px;font-size:13px;color:var(--muted);margin-top:14px;line-height:1.5}
+.tip-box.show{display:block}
 
 /* ── NAV BUTTONS ── */
 .step-nav{display:flex;gap:10px;margin-top:4px}
@@ -227,7 +256,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .btn-next{flex:1}
 
 /* ── AGREE ── */
-.agree-row{display:flex;align-items:flex-start;gap:12px;background:var(--off);border:1px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .2s,background .2s}
+.agree-row{display:flex;align-items:flex-start;gap:12px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .2s,background .2s}
 .agree-row:hover{border-color:var(--accent-border)}
 .agree-row.checked{border-color:var(--accent-border);background:var(--accent-dim)}
 .agree-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);cursor:pointer;flex-shrink:0;margin-top:2px}
@@ -272,28 +301,27 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 }
 .ticket-tear-circle-l{
   width:18px;height:18px;border-radius:50%;
-  background:var(--off);
+  background:#0e0b08;
   flex-shrink:0;
   position:relative;z-index:1;
   margin-left:-9px;
 }
 .ticket-tear-circle-r{
   width:18px;height:18px;border-radius:50%;
-  background:var(--off);
+  background:#0e0b08;
   flex-shrink:0;
   position:relative;z-index:1;
   margin-left:auto;
   margin-right:-9px;
 }
 .ticket-body{
-  background:var(--bg);
-  background-image:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/></filter><rect width='200' height='200' filter='url(%23n)' opacity='0.03'/></svg>");
-  border:1px solid var(--border);border-top:none;
+  background:#1a1409;
+  border:1px solid rgba(249,115,22,.12);border-top:none;
   padding:20px 24px;
   display:flex;gap:16px;align-items:flex-start;
 }
 .ticket-fields{flex:1;min-width:0}
-.ticket-row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13px}
+.ticket-row{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.1);font-size:13px}
 .ticket-row:last-child{border-bottom:none}
 .ticket-row span:first-child{color:var(--dim);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding-top:2px}
 .ticket-row span:last-child{font-weight:700;color:var(--text);text-align:right}
@@ -311,7 +339,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
 .ticket-qr svg{width:100%;height:100%;display:block}
 
 #confetti-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:900}
-.success-next{margin:30px auto 0;max-width:440px;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:22px;text-align:left;box-shadow:var(--shadow)}
+.success-next{margin:30px auto 0;max-width:440px;background:#1a1409;border:1px solid rgba(249,115,22,.12);border-radius:14px;padding:22px;text-align:left;box-shadow:0 8px 40px rgba(0,0,0,.4)}
 .success-next-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
 .success-next-item{display:flex;gap:10px;font-size:13px;color:var(--muted);margin-bottom:9px;align-items:flex-start}
 .success-next-item:last-child{margin-bottom:0}
@@ -326,7 +354,6 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
   .form-grid{grid-template-columns:1fr}
   .form-card{padding:22px 18px}
   .chip-row{grid-template-columns:repeat(2,1fr)}
-  .step-connector{width:28px}
 }
 @media(prefers-reduced-motion:reduce){
   .step,.success-check,.progress-fill{animation:none;transition:none}
@@ -355,29 +382,81 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
     </div>
   </div>
 
-  <div class="progress-wrap" id="progress-wrap">
-    <div class="top-progress-bar"><div class="top-progress-fill" id="top-progress-fill"></div></div>
+  <!-- ── WIZARD PROGRESS ── -->
+  <div class="wizard-progress" id="progress-wrap">
     <div class="draft-saved" id="draft-saved">&#10003; Draft saved</div>
-    <div class="step-indicators" id="step-indicators">
-      <div class="step-dot active" id="dot-1">1</div>
-      <div class="step-connector" id="conn-1"></div>
-      <div class="step-dot" id="dot-2">2</div>
-      <div class="step-connector" id="conn-2"></div>
-      <div class="step-dot" id="dot-3">3</div>
+
+    <!-- dot + line track -->
+    <div class="wizard-track">
+      <div class="wizard-dot-wrap">
+        <div class="wizard-dot active" id="dot-1">1</div>
+        <div class="wizard-dot-label active" id="dot-label-1">About You</div>
+      </div>
+      <div class="wizard-line" id="line-1"></div>
+      <div class="wizard-dot-wrap">
+        <div class="wizard-dot" id="dot-2">2</div>
+        <div class="wizard-dot-label" id="dot-label-2">Your Trip</div>
+      </div>
+      <div class="wizard-line" id="line-2"></div>
+      <div class="wizard-dot-wrap">
+        <div class="wizard-dot" id="dot-3">3</div>
+        <div class="wizard-dot-label" id="dot-label-3">Your Points</div>
+      </div>
     </div>
+
+    <!-- meta row -->
     <div class="progress-meta">
-      <span class="progress-step" id="progress-label">Step 1 of 3 — Your trip</span>
+      <span class="progress-step" id="progress-label">Step 1 of 3 — About You</span>
       <span class="progress-pct" id="progress-pct">33%</span>
     </div>
-    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div><span class="progress-plane" id="progress-plane">&#9992;&#65039;</span></div>
+    <!-- flying plane bar -->
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill" style="width:33%"></div>
+      <span class="progress-plane" id="progress-plane" style="left:33%">&#9992;&#65039;</span>
+    </div>
   </div>
 
-  <form id="intakeForm" novalidate>
+  <form id="intakeForm" action="/api/intake" method="POST" novalidate>
     <!-- honeypot: bots fill it, humans never see it -->
     <div class="hp-field" aria-hidden="true"><input type="text" name="hp" tabindex="-1" autocomplete="off"></div>
 
-    <!-- STEP 1 — YOUR TRIP -->
+    <!-- ═══════════════════════════════════════════════
+         STEP 1 — ABOUT YOU
+    ════════════════════════════════════════════════ -->
     <div class="step active" id="step-1">
+      <div class="form-card">
+        <div class="form-card-title">Tell us about yourself &#128075;</div>
+        <div class="form-card-sub">Just enough to reach you with your options.</div>
+        <div class="form-grid">
+          <div class="field-float field">
+            <input type="text" name="first_name" placeholder=" " autocomplete="given-name" id="ff-first_name">
+            <label for="ff-first_name">First name <span class="req">*</span></label>
+            <span class="err-msg">First name is required.</span>
+          </div>
+          <div class="field-float field">
+            <input type="text" name="last_name" placeholder=" " autocomplete="family-name" id="ff-last_name">
+            <label for="ff-last_name">Last name</label>
+          </div>
+          <div class="field-float field form-full">
+            <input type="email" name="email" placeholder=" " autocomplete="email" id="ff-email">
+            <label for="ff-email">Email <span class="req">*</span></label>
+            <span class="err-msg">A valid email address is required.</span>
+          </div>
+          <div class="field-float field form-full">
+            <input type="tel" name="phone" placeholder=" " autocomplete="tel" id="ff-phone">
+            <label for="ff-phone">Phone (optional)</label>
+          </div>
+        </div>
+      </div>
+      <div class="step-nav">
+        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(1)">Next &#8594;</button>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════
+         STEP 2 — YOUR TRIP
+    ════════════════════════════════════════════════ -->
+    <div class="step" id="step-2">
       <div class="form-card">
         <div class="form-card-title">Where are we sending you? &#9992;&#65039;</div>
         <div class="form-card-sub">Dream big — that's what the points are for.</div>
@@ -402,12 +481,12 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
             <input type="hidden" name="cabin_pref" value="business">
           </div>
           <div class="field">
-            <label>Trip type</label>
-            <select name="trip_type">
-              <option value="leisure">Leisure / vacation</option>
-              <option value="business">Business travel</option>
-              <option value="mixed">Mixed</option>
-              <option value="honeymoon">Honeymoon / anniversary</option>
+            <label>Flexibility</label>
+            <select name="flexibility">
+              <option value="exact">Exact dates only</option>
+              <option value="few_days" selected>&#177; a few days</option>
+              <option value="week">&#177; a week</option>
+              <option value="very_flexible">Very flexible</option>
             </select>
           </div>
           <div class="field">
@@ -420,19 +499,26 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
             </select>
           </div>
           <div class="field form-full">
-            <label>Anything else about the dream?</label>
-            <textarea name="notes" placeholder="Lie-flat seats, anniversary trip, traveling with kids…" maxlength="2000" id="textarea-notes"></textarea>
-            <div class="char-counter" id="counter-notes">0 / 2000</div>
+            <label>Trip type</label>
+            <select name="trip_type">
+              <option value="leisure">Leisure / vacation</option>
+              <option value="business">Business travel</option>
+              <option value="mixed">Mixed</option>
+              <option value="honeymoon">Honeymoon / anniversary</option>
+            </select>
           </div>
         </div>
       </div>
       <div class="step-nav">
-        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(1)">Next — your points &#8594;</button>
+        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(2)">&#8592; Back</button>
+        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(2)">Next &#8594;</button>
       </div>
     </div>
 
-    <!-- STEP 2 — YOUR POINTS -->
-    <div class="step" id="step-2">
+    <!-- ═══════════════════════════════════════════════
+         STEP 3 — YOUR POINTS
+    ════════════════════════════════════════════════ -->
+    <div class="step" id="step-3">
       <div class="form-card">
         <div class="form-card-title">What are you sitting on? &#11041;</div>
         <div class="form-card-sub">Every program counts — rough estimates are fine. We never ask for passwords.</div>
@@ -449,67 +535,31 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
           </div>
         </div>
         <button type="button" class="btn-add-row" onclick="addPtsRow()">+ Add another program</button>
+        <div class="tip-box" id="pts-tip">&#128161; Tip: adding balances helps us research faster — even rough numbers help a lot.</div>
         <div class="pts-skip">Not sure what you have? Skip this — we'll figure it out together.</div>
       </div>
-      <div class="step-nav">
-        <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(2)">&#8592; Back</button>
-        <button type="button" class="btn btn-primary btn-next" onclick="nextStep(2)">Next — about you &#8594;</button>
-      </div>
-    </div>
 
-    <!-- STEP 3 — ABOUT YOU -->
-    <div class="step" id="step-3">
       <div class="form-card">
-        <div class="form-card-title">Almost there &#127919;</div>
-        <div class="form-card-sub">Just enough to reach you with your options.</div>
-        <div class="form-grid">
-          <div class="field-float field">
-            <input type="text" name="first_name" placeholder=" " autocomplete="given-name" id="ff-first_name">
-            <label for="ff-first_name">First name <span class="req">*</span></label>
-            <span class="err-msg">Required.</span>
-          </div>
-          <div class="field-float field">
-            <input type="text" name="last_name" placeholder=" " autocomplete="family-name" id="ff-last_name">
-            <label for="ff-last_name">Last name <span class="req">*</span></label>
-            <span class="err-msg">Required.</span>
-          </div>
-          <div class="field-float field">
-            <input type="email" name="email" placeholder=" " autocomplete="email" id="ff-email">
-            <label for="ff-email">Email <span class="req">*</span></label>
-            <span class="err-msg">A valid email is required.</span>
-          </div>
-          <div class="field-float field">
-            <input type="tel" name="phone" placeholder=" " autocomplete="tel" id="ff-phone">
-            <label for="ff-phone">Phone</label>
-          </div>
-          <div class="field-float field">
-            <input type="text" name="home_airport" placeholder=" " autocomplete="off" id="ff-home_airport">
-            <label for="ff-home_airport">Home airport <span class="req">*</span></label>
-            <span class="err-msg">Required — where do you fly from?</span>
-          </div>
-          <div class="field">
-            <label>Preferred contact</label>
-            <select name="comm_pref">
-              <option value="email">Email</option>
-              <option value="text">Text / SMS</option>
-              <option value="whatsapp">WhatsApp</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>How did you hear about us?</label>
-            <select name="referral_source">
-              <option value="">Select…</option>
-              <option>Friend or family referral</option>
-              <option>Social media</option>
-              <option>Search engine</option>
-              <option>Word of mouth</option>
-              <option>Other</option>
-            </select>
-          </div>
-          <div class="field-float field">
-            <input type="text" name="referral_name" placeholder=" " id="ff-referral_name">
-            <label for="ff-referral_name">Referral name (optional)</label>
-          </div>
+        <div class="form-card-title">Goals &amp; notes</div>
+        <div class="form-card-sub">Lie-flat seats? Anniversary trip? Traveling with kids? Anything helps.</div>
+        <div class="field">
+          <textarea name="notes" placeholder="Tell us anything else about the dream trip…" maxlength="2000" id="textarea-notes"></textarea>
+          <div class="char-counter" id="counter-notes">0 / 2000</div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label>Home airport</label>
+          <input type="text" name="home_airport" placeholder="e.g. LAX, JFK, ORD" autocomplete="off" id="ff-home_airport">
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label>How did you hear about us?</label>
+          <select name="referral_source">
+            <option value="">Select…</option>
+            <option>Friend or family referral</option>
+            <option>Social media</option>
+            <option>Search engine</option>
+            <option>Word of mouth</option>
+            <option>Other</option>
+          </select>
         </div>
       </div>
 
@@ -521,10 +571,10 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
           <input type="checkbox" id="agree" name="agree">
           <span>I understand and agree. This is an advisory service — I book my own flights with DAT's step-by-step guidance.</span>
         </label>
-        <div class="field" style="margin-top:6px"><span class="err-msg" id="agree-err">Please check the box to continue.</span></div>
+        <div class="field" style="margin-top:6px"><span class="err-msg" id="agree-err" style="display:none">Please check the box to continue.</span></div>
         <div class="submit-err" id="submit-err"></div>
         <div style="margin-top:18px">
-          <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;min-height:50px;font-size:15px;border-radius:10px">Submit — it's free</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn" style="width:100%;min-height:50px;font-size:15px;border-radius:10px">Submit Application</button>
         </div>
         <div class="trust-strip">
           <div class="trust-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1,9 5,13 15,3"/></svg>$0 upfront</div>
@@ -532,6 +582,7 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
           <div class="trust-item"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="1,9 5,13 15,3"/></svg>Reply in 24–72h</div>
         </div>
       </div>
+
       <div class="step-nav" style="margin-top:0">
         <button type="button" class="btn btn-ghost btn-back" onclick="prevStep(3)">&#8592; Back</button>
       </div>
@@ -571,39 +622,39 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
             <rect x="2" y="50" width="20" height="20" fill="none" stroke="#f97316" stroke-width="3"/>
             <rect x="8" y="56" width="8" height="8" fill="#f97316"/>
             <!-- D letter center -->
-            <rect x="30" y="28" width="4" height="16" fill="#f5f5f4"/>
-            <rect x="34" y="28" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="34" y="40" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="38" y="32" width="4" height="8" fill="#f5f5f4"/>
+            <rect x="30" y="28" width="4" height="16" fill="#f5f0ea"/>
+            <rect x="34" y="28" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="34" y="40" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="38" y="32" width="4" height="8" fill="#f5f0ea"/>
             <!-- scattered data bits -->
-            <rect x="26" y="2" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="32" y="2" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="40" y="2" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="44" y="2" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="2" y="26" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="2" y="32" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="2" y="40" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="2" y="44" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="66" y="26" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="66" y="32" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="66" y="40" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="26" y="66" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="32" y="66" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="44" y="66" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="50" y="66" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="50" y="26" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="56" y="26" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="50" y="36" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="60" y="40" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="50" y="46" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="60" y="50" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="50" y="56" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="56" y="60" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="20" y="26" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="14" y="32" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="20" y="36" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="14" y="42" width="4" height="4" fill="#f5f5f4"/>
-            <rect x="20" y="46" width="4" height="4" fill="#f5f5f4"/>
+            <rect x="26" y="2" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="32" y="2" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="40" y="2" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="44" y="2" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="2" y="26" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="2" y="32" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="2" y="40" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="2" y="44" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="66" y="26" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="66" y="32" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="66" y="40" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="26" y="66" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="32" y="66" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="44" y="66" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="50" y="66" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="50" y="26" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="56" y="26" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="50" y="36" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="60" y="40" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="50" y="46" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="60" y="50" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="50" y="56" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="56" y="60" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="20" y="26" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="14" y="32" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="20" y="36" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="14" y="42" width="4" height="4" fill="#f5f0ea"/>
+            <rect x="20" y="46" width="4" height="4" fill="#f5f0ea"/>
           </svg>
         </div>
       </div>
@@ -615,12 +666,16 @@ nav{display:flex;align-items:center;justify-content:space-between;padding:0 48px
       <div class="success-next-item"><span class="success-next-num">3</span><span>You book it yourself with our step-by-step guide — we're with you the whole way.</span></div>
       <div class="success-next-item"><span class="success-next-num">4</span><span>You pay 10% of documented savings. No savings, no fee.</span></div>
     </div>
-    <div style="margin-top:28px"><a href="index.html" class="btn btn-ghost">&#8592; Back to site</a></div>
+    <div style="margin-top:28px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+      <a href="index.html" class="btn btn-ghost">&#8592; Back to site</a>
+      <a href="client.html" class="btn btn-primary">Log into your portal &#x2192;</a>
+    </div>
+    <p style="margin-top:16px;font-size:12px;color:var(--muted);text-align:center">Check your email for login credentials — usually within 24 hours.</p>
   </div>
 </div>
 
 <script>
-/* Funnel tracking */
+/* ── Funnel tracking ── */
 function sid(){
   var s=sessionStorage.getItem('dat_sid');
   if(!s){s=(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2));sessionStorage.setItem('dat_sid',s);}
@@ -640,53 +695,90 @@ track('page_view');
 var formStarted=false;
 function markStart(){if(!formStarted){formStarted=true;track('form_start');}}
 
-/* Steps */
-var STEP_LABELS={1:'Step 1 of 3 — Your trip',2:'Step 2 of 3 — Your points',3:'Step 3 of 3 — About you'};
-var curStep=1,maxTracked=0,lastDir='forward';
-function updateStepDots(n){
+/* ── Step state ── */
+var STEP_LABELS={
+  1:'Step 1 of 3 — About You',
+  2:'Step 2 of 3 — Your Trip',
+  3:'Step 3 of 3 — Your Points'
+};
+var curStep=1,maxTracked=0;
+
+/* Update the dot/line/label states */
+function updateDots(n){
   for(var i=1;i<=3;i++){
     var dot=document.getElementById('dot-'+i);
+    var lbl=document.getElementById('dot-label-'+i);
     dot.classList.remove('active','done');
-    if(i<n)dot.classList.add('done');
-    else if(i===n)dot.classList.add('active');
+    lbl.classList.remove('active','done');
+    if(i<n){
+      dot.classList.add('done');
+      dot.textContent='✓'; /* ✓ check mark */
+      lbl.classList.add('done');
+    } else if(i===n){
+      dot.classList.add('active');
+      dot.textContent=String(i);
+      lbl.classList.add('active');
+    } else {
+      dot.textContent=String(i);
+    }
   }
   for(var j=1;j<=2;j++){
-    var conn=document.getElementById('conn-'+j);
-    conn.classList.toggle('done',j<n);
+    var line=document.getElementById('line-'+j);
+    line.classList.toggle('done', j<n);
   }
 }
+
+/* Show a step with animation direction */
 function showStep(n,dir){
+  var prev=document.getElementById('step-'+curStep);
   curStep=n;
-  lastDir=dir||'forward';
+  /* remove animation classes first */
   document.querySelectorAll('.step').forEach(function(s){
-    s.classList.remove('active','slide-back');
+    s.classList.remove('active','entering-forward','entering-back');
   });
   var el=document.getElementById('step-'+n);
   el.classList.add('active');
-  if(lastDir==='back')el.classList.add('slide-back');
+  /* trigger reflow then add animation class */
+  void el.offsetWidth;
+  if(dir==='forward') el.classList.add('entering-forward');
+  else if(dir==='back') el.classList.add('entering-back');
+
   document.getElementById('progress-label').textContent=STEP_LABELS[n];
   document.getElementById('progress-pct').textContent=Math.round(n/3*100)+'%';
   document.getElementById('progress-fill').style.width=(n/3*100)+'%';
   document.getElementById('progress-plane').style.left=(n/3*100)+'%';
-  document.getElementById('top-progress-fill').style.width=(n/3*100)+'%';
-  updateStepDots(n);
+  updateDots(n);
   window.scrollTo({top:0,behavior:'smooth'});
   saveDraft();
 }
+
+/* ── Validation ── */
+function clearInvalid(stepNum){
+  document.querySelectorAll('#step-'+stepNum+' .field.invalid').forEach(function(f){
+    f.classList.remove('invalid');
+  });
+}
+function setInvalid(input){
+  input.closest('.field').classList.add('invalid');
+}
 function validateStep(n){
+  clearInvalid(n);
   var ok=true;
-  document.querySelectorAll('#step-'+n+' .field.invalid').forEach(function(f){f.classList.remove('invalid');});
   if(n===1){
+    var nameEl=document.querySelector('[name=first_name]');
+    if(!nameEl.value.trim()){setInvalid(nameEl);ok=false;}
+    var emailEl=document.querySelector('[name=email]');
+    if(!/^[^@\s]+@[^@\s]+/.test(emailEl.value.trim())){setInvalid(emailEl);ok=false;}
+  }
+  if(n===2){
     var dest=document.querySelector('[name=travel_goals]');
-    if(!dest.value.trim()){dest.closest('.field').classList.add('invalid');ok=false;}
+    if(!dest.value.trim()){setInvalid(dest);ok=false;}
   }
   if(n===3){
-    ['first_name','last_name','home_airport'].forEach(function(name){
-      var f=document.querySelector('[name='+name+']');
-      if(!f.value.trim()){f.closest('.field').classList.add('invalid');ok=false;}
-    });
-    var em=document.querySelector('[name=email]');
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em.value.trim())){em.closest('.field').classList.add('invalid');ok=false;}
+    /* no required fields — show tip if balances are empty */
+    var hasBal=false;
+    document.querySelectorAll('.pts-bal').forEach(function(b){if(b.value.trim())hasBal=true;});
+    document.getElementById('pts-tip').classList.toggle('show',!hasBal);
   }
   if(!ok){
     var firstBad=document.querySelector('#step-'+n+' .field.invalid input,#step-'+n+' .field.invalid select');
@@ -694,14 +786,17 @@ function validateStep(n){
   }
   return ok;
 }
+
 function nextStep(from){
   if(!validateStep(from))return;
   if(from>maxTracked){maxTracked=from;track('step_'+from+'_complete');}
   showStep(from+1,'forward');
 }
-function prevStep(from){showStep(from-1,'back');}
+function prevStep(from){
+  showStep(from-1,'back');
+}
 
-/* Cabin chips */
+/* ── Cabin chips ── */
 document.querySelectorAll('#cabin-chips .chip').forEach(function(c){
   c.addEventListener('click',function(){
     document.querySelectorAll('#cabin-chips .chip').forEach(function(x){x.classList.remove('sel');});
@@ -711,11 +806,11 @@ document.querySelectorAll('#cabin-chips .chip').forEach(function(c){
   });
 });
 
-/* Points rows */
+/* ── Points rows ── */
 function addPtsRow(prog,bal){
   var row=document.createElement('div');
   row.className='points-row';
-  row.innerHTML='<input type="text" class="pts-prog" placeholder="Program"><input type="text" class="pts-bal" placeholder="Balance" inputmode="numeric"><button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">×</button>';
+  row.innerHTML='<input type="text" class="pts-prog" placeholder="Program"><input type="text" class="pts-bal" placeholder="Balance" inputmode="numeric"><button type="button" class="btn-remove" onclick="removePtsRow(this)" tabindex="-1">&times;</button>';
   if(prog)row.querySelector('.pts-prog').value=prog;
   if(bal)row.querySelector('.pts-bal').value=bal;
   document.getElementById('points-rows').appendChild(row);
@@ -735,14 +830,14 @@ function ptsList(){
   return list;
 }
 
-/* Agree toggle */
+/* ── Agree toggle ── */
 var agreeCb=document.getElementById('agree');
 agreeCb.addEventListener('change',function(){
   document.getElementById('agree-row').classList.toggle('checked',this.checked);
   document.getElementById('agree-err').style.display='none';
 });
 
-/* Autosave + restore */
+/* ── Autosave + restore ── */
 var DRAFT_KEY='dat_intake_draft',saveTimer=null,draftIndicatorTimer=null,restoring=false;
 function showDraftIndicator(){
   var el=document.getElementById('draft-saved');
@@ -770,7 +865,9 @@ function loadDraft(){
     var raw=sessionStorage.getItem(DRAFT_KEY);if(!raw)return null;
     var d=JSON.parse(raw);
     if(!d||!d.ts)return null;
-    var hasContent=Object.keys(d.fields||{}).some(function(k){return (d.fields[k]||'').trim()&&k!=='cabin_pref'&&k!=='max_stops'&&k!=='trip_type'&&k!=='comm_pref';})||(d.points||[]).length;
+    var hasContent=Object.keys(d.fields||{}).some(function(k){
+      return (d.fields[k]||'').trim()&&k!=='cabin_pref'&&k!=='max_stops'&&k!=='trip_type'&&k!=='comm_pref'&&k!=='flexibility';
+    })||(d.points||[]).length;
     return hasContent?d:null;
   }catch(e){return null;}
 }
@@ -781,17 +878,16 @@ function restoreDraft(){
     var f=document.querySelector('[name='+k+']');
     if(f)f.value=d.fields[k];
   });
-  // cabin chip visual
+  /* cabin chip visual */
   var cab=(d.fields||{}).cabin_pref;
   if(cab){document.querySelectorAll('#cabin-chips .chip').forEach(function(c){c.classList.toggle('sel',c.dataset.val===cab);});}
-  // points rows
+  /* points rows */
   var pts=d.points||[];
   if(pts.length){
     document.getElementById('points-rows').innerHTML='';
     pts.forEach(function(p){addPtsRow(p.program,p.balance);});
     if(pts.length<2)addPtsRow();
   }
-  // update char counters after restore
   updateAllCharCounters();
   restoring=false;
   document.getElementById('restore-banner').classList.remove('show');
@@ -811,13 +907,13 @@ document.getElementById('intakeForm').addEventListener('keydown',function(e){
   if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA'&&curStep<3){e.preventDefault();nextStep(curStep);}
 });
 
-/* Submit — reliable: await, retry, never lose the lead */
+/* ── Submit ── */
 function showSubmitErr(msg){
   var el=document.getElementById('submit-err');
   el.textContent=msg;el.classList.add('show');
 }
 async function postIntake(data){
-  var delays=[0,1500,3500];                       // up to 3 attempts
+  var delays=[0,1500,3500];
   for(var i=0;i<delays.length;i++){
     if(delays[i])await new Promise(function(r){setTimeout(r,delays[i]);});
     try{
@@ -825,21 +921,23 @@ async function postIntake(data){
       if(res.ok)return {ok:true};
       if(res.status===422){var d=await res.json().catch(function(){return{};});return {ok:false,fatal:true,msg:d.detail||'Something in the form was rejected — check your email address.'};}
       if(res.status===429)return {ok:false,fatal:true,msg:'Too many submissions from this network — please try again in an hour.'};
-      // 5xx -> retry
-    }catch(e){/* network error -> retry */}
+    }catch(e){}
   }
-  return {ok:false,fatal:false,msg:'We couldn’t reach our server. Your answers are saved on this device — please try again in a minute.'};
+  return {ok:false,fatal:false,msg:"We couldn’t reach our server. Your answers are saved on this device — please try again in a minute."};
 }
 document.getElementById('intakeForm').addEventListener('submit',async function(e){
   e.preventDefault();
   document.getElementById('submit-err').classList.remove('show');
-  if(!validateStep(3))return;
+  /* Final step validation — step 3 has no hard requirements, but check agree */
   if(!agreeCb.checked){
     document.getElementById('agree-err').style.display='block';
     document.getElementById('agree-row').style.outline='2px solid var(--red)';
     setTimeout(function(){document.getElementById('agree-row').style.outline='';},2000);
     return;
   }
+  /* Show tip if balances empty (non-blocking) */
+  validateStep(3);
+
   var btn=document.getElementById('submitBtn');
   btn.disabled=true;btn.textContent='Submitting…';
 
@@ -849,8 +947,8 @@ document.getElementById('intakeForm').addEventListener('submit',async function(e
     else data[f.name]=f.value;
   });
   data.submitted_at=new Date().toISOString();
-  data.consent='true';                              // backend records consent_at
-  data._session_id=sid();                           // backend logs the funnel 'submit' event
+  data.consent='true';
+  data._session_id=sid();
   data.utm_source=sessionStorage.getItem('dat_utm_source')||'';
   data.utm_medium=sessionStorage.getItem('dat_utm_medium')||'';
   data.utm_campaign=sessionStorage.getItem('dat_utm_campaign')||'';
@@ -871,12 +969,12 @@ document.getElementById('intakeForm').addEventListener('submit',async function(e
     window.scrollTo({top:0,behavior:'smooth'});
     confettiBurst();
   }else{
-    btn.disabled=false;btn.textContent='Submit — it’s free';
+    btn.disabled=false;btn.textContent='Submit Application';
     showSubmitErr(result.msg);
   }
 });
 
-/* Confirmation ticket */
+/* ── Confirmation ticket ── */
 var CABIN_LABELS={economy:'Economy',premium_economy:'Premium Economy',business:'Business',first:'First'};
 function fillTicket(data){
   document.getElementById('ticket-name').textContent=((data.first_name||'')+' '+(data.last_name||'')).trim()||'You';
@@ -886,7 +984,7 @@ function fillTicket(data){
   document.getElementById('ticket-eta').textContent=eta.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 }
 
-/* Character counters */
+/* ── Character counters ── */
 function updateCharCounter(textarea,counterId){
   var counter=document.getElementById(counterId);
   if(!counter)return;
@@ -899,11 +997,9 @@ function updateAllCharCounters(){
   if(notesTA)updateCharCounter(notesTA,'counter-notes');
 }
 var notesTA=document.getElementById('textarea-notes');
-if(notesTA){
-  notesTA.addEventListener('input',function(){updateCharCounter(this,'counter-notes');});
-}
+if(notesTA){notesTA.addEventListener('input',function(){updateCharCounter(this,'counter-notes');});}
 
-/* Confetti — pure canvas, no libs */
+/* ── Confetti — pure canvas, no libs ── */
 function confettiBurst(){
   if(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   var canvas=document.createElement('canvas');
@@ -935,7 +1031,7 @@ function confettiBurst(){
     ctx.clearRect(0,0,W,H);
     var alive=false;
     pieces.forEach(function(p){
-      p.vx*=p.drag;p.vy=p.vy*p.drag+.22;   /* gravity */
+      p.vx*=p.drag;p.vy=p.vy*p.drag+.22;
       p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;
       if(p.y<H+30){alive=true;}
       ctx.save();

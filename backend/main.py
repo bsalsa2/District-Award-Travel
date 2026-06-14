@@ -223,8 +223,9 @@ class WorkflowEvent(Base):
     __tablename__ = "workflow_events"
     id          = Column(Integer, primary_key=True)
     trip_id     = Column(Integer, ForeignKey("trip_requests.id"), nullable=False, index=True)
-    from_status = Column(String, default="")
-    to_status   = Column(String, nullable=False)
+    from_status = Column(String(50), default="")
+    to_status   = Column(String(50), nullable=False)
+    actor       = Column(String(100), default="admin")
     note        = Column(Text, default="")
     created_at  = Column(DateTime, default=dt.datetime.utcnow)
 
@@ -336,6 +337,14 @@ try:
             _conn.execute(_sql_text2(_stmt))
 except Exception as _e:
     print(f"[startup] index migration warning: {_e}")
+
+# Add actor column to workflow_events (existing DBs won't have it from create_all)
+try:
+    from sqlalchemy import text as _sql_text_we
+    with engine.begin() as _conn:
+        _conn.execute(_sql_text_we("ALTER TABLE workflow_events ADD COLUMN actor VARCHAR(100) DEFAULT 'admin'"))
+except Exception:
+    pass  # column already exists (or fresh DB where create_all included it)
 
 # Safe waitlist table migration (create_all handles fresh DBs; this covers existing ones)
 try:
@@ -1395,10 +1404,50 @@ async def submit_intake(request: Request, db: Session = Depends(get_db)):
         ))
     db.commit()
     name = f"{data.get('first_name','')} {data.get('last_name','')}".strip() or "Someone"
-    # Notify admin
+    # Notify admin — rich HTML email
+    destination = (
+        data.get("trip1_dest") or data.get("destination") or data.get("travel_goals", "")[:40] or "—"
+    )
+    _pts_programs = ", ".join(
+        k.replace("pts_", "").replace("_", " ").title()
+        for k, v in data.items()
+        if k.startswith("pts_") and str(v).strip()
+    ) or "—"
+    _goals_raw = data.get("travel_goals", "") or data.get("notes", "")
+    _goals = (_goals_raw[:500] + "…") if len(_goals_raw) > 500 else _goals_raw
+    _dates = data.get("trip1_dates") or data.get("dates") or "—"
+    _cabin = data.get("cabin_pref") or "—"
+    _intake_html = f"""<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;font-family:Arial,sans-serif;background:#f8fafc;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 0;">
+    <tr><td align="center">
+      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;max-width:600px;">
+        <tr><td style="background:#f97316;padding:20px 32px;">
+          <span style="color:#ffffff;font-size:20px;font-weight:bold;">🚀 New DAT Intake</span>
+        </td></tr>
+        <tr><td style="padding:28px 32px;">
+          <table width="100%" cellpadding="6" cellspacing="0">
+            <tr><td style="color:#64748b;width:160px;">Name</td><td style="color:#1e293b;font-weight:bold;">{name}</td></tr>
+            <tr><td style="color:#64748b;">Email</td><td style="color:#1e293b;">{data.get('email','')}</td></tr>
+            <tr><td style="color:#64748b;">Destination</td><td style="color:#1e293b;">{destination}</td></tr>
+            <tr><td style="color:#64748b;">Dates</td><td style="color:#1e293b;">{_dates}</td></tr>
+            <tr><td style="color:#64748b;">Cabin</td><td style="color:#1e293b;">{_cabin}</td></tr>
+            <tr><td style="color:#64748b;">Points Programs</td><td style="color:#1e293b;">{_pts_programs}</td></tr>
+            <tr><td style="color:#64748b;vertical-align:top;">Goals / Notes</td><td style="color:#1e293b;">{_goals or '—'}</td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:16px 32px;border-top:1px solid #e2e8f0;">
+          <p style="font-size:12px;color:#94a3b8;margin:0;">Received {dt.datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC &middot; Reply-To: {data.get('email','')}</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>"""
     send_email(
-        subject=f"New DAT Intake: {name}",
-        body=format_intake_email(data),
+        subject=f"🚀 New DAT Intake — {name} ({destination})",
+        body=_intake_html,
         reply_to=data.get("email", ""),
     )
     # Confirmation email to client
@@ -1460,6 +1509,14 @@ async def join_waitlist(request: Request, body: WaitlistIn, db: Session = Depend
         body=f"New waitlist signup:\n  Name: {name or '(not provided)'}\n  Email: {email}\n  Time: {dt.datetime.utcnow().isoformat()} UTC",
     )
     return {"ok": True, "message": "You're on the list!"}
+
+
+@app.get("/api/admin/waitlist")
+def list_waitlist(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rows = db.query(Waitlist).order_by(Waitlist.created_at.desc()).all()
+    return [{"id": r.id, "email": r.email, "name": r.name,
+             "created_at": r.created_at.isoformat() if r.created_at else None} for r in rows]
+
 
 
 @app.post("/api/track")
@@ -1589,6 +1646,43 @@ def public_examples(request: Request, db: Session = Depends(get_db)):
                 break
             rows.append(_example_row(*ex, real=False))
     return rows
+
+
+@app.get("/api/admin/activity-heatmap")
+def admin_activity_heatmap(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Daily activity count for the last 84 days (12 weeks).
+    count = intake submissions + new trip requests + new savings records on that date.
+    level: 0=none, 1=1-2, 2=3-5, 3=6+"""
+    today = dt.date.today()
+    start_date = today - dt.timedelta(days=83)
+    start_dt = dt.datetime(start_date.year, start_date.month, start_date.day)
+
+    # Query each table for created_at in range
+    intakes = db.query(Intake.created_at).filter(Intake.created_at >= start_dt).all()
+    trips = db.query(TripRequest.created_at).filter(TripRequest.created_at >= start_dt).all()
+    savings = db.query(SavingsRecord.created_at).filter(SavingsRecord.created_at >= start_dt).all()
+
+    counts: dict = {}
+    for (ts,) in intakes + trips + savings:
+        if ts:
+            d = ts.date() if hasattr(ts, 'date') else ts
+            key = d.isoformat()
+            counts[key] = counts.get(key, 0) + 1
+
+    def level(c: int) -> int:
+        if c == 0: return 0
+        if c <= 2: return 1
+        if c <= 5: return 2
+        return 3
+
+    days = []
+    for i in range(84):
+        d = start_date + dt.timedelta(days=i)
+        key = d.isoformat()
+        c = counts.get(key, 0)
+        days.append({"date": key, "count": c, "level": level(c)})
+
+    return {"days": days}
 
 
 @app.get("/api/admin/funnel")
@@ -1820,13 +1914,49 @@ def list_clients(_: dict = Depends(require_admin), db: Session = Depends(get_db)
 
 @app.get("/api/admin/clients/{email}")
 def get_client(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    """Return full client data including their portal JSON for the admin profile drawer."""
+    """Return full client data including trips (_trip_row), savings_breakdown, point_programs, and last 20 messages."""
     client = db.query(Client).filter(Client.email == email.lower()).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     payload = json.loads(client.data or "{}")
     payload.update({"name": client.name, "tier": client.tier, "email": client.email,
                      "created_at": client.created_at.isoformat()})
+
+    # Full trip rows with workflow flags
+    now = dt.datetime.utcnow()
+    trips = db.query(TripRequest).filter(TripRequest.client_id == client.id).order_by(TripRequest.created_at.desc()).all()
+    payload["trips"] = [_trip_row(t, client, now) for t in trips]
+
+    # Savings breakdown (all statuses visible to admin)
+    savings_recs = db.query(SavingsRecord).filter(
+        SavingsRecord.client_id == client.id
+    ).order_by(SavingsRecord.created_at.desc()).all()
+    savings_breakdown = []
+    for r in savings_recs:
+        gross = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee = calc_fee(gross, r.fee_rate_bps)
+        savings_breakdown.append({
+            "id": r.id,
+            "trip_label": r.trip_label,
+            "cash_benchmark_cents": r.cash_benchmark_cents,
+            "gross_savings_cents": gross,
+            "fee_cents": fee,
+            "points_used": r.points_used,
+            "points_program": r.points_program,
+            "status": r.status,
+            "invoice_number": r.invoice_number,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "report_url": f"/api/report/{r.report_token}" if r.report_token else None,
+        })
+    payload["savings_breakdown"] = savings_breakdown
+
+    # Point programs from the data JSON
+    payload["point_programs"] = payload.get("points", [])
+
+    # Last 20 messages
+    messages = payload.get("messages", [])
+    payload["messages"] = messages[-20:]
+
     return payload
 
 
@@ -1985,10 +2115,40 @@ def delete_client(email: str, _: dict = Depends(require_admin), db: Session = De
     return {"ok": True}
 
 
+@app.post("/api/admin/clients/{email}/reset-password")
+def admin_reset_client_password(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Generate a new random 12-char alphanumeric password, hash and save it,
+    then email the new password to the client. Admin only."""
+    import string as _string
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    alphabet = _string.ascii_letters + _string.digits
+    new_password = "".join(secrets.choice(alphabet) for _ in range(12))
+    client.password_hash = hash_pw(new_password)
+    db.commit()
+    # Email the new password to the client
+    portal_url = BASE_URL + "/client.html"
+    body = f"""Hi {client.name.split()[0] if client.name else 'there'},
+
+Your District Award Travel portal password has been reset by your advisor.
+
+Your new temporary password is: {new_password}
+
+Please log in at {portal_url} and change your password after signing in.
+
+If you did not request this reset, please contact us immediately.
+
+Best,
+Braden
+District Award Travel"""
+    queue_email(client.email, "Your password has been reset — District Award Travel", body)
+    return {"ok": True}
+
+
 @app.get("/api/admin/expiring-points")
 def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    """All client point balances with an expiration_date, sorted soonest first.
-    Returns rows within 180 days; includes urgency level for the admin UI."""
+    """All client point balances expiring within 90 days, sorted soonest first."""
     clients = db.query(Client).all()
     today = dt.date.today()
     rows = []
@@ -2002,8 +2162,8 @@ def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_
                 exp_date = dt.date.fromisoformat(str(exp_str)[:10])
             except ValueError:
                 continue
-            days_left = (exp_date - today).days
-            if days_left > 180 or days_left < 0:
+            days_remaining = (exp_date - today).days
+            if days_remaining > 90 or days_remaining < 0:
                 continue
             rows.append({
                 "client_name": c.name,
@@ -2011,10 +2171,9 @@ def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_
                 "program": p.get("program") or p.get("name") or "Unknown",
                 "balance": p.get("balance") or p.get("points") or 0,
                 "expiration_date": str(exp_date),
-                "days_left": days_left,
-                "urgency": "urgent" if days_left <= 30 else "warning" if days_left <= 90 else "calm",
+                "days_remaining": days_remaining,
             })
-    rows.sort(key=lambda r: r["days_left"])
+    rows.sort(key=lambda r: r["days_remaining"])
     return rows
 
 
@@ -2069,8 +2228,15 @@ def send_message(msg_in: SendMessageIn, _: dict = Depends(require_admin), db: Se
 # admin already writes to). sender: "advisor" | "client". unread = unread by
 # client; unread_admin = unread by advisor.
 
+class ClientMessageAttachmentIn(BaseModel):
+    type: str  # "image"
+    data: str  # data URI base64
+    filename: str = ""
+
+
 class ClientMessageIn(BaseModel):
     body: str
+    attachment: Optional[ClientMessageAttachmentIn] = None
 
 
 @app.post("/api/client/message")
@@ -2084,20 +2250,32 @@ def client_send_message(request: Request, msg_in: ClientMessageIn,
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     text = (msg_in.body or "").strip()
-    if not text:
+    attachment = msg_in.attachment
+    if not text and not attachment:
         raise HTTPException(status_code=422, detail="Message is empty")
     if len(text) > 5000:
         raise HTTPException(status_code=422, detail="Message too long (5000 chars max)")
+    # Basic attachment validation: must be image data URI, cap at ~7MB base64
+    if attachment:
+        if attachment.type != "image":
+            raise HTTPException(status_code=422, detail="Only image attachments are supported")
+        if not attachment.data.startswith("data:image/"):
+            raise HTTPException(status_code=422, detail="Invalid image data")
+        if len(attachment.data) > 7_000_000:
+            raise HTTPException(status_code=422, detail="Attachment too large")
 
     data = json.loads(client.data or "{}")
     messages = data.get("messages", [])
-    messages.append({
+    msg_obj: dict = {
         "from": client.name,
         "sender": "client",
         "time": dt.datetime.utcnow().isoformat(),
         "text": text,
         "unread_admin": True,
-    })
+    }
+    if attachment:
+        msg_obj["attachment"] = attachment.model_dump()
+    messages.append(msg_obj)
     data["messages"] = messages
     client.data = json.dumps(data)
     db.commit()
@@ -2154,6 +2332,42 @@ def admin_inbox(_: dict = Depends(require_admin), db: Session = Depends(get_db))
         })
     rows.sort(key=lambda r: (r["last"]["time"] if r["last"] else ""), reverse=True)
     return rows
+
+
+class AdminClientMessageIn(BaseModel):
+    subject: str = ""
+    body: str
+
+
+@app.post("/api/admin/clients/{email}/message")
+def admin_send_client_message(email: str, msg_in: AdminClientMessageIn, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Admin sends a direct message to a client by email path param.
+    Saves to their messages JSON and bumps SSE version for real-time delivery."""
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    data = json.loads(client.data or "{}")
+    messages = data.get("messages", [])
+    message = {
+        "from": "Braden — DAT",
+        "sender": "advisor",
+        "time": dt.datetime.utcnow().isoformat(),
+        "subject": msg_in.subject,
+        "text": msg_in.body,
+        "unread": True,
+    }
+    messages.append(message)
+    data["messages"] = messages
+    client.data = json.dumps(data)
+    db.commit()
+    bump_client_version(client.email)
+    email_subject = f"New message: {msg_in.subject}" if msg_in.subject.strip() else "New message from Braden — District Award Travel"
+    send_email_to(
+        client.email,
+        email_subject,
+        f"Hi {client.name.split()[0]},\n\n{msg_in.body}\n\nLog in to your portal to view this message.\n\nBest,\nBraden\nDistrict Award Travel",
+    )
+    return {"ok": True, "message_id": len(messages) - 1}
 
 
 @app.post("/api/admin/clients/{email}/messages/read")
@@ -2661,6 +2875,43 @@ def delete_savings(record_id: int, db: Session = Depends(get_db), _: dict = Depe
     db.delete(rec)
     db.commit()
     return {"ok": True}
+
+
+@app.get("/api/admin/search")
+@limiter.limit("30/minute")
+def admin_search(request: Request, q: str = "", db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Global search across clients, trips, and savings records."""
+    if len(q) < 2:
+        return {"clients": [], "trips": [], "savings": []}
+    pat = f"%{q}%"
+    # Clients
+    client_rows = db.query(Client).filter(
+        (Client.name.ilike(pat)) | (Client.email.ilike(pat))
+    ).limit(20).all()
+    clients_out = [{"id": c.id, "name": c.name, "email": c.email, "type": "client"} for c in client_rows]
+
+    # Trips — join client for name/email
+    trip_rows = db.query(TripRequest, Client).join(Client, TripRequest.client_id == Client.id).filter(
+        (TripRequest.destination.ilike(pat)) | (TripRequest.notes.ilike(pat))
+    ).limit(20).all()
+    trips_out = [
+        {"id": t.id, "destination": t.destination, "client_name": c.name, "client_email": c.email,
+         "status": t.workflow_status, "type": "trip"}
+        for t, c in trip_rows
+    ]
+
+    # Savings — join client for email
+    sav_rows = db.query(SavingsRecord, Client).join(Client, SavingsRecord.client_id == Client.id).filter(
+        (SavingsRecord.trip_label.ilike(pat)) | (Client.email.ilike(pat))
+    ).limit(20).all()
+    savings_out = [
+        {"id": r.id, "trip_label": r.trip_label, "client_email": c.email,
+         "gross_savings_cents": calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents),
+         "type": "saving"}
+        for r, c in sav_rows
+    ]
+
+    return {"clients": clients_out, "trips": trips_out, "savings": savings_out}
 
 
 @app.get("/api/admin/export/clients")
@@ -3229,16 +3480,139 @@ def admin_stats(db: Session = Depends(get_db), _: dict = Depends(require_admin))
     n_savings = len(savings_recs)
     avg_savings_per_trip_cents = (total_savings_cents // n_savings) if n_savings else 0
 
+    booked_trips = db.query(TripRequest).filter(TripRequest.workflow_status == "booked").count()
+
     return {
         "trips_by_status": trips_by_status,
         "total_clients": total_clients,
         "total_trips": total_trips,
         "active_trips": active_trips,
+        "booked_trips": booked_trips,
         "total_savings_cents": total_savings_cents,
         "total_fees_cents": total_fees_cents,
         "avg_savings_per_trip_cents": avg_savings_per_trip_cents,
         "trips_stale": trips_stale,
         "new_clients_this_week": new_clients_this_week,
+    }
+
+
+@app.get("/api/admin/dashboard")
+def admin_dashboard(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Combined dashboard endpoint: stats + action_items + board column counts."""
+    # ── Stats (mirrors /api/admin/stats) ──────────────────────────────────────
+    now = dt.datetime.utcnow()
+    stale_cutoff = now - dt.timedelta(hours=48)
+    week_ago = now - dt.timedelta(days=7)
+    terminal = {"closed", "declined", "lost", "booked"}
+
+    trips = db.query(TripRequest).all()
+    trips_by_status: dict = {}
+    total_trips = 0
+    active_trips = 0
+    trips_stale = 0
+    for t in trips:
+        total_trips += 1
+        s = t.workflow_status or "new"
+        trips_by_status[s] = trips_by_status.get(s, 0) + 1
+        if s not in terminal:
+            active_trips += 1
+            updated = t.last_activity_at or t.created_at
+            if updated and updated < stale_cutoff:
+                trips_stale += 1
+
+    total_clients = db.query(Client).count()
+    new_clients_this_week = db.query(Client).filter(Client.created_at >= week_ago).count()
+    booked_trips = db.query(TripRequest).filter(TripRequest.workflow_status == "booked").count()
+
+    savings_recs = db.query(SavingsRecord).filter(
+        SavingsRecord.status.in_(["booked", "invoiced", "paid"])
+    ).all()
+    total_savings_cents = 0
+    total_fees_cents = 0
+    for rec in savings_recs:
+        gross = calc_gross_savings(
+            rec.cash_benchmark_cents,
+            rec.award_taxes_fees_cents,
+            rec.other_out_of_pocket_cents,
+        )
+        total_savings_cents += max(gross, 0)
+        total_fees_cents += calc_fee(gross, rec.fee_rate_bps)
+    n_savings = len(savings_recs)
+    avg_savings_per_trip_cents = (total_savings_cents // n_savings) if n_savings else 0
+
+    stats = {
+        "trips_by_status": trips_by_status,
+        "total_clients": total_clients,
+        "total_trips": total_trips,
+        "active_trips": active_trips,
+        "booked_trips": booked_trips,
+        "total_savings_cents": total_savings_cents,
+        "total_fees_cents": total_fees_cents,
+        "avg_savings_per_trip_cents": avg_savings_per_trip_cents,
+        "trips_stale": trips_stale,
+        "new_clients_this_week": new_clients_this_week,
+    }
+
+    # ── Column counts (board summary) ─────────────────────────────────────────
+    column_counts = {s: trips_by_status.get(s, 0) for s in WORKFLOW_STATUSES}
+
+    # ── Action items (mirrors /api/admin/action-items) ────────────────────────
+    today = dt.date.today()
+    items: list = []
+
+    cutoff_trip = now - dt.timedelta(hours=48)
+    stale_trips_q = (
+        db.query(TripRequest)
+        .filter(
+            TripRequest.workflow_status.notin_(TERMINAL_STATUSES),
+            TripRequest.last_activity_at < cutoff_trip,
+        )
+        .all()
+    )
+    for trip in stale_trips_q:
+        hours_stale = int((now - trip.last_activity_at).total_seconds() // 3600)
+        client = db.query(Client).filter(Client.id == trip.client_id).first()
+        items.append({
+            "type": "stale_trip",
+            "priority": "high",
+            "trip_id": trip.id,
+            "client_name": client.name if client else "Unknown",
+            "client_email": client.email if client else "",
+            "destination": trip.destination or "Unknown destination",
+            "status": trip.workflow_status,
+            "hours": hours_stale,
+        })
+
+    clients_all = db.query(Client).all()
+    for c in clients_all:
+        data = json.loads(c.data or "{}")
+        for p in data.get("points", []):
+            exp_str = p.get("expiration_date") or ""
+            if not exp_str:
+                continue
+            try:
+                exp_date = dt.date.fromisoformat(str(exp_str)[:10])
+            except ValueError:
+                continue
+            days_left = (exp_date - today).days
+            if days_left < 0 or days_left > 90:
+                continue
+            items.append({
+                "type": "expiring_points",
+                "priority": "high" if days_left <= 30 else "medium",
+                "client_name": c.name,
+                "client_email": c.email,
+                "program": p.get("program") or "Unknown",
+                "days_left": days_left,
+            })
+
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    items.sort(key=lambda i: priority_order.get(i["priority"], 9))
+
+    return {
+        "stats": stats,
+        "action_items": items,
+        "column_counts": column_counts,
     }
 
 
@@ -3276,6 +3650,18 @@ def create_trip(body: TripCreateIn, db: Session = Depends(get_db), _: dict = Dep
     db.commit()
     db.refresh(trip)
     return _trip_row(trip, client)
+
+
+@app.get("/api/admin/trips/{trip_id}")
+def get_trip(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Return full details for a single trip including research_notes, workflow_status,
+    stage_entered_at, last_activity_at, time_tracked_minutes, and notes (parsed as JSON)."""
+    now = dt.datetime.utcnow()
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    client = db.query(Client).filter(Client.id == trip.client_id).first()
+    return _trip_row(trip, client, now)
 
 
 @app.patch("/api/admin/trips/{trip_id}")
@@ -3361,6 +3747,31 @@ def trip_events(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(r
     return [{"id": e.id, "from_status": e.from_status, "to_status": e.to_status, "note": e.note, "created_at": e.created_at.isoformat()} for e in events]
 
 
+@app.get("/api/admin/trips/{trip_id}/timeline")
+def trip_timeline(trip_id: int, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Return workflow event history for a trip, newest first, for audit/timeline display."""
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    events = (
+        db.query(WorkflowEvent)
+        .filter(WorkflowEvent.trip_id == trip_id)
+        .order_by(WorkflowEvent.created_at.desc())
+        .all()
+    )
+    return [
+        {
+            "id": e.id,
+            "from_status": e.from_status,
+            "to_status": e.to_status,
+            "actor": getattr(e, "actor", "admin") or "admin",
+            "note": e.note,
+            "created_at_iso": e.created_at.isoformat() if e.created_at else None,
+        }
+        for e in events
+    ]
+
+
 @app.patch("/api/admin/trips/{trip_id}/research-notes")
 def update_trip_research_notes(trip_id: int, body: TripResearchNotesIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
     trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
@@ -3394,6 +3805,46 @@ def add_trip_time(trip_id: int, body: TripTimeIn, db: Session = Depends(get_db),
     trip.time_tracked_minutes = (trip.time_tracked_minutes or 0) + body.minutes
     db.commit()
     return {"ok": True, "time_tracked_minutes": trip.time_tracked_minutes}
+
+
+class LogTimeIn(BaseModel):
+    minutes: int = Field(..., ge=1, le=480)
+
+
+@app.post("/api/admin/trips/{trip_id}/log-time")
+def log_trip_time(trip_id: int, body: LogTimeIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Add minutes to a trip's time_tracked_minutes total. Validates 1–480 (max 8 hrs per log)."""
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    trip.time_tracked_minutes = (trip.time_tracked_minutes or 0) + body.minutes
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True, "time_tracked_minutes": trip.time_tracked_minutes}
+
+
+class TripNoteAddIn(BaseModel):
+    text: str
+
+
+@app.post("/api/admin/trips/{trip_id}/note")
+def add_trip_note_singular(trip_id: int, body: TripNoteAddIn, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Append a note to a trip's notes JSON array.
+    Each note stores text, created_at (ISO), and author='admin'."""
+    trip = db.query(TripRequest).filter(TripRequest.id == trip_id).first()
+    if not trip:
+        raise HTTPException(404, "Trip not found")
+    notes = json.loads(trip.notes or "[]")
+    note_entry = {
+        "text": body.text,
+        "created_at": dt.datetime.utcnow().isoformat(),
+        "author": "admin",
+    }
+    notes.append(note_entry)
+    trip.notes = json.dumps(notes)
+    trip.last_activity_at = dt.datetime.utcnow()
+    db.commit()
+    return {"ok": True, "notes": notes}
 
 
 @app.get("/api/admin/trips/{trip_id}/cockpit")
@@ -3754,6 +4205,104 @@ def cron_digest(key: str = "", db: Session = Depends(get_db)):
     return {"ok": True, "sent": sent}
 
 
+# ── Admin: CSV exports ──
+@app.get("/api/admin/export/clients")
+def export_clients(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Export all clients as a CSV file with key metrics."""
+    import csv
+    import io
+
+    clients = db.query(Client).order_by(Client.created_at).all()
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["name", "email", "tier", "created_at", "trip_count", "total_points", "latest_trip_status"])
+    for c in clients:
+        trips = db.query(TripRequest).filter(TripRequest.client_id == c.id).order_by(TripRequest.created_at.desc()).all()
+        trip_count = len(trips)
+        latest_trip_status = trips[0].workflow_status if trips else ""
+        cdata = json.loads(c.data or "{}")
+        # Sum all point balances stored in the "points" array (balances may be strings like "50,000")
+        total_points = 0
+        for p in cdata.get("points", []):
+            try:
+                total_points += int(str(p.get("balance", "0")).replace(",", "").replace(" ", ""))
+            except (ValueError, TypeError):
+                pass
+        created_at = c.created_at.isoformat() if c.created_at else ""
+        writer.writerow([c.name, c.email, c.tier, created_at, trip_count, total_points, latest_trip_status])
+
+    from fastapi.responses import Response
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="dat-clients.csv"'},
+    )
+
+
+@app.get("/api/admin/export/savings")
+def export_savings(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Export all savings records as a CSV file."""
+    import csv
+    import io
+
+    recs = db.query(SavingsRecord).order_by(SavingsRecord.created_at).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow([
+        "client_email", "trip_label",
+        "cash_benchmark_cents", "savings_cents", "fee_cents",
+        "status", "created_at",
+    ])
+    for r in recs:
+        client = client_map.get(r.client_id)
+        gross_cents = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee_cents = calc_fee(gross_cents, r.fee_rate_bps)
+        writer.writerow([
+            client.email if client else "",
+            r.trip_label,
+            f"${r.cash_benchmark_cents / 100:.2f}",
+            f"${gross_cents / 100:.2f}",
+            f"${fee_cents / 100:.2f}",
+            r.status,
+            r.created_at.isoformat() if r.created_at else "",
+        ])
+
+    from fastapi.responses import Response
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="dat-savings.csv"'},
+    )
+
+
+# ── Client: preferences ──
+class ClientPreferencesIn(BaseModel):
+    dark_mode: Optional[bool] = None
+    email_notifications: Optional[bool] = None
+
+
+@app.patch("/api/client/preferences")
+def update_client_preferences(body: ClientPreferencesIn, identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
+    """Client updates their UI preferences (dark_mode, email_notifications).
+    Stored in the data JSON column under the 'preferences' key."""
+    if identity.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    client = db.query(Client).filter(Client.email == identity["sub"]).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    existing = json.loads(client.data or "{}")
+    prefs = existing.get("preferences") or {}
+    if body.dark_mode is not None:
+        prefs["dark_mode"] = body.dark_mode
+    if body.email_notifications is not None:
+        prefs["email_notifications"] = body.email_notifications
+    existing["preferences"] = prefs
+    client.data = json.dumps(existing)
+    db.commit()
+    return {"ok": True, "preferences": prefs}
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # Action Items — smart alerts aggregated for the admin
 # ──────────────────────────────────────────────────────────────────────────
@@ -3792,6 +4341,37 @@ def get_action_items(_: dict = Depends(require_admin), db: Session = Depends(get
             "destination": trip.destination or "Unknown destination",
             "status": trip.workflow_status,
             "hours": hours_stale,
+        })
+
+    # ── 1b. New intakes (trips in 'new' status >24 h without review) ─────────
+    cutoff_new = now - dt.timedelta(hours=24)
+    new_trips_pending = (
+        db.query(TripRequest)
+        .filter(
+            TripRequest.workflow_status == "new",
+            TripRequest.created_at < cutoff_new,
+        )
+        .all()
+    )
+    stale_trip_ids = {t.id for t in stale_trips}
+    for trip in new_trips_pending:
+        if trip.id in stale_trip_ids:
+            continue  # already reported above
+        client = db.query(Client).filter(Client.id == trip.client_id).first()
+        client_name = client.name if client else "Unknown"
+        client_email = client.email if client else ""
+        hours_waiting = int((now - trip.created_at).total_seconds() // 3600)
+        items.append({
+            "type": "new_trip_pending",
+            "priority": "high",
+            "level": "amber",
+            "trip_id": trip.id,
+            "client_name": client_name,
+            "client_email": client_email,
+            "destination": trip.destination or "Unknown destination",
+            "status": "new",
+            "hours": hours_waiting,
+            "message": "New intake needs review",
         })
 
     # ── 2. Expiring points (<90 days) ────────────────────────────────────────
@@ -3888,6 +4468,78 @@ def get_action_items(_: dict = Depends(require_admin), db: Session = Depends(get
     items.sort(key=lambda i: priority_order.get(i["priority"], 9))
 
     return {"items": items, "total": len(items), "high": high, "medium": medium, "low": low}
+
+
+@app.get("/api/admin/funnel")
+def get_funnel(days: int = 30, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Return funnel analytics for the last N days (default 30)."""
+    period_days = max(1, min(days, 3650))
+    cutoff = dt.datetime.utcnow() - dt.timedelta(days=period_days)
+
+    intakes = db.query(Intake).filter(Intake.created_at >= cutoff).count()
+    clients_created = db.query(Client).filter(Client.created_at >= cutoff).count()
+    trips_created = db.query(TripRequest).filter(TripRequest.created_at >= cutoff).count()
+    trips_booked = (
+        db.query(TripRequest)
+        .filter(TripRequest.created_at >= cutoff, TripRequest.workflow_status == "booked")
+        .count()
+    )
+
+    savings_q = db.query(SavingsRecord).filter(SavingsRecord.created_at >= cutoff).all()
+    savings_logged = len(savings_q)
+    total_savings_cents = sum(s.cash_benchmark_cents for s in savings_q)
+
+    intake_to_client_rate = round(clients_created / intakes, 3) if intakes else 0.0
+    client_to_trip_rate = round(trips_created / clients_created, 3) if clients_created else 0.0
+    trip_to_booked_rate = round(trips_booked / trips_created, 3) if trips_created else 0.0
+
+    # avg days from trip creation to reaching "booked" status via WorkflowEvent
+    booked_events = (
+        db.query(WorkflowEvent)
+        .filter(WorkflowEvent.to_status == "booked", WorkflowEvent.created_at >= cutoff)
+        .all()
+    )
+    days_to_book_list = []
+    for ev in booked_events:
+        trip = db.query(TripRequest).filter(TripRequest.id == ev.trip_id).first()
+        if trip:
+            delta = (ev.created_at - trip.created_at).total_seconds() / 86400
+            if delta >= 0:
+                days_to_book_list.append(delta)
+    avg_days_to_book = round(sum(days_to_book_list) / len(days_to_book_list), 1) if days_to_book_list else 0.0
+
+    # top 3 destinations
+    from collections import Counter
+    dest_counts: Counter = Counter()
+    for trip in db.query(TripRequest).filter(TripRequest.created_at >= cutoff).all():
+        d = (trip.destination or "").strip()
+        if d:
+            dest_counts[d] += 1
+    top_destinations = [d for d, _ in dest_counts.most_common(3)]
+
+    # new clients per week
+    week_counts: dict = {}
+    for client in db.query(Client).filter(Client.created_at >= cutoff).all():
+        iso = client.created_at.isocalendar()
+        week_start = dt.date.fromisocalendar(iso[0], iso[1], 1).isoformat()
+        week_counts[week_start] = week_counts.get(week_start, 0) + 1
+    new_clients_by_week = [{"week": w, "count": c} for w, c in sorted(week_counts.items())]
+
+    return {
+        "period_days": period_days,
+        "intakes": intakes,
+        "clients_created": clients_created,
+        "trips_created": trips_created,
+        "trips_booked": trips_booked,
+        "savings_logged": savings_logged,
+        "total_savings_cents": total_savings_cents,
+        "intake_to_client_rate": intake_to_client_rate,
+        "client_to_trip_rate": client_to_trip_rate,
+        "trip_to_booked_rate": trip_to_booked_rate,
+        "avg_days_to_book": avg_days_to_book,
+        "top_destinations": top_destinations,
+        "new_clients_by_week": new_clients_by_week,
+    }
 
 
 # ──────────────────────────────────────────────────────────────────────────
