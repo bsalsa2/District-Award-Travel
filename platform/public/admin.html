@@ -3711,6 +3711,17 @@ async function _loadDrawerActivity(email){
 
     <div style="margin-bottom:20px">
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Research Notes</div>
+      <!-- Notes toolbar -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <button id="td-rn-edit-btn" onclick="rnSwitchMode('edit')"
+          style="font-size:.74rem;padding:2px 10px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;font-weight:600">Edit</button>
+        <button id="td-rn-preview-btn" onclick="rnSwitchMode('preview')"
+          style="font-size:.74rem;padding:2px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--off);color:var(--text);cursor:pointer">Preview</button>
+        <button onclick="rnCopyNotes()"
+          style="font-size:.74rem;padding:2px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--off);color:var(--text);cursor:pointer">Copy notes</button>
+        <span id="td-rn-copy-ok" style="font-size:.74rem;color:var(--green);opacity:0;transition:opacity .4s">&#x2713; Copied</span>
+        <span id="td-rn-wordcount" style="font-size:.74rem;color:var(--muted);margin-left:auto">0 words &middot; 0 chars</span>
+      </div>
       <textarea id="td-research-notes" rows="6"
         placeholder="Add research notes, award availability, transfer options..."
         style="width:100%;box-sizing:border-box;background:var(--off);border:1px solid var(--border2);color:var(--text);
@@ -3719,9 +3730,48 @@ async function _loadDrawerActivity(email){
         onfocus="this.style.borderColor='var(--accent)';this.style.boxShadow='0 0 0 2px var(--accent-dim)'"
         onblur="this.style.borderColor='var(--border2)';this.style.boxShadow='none'"
       ></textarea>
+      <!-- Markdown preview pane -->
+      <div id="td-rn-preview" style="display:none;width:100%;box-sizing:border-box;background:var(--off);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:10px 12px;font-size:.84rem;line-height:1.6;min-height:120px;max-height:340px;overflow-y:auto"></div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px">
         <span id="td-rn-saved" style="font-size:.75rem;color:var(--green);opacity:0;transition:opacity .4s">&#x2713; Saved</span>
         <span id="td-rn-count" style="font-size:.75rem;color:var(--muted)">0 / 10000</span>
+      </div>
+    </div>
+
+    <!-- OPTIONS PREVIEW -->
+    <div id="td-options-section" style="display:none;margin-bottom:20px">
+      <div style="padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px">
+        <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="tdToggleOptions()">
+          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Options Preview</div>
+          <span id="td-options-badge" style="font-size:.72rem;padding:2px 8px;border-radius:20px;background:rgba(249,115,22,.15);color:var(--accent);font-weight:600"></span>
+          <span id="td-options-chevron" style="font-size:.8rem;color:var(--muted);margin-left:auto">&#9660;</span>
+        </div>
+        <div id="td-options-list" style="display:none;margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- QUICK MESSAGE -->
+    <div style="margin-bottom:4px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px">Quick Message to Client</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <select id="td-msg-template" onchange="tdApplyMsgTemplate()"
+          style="flex:1;min-width:120px;padding:4px 8px;border-radius:6px;border:1px solid var(--border2);background:var(--off);color:var(--text);font-size:.8rem;cursor:pointer">
+          <option value="">-- Template --</option>
+          <option value="options_ready">Options ready</option>
+          <option value="need_info">Need info</option>
+          <option value="advance_notice">Advance notice</option>
+        </select>
+      </div>
+      <textarea id="td-msg-input" rows="2"
+        placeholder="Quick message to client about this trip..."
+        style="width:100%;box-sizing:border-box;background:var(--off);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:8px 10px;font-size:.83rem;font-family:var(--font);resize:none;outline:none;line-height:1.4"
+        onfocus="this.style.borderColor='var(--accent)'"
+        onblur="this.style.borderColor='var(--border2)'"
+      ></textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+        <button onclick="tdSendQuickMsg()"
+          style="font-size:.8rem;padding:5px 16px;border-radius:6px;border:none;background:var(--accent);color:#fff;cursor:pointer;font-weight:600">Send</button>
+        <span id="td-msg-sent" style="font-size:.78rem;color:var(--green);opacity:0;transition:opacity .4s">&#x2713; Sent</span>
       </div>
     </div>
   </div>
