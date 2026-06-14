@@ -517,6 +517,24 @@
   .drawer-quick-send:hover{filter:brightness(1.1)}
   .drawer-quick-sent{font-size:.75rem;color:var(--green);font-weight:600;display:none;padding:4px 0}
   @media(max-width:640px){.client-drawer{width:100%}}
+  /* ── ADMIN MOBILE ── */
+  @media(max-width:768px){
+    .admin-layout{flex-direction:column}
+    .sidebar{width:100%;height:auto;flex-direction:row;flex-wrap:wrap;padding:8px 12px;gap:4px;border-right:none;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;overflow-x:auto}
+    .sidebar-logo-gradient{display:none}
+    .sidebar-user{display:none}
+    .sidebar-section-label{display:none}
+    .nav-item{padding:6px 12px;font-size:12px;flex-direction:row;gap:6px;border-radius:8px;min-width:auto;border-left:none!important;white-space:nowrap}
+    .nav-item.active{background:rgba(249,115,22,.15);color:#f97316;border-left:none!important;border-bottom:2px solid #f97316}
+    .admin-main{flex:1;overflow:hidden}
+    .panel-head,.phead{flex-direction:column;gap:8px;align-items:flex-start}
+    .table-wrap{overflow-x:auto}
+    table{min-width:600px}
+    .gsearch-bar{padding:8px 12px}
+    .sps-val{font-size:1.6rem}
+    .savings-pipeline-strip{padding:16px;gap:8px}
+    .metric-grid{grid-template-columns:1fr 1fr}
+  }
 
   /* SAVINGS PIPELINE STRIP */
   .savings-pipeline-strip { display:flex; align-items:center; justify-content:center; gap:0;
@@ -2303,7 +2321,7 @@ function sendCompose(){
 function openPlan(){ document.getElementById('plan-overlay').classList.add('open'); resetPlan(); }
 function closePlan(){ document.getElementById('plan-overlay').classList.remove('open'); }
 function resetPlan(){
-  ['plan-client','plan-title','plan-overview','plan-dest','plan-dates','plan-program','plan-points','plan-value','plan-cabin','plan-details']
+  ['plan-client','plan-title','plan-overview','plan-dest','plan-dates']
     .forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
   var ol=document.getElementById('plan-options-list');
   if(ol)ol.innerHTML='';
@@ -2402,12 +2420,16 @@ function _collectOptionCards(){
   return options;
 }
 async function savePlanDraft(){
-  const tripId=document.getElementById('plan-client').value.split('|')[2];
-  if(!tripId){toast('Select a client with a trip first');return;}
+  const client_email=document.getElementById('plan-client').value.split('|')[1];
+  if(!client_email){toast('Select a client first');return;}
   const options=_collectOptionCards();
   const draft={title:document.getElementById('plan-title').value.trim(),overview:document.getElementById('plan-overview').value.trim(),dest:document.getElementById('plan-dest').value.trim(),dates:document.getElementById('plan-dates').value.trim(),options};
+  const clientObj=CLIENTS.find(function(c){return c.email===client_email;});
+  const trips=(clientObj&&clientObj.trips)||[];
+  const trip=trips[0];
+  if(!trip){toast('No trip found for this client');return;}
   try{
-    const r=await fetch('/api/admin/trips/'+tripId,{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},body:JSON.stringify({data:JSON.stringify(draft)})});
+    const r=await fetch('/api/admin/trips/'+trip.id,{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},body:JSON.stringify({data:JSON.stringify(draft)})});
     if(r.ok){toast('Draft saved ✓');}else{toast('Save failed: '+r.status);}
   }catch(e){toast('Save error');}
 }
