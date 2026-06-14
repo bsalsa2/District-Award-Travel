@@ -991,6 +991,13 @@
               <option value="Booked">Booked</option>
               <option value="Closed">Closed</option>
             </select>
+            <select id="client-sort" onchange="filterClients()"
+              style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--card);color:var(--text);font-size:.875rem;cursor:pointer">
+              <option value="name">Sort: Name</option>
+              <option value="newest">Sort: Newest</option>
+              <option value="trips">Sort: Most Trips</option>
+              <option value="points">Sort: Most Points</option>
+            </select>
             <div id="client-count-indicator" style="font-size:.82rem;color:var(--muted);white-space:nowrap"></div>
           </div>
           <div id="clients-table-wrap">
@@ -1879,6 +1886,19 @@ function filterClients(){
       return status === clientFilter.status;
     })();
     return matchesSearch && matchesStatus;
+  });
+  // Sort
+  var sortEl=document.getElementById('client-sort');
+  var sortVal=sortEl?sortEl.value:'name';
+  filtered.sort(function(a,b){
+    if(sortVal==='newest')return new Date(b.created_at||0)-new Date(a.created_at||0);
+    if(sortVal==='trips')return ((b.trips||[]).length)-((a.trips||[]).length);
+    if(sortVal==='points'){
+      var pa=(a.points||a.point_programs||[]).reduce(function(s,p){return s+(p.balance||p.points||0);},0);
+      var pb=(b.points||b.point_programs||[]).reduce(function(s,p){return s+(p.balance||p.points||0);},0);
+      return pb-pa;
+    }
+    return (a.name||'').localeCompare(b.name||'');
   });
   var countEl = document.getElementById('client-count-indicator');
   if(countEl) countEl.textContent = 'Showing ' + filtered.length + ' of ' + CLIENTS.length + ' clients';
