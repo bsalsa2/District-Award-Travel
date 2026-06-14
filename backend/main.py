@@ -4542,6 +4542,80 @@ def get_funnel(days: int = 30, db: Session = Depends(get_db), _: dict = Depends(
     }
 
 
+@app.get("/api/admin/stats/weekly")
+async def admin_weekly_stats(admin=Depends(require_admin), db: Session = Depends(get_db)):
+    from datetime import date, timedelta
+    today = date.today()
+    # Find the Monday of the current week
+    monday = today - timedelta(days=today.weekday())
+    weeks = []
+    for i in range(11, -1, -1):
+        week_start = monday - timedelta(weeks=i)
+        week_end = week_start + timedelta(days=7)
+        intakes = db.query(TripRequest).filter(
+            TripRequest.created_at >= week_start,
+            TripRequest.created_at < week_end
+        ).count()
+        bookings = db.query(TripRequest).filter(
+            TripRequest.workflow_status == "booked",
+            TripRequest.created_at >= week_start,
+            TripRequest.created_at < week_end
+        ).count()
+        weeks.append({"week_start": week_start.isoformat(), "intakes": intakes, "bookings": bookings})
+    return {"weeks": weeks}
+
+
+@app.get("/api/admin/savings/{entry_id}/report")
+async def savings_report(entry_id: int, admin=Depends(require_admin), db: Session = Depends(get_db)):
+    entry = db.query(SavingsRecord).filter(SavingsRecord.id == entry_id).first()
+    if not entry:
+        raise HTTPException(404, "Not found")
+
+    saved_cents = getattr(entry, 'savings_cents', None)
+    if saved_cents is None:
+        # Compute savings: benchmark - taxes/fees - other out of pocket
+        benchmark_cents = getattr(entry, 'cash_benchmark_cents', 0) or 0
+        taxes_fees_cents = getattr(entry, 'award_taxes_fees_cents', 0) or 0
+        other_cents = getattr(entry, 'other_out_of_pocket_cents', 0) or 0
+        saved_cents = benchmark_cents - taxes_fees_cents - other_cents
+    saved_cents = saved_cents or 0
+    fee_rate_bps = getattr(entry, 'fee_rate_bps', 1000) or 1000
+    fee_cents = int(saved_cents * fee_rate_bps / 10000)
+    benchmark_cents = getattr(entry, 'cash_benchmark_cents', 0) or 0
+
+    # Get client email via relationship or fallback
+    client_email = ""
+    if hasattr(entry, 'client') and entry.client:
+        client_email = getattr(entry.client, 'email', '')
+
+    html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>DAT Savings Report</title>
+<style>body{{font-family:system-ui,sans-serif;max-width:600px;margin:40px auto;padding:20px;color:#1a1a1a;}}
+h1{{color:#f97316;font-size:1.5rem;margin-bottom:4px;}}
+.label{{font-size:12px;color:#666;text-transform:uppercase;letter-spacing:.05em;margin-top:16px;}}
+.value{{font-size:1.2rem;font-weight:700;margin-top:2px;}}
+.savings{{color:#16a34a;font-size:2rem;font-weight:800;}}
+.divider{{border:none;border-top:1px solid #e5e5e5;margin:20px 0;}}
+.footer{{font-size:12px;color:#999;margin-top:32px;}}
+</style></head><body>
+<h1>&#x2708; District Award Travel — Savings Report</h1>
+<p style="color:#666;font-size:13px;">Generated {datetime.utcnow().strftime('%B %d, %Y')}</p>
+<hr class="divider">
+<div class="label">Client</div><div class="value">{client_email}</div>
+<div class="label">Trip</div><div class="value">{getattr(entry,'trip_label','N/A')}</div>
+<div class="label">Cash Benchmark</div><div class="value">${benchmark_cents//100:,}</div>
+<div class="label">Option Booked</div><div class="value">{getattr(entry,'option_booked','N/A')}</div>
+<div class="label">Points Paid</div><div class="value">{getattr(entry,'points_used',0):,}</div>
+<div class="label">Fees Paid</div><div class="value">${(getattr(entry,'award_taxes_fees_cents',0) or 0)//100:,}</div>
+<hr class="divider">
+<div class="label">You Saved</div><div class="savings">${saved_cents//100:,}</div>
+<div class="label">DAT Fee ({fee_rate_bps//100}%)</div><div class="value" style="color:#f97316;">${fee_cents//100:,}</div>
+<div class="footer">District Award Travel &middot; districtawardtravel@gmail.com &middot; districtawardtravel.com</div>
+</body></html>"""
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content=html)
+
+
 # ──────────────────────────────────────────────────────────────────────────
 # Static website (served last so /api routes take precedence)
 # ──────────────────────────────────────────────────────────────────────────

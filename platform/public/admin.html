@@ -449,7 +449,7 @@
   .kb-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted,rgba(250,248,243,.55))}
   .kb-col-count{font-size:11px;font-weight:700;background:rgba(249,115,22,.18);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:100px;padding:2px 7px}
   .kb-cards{padding:8px;display:flex;flex-direction:column;gap:6px;min-height:80px}
-  .kb-card{background:var(--card,#1a1814);border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.07));padding:10px 12px;cursor:pointer}
+  .kb-card{background:var(--card,#1a1814);border-radius:8px;border:1px solid var(--border,rgba(255,255,255,.07));padding:10px 12px;cursor:pointer;position:relative}
   .kb-card:hover{border-color:rgba(249,115,22,.3);box-shadow:0 2px 12px rgba(249,115,22,.08)}
   .kb-card.stale{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)}
   .kb-card.critical{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
@@ -770,6 +770,10 @@
     border-radius:8px; padding:14px 16px; color:#ef4444;
     font-size:.87rem;
   }
+  @keyframes warn-pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .stale-badge{animation:warn-pulse 1.5s infinite;position:absolute;top:8px;right:8px;background:rgba(249,115,22,.2);color:var(--accent);border-radius:4px;padding:2px 6px;font-size:11px;}
+  @keyframes card-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .kb-card{animation:card-in .2s ease;}
 </style>
 </head>
 <body>
@@ -887,6 +891,21 @@
             <div class="metric-card"><div class="metric-label">New This Week</div><div class="metric-val" id="ov-new-clients">—</div><div class="metric-delta">joined last 7 days</div></div>
             <div class="metric-card"><div class="metric-label">Booking Rate</div><div class="metric-val" id="ov-booking-rate">—</div><div class="metric-delta">booked / total trips</div></div>
             <div class="metric-card" id="waitlist-card" style="cursor:pointer" onclick="loadWaitlist()" title="Click to view waitlist"><div class="metric-label">Waitlist</div><div class="metric-val purple" id="ov-waitlist-count">—</div><div class="metric-delta">emails captured</div></div>
+            <div class="metric-card">
+  <div class="metric-label">Avg. Days to Close</div>
+  <div class="metric-val" id="ov-avg-days">—</div>
+</div>
+<div class="metric-card">
+  <div class="metric-label">Intakes This Week</div>
+  <div class="metric-val" id="ov-intakes-week">0</div>
+</div>
+          </div>
+
+          <!-- QUICK ACTIONS BAR -->
+          <div style="display:flex;gap:10px;margin:0 0 20px;flex-wrap:wrap;">
+            <button onclick="openPlan()" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--accent);cursor:pointer;font-size:13px;" onmouseover="this.style.background='rgba(249,115,22,.1)'" onmouseout="this.style.background='var(--card)'">📋 New Trip</button>
+            <button onclick="document.querySelector('[data-panel=inbox]').click()" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--accent);cursor:pointer;font-size:13px;" onmouseover="this.style.background='rgba(249,115,22,.1)'" onmouseout="this.style.background='var(--card)'">✉ Broadcast</button>
+            <a href="/api/admin/clients/export" id="export-csv-btn" style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--accent);cursor:pointer;font-size:13px;text-decoration:none;display:inline-block;" onmouseover="this.style.background='rgba(249,115,22,.1)'" onmouseout="this.style.background='var(--card)'">📊 Export CSV</a>
           </div>
 
           <!-- FUNNEL SECTION -->
@@ -1087,6 +1106,20 @@
           <div class="header-actions"><button class="btn-action" onclick="exportCSV('/api/admin/export/savings','district-savings.csv')">&#8659; Export CSV</button><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
         </div>
         <div class="content">
+          <div id="savings-pipeline" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Owed</div>
+              <div id="savings-owed" style="font-size:1.6rem;font-weight:700;color:var(--accent);margin-top:4px;">$0</div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Invoiced</div>
+              <div id="savings-invoiced" style="font-size:1.6rem;font-weight:700;color:#f59e0b;margin-top:4px;">$0</div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Collected</div>
+              <div id="savings-collected" style="font-size:1.6rem;font-weight:700;color:#22c55e;margin-top:4px;">$0</div>
+            </div>
+          </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
             <div class="metric-card" style="border-top:3px solid #f97316"><div class="metric-label">Owed</div><div class="metric-val" style="color:#f97316" id="sf-owed">$0</div><div class="metric-delta">fees not yet invoiced</div></div>
             <div class="metric-card" style="border-top:3px solid var(--blue)"><div class="metric-label">Invoiced</div><div class="metric-val blue" id="sf-invoiced">$0</div><div class="metric-delta">sent to client</div></div>
@@ -1812,6 +1845,7 @@ async function renderFees(){
     var entries=await res.json();
     var sumRes=await fetch('/api/admin/savings/summary',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
     var summary=sumRes.ok?await sumRes.json():{total_gross_cents:0,total_fee_cents:0,count:0};
+    updateSavingsPipeline(summary);
     var savingsStr='$'+Math.floor((summary.total_gross_cents||0)/100).toLocaleString();
     var feesStr='$'+Math.floor((summary.total_fee_cents||0)/100).toLocaleString();
     document.getElementById('fees-total-savings').textContent=savingsStr;
@@ -1837,7 +1871,7 @@ async function renderFees(){
           +'<td style="color:var(--green);font-weight:600">'+fmtUsdCents(gross)+'</td>'
           +'<td style="color:var(--gold);font-weight:600">'+fmtUsdCents(fee)+'</td>'
           +'<td><select class="sv-status-sel" data-id="'+e.id+'" style="font-size:.78rem;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 6px;cursor:pointer"><option value="draft"'+(e.status==='draft'?' selected':'')+'>draft</option><option value="booked"'+(e.status==='booked'?' selected':'')+'>booked</option><option value="invoiced"'+(e.status==='invoiced'?' selected':'')+'>invoiced</option><option value="paid"'+(e.status==='paid'?' selected':'')+'>paid</option><option value="void"'+(e.status==='void'?' selected':'')+'>void</option></select><span class="sv-saved-flash" id="sv-flash-'+e.id+'" style="font-size:.72rem;color:var(--green);margin-left:4px;opacity:0;transition:opacity .3s"></span> <button class="btn-sm" title="View Report" style="font-size:.88rem;padding:2px 6px" onclick="openSavingReport('+e.id+')">&#128196;</button></td>'
-          +'<td style="display:flex;gap:4px;flex-wrap:wrap">'+invoiceBtn+'<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteSaving('+e.id+')">🗑</button></td></tr>';
+          +'<td style="display:flex;gap:4px;flex-wrap:wrap">'+invoiceBtn+'<button onclick="viewSavingsReport('+e.id+')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--muted);cursor:pointer;font-size:11px;">📄 Report</button><button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteSaving('+e.id+')">🗑</button></td></tr>';
       }).join('')
       :'<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
     var totalSavCents=entries.reduce(function(s,e){return s+(e.gross_savings_cents||0);},0);
@@ -1855,6 +1889,19 @@ async function openSavingReport(id){
     var url=data.report_url||('/api/report/'+(data.token||''));
     window.open(url,'_blank');
   }catch(e){toast('Could not load report','error');}
+}
+function updateSavingsPipeline(summary){
+  var fmt=function(c){return '$'+(Math.round((c||0)/100)).toLocaleString();};
+  var o=document.getElementById('savings-owed');if(o)o.textContent=fmt(summary.owed_cents);
+  var i=document.getElementById('savings-invoiced');if(i)i.textContent=fmt(summary.invoiced_cents);
+  var c=document.getElementById('savings-collected');if(c)c.textContent=fmt(summary.collected_cents);
+}
+async function viewSavingsReport(id){
+  var res=await fetch('/api/admin/savings/'+id+'/report',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+  if(!res.ok){toast('Report unavailable','error');return;}
+  var html=await res.text();
+  var w=window.open('','_blank','width=700,height=600');
+  w.document.write(html);w.document.close();
 }
 function fmtUsdCents(c){return '$'+Math.floor(c/100).toLocaleString()+'.'+(Math.abs(c)%100<10?'0':'')+(Math.abs(c)%100);}
 document.addEventListener('change',async function(e){
@@ -2914,6 +2961,24 @@ async function loadStats(){
     _lastStatsLoad=Date.now();
     updateRefreshTs();
   }catch(e){console.warn('loadStats error',e);}
+  // Also fetch combined dashboard endpoint
+  try{
+    var dr=await fetch('/api/admin/dashboard',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'X-Admin-Token':ADMIN_TOKEN}});
+    if(dr.ok){
+      var dd=await dr.json();
+      // Populate extra elements if they exist
+      var se=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+      se('ov-clients-total', dd.clients_total||0);
+      se('ov-intakes-week', dd.intakes_this_week||0);
+      se('ov-avg-days', dd.avg_days_to_close?dd.avg_days_to_close.toFixed(1)+'d':'—');
+      se('ov-booking-rate-pct', (dd.booking_rate_pct||0)+'%');
+      // Populate savings pipeline if elements exist
+      var fmt=function(c){return '$'+(Math.round((c||0)/100)).toLocaleString();};
+      se('savings-owed', fmt(dd.savings_owed_cents));
+      se('savings-invoiced', fmt(dd.savings_invoiced_cents));
+      se('savings-collected', fmt(dd.savings_collected_cents));
+    }
+  }catch(e){console.warn('dashboard fetch error',e);}
 }
 var _lastStatsLoad=0;
 function updateRefreshTs(){
@@ -3675,19 +3740,42 @@ function renderBoard(data){
         timeBadge='<span class="kb-card-time-badge">'+timeLbl+'</span>';
       }
       var watermark='<div class="kb-card-watermark">'+esc((t.destination||'').split(',')[0].trim().slice(0,16))+'</div>';
-      return '<div class="'+cls+'" data-kb-idx="'+idx+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer;padding-bottom:'+(timeBadge?'28px':'10px')+'">'+
+      var staleBadge=(t.hours_in_stage>48)?'<span class="stale-badge">&#x26A0; stale</span>':'';
+      return '<div class="'+cls+'" data-kb-idx="'+idx+'" data-trip-id="'+t.id+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer;padding-bottom:'+(timeBadge?'28px':'10px')+'">'+
+        staleBadge+
         '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+notesBadge+'</div>'+
         '<div class="kb-card-client">'+esc(t.client_name||t.client_email||'')+'</div>'+
         '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+buildBtn+advBtn+'</div>'+
         watermark+timeBadge+'</div>';
     }).join(''):'<div class="kb-empty">&#x2708;<br>No trips here</div>';
-    return '<div class="kb-col"><div class="kb-col-head"><span class="kb-col-title"><span class="kb-status-dot"></span>'+col.label+'</span>'+
+    return '<div class="kb-col" data-status="'+col.key+'"><div class="kb-col-head"><span class="kb-col-title"><span class="kb-status-dot"></span>'+col.label+'</span>'+
       '<span class="kb-col-count">'+cards.length+'</span></div><div class="kb-cards">'+cardHtml+'</div></div>';
   }).join('');
   // Staggered entrance animation
   board.querySelectorAll('.kb-card').forEach(function(el){
     var delay=(parseInt(el.getAttribute('data-kb-idx'),10)||0)*40;
     setTimeout(function(){el.classList.add('kb-card-visible');},delay);
+  });
+  initKanbanDrag();
+}
+
+function initKanbanDrag(){
+  document.querySelectorAll('.kb-card').forEach(function(card){
+    card.setAttribute('draggable','true');
+    card.addEventListener('dragstart',function(e){e.dataTransfer.setData('text/plain',card.dataset.tripId||'');card.style.opacity='.4';});
+    card.addEventListener('dragend',function(){card.style.opacity='1';});
+  });
+  document.querySelectorAll('.kb-col').forEach(function(col){
+    col.addEventListener('dragover',function(e){e.preventDefault();col.style.background='rgba(249,115,22,.08)';});
+    col.addEventListener('dragleave',function(){col.style.background='';});
+    col.addEventListener('drop',async function(e){
+      e.preventDefault();col.style.background='';
+      var tripId=e.dataTransfer.getData('text/plain');
+      var newStatus=col.dataset.status;
+      if(!tripId||!newStatus)return;
+      var res=await fetch('/api/admin/trips/'+tripId+'/status',{method:'PATCH',headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({status:newStatus})});
+      if(res.ok){toast('Moved to '+newStatus,'success');loadBoard();}else{toast('Move failed','error');}
+    });
   });
 }
 
@@ -3970,7 +4058,11 @@ async function _loadDrawerActivity(email){
       'status_changed':'var(--dim)',
       'message_sent':'var(--green)',
       'message_received':'var(--purple,#a78bfa)',
-      'saving_logged':'var(--green,#16a34a)'
+      'saving_logged':'var(--green,#16a34a)',
+      'message':'var(--accent)',
+      'trip_advance':'#3b82f6',
+      'intake':'#22c55e',
+      'savings':'#a855f7'
     };
     var now=Date.now();
     function relTime(ts){
@@ -4059,6 +4151,12 @@ async function _loadDrawerActivity(email){
       </div>
     </div>
 
+    <!-- ACTIVITY TIMELINE -->
+    <div style="margin-top:24px;">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Activity Timeline</div>
+      <div id="trip-timeline-list"></div>
+    </div>
+
     <!-- OPTIONS PREVIEW -->
     <div id="td-options-section" style="display:none;margin-bottom:20px">
       <div style="padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px">
@@ -4135,6 +4233,7 @@ function openTripDetail(trip) {
   document.getElementById('td-time-form').style.display = 'none';
   document.getElementById('td-time-logged').style.opacity = '0';
   document.getElementById('trip-detail-overlay').classList.add('open');
+  loadTripTimeline(_tdTripId);
 }
 
 function closeTripDetail() {
@@ -4386,7 +4485,10 @@ async function tdSendQuickMsg() {
   </div>
   <div class="drawer-body" id="client-drawer-content"></div>
   <div class="drawer-quick-reply" id="client-drawer-quick-reply" style="display:none">
-    <textarea id="drawer-reply-input" rows="1" placeholder="Quick message…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();drawerSendQuickReply();}"></textarea>
+    <div style="flex:1;display:flex;flex-direction:column">
+    <textarea id="drawer-reply-input" rows="1" placeholder="Quick message…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();drawerSendQuickReply();}" oninput="(function(el){var ct=document.getElementById('drawer-msg-counter');if(ct)ct.textContent=el.value.length+' / 2000';})(this)"></textarea>
+    <div id="drawer-msg-counter" style="text-align:right;font-size:11px;color:var(--muted);margin-top:2px">0 / 2000</div>
+    </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
       <button class="drawer-quick-send" onclick="drawerSendQuickReply()">Send</button>
       <span class="drawer-quick-sent" id="drawer-reply-sent">✓ Sent</span>
@@ -4395,17 +4497,17 @@ async function tdSendQuickMsg() {
 </div>
 
 <!-- KEYBOARD SHORTCUTS HELP MODAL -->
-<div id="kb-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeKbModal()">
-  <div style="background:#1a1409;color:#f5f0ea;border-radius:12px;padding:32px 36px;width:100%;max-width:560px;box-shadow:0 8px 48px rgba(0,0,0,.8);border:1px solid rgba(249,115,22,.15);font-family:inherit">
-    <div style="font-size:1.1rem;font-weight:700;margin-bottom:20px;border-bottom:1px solid rgba(249,115,22,.15);padding-bottom:12px;color:#f97316">Keyboard Shortcuts</div>
+<div id="kb-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeKbModal()">
+  <div style="background:var(--card,#1a1409);color:var(--text,#f5f0ea);border:1px solid var(--border,rgba(249,115,22,.18));border-radius:16px;padding:32px;width:90%;max-width:500px;box-shadow:0 8px 48px rgba(0,0,0,.8);font-family:inherit">
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:20px;border-bottom:1px solid var(--border,rgba(249,115,22,.18));padding-bottom:12px;color:var(--accent,#f97316)">Keyboard Shortcuts</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
       <div>
-        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(245,240,234,.35);margin-bottom:10px;text-transform:uppercase">Navigation</div>
-        <table style="border-collapse:collapse;width:100%"><tbody id="kb-rows-nav"></tbody></table>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--muted,rgba(245,240,234,.45));margin-bottom:10px;text-transform:uppercase">Navigation</div>
+        <div id="kb-rows-nav"></div>
       </div>
       <div>
-        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(245,240,234,.35);margin-bottom:10px;text-transform:uppercase">Actions</div>
-        <table style="border-collapse:collapse;width:100%"><tbody id="kb-rows-actions"></tbody></table>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--muted,rgba(245,240,234,.45));margin-bottom:10px;text-transform:uppercase">Actions</div>
+        <div id="kb-rows-actions"></div>
       </div>
     </div>
     <div style="margin-top:20px;text-align:right"><button onclick="closeKbModal()" style="background:rgba(249,115,22,.12);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:6px;padding:6px 16px;cursor:pointer;font-size:.85rem">Close</button></div>
@@ -4418,29 +4520,29 @@ async function tdSendQuickMsg() {
    ════════════════════════════════════════════ */
 (function(){
   var KB_NAV = [
-    {keys:'g → o', desc:'Overview'},
-    {keys:'g → p', desc:'Pipeline'},
-    {keys:'g → c', desc:'Clients'},
-    {keys:'g → m', desc:'Messages'},
-    {keys:'g → f', desc:'Fees'},
+    {keys:'g o', desc:'Overview'},
+    {keys:'g p', desc:'Pipeline'},
+    {keys:'g c', desc:'Clients'},
+    {keys:'g m', desc:'Messages'},
+    {keys:'g f', desc:'Fees/Savings'},
   ];
   var KB_ACTIONS = [
-    {keys:'n',   desc:'New plan'},
-    {keys:'/',   desc:'Search'},
-    {keys:'?',   desc:'Help'},
-    {keys:'Esc', desc:'Close'},
+    {keys:'?',   desc:'Show this help'},
+    {keys:'/',   desc:'Focus search'},
+    {keys:'n',   desc:'New trip'},
+    {keys:'Esc', desc:'Close modal'},
   ];
 
-  function kbKbd(k){ return '<kbd style="background:#1a1409;border:1px solid rgba(249,115,22,.3);border-radius:4px;padding:2px 6px;font-family:monospace;font-size:12px;color:#f97316">'+k+'</kbd>'; }
-  function populateKbSection(tbodyId, rows){
-    var tbody = document.getElementById(tbodyId);
-    if(!tbody) return;
-    rows.forEach(function(s){
-      var tr = document.createElement('tr');
-      tr.innerHTML = '<td style="padding:5px 0;white-space:nowrap">'+kbKbd(s.keys)+'</td>'
-                   +'<td style="padding:5px 0 5px 10px;color:rgba(245,240,234,.7);font-size:.88rem">'+s.desc+'</td>';
-      tbody.appendChild(tr);
-    });
+  function kbRow(desc, key){
+    return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border,rgba(249,115,22,.18));font-size:13px;">'
+      +'<span style="color:var(--muted,rgba(245,240,234,.55))">'+desc+'</span>'
+      +'<kbd style="background:rgba(255,255,255,.08);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--text,#f5f0ea);font-family:monospace">'+key+'</kbd>'
+      +'</div>';
+  }
+  function populateKbSection(elId, rows){
+    var el = document.getElementById(elId);
+    if(!el) return;
+    el.innerHTML = rows.map(function(s){ return kbRow(s.desc, s.keys); }).join('');
   }
   populateKbSection('kb-rows-nav', KB_NAV);
   populateKbSection('kb-rows-actions', KB_ACTIONS);
@@ -4545,6 +4647,11 @@ async function tdSendQuickMsg() {
   function openDrop(){drop.classList.add('open');}
   function closeDrop(){drop.classList.remove('open');}
   function showSpinner(){drop.innerHTML='<div class="gsearch-spinner">Searching&#x2026;</div>';openDrop();}
+  function hlSearch(text,q){
+    if(!q)return text;
+    var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+    return text.replace(re,'<mark style="background:rgba(249,115,22,.3);color:var(--text);border-radius:2px;">$1</mark>');
+  }
   function renderResults(data,q){
     var html='';
     var clients=data.clients||[];var trips=data.trips||[];var savings=data.savings||[];
@@ -4556,8 +4663,8 @@ async function tdSendQuickMsg() {
       clients.forEach(function(c){
         html+='<div class="gsearch-item" onmousedown="event.preventDefault();gsearchPickClient(\''+esc(c.email)+'\')">'
           +'<span class="gsearch-item-ico">&#x1F464;</span><div>'
-          +'<div class="gsearch-item-main">'+esc(c.name)+'</div>'
-          +'<div class="gsearch-item-sub">'+esc(c.email)+'</div></div></div>';
+          +'<div class="gsearch-item-main">'+hlSearch(esc(c.name),q)+'</div>'
+          +'<div class="gsearch-item-sub">'+hlSearch(esc(c.email),q)+'</div></div></div>';
       });
       html+='</div>';
     }
@@ -4566,8 +4673,8 @@ async function tdSendQuickMsg() {
       trips.forEach(function(t){
         html+='<div class="gsearch-item" onmousedown="event.preventDefault();gsearchPickTrip()">'
           +'<span class="gsearch-item-ico">&#x2708;</span><div>'
-          +'<div class="gsearch-item-main">'+esc(t.destination||'(no destination)')+'</div>'
-          +'<div class="gsearch-item-sub">'+esc(t.client_name||t.client_email)+' &middot; '+esc(t.status)+'</div></div></div>';
+          +'<div class="gsearch-item-main">'+hlSearch(esc(t.destination||'(no destination)'),q)+'</div>'
+          +'<div class="gsearch-item-sub">'+hlSearch(esc(t.client_name||t.client_email),q)+' &middot; '+esc(t.status)+'</div></div></div>';
       });
       html+='</div>';
     }
@@ -4577,8 +4684,8 @@ async function tdSendQuickMsg() {
         var dollars=s.gross_savings_cents?'$'+(s.gross_savings_cents/100).toLocaleString('en-US',{maximumFractionDigits:0}):'';
         html+='<div class="gsearch-item" onmousedown="event.preventDefault();gsearchPickSaving()">'
           +'<span class="gsearch-item-ico">&#x1F4B0;</span><div>'
-          +'<div class="gsearch-item-main">'+esc(s.trip_label||'Savings Record')+'</div>'
-          +'<div class="gsearch-item-sub">'+esc(s.client_email)+(dollars?' &middot; '+dollars:'')+'</div></div></div>';
+          +'<div class="gsearch-item-main">'+hlSearch(esc(s.trip_label||'Savings Record'),q)+'</div>'
+          +'<div class="gsearch-item-sub">'+hlSearch(esc(s.client_email),q)+(dollars?' &middot; '+dollars:'')+'</div></div></div>';
       });
       html+='</div>';
     }
@@ -4676,6 +4783,37 @@ async function tdSendQuickMsg() {
     obs.observe(ovPanel,{childList:true,subtree:true,characterData:true});
   }
 })();
+
+async function loadTripTimeline(tripId){
+  if(!tripId||!ADMIN_TOKEN)return;
+  var el=document.getElementById('trip-timeline-list');
+  if(!el)return;
+  el.innerHTML='<div style="color:var(--muted);font-size:13px;">Loading...</div>';
+  try{
+    var res=await fetch('/api/admin/trips/'+tripId+'/timeline',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok){el.innerHTML='<div style="color:var(--muted);font-size:13px;">No events.</div>';return;}
+    var events=await res.json();
+    if(!events.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;">No events yet.</div>';return;}
+    el.innerHTML=events.map(function(ev){
+      var d=new Date(ev.created_at);
+      var label=d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">'
+        +'<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>'
+        +'<div><div style="font-size:11px;color:var(--muted);">'+label+'</div>'
+        +'<div style="font-size:13px;color:var(--text);">'+(ev.from_status||'start')+' → '+(ev.to_status||'?')
+        +(ev.note?' — <em style="color:var(--muted);">'+ev.note+'</em>':'')+'</div></div></div>';
+    }).join('');
+  }catch(e){el.innerHTML='<div style="color:var(--muted);font-size:13px;">Error loading timeline.</div>';}
+}
+
+function mdPreview(txt){
+  return txt
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^## (.+)$/gm,'<h3 style="color:var(--accent);margin:8px 0 4px;">$1</h3>')
+    .replace(/^- (.+)$/gm,'<li style="margin:2px 0;">$1</li>')
+    .replace(/(<li.*<\/li>)/s,'<ul style="padding-left:18px;margin:4px 0;">$1</ul>');
+}
 </script>
 </body>
 </html>
