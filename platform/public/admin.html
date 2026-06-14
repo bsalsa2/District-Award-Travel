@@ -1364,7 +1364,7 @@
 <!-- PLAN BUILDER MODAL -->
 <div id="plan-overlay" class="overlay">
   <div class="modal wide">
-    <div class="modal-head"><h2>📋 Build Travel Plan</h2><button class="modal-close" onclick="closePlan()">&times;</button></div>
+    <div class="modal-head"><h2 id="plan-modal-title">📋 Build Travel Plan</h2><button class="modal-close" onclick="closePlan()">&times;</button></div>
     <p class="modal-sub">Compose a travel plan with specific recommendations and send directly to the client's portal. They'll see it when they log in.</p>
     <div class="form-group"><label>Client</label>
       <select id="plan-client" onchange="planSyncEmail()">
@@ -1396,9 +1396,23 @@
       <button class="plan-add-btn" onclick="addPlanOption(document.getElementById('plan-tpl-select').value)">+ Add Another Option</button>
     </div>
 
-    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:4px">
+    <!-- CLIENT PREVIEW PANE (hidden by default) -->
+    <div id="plan-client-preview" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+      <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:12px">👁 Client View Preview</div>
+      <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);border-radius:14px;padding:22px 24px;color:#fff">
+        <div style="font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:6px">District Award Travel · Your Plan</div>
+        <div id="cpv-title" style="font-size:1.2rem;font-weight:800;color:#fff;margin-bottom:4px"></div>
+        <div style="font-size:.78rem;color:rgba(255,255,255,.5);margin-bottom:12px"><span id="cpv-dest"></span><span id="cpv-dates"></span></div>
+        <div id="cpv-overview" style="font-size:.84rem;color:rgba(255,255,255,.75);line-height:1.6;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.1)"></div>
+        <div id="cpv-options" style="display:flex;flex-direction:column;gap:12px"></div>
+        <div style="font-size:.62rem;color:rgba(255,255,255,.3);margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);text-align:center">Sent via District Award Travel · For questions reply in your portal</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:16px;align-items:center">
       <button class="btn-primary" onclick="sendPlan()">📤 Send Plan to Client Portal</button>
       <button class="btn-sm" onclick="savePlanDraft()">💾 Save Draft</button>
+      <button class="btn-sm" id="plan-preview-toggle-btn" onclick="toggleClientPlanPreview()" style="border-color:rgba(249,115,22,.35);color:var(--accent)">👁 Preview as Client</button>
       <button class="btn-sm" onclick="closePlan()">Cancel</button>
     </div>
   </div>
@@ -2328,8 +2342,13 @@ function resetPlan(){
   _optCounter=0;
 }
 function planSyncEmail(){
-  const v=document.getElementById('plan-client').value.split('|');
-  // email not needed in this version, but we could use it
+  const sel=document.getElementById('plan-client');
+  const v=sel.value.split('|');
+  const name=v[0]||'';
+  const titleEl=document.getElementById('plan-modal-title');
+  if(titleEl){
+    titleEl.textContent=name?'📋 Build Options for '+name:'📋 Build Travel Plan';
+  }
 }
 
 /* ── Option cards ── */
@@ -2483,6 +2502,45 @@ function sendPlan(){
       document.getElementById('plan-client').disabled=false;
     })
     .catch(e=>{alert('Error sending plan: '+e);document.getElementById('plan-client').disabled=false;});
+}
+function toggleClientPlanPreview(){
+  var pane=document.getElementById('plan-client-preview');
+  var btn=document.getElementById('plan-preview-toggle-btn');
+  if(!pane)return;
+  var showing=pane.style.display!=='none';
+  if(!showing){
+    var g=function(id){var el=document.getElementById(id);return el?el.value.trim():'';};
+    document.getElementById('cpv-title').textContent=g('plan-title')||'Your Travel Plan';
+    var dest=g('plan-dest');
+    var dates=g('plan-dates');
+    document.getElementById('cpv-dest').textContent=dest;
+    document.getElementById('cpv-dates').textContent=(dest&&dates)?' · '+dates:(dates||'');
+    document.getElementById('cpv-overview').textContent=g('plan-overview');
+    var opts=_collectOptionCards();
+    var html='';
+    opts.forEach(function(o,i){
+      html+='<div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:14px 16px">'
+        +'<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);margin-bottom:4px">Option '+(i+1)+'</div>'
+        +'<div style="font-size:.96rem;font-weight:700;color:#fff;margin-bottom:6px">'+esc(o.title||'Option '+(i+1))+'</div>'
+        +(o.route?'<div style="font-size:.74rem;color:rgba(255,255,255,.55);margin-bottom:8px">'+esc(o.route)+'</div>':'')
+        +'<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px">'
+        +(o.points?'<div><div style="font-size:.58rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Points</div><div style="font-size:.9rem;font-weight:700;color:#facc15">'+esc(o.points)+'</div></div>':'')
+        +(o.program?'<div><div style="font-size:.58rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Program</div><div style="font-size:.9rem;font-weight:700;color:#facc15">'+esc(o.program)+'</div></div>':'')
+        +(o.value?'<div><div style="font-size:.58rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Cash Value</div><div style="font-size:.9rem;font-weight:700;color:#facc15">'+esc(o.value)+'</div></div>':'')
+        +(o.cabin?'<div><div style="font-size:.58rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Cabin / Room</div><div style="font-size:.9rem;font-weight:700;color:#facc15">'+esc(o.cabin)+'</div></div>':'')
+        +'</div>'
+        +(o.notes?'<div style="font-size:.74rem;color:rgba(255,255,255,.45);font-style:italic">'+esc(o.notes)+'</div>':'')
+        +'</div>';
+    });
+    if(!html)html='<div style="font-size:.82rem;color:rgba(255,255,255,.35);text-align:center;padding:16px">No options added yet.</div>';
+    document.getElementById('cpv-options').innerHTML=html;
+    pane.style.display='block';
+    btn.textContent='✕ Hide Preview';
+    pane.scrollIntoView({behavior:'smooth',block:'nearest'});
+  } else {
+    pane.style.display='none';
+    btn.textContent='👁 Preview as Client';
+  }
 }
 function quickComposeCreds(){
   const email=document.getElementById('res-email').textContent;
