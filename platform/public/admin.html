@@ -1026,10 +1026,11 @@
           <div class="chat-layout show-list" id="chat-layout">
             <div class="chat-sidebar">
               <div class="inbox-toolbar">
-                <input type="search" class="inbox-search" id="inbox-search" placeholder="Search conversations…" oninput="renderInbox()" onsearch="renderInbox()">
+                <input type="search" class="inbox-search" id="inbox-search" placeholder="Search by name or email…" oninput="renderInbox()" onsearch="renderInbox()">
                 <div class="inbox-chips">
                   <span class="inbox-chip active" id="chip-all" onclick="setInboxFilter('all')">All</span>
                   <span class="inbox-chip" id="chip-starred" onclick="setInboxFilter('starred')">⭐ Starred</span>
+                  <button onclick="markAllThreadsRead()" style="margin-left:auto;background:none;border:none;font-size:.72rem;color:var(--muted);cursor:pointer;padding:2px 4px;font-family:var(--font);transition:color .15s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">✓ Mark all read</button>
                 </div>
               </div>
               <div class="chat-list" id="chat-list">
@@ -1052,7 +1053,7 @@
                     <div class="achat-tpl-item" onclick="insertChatTpl('chat_deadline')">Deadline Alert</div>
                   </div>
                 </div>
-                <textarea class="achat-input" id="achat-input" rows="1" placeholder="Type a reply…" onkeydown="achatKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"></textarea>
+                <textarea class="achat-input" id="achat-input" rows="1" placeholder="Type a reply… (Shift+Enter to send)" onkeydown="achatKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,110)+'px'"></textarea>
                 <button class="achat-send" id="achat-send" onclick="sendAdminChat()">Send</button>
               </div>
             </div>
@@ -3027,6 +3028,16 @@ function chatTime(s){
 }
 
 function hlMatch(text,q){if(!q)return esc(text);var s=esc(text),eq=esc(q).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');return s.replace(new RegExp('('+eq+')','gi'),'<mark>$1</mark>');}
+function relTime(s){
+  if(!s)return'';
+  const d=new Date(s);if(isNaN(d))return'';
+  const diff=Math.floor((Date.now()-d)/1000);
+  if(diff<60)return'just now';
+  if(diff<3600)return Math.floor(diff/60)+'m ago';
+  if(diff<86400)return Math.floor(diff/3600)+'h ago';
+  if(diff<604800)return Math.floor(diff/86400)+'d ago';
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
 function renderInbox(){
   const el=document.getElementById('chat-list');
   if(!INBOX.length){el.innerHTML='<div class="chat-empty">No clients yet — conversations appear here once you add clients.</div>';return;}
@@ -3041,15 +3052,23 @@ function renderInbox(){
   if(INBOX_FILTER==='starred')rows=rows.filter(function(r){return STARRED_THREADS.has(r.email);});
   if(!rows.length){el.innerHTML='<div class="chat-empty">No results.</div>';return;}
   el.innerHTML=rows.map(function(r){
-    const prev=r.last?((r.last.sender==='client'?'':'You: ')+r.last.text):'No messages yet';
+    const prevFull=r.last?((r.last.sender==='client'?'':'You: ')+r.last.text):'No messages yet';
+    const prevTrunc=prevFull.length>60?prevFull.slice(0,60)+'…':prevFull;
     const starred=STARRED_THREADS.has(r.email);
-    return '<div class="conv '+(CHAT_EMAIL===r.email?'active':'')+'" onclick="openThread(\''+eid(r.email)+'\')">'+
-      '<div class="conv-top"><div class="conv-name">'+hlMatch(r.name,q)+'</div>'+
-      '<div style="display:flex;align-items:center;gap:4px">'+(r.unread?'<span class="conv-unread">'+r.unread+'</span>':'')+
-      '<span class="conv-time">'+chatTime(r.last&&r.last.time)+'</span>'+
-      '<button class="conv-star" onclick="toggleStar(\''+eid(r.email)+'\',event)" title="'+(starred?'Unstar':'Star')+'">'+(starred?'★':'☆')+'</button>'+
-      '</div></div>'+
-      '<div class="conv-prev '+(r.unread?'unread':'')+'">'+esc(prev)+'</div></div>';
+    const isActive=CHAT_EMAIL===r.email;
+    const hasUnread=!!(r.unread&&r.unread>0);
+    const dotHtml=hasUnread?'<span style="width:8px;height:8px;border-radius:50%;background:#f97316;flex-shrink:0;margin-right:4px;display:inline-block;align-self:center"></span>':'<span style="width:8px;flex-shrink:0;margin-right:4px;display:inline-block"></span>';
+    return '<div class="conv '+(isActive?'active':'')+'" onclick="openThread(\''+eid(r.email)+'\')" style="display:flex;align-items:stretch;padding:0">'+
+      '<div style="display:flex;align-items:center;padding:14px 0 14px 10px">'+dotHtml+'</div>'+
+      '<div style="flex:1;padding:12px 14px 12px 4px;min-width:0">'+
+        '<div class="conv-top"><div class="conv-name">'+hlMatch(r.name,q)+'</div>'+
+        '<div style="display:flex;align-items:center;gap:4px">'+
+          '<span class="conv-time">'+relTime(r.last&&r.last.time)+'</span>'+
+          '<button class="conv-star" onclick="toggleStar(\''+eid(r.email)+'\',event)" title="'+(starred?'Unstar':'Star')+'">'+(starred?'★':'☆')+'</button>'+
+        '</div></div>'+
+        '<div class="conv-prev '+(hasUnread?'unread':'')+'" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(prevTrunc)+'</div>'+
+      '</div>'+
+    '</div>';
   }).join('');
 }
 
@@ -3168,7 +3187,18 @@ document.addEventListener('click',function(e){
   const wrap=e.target.closest('.achat-tpl-wrap');
   if(!wrap) closeChatTplMenu();
 });
-function achatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAdminChat();}}
+function markAllThreadsRead(){
+  INBOX.forEach(function(r){r.unread=0;});
+  renderInbox();
+  const b=document.getElementById('nav-chat-count');
+  if(b){b.style.display='none';}
+  if(CHAT_EMAIL&&!markingRead)markThreadRead();
+}
+function achatKey(e){
+  if(e.key==='Enter'&&e.shiftKey){e.preventDefault();sendAdminChat();}
+  else if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendAdminChat();}
+  // plain Enter inserts a newline (default textarea behavior)
+}
 
 async function sendAdminChat(){
   const inp=document.getElementById('achat-input');
