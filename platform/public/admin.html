@@ -840,6 +840,13 @@
         </div>
       </div>
 
+      <!-- SLIM STATUS BAR -->
+      <div id="status-bar" style="background:rgba(0,0,0,.5);border-bottom:1px solid rgba(249,115,22,.07);padding:0 20px;font-size:11px;color:rgba(245,240,234,.35);display:flex;align-items:center;justify-content:space-between;height:30px;flex-shrink:0">
+        <span id="status-bar-dt"></span>
+        <span id="status-bar-trips"></span>
+        <span style="cursor:pointer" onclick="openKbModal()">? for shortcuts</span>
+      </div>
+
       <!-- OVERVIEW -->
       <div class="panel active" id="panel-overview">
         <div class="page-header">
@@ -867,6 +874,7 @@
             <div class="metric-card"><div class="metric-label">Stale Trips</div><div class="metric-val" id="ov-stale-trips">—</div><div class="metric-delta">no update in 7+ days</div></div>
             <div class="metric-card"><div class="metric-label">New This Week</div><div class="metric-val" id="ov-new-clients">—</div><div class="metric-delta">joined last 7 days</div></div>
             <div class="metric-card"><div class="metric-label">Booking Rate</div><div class="metric-val" id="ov-booking-rate">—</div><div class="metric-delta">booked / total trips</div></div>
+            <div class="metric-card" id="waitlist-card" style="cursor:pointer" onclick="loadWaitlist()" title="Click to view waitlist"><div class="metric-label">Waitlist</div><div class="metric-val purple" id="ov-waitlist-count">—</div><div class="metric-delta">emails captured</div></div>
           </div>
 
           <!-- FUNNEL SECTION -->
@@ -2737,6 +2745,33 @@ function adminError(msg){
 }
 var statsTimer=null;
 var heatmapTimer=null;
+async function loadWaitlist(){
+  if(!ADMIN_TOKEN)return;
+  try{
+    const res=await fetch('/api/admin/waitlist',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok)return;
+    const rows=await res.json();
+    const el=document.getElementById('ov-waitlist-count');
+    if(el)el.textContent=rows.length;
+    if(!rows.length){toast('Waitlist is empty','info');return;}
+    const existing=document.getElementById('waitlist-modal-overlay');
+    if(existing)existing.remove();
+    const overlay=document.createElement('div');
+    overlay.id='waitlist-modal-overlay';
+    overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+    overlay.innerHTML='<div style="background:#1a1409;border:1px solid rgba(249,115,22,.25);border-radius:16px;padding:28px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.8)">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px"><div style="font-size:16px;font-weight:800">📧 Waitlist ('+rows.length+')</div><button onclick="document.getElementById(\'waitlist-modal-overlay\').remove()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">×</button></div>'
+      +'<table style="width:100%;border-collapse:collapse"><thead><tr>'
+      +'<th style="text-align:left;font-size:11px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--border)">Email</th>'
+      +'<th style="text-align:left;font-size:11px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--border)">Name</th>'
+      +'<th style="text-align:left;font-size:11px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--border)">Date</th>'
+      +'</tr></thead><tbody>'
+      +rows.map(function(r){return '<tr><td style="padding:8px;font-size:13px">'+esc(r.email)+'</td><td style="padding:8px;font-size:13px;color:var(--muted)">'+esc(r.name||'—')+'</td><td style="padding:8px;font-size:12px;color:var(--dim)">'+(r.created_at||'').slice(0,10)+'</td></tr>';}).join('')
+      +'</tbody></table></div>';
+    document.body.appendChild(overlay);
+  }catch(e){toast('Failed to load waitlist','error');}
+}
 async function loadStats(){
   if(!ADMIN_TOKEN)return;
   try{
@@ -2748,6 +2783,9 @@ async function loadStats(){
     s('ov-avg-savings','avg per trip: '+fmtUsdCents(d.avg_savings_per_trip_cents||0));
     s('ov-total-trips',d.total_trips||0);
     s('ov-active-trips',(d.active_trips||0)+' active');
+    window._statusBarActiveTrips = d.active_trips||0;
+    var stEl = document.getElementById('status-bar-trips');
+    if(stEl) stEl.textContent = (d.active_trips||0) + ' active trips';
     const staleEl=document.getElementById('ov-stale-trips');
     if(staleEl){
       const stale=d.trips_stale||0;
@@ -4218,13 +4256,20 @@ async function tdSendQuickMsg() {
 </div>
 
 <!-- KEYBOARD SHORTCUTS HELP MODAL -->
-<div id="kb-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeKbModal()">
-  <div style="background:#1e1e2e;color:#e0e0f0;border-radius:12px;padding:32px 40px;min-width:320px;box-shadow:0 8px 40px rgba(0,0,0,.6);font-family:inherit">
-    <div style="font-size:1.15rem;font-weight:700;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:12px">Keyboard Shortcuts</div>
-    <table style="border-collapse:collapse;width:100%">
-      <tbody id="kb-rows"></tbody>
-    </table>
-    <div style="margin-top:18px;text-align:right"><button onclick="closeKbModal()" style="background:#333;color:#e0e0f0;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;font-size:.9rem">Close</button></div>
+<div id="kb-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeKbModal()">
+  <div style="background:#1a1409;color:#f5f0ea;border-radius:12px;padding:32px 36px;width:100%;max-width:560px;box-shadow:0 8px 48px rgba(0,0,0,.8);border:1px solid rgba(249,115,22,.15);font-family:inherit">
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:20px;border-bottom:1px solid rgba(249,115,22,.15);padding-bottom:12px;color:#f97316">Keyboard Shortcuts</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(245,240,234,.35);margin-bottom:10px;text-transform:uppercase">Navigation</div>
+        <table style="border-collapse:collapse;width:100%"><tbody id="kb-rows-nav"></tbody></table>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(245,240,234,.35);margin-bottom:10px;text-transform:uppercase">Actions</div>
+        <table style="border-collapse:collapse;width:100%"><tbody id="kb-rows-actions"></tbody></table>
+      </div>
+    </div>
+    <div style="margin-top:20px;text-align:right"><button onclick="closeKbModal()" style="background:rgba(249,115,22,.12);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:6px;padding:6px 16px;cursor:pointer;font-size:.85rem">Close</button></div>
   </div>
 </div>
 
@@ -4233,24 +4278,33 @@ async function tdSendQuickMsg() {
    KEYBOARD SHORTCUTS
    ════════════════════════════════════════════ */
 (function(){
-  var KB_SHORTCUTS = [
-    {keys:'g o', desc:'Overview'},
-    {keys:'g p', desc:'Pipeline'},
-    {keys:'g c', desc:'Clients'},
-    {keys:'g m', desc:'Messages'},
-    {keys:'g f', desc:'Savings & Fees'},
-    {keys:'?',   desc:'This help'},
-    {keys:'Esc', desc:'Close modals'},
+  var KB_NAV = [
+    {keys:'g → o', desc:'Overview'},
+    {keys:'g → p', desc:'Pipeline'},
+    {keys:'g → c', desc:'Clients'},
+    {keys:'g → m', desc:'Messages'},
+    {keys:'g → f', desc:'Fees'},
+  ];
+  var KB_ACTIONS = [
+    {keys:'n',   desc:'New plan'},
+    {keys:'/',   desc:'Search'},
+    {keys:'?',   desc:'Help'},
+    {keys:'Esc', desc:'Close'},
   ];
 
-  // Populate help modal rows
-  var tbody = document.getElementById('kb-rows');
-  KB_SHORTCUTS.forEach(function(s){
-    var tr = document.createElement('tr');
-    tr.innerHTML = '<td style="padding:5px 0;width:90px"><code style="background:#2a2a3e;border-radius:4px;padding:2px 8px;font-size:.88rem;letter-spacing:.04em">'+s.keys+'</code></td>'
-                 +'<td style="padding:5px 0;color:#b0b8d0;font-size:.95rem">'+s.desc+'</td>';
-    tbody.appendChild(tr);
-  });
+  function kbKbd(k){ return '<kbd style="background:#1a1409;border:1px solid rgba(249,115,22,.3);border-radius:4px;padding:2px 6px;font-family:monospace;font-size:12px;color:#f97316">'+k+'</kbd>'; }
+  function populateKbSection(tbodyId, rows){
+    var tbody = document.getElementById(tbodyId);
+    if(!tbody) return;
+    rows.forEach(function(s){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td style="padding:5px 0;white-space:nowrap">'+kbKbd(s.keys)+'</td>'
+                   +'<td style="padding:5px 0 5px 10px;color:rgba(245,240,234,.7);font-size:.88rem">'+s.desc+'</td>';
+      tbody.appendChild(tr);
+    });
+  }
+  populateKbSection('kb-rows-nav', KB_NAV);
+  populateKbSection('kb-rows-actions', KB_ACTIONS);
 
   function openKbModal(){
     var el = document.getElementById('kb-overlay');
@@ -4294,6 +4348,13 @@ async function tdSendQuickMsg() {
       return;
     }
 
+    // n — new plan
+    if(key === 'n'){
+      if(typeof openPlan === 'function') openPlan();
+      clearSeq();
+      return;
+    }
+
     // g X sequences
     if(firstKey === 'g'){
       clearSeq();
@@ -4313,6 +4374,25 @@ async function tdSendQuickMsg() {
 
     clearSeq();
   });
+})();
+
+/* ════════════════════════════════════════════
+   STATUS BAR CLOCK
+   ════════════════════════════════════════════ */
+(function(){
+  function updateStatusClock(){
+    var el = document.getElementById('status-bar-dt');
+    if(!el) return;
+    var now = new Date();
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var h = now.getHours(), m = now.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12; if(!h) h = 12;
+    var ms = m < 10 ? '0'+m : m;
+    el.textContent = months[now.getMonth()] + ' ' + now.getDate() + ' · ' + h + ':' + ms + ' ' + ampm;
+  }
+  updateStatusClock();
+  setInterval(updateStatusClock, 60000);
 })();
 
 /* ════════════════════════════════════════════
