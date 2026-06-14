@@ -1098,6 +1098,20 @@
           <div class="header-actions"><button class="btn-action" onclick="exportCSV('/api/admin/export/savings','district-savings.csv')">&#8659; Export CSV</button><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
         </div>
         <div class="content">
+          <div id="savings-pipeline" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Owed</div>
+              <div id="savings-owed" style="font-size:1.6rem;font-weight:700;color:var(--accent);margin-top:4px;">$0</div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Invoiced</div>
+              <div id="savings-invoiced" style="font-size:1.6rem;font-weight:700;color:#f59e0b;margin-top:4px;">$0</div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;">
+              <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">Collected</div>
+              <div id="savings-collected" style="font-size:1.6rem;font-weight:700;color:#22c55e;margin-top:4px;">$0</div>
+            </div>
+          </div>
           <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
             <div class="metric-card" style="border-top:3px solid #f97316"><div class="metric-label">Owed</div><div class="metric-val" style="color:#f97316" id="sf-owed">$0</div><div class="metric-delta">fees not yet invoiced</div></div>
             <div class="metric-card" style="border-top:3px solid var(--blue)"><div class="metric-label">Invoiced</div><div class="metric-val blue" id="sf-invoiced">$0</div><div class="metric-delta">sent to client</div></div>
@@ -1823,6 +1837,7 @@ async function renderFees(){
     var entries=await res.json();
     var sumRes=await fetch('/api/admin/savings/summary',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
     var summary=sumRes.ok?await sumRes.json():{total_gross_cents:0,total_fee_cents:0,count:0};
+    updateSavingsPipeline(summary);
     var savingsStr='$'+Math.floor((summary.total_gross_cents||0)/100).toLocaleString();
     var feesStr='$'+Math.floor((summary.total_fee_cents||0)/100).toLocaleString();
     document.getElementById('fees-total-savings').textContent=savingsStr;
@@ -1848,7 +1863,7 @@ async function renderFees(){
           +'<td style="color:var(--green);font-weight:600">'+fmtUsdCents(gross)+'</td>'
           +'<td style="color:var(--gold);font-weight:600">'+fmtUsdCents(fee)+'</td>'
           +'<td><select class="sv-status-sel" data-id="'+e.id+'" style="font-size:.78rem;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 6px;cursor:pointer"><option value="draft"'+(e.status==='draft'?' selected':'')+'>draft</option><option value="booked"'+(e.status==='booked'?' selected':'')+'>booked</option><option value="invoiced"'+(e.status==='invoiced'?' selected':'')+'>invoiced</option><option value="paid"'+(e.status==='paid'?' selected':'')+'>paid</option><option value="void"'+(e.status==='void'?' selected':'')+'>void</option></select><span class="sv-saved-flash" id="sv-flash-'+e.id+'" style="font-size:.72rem;color:var(--green);margin-left:4px;opacity:0;transition:opacity .3s"></span> <button class="btn-sm" title="View Report" style="font-size:.88rem;padding:2px 6px" onclick="openSavingReport('+e.id+')">&#128196;</button></td>'
-          +'<td style="display:flex;gap:4px;flex-wrap:wrap">'+invoiceBtn+'<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteSaving('+e.id+')">🗑</button></td></tr>';
+          +'<td style="display:flex;gap:4px;flex-wrap:wrap">'+invoiceBtn+'<button onclick="viewSavingsReport('+e.id+')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:3px 8px;color:var(--muted);cursor:pointer;font-size:11px;">📄 Report</button><button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteSaving('+e.id+')">🗑</button></td></tr>';
       }).join('')
       :'<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
     var totalSavCents=entries.reduce(function(s,e){return s+(e.gross_savings_cents||0);},0);
@@ -1866,6 +1881,19 @@ async function openSavingReport(id){
     var url=data.report_url||('/api/report/'+(data.token||''));
     window.open(url,'_blank');
   }catch(e){toast('Could not load report','error');}
+}
+function updateSavingsPipeline(summary){
+  var fmt=function(c){return '$'+(Math.round((c||0)/100)).toLocaleString();};
+  var o=document.getElementById('savings-owed');if(o)o.textContent=fmt(summary.owed_cents);
+  var i=document.getElementById('savings-invoiced');if(i)i.textContent=fmt(summary.invoiced_cents);
+  var c=document.getElementById('savings-collected');if(c)c.textContent=fmt(summary.collected_cents);
+}
+async function viewSavingsReport(id){
+  var res=await fetch('/api/admin/savings/'+id+'/report',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+  if(!res.ok){toast('Report unavailable','error');return;}
+  var html=await res.text();
+  var w=window.open('','_blank','width=700,height=600');
+  w.document.write(html);w.document.close();
 }
 function fmtUsdCents(c){return '$'+Math.floor(c/100).toLocaleString()+'.'+(Math.abs(c)%100<10?'0':'')+(Math.abs(c)%100);}
 document.addEventListener('change',async function(e){
