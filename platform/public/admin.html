@@ -2481,6 +2481,30 @@ function _refreshOptPreview(id){
   var lbl=document.getElementById(id+'-label');
   if(lbl)lbl.textContent=t('title')||'Option';
 }
+function _onOptImgChange(id){
+  const input=document.getElementById(id+'-img-input');
+  if(!input||!input.files||!input.files[0])return;
+  const file=input.files[0];
+  if(!file.type.startsWith('image/')){toast('Please upload an image file');return;}
+  const nameEl=document.getElementById(id+'-img-name');
+  const clearBtn=document.getElementById(id+'-img-clear');
+  const previewImg=document.getElementById(id+'-img-preview');
+  if(nameEl)nameEl.textContent=file.name;
+  if(clearBtn)clearBtn.style.display='';
+  const reader=new FileReader();
+  reader.onload=function(e){if(previewImg){previewImg.src=e.target.result;previewImg.style.display='block';}};
+  reader.readAsDataURL(file);
+}
+function _clearOptImg(id){
+  const input=document.getElementById(id+'-img-input');
+  if(input)input.value='';
+  const nameEl=document.getElementById(id+'-img-name');
+  if(nameEl)nameEl.textContent='';
+  const clearBtn=document.getElementById(id+'-img-clear');
+  if(clearBtn)clearBtn.style.display='none';
+  const previewImg=document.getElementById(id+'-img-preview');
+  if(previewImg){previewImg.src='';previewImg.style.display='none';}
+}
 function sendPlan(){
   const client_email=document.getElementById('plan-client').value.split('|')[1];
   const title=document.getElementById('plan-title').value.trim();
