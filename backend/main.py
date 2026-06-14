@@ -1511,6 +1511,14 @@ async def join_waitlist(request: Request, body: WaitlistIn, db: Session = Depend
     return {"ok": True, "message": "You're on the list!"}
 
 
+@app.get("/api/admin/waitlist")
+def list_waitlist(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    rows = db.query(Waitlist).order_by(Waitlist.created_at.desc()).all()
+    return [{"id": r.id, "email": r.email, "name": r.name,
+             "created_at": r.created_at.isoformat() if r.created_at else None} for r in rows]
+
+
+
 @app.post("/api/track")
 @limiter.limit("120/hour")
 async def track_event(request: Request, body: TrackIn, db: Session = Depends(get_db)):
