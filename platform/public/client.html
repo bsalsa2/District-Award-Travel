@@ -51,6 +51,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .gs-step-icon.pending{color:transparent}
 .gs-step-label{color:#e5e7eb}
 .gs-step-label.done{color:#a1a1aa;text-decoration:line-through}
+@keyframes confetti-pop{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
 .gs-cta{background:#f97316;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)}
 .gs-cta:hover{background:#ea6c10}
 .refer-card{background:linear-gradient(135deg,#1c1917,#292524);border-radius:14px;padding:24px 26px;margin-top:28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
@@ -635,8 +636,11 @@ body.light-mode{
         <div class="refer-card">
           <div>
             <div class="refer-title">🎁 Refer a Friend</div>
-            <div class="refer-sub">Know someone sitting on points? Send them to District — they only pay if they save, and you'll be their hero.</div>
-            <div id="refer-url-box" style="display:none;margin-top:12px;background:rgba(0,0,0,.3);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:12px;color:rgba(245,240,234,.6);word-break:break-all"></div>
+            <div class="refer-sub">Earn $50 credit when your friend books their first trip</div>
+            <div id="refer-url-wrap" style="display:none;margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input id="refer-url" readonly onclick="navigator.clipboard.writeText(this.value).then(function(){showToast('Copied!','success');});" style="flex:1;min-width:180px;background:rgba(0,0,0,.3);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:12px;color:rgba(245,240,234,.8);cursor:pointer;outline:none" value="">
+              <button onclick="var u=document.getElementById('refer-url');if(u)navigator.clipboard.writeText(u.value).then(function(){showToast('Link copied!','success');});" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px;white-space:nowrap;">Copy</button>
+            </div>
             <div id="refer-social" style="display:none;margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
               <a id="refer-wa" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;background:#25d366;color:#fff;font-size:12px;font-weight:700;text-decoration:none">WhatsApp</a>
               <a id="refer-email-link" href="#" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;background:#3b82f6;color:#fff;font-size:12px;font-weight:700;text-decoration:none">Email</a>
@@ -1029,14 +1033,23 @@ function animStat(id,target,fmt){
   requestAnimationFrame(step);
 }
 
+function showToast(msg,type){
+  var t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:'+(type==='success'?'#22c55e':'#374151')+';color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .3s';
+  document.body.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove();},320);},1800);
+}
+
 function copyReferral(){
   const name=((currentData&&currentData.name)||'').split(' ')[0].toLowerCase();
   const url=location.origin+'/?utm_source=referral&utm_medium=client'+(name?'&utm_campaign='+encodeURIComponent(name):'');
   const msg=`Hey! I've been using District Award Travel to find award redemptions for my points — they found me business class for way less than cash and only charge 10% of what they save you. No upfront fee. Check it out: ${url}`;
   // Show URL box and social links
-  const urlBox=document.getElementById('refer-url-box');
+  const urlWrap=document.getElementById('refer-url-wrap');
+  const urlInput=document.getElementById('refer-url');
   const social=document.getElementById('refer-social');
-  if(urlBox){urlBox.textContent=url;urlBox.style.display='block';}
+  if(urlWrap&&urlInput){urlInput.value=url;urlWrap.style.display='flex';}
   if(social){
     social.style.display='flex';
     const wa=document.getElementById('refer-wa');
@@ -1101,11 +1114,30 @@ function renderGettingStarted(c){
   // Hide entirely if all done OR if client is already active (2+ trips and any booked savings)
   if(completed===5||(trips.length>=2&&s5)){card.classList.remove('visible');return;}
 
-  bar.style.width=(completed/5*100)+'%';
-  stepsEl.innerHTML=steps.map(s=>`<div class="gs-step">
-    <div class="gs-step-icon ${s.done?'done':'pending'}">${s.done?'✓':''}</div>
-    <span class="gs-step-label ${s.done?'done':''}">${s.label}</span>
-  </div>`).join('');
+  window.gsUpdateBar=function(){
+    var checked=card.querySelectorAll('.gs-cb:checked').length;
+    var total=5;
+    bar.style.width=(checked/total*100)+'%';
+    if(checked===total){
+      card.style.borderLeftColor='#22c55e';
+      card.style.animation='confetti-pop .4s ease';
+      setTimeout(function(){card.style.animation='';},400);
+    } else {
+      card.style.borderLeftColor='#f97316';
+    }
+  };
+
+  stepsEl.innerHTML=steps.map((s,i)=>{
+    const savedChecked=s.done||localStorage.getItem('dat_checklist_'+i)==='1';
+    return `<div class="gs-step">
+      <input type="checkbox" class="gs-cb" data-idx="${i}" ${savedChecked?'checked':''} style="accent-color:#f97316;width:15px;height:15px;flex-shrink:0;cursor:pointer;margin-right:4px" onchange="localStorage.setItem('dat_checklist_${i}',this.checked?'1':'0');var lbl=this.nextElementSibling;if(lbl){lbl.style.textDecoration=this.checked?'line-through':'none';lbl.style.color=this.checked?'#6b7280':'';}gsUpdateBar();">
+      <span class="gs-step-label ${s.done?'done':''}" style="${savedChecked?'text-decoration:line-through;color:#6b7280;':''}">${s.label}</span>
+    </div>`;
+  }).join('');
+
+  // Initial bar update based on restored state
+  gsUpdateBar();
+
   msgBtn.style.display=s2?'none':'inline-block';
   card.classList.add('visible');
 }
