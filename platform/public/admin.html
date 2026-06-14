@@ -2700,8 +2700,13 @@ function renderIntakes(intakes){
     const email_btn=i.email?'<button class="btn-sm primary" onclick="composeTo(\''+esc(i.name||'')+'\',\''+esc(i.email)+'\')">✉ Reply</button>':'';
     const import_btn='<button class="btn-sm ai" onclick="prefillImportFromIntake('+i.id+')">✨ Create Account</button>';
     const delete_btn='<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteIntake('+i.id+',\''+esc(i.name||'Unknown')+'\')">🗑</button>';
+    const p2=i.payload||{};
+    const dest=p2.destination||p2.trip1_destination||'';
+    const cabin=p2.cabin_preference||p2.cabin||p2.trip1_cabin||'';
+    const pts=p2.points_programs||p2.point_programs||'';
+    const metaTags=[dest&&('<span class="trip-chip">✈ '+esc(dest)+'</span>'),cabin&&('<span class="trip-chip">'+esc(cabin)+'</span>'),pts&&('<span class="trip-chip">🏆 '+esc(String(pts).slice(0,40))+'</span>')].filter(Boolean).join('');
     return '<div class="intake-card">'
-      +'<div><div class="intake-name">'+esc(i.name||'Unknown')+'</div><div class="intake-email">'+esc(i.email||'')+(i.phone?' · '+esc(i.phone):'')+'</div></div>'
+      +'<div><div class="intake-name">'+esc(i.name||'Unknown')+'</div><div class="intake-email">'+esc(i.email||'')+(i.phone?' · '+esc(i.phone):'')+'</div>'+(metaTags?'<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">'+metaTags+'</div>':'')+'</div>'
       +'<div class="intake-details">'+esc(goals)+'</div>'
       +'<div style="display:flex;flex-direction:column;gap:7px;align-items:flex-end">'
       +'<span style="font-size:.7rem;color:var(--muted)">'+(i.created_at||'').slice(0,10)+'</span>'
