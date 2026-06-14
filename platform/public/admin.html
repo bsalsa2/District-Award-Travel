@@ -2334,6 +2334,23 @@ function sendCompose(){
    ════════════════════════════════════════════ */
 function openPlan(){ document.getElementById('plan-overlay').classList.add('open'); resetPlan(); }
 function closePlan(){ document.getElementById('plan-overlay').classList.remove('open'); }
+function openOptionBuilder(tripId, clientName, clientEmail){
+  openPlan();
+  // Pre-select the client in the plan builder
+  setTimeout(function(){
+    var sel=document.getElementById('plan-client');
+    if(!sel)return;
+    for(var i=0;i<sel.options.length;i++){
+      var v=sel.options[i].value||'';
+      var parts=v.split('|');
+      if((clientEmail&&parts[1]===clientEmail)||(clientName&&parts[0]===clientName)){
+        sel.selectedIndex=i;
+        planSyncEmail();
+        break;
+      }
+    }
+  },50);
+}
 function resetPlan(){
   ['plan-client','plan-title','plan-overview','plan-dest','plan-dates']
     .forEach(id=>{var el=document.getElementById(id);if(el)el.value='';});
@@ -2381,6 +2398,14 @@ function addPlanOption(tpl, vals){
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Option Title</label>'
     +'<input type="text" id="'+id+'-title" value="'+esc(tmpl.title)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. Business Class via ANA"></div>'
+    +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Type</label>'
+    +'<select id="'+id+'-type" onchange="_refreshOptPreview(\''+id+'\')" style="width:100%;padding:7px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:.82rem;font-family:var(--font)">'
+    +'<option value="flight"'+(tmpl.type==='flight'?' selected':'')+'>✈ Flight</option>'
+    +'<option value="hotel"'+(tmpl.type==='hotel'?' selected':'')+'>🏨 Hotel</option>'
+    +'<option value="car"'+(tmpl.type==='car'?' selected':'')+'>🚗 Car</option>'
+    +'<option value="cash"'+(tmpl.type==='cash'?' selected':'')+'>💵 Cash</option>'
+    +'<option value=""'+((!tmpl.type||tmpl.type==='')?' selected':'')+'>— Other —</option>'
+    +'</select></div>'
     +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Program</label>'
     +'<input type="text" id="'+id+'-program" value="'+esc(tmpl.program)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. Chase UR"></div>'
     +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Route / Property</label>'
@@ -2391,6 +2416,8 @@ function addPlanOption(tpl, vals){
     +'<input type="text" id="'+id+'-points" value="'+esc(tmpl.points)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. 60,000"></div>'
     +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Cash Equivalent</label>'
     +'<input type="text" id="'+id+'-value" value="'+esc(tmpl.value)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. $1,200"></div>'
+    +'<div class="form-group" style="margin:0;grid-column:1/-1"><label style="font-size:.7rem">Image URL <span style="color:var(--dim);font-weight:400">(optional — shown in client portal)</span></label>'
+    +'<input type="url" id="'+id+'-image" value="'+esc(tmpl.image||'')+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="https://… (airline/hotel image)"></div>'
     +'</div>'
     +'<div class="form-group" style="margin-top:10px;margin-bottom:0"><label style="font-size:.7rem">Notes / Details</label>'
     +'<textarea id="'+id+'-notes" rows="2" oninput="_refreshOptPreview(\''+id+'\')" placeholder="Routing, availability, caveats…">'+esc(tmpl.notes||'')+'</textarea></div>'
@@ -2434,7 +2461,7 @@ function _dupOpt(id){
   if(!el)return;
   const tpl=el.dataset.tpl||'blank';
   const g=function(f){var e=document.getElementById(id+'-'+f);return e?e.value:'';};
-  addPlanOption(tpl,{title:g('title'),program:g('program'),route:g('route'),cabin:g('cabin'),points:g('points'),value:g('value'),notes:g('notes')});
+  addPlanOption(tpl,{title:g('title'),type:g('type'),program:g('program'),route:g('route'),cabin:g('cabin'),points:g('points'),value:g('value'),image:g('image'),notes:g('notes')});
 }
 function _collectOptionCards(){
   const cards=document.getElementById('plan-options-list').querySelectorAll('.option-card');
@@ -2442,7 +2469,7 @@ function _collectOptionCards(){
   cards.forEach(function(c){
     const id=c.id;
     const g=function(f){var e=document.getElementById(id+'-'+f);return e?e.value.trim():'';};
-    options.push({title:g('title'),program:g('program'),route:g('route'),cabin:g('cabin'),points:g('points'),value:g('value'),notes:g('notes')});
+    options.push({title:g('title'),type:g('type'),program:g('program'),route:g('route'),cabin:g('cabin'),points:g('points'),value:g('value'),image:g('image'),notes:g('notes')});
   });
   return options;
 }
@@ -2551,8 +2578,10 @@ function toggleClientPlanPreview(){
     var opts=_collectOptionCards();
     var html='';
     opts.forEach(function(o,i){
-      html+='<div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:14px 16px">'
-        +'<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);margin-bottom:4px">Option '+(i+1)+'</div>'
+      html+='<div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;overflow:hidden">'
+        +(o.image?'<img src="'+esc(o.image)+'" alt="" style="width:100%;height:120px;object-fit:cover;display:block;border-bottom:1px solid rgba(255,255,255,.1)" onerror="this.style.display=\'none\'">':'')
+        +'<div style="padding:14px 16px">'
+        +'<div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);margin-bottom:4px">Option '+(i+1)+(o.type?' · '+o.type.toUpperCase():'')+'</div>'
         +'<div style="font-size:.96rem;font-weight:700;color:#fff;margin-bottom:6px">'+esc(o.title||'Option '+(i+1))+'</div>'
         +(o.route?'<div style="font-size:.74rem;color:rgba(255,255,255,.55);margin-bottom:8px">'+esc(o.route)+'</div>':'')
         +'<div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px">'
@@ -2562,7 +2591,7 @@ function toggleClientPlanPreview(){
         +(o.cabin?'<div><div style="font-size:.58rem;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.06em">Cabin / Room</div><div style="font-size:.9rem;font-weight:700;color:#facc15">'+esc(o.cabin)+'</div></div>':'')
         +'</div>'
         +(o.notes?'<div style="font-size:.74rem;color:rgba(255,255,255,.45);font-style:italic">'+esc(o.notes)+'</div>':'')
-        +'</div>';
+        +'</div></div>';
     });
     if(!html)html='<div style="font-size:.82rem;color:rgba(255,255,255,.35);text-align:center;padding:16px">No options added yet.</div>';
     document.getElementById('cpv-options').innerHTML=html;
@@ -3430,6 +3459,7 @@ function renderBoard(data){
       var hrs=t.hours_in_stage?Math.round(t.hours_in_stage)+'h':'';
       var advBtn=(!['closed','declined','lost','booked'].includes(t.workflow_status))?
         '<button class="kb-advance-btn" onclick="event.stopPropagation();advanceTrip('+t.id+')">&#x2192;</button>':'';
+      var buildBtn='<button class="kb-advance-btn" onclick="event.stopPropagation();openOptionBuilder('+t.id+','+JSON.stringify(t.client_name||t.client_email||'')+','+JSON.stringify(t.client_email||'')+')">&#x1F4CB;</button>';
       var notesBadge='';
       if(t.research_notes&&t.research_notes.trim()){
         var tip=t.research_notes.trim().slice(0,100)+(t.research_notes.trim().length>100?'…':'');
@@ -3447,7 +3477,7 @@ function renderBoard(data){
       return '<div class="'+cls+'" data-kb-idx="'+idx+'" onclick="openTripDetail(_TRIP_MAP['+t.id+']||{id:'+t.id+'})" style="cursor:pointer;padding-bottom:'+(timeBadge?'28px':'10px')+'">'+
         '<div class="kb-card-dest">'+esc(t.destination||'(no destination)')+notesBadge+'</div>'+
         '<div class="kb-card-client">'+esc(t.client_name||t.client_email||'')+'</div>'+
-        '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+advBtn+'</div>'+
+        '<div class="kb-card-meta"><span class="kb-card-hours">'+hrs+'</span>'+staleTag+buildBtn+advBtn+'</div>'+
         watermark+timeBadge+'</div>';
     }).join(''):'<div class="kb-empty">&#x2708;<br>No trips here</div>';
     return '<div class="kb-col"><div class="kb-col-head"><span class="kb-col-title"><span class="kb-status-dot"></span>'+col.label+'</span>'+
