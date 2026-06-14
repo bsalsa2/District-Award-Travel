@@ -1838,15 +1838,20 @@ function renderClientsTable(clientsToRender){
   var countEl = document.getElementById('client-count-indicator');
   if(countEl && clientsToRender === undefined) countEl.textContent = 'Showing ' + CLIENTS.length + ' of ' + CLIENTS.length + ' clients';
   const html = list.length
-    ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Status</th><th>Added</th><th></th></tr></thead><tbody>'
+    ? '<table><thead><tr><th>Name</th><th>Email</th><th>Tier</th><th>Status</th><th>Trips</th><th>Points</th><th>Added</th><th></th></tr></thead><tbody>'
       + list.map(function(c){
           var cTrips=Array.isArray(c.trips)?c.trips:[];
           var cStatus=cTrips.length?cTrips[cTrips.length-1].workflow_status:(c.workflow_status||'');
+          var cPts=Array.isArray(c.points)?c.points:(Array.isArray(c.point_programs)?c.point_programs:[]);
+          var totalPts=cPts.reduce(function(s,p){return s+(p.balance||p.points||0);},0);
+          var ptsDisplay=totalPts>0?'<span style="color:var(--accent);font-weight:700;font-size:.82rem">'+totalPts.toLocaleString('en-US')+'</span>':'<span style="color:var(--dim);font-size:.75rem">—</span>';
           return '<tr style="cursor:pointer" onclick="openClientDrawer(\''+esc(c.email)+'\')">'
             +'<td><div class="client-name">'+esc(c.name)+'</div></td>'
             +'<td><div style="font-size:.82rem">'+esc(c.email)+'</div></td>'
             +'<td><span class="badge badge-blue">'+esc(c.tier)+'</span></td>'
             +'<td>'+(cStatus?'<span class="badge status-'+esc(cStatus)+'">'+esc(cStatus.replace(/_/g,' '))+'</span>':'<span style="color:var(--dim);font-size:.75rem">—</span>')+'</td>'
+            +'<td><span style="font-size:.82rem;color:var(--muted)">'+cTrips.length+'</span></td>'
+            +'<td>'+ptsDisplay+'</td>'
             +'<td><div class="client-sub">'+(c.created_at||'').slice(0,10)+'</div></td>'
             +'<td onclick="event.stopPropagation()"><div style="display:flex;gap:5px;flex-wrap:wrap">'
             +'<button class="btn-sm" onclick="composeTo(\''+esc(c.name)+'\',\''+esc(c.email)+'\')">✉</button>'
