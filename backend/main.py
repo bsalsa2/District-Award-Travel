@@ -2115,10 +2115,40 @@ def delete_client(email: str, _: dict = Depends(require_admin), db: Session = De
     return {"ok": True}
 
 
+@app.post("/api/admin/clients/{email}/reset-password")
+def admin_reset_client_password(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
+    """Generate a new random 12-char alphanumeric password, hash and save it,
+    then email the new password to the client. Admin only."""
+    import string as _string
+    client = db.query(Client).filter(Client.email == email.lower()).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    alphabet = _string.ascii_letters + _string.digits
+    new_password = "".join(secrets.choice(alphabet) for _ in range(12))
+    client.password_hash = hash_pw(new_password)
+    db.commit()
+    # Email the new password to the client
+    portal_url = BASE_URL + "/client.html"
+    body = f"""Hi {client.name.split()[0] if client.name else 'there'},
+
+Your District Award Travel portal password has been reset by your advisor.
+
+Your new temporary password is: {new_password}
+
+Please log in at {portal_url} and change your password after signing in.
+
+If you did not request this reset, please contact us immediately.
+
+Best,
+Braden
+District Award Travel"""
+    queue_email(client.email, "Your password has been reset — District Award Travel", body)
+    return {"ok": True}
+
+
 @app.get("/api/admin/expiring-points")
 def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    """All client point balances with an expiration_date, sorted soonest first.
-    Returns rows within 180 days; includes urgency level for the admin UI."""
+    """All client point balances expiring within 90 days, sorted soonest first."""
     clients = db.query(Client).all()
     today = dt.date.today()
     rows = []
@@ -2132,8 +2162,8 @@ def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_
                 exp_date = dt.date.fromisoformat(str(exp_str)[:10])
             except ValueError:
                 continue
-            days_left = (exp_date - today).days
-            if days_left > 180 or days_left < 0:
+            days_remaining = (exp_date - today).days
+            if days_remaining > 90 or days_remaining < 0:
                 continue
             rows.append({
                 "client_name": c.name,
@@ -2141,10 +2171,9 @@ def expiring_points(_: dict = Depends(require_admin), db: Session = Depends(get_
                 "program": p.get("program") or p.get("name") or "Unknown",
                 "balance": p.get("balance") or p.get("points") or 0,
                 "expiration_date": str(exp_date),
-                "days_left": days_left,
-                "urgency": "urgent" if days_left <= 30 else "warning" if days_left <= 90 else "calm",
+                "days_remaining": days_remaining,
             })
-    rows.sort(key=lambda r: r["days_left"])
+    rows.sort(key=lambda r: r["days_remaining"])
     return rows
 
 
@@ -3451,16 +3480,139 @@ def admin_stats(db: Session = Depends(get_db), _: dict = Depends(require_admin))
     n_savings = len(savings_recs)
     avg_savings_per_trip_cents = (total_savings_cents // n_savings) if n_savings else 0
 
+    booked_trips = db.query(TripRequest).filter(TripRequest.workflow_status == "booked").count()
+
     return {
         "trips_by_status": trips_by_status,
         "total_clients": total_clients,
         "total_trips": total_trips,
         "active_trips": active_trips,
+        "booked_trips": booked_trips,
         "total_savings_cents": total_savings_cents,
         "total_fees_cents": total_fees_cents,
         "avg_savings_per_trip_cents": avg_savings_per_trip_cents,
         "trips_stale": trips_stale,
         "new_clients_this_week": new_clients_this_week,
+    }
+
+
+@app.get("/api/admin/dashboard")
+def admin_dashboard(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Combined dashboard endpoint: stats + action_items + board column counts."""
+    # ── Stats (mirrors /api/admin/stats) ──────────────────────────────────────
+    now = dt.datetime.utcnow()
+    stale_cutoff = now - dt.timedelta(hours=48)
+    week_ago = now - dt.timedelta(days=7)
+    terminal = {"closed", "declined", "lost", "booked"}
+
+    trips = db.query(TripRequest).all()
+    trips_by_status: dict = {}
+    total_trips = 0
+    active_trips = 0
+    trips_stale = 0
+    for t in trips:
+        total_trips += 1
+        s = t.workflow_status or "new"
+        trips_by_status[s] = trips_by_status.get(s, 0) + 1
+        if s not in terminal:
+            active_trips += 1
+            updated = t.last_activity_at or t.created_at
+            if updated and updated < stale_cutoff:
+                trips_stale += 1
+
+    total_clients = db.query(Client).count()
+    new_clients_this_week = db.query(Client).filter(Client.created_at >= week_ago).count()
+    booked_trips = db.query(TripRequest).filter(TripRequest.workflow_status == "booked").count()
+
+    savings_recs = db.query(SavingsRecord).filter(
+        SavingsRecord.status.in_(["booked", "invoiced", "paid"])
+    ).all()
+    total_savings_cents = 0
+    total_fees_cents = 0
+    for rec in savings_recs:
+        gross = calc_gross_savings(
+            rec.cash_benchmark_cents,
+            rec.award_taxes_fees_cents,
+            rec.other_out_of_pocket_cents,
+        )
+        total_savings_cents += max(gross, 0)
+        total_fees_cents += calc_fee(gross, rec.fee_rate_bps)
+    n_savings = len(savings_recs)
+    avg_savings_per_trip_cents = (total_savings_cents // n_savings) if n_savings else 0
+
+    stats = {
+        "trips_by_status": trips_by_status,
+        "total_clients": total_clients,
+        "total_trips": total_trips,
+        "active_trips": active_trips,
+        "booked_trips": booked_trips,
+        "total_savings_cents": total_savings_cents,
+        "total_fees_cents": total_fees_cents,
+        "avg_savings_per_trip_cents": avg_savings_per_trip_cents,
+        "trips_stale": trips_stale,
+        "new_clients_this_week": new_clients_this_week,
+    }
+
+    # ── Column counts (board summary) ─────────────────────────────────────────
+    column_counts = {s: trips_by_status.get(s, 0) for s in WORKFLOW_STATUSES}
+
+    # ── Action items (mirrors /api/admin/action-items) ────────────────────────
+    today = dt.date.today()
+    items: list = []
+
+    cutoff_trip = now - dt.timedelta(hours=48)
+    stale_trips_q = (
+        db.query(TripRequest)
+        .filter(
+            TripRequest.workflow_status.notin_(TERMINAL_STATUSES),
+            TripRequest.last_activity_at < cutoff_trip,
+        )
+        .all()
+    )
+    for trip in stale_trips_q:
+        hours_stale = int((now - trip.last_activity_at).total_seconds() // 3600)
+        client = db.query(Client).filter(Client.id == trip.client_id).first()
+        items.append({
+            "type": "stale_trip",
+            "priority": "high",
+            "trip_id": trip.id,
+            "client_name": client.name if client else "Unknown",
+            "client_email": client.email if client else "",
+            "destination": trip.destination or "Unknown destination",
+            "status": trip.workflow_status,
+            "hours": hours_stale,
+        })
+
+    clients_all = db.query(Client).all()
+    for c in clients_all:
+        data = json.loads(c.data or "{}")
+        for p in data.get("points", []):
+            exp_str = p.get("expiration_date") or ""
+            if not exp_str:
+                continue
+            try:
+                exp_date = dt.date.fromisoformat(str(exp_str)[:10])
+            except ValueError:
+                continue
+            days_left = (exp_date - today).days
+            if days_left < 0 or days_left > 90:
+                continue
+            items.append({
+                "type": "expiring_points",
+                "priority": "high" if days_left <= 30 else "medium",
+                "client_name": c.name,
+                "client_email": c.email,
+                "program": p.get("program") or "Unknown",
+                "days_left": days_left,
+            })
+
+    priority_order = {"high": 0, "medium": 1, "low": 2}
+    items.sort(key=lambda i: priority_order.get(i["priority"], 9))
+
+    return {
+        "stats": stats,
+        "action_items": items,
+        "column_counts": column_counts,
     }
 
 
