@@ -1035,6 +1035,11 @@
           <div class="header-actions"><button class="btn-action" onclick="exportCSV('/api/admin/export/savings','district-savings.csv')">&#8659; Export CSV</button><button class="btn-action solid" onclick="openAddSaving()">+ Log Saving</button></div>
         </div>
         <div class="content">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+            <div class="metric-card" style="border-top:3px solid #f97316"><div class="metric-label">Owed</div><div class="metric-val" style="color:#f97316" id="sf-owed">$0</div><div class="metric-delta">fees not yet invoiced</div></div>
+            <div class="metric-card" style="border-top:3px solid var(--blue)"><div class="metric-label">Invoiced</div><div class="metric-val blue" id="sf-invoiced">$0</div><div class="metric-delta">sent to client</div></div>
+            <div class="metric-card" style="border-top:3px solid var(--green)"><div class="metric-label">Collected</div><div class="metric-val green" id="sf-collected">$0</div><div class="metric-delta">payment received</div></div>
+          </div>
           <div class="savings-pipeline-strip">
             <div class="sps-stat">
               <div class="sps-val" id="sps-identified">$0</div>
@@ -1064,6 +1069,7 @@
               </tbody>
             </table>
           </div>
+          <div id="fees-footer" style="font-size:.82rem;color:var(--muted);padding:8px 4px;border-top:1px solid var(--border);margin-top:4px"></div>
         </div>
       </div>
 
@@ -1281,6 +1287,10 @@
       <div class="form-group"><label>Award Taxes+Fees ($)</label><input type="number" id="sv-taxes" placeholder="112" min="0" step="0.01" oninput="updateSvFeePreview()"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group"><label>Cash Benchmark Source</label><input type="text" id="sv-benchmark-source" placeholder="URL or description"></div>
+      <div class="form-group"><label>Benchmark Date</label><input type="date" id="sv-benchmark-date"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div class="form-group"><label>Points Used</label><input type="number" id="sv-points" placeholder="75000" min="0"></div>
       <div class="form-group"><label>Program</label><input type="text" id="sv-program" placeholder="Chase UR, AA miles…"></div>
     </div>
@@ -1289,6 +1299,7 @@
     </div>
     <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:16px;font-size:.83rem;color:var(--muted)">
       Net savings: <strong style="color:var(--green)" id="sv-net-preview">$0</strong> · Advisory fee: <strong style="color:var(--gold)" id="sv-fee-preview">$0</strong>
+      <div style="margin-top:6px">Savings: <strong style="color:var(--green)" id="sv-live-savings">$0</strong> | Fee: <strong style="color:var(--gold)" id="sv-live-fee">$0</strong></div>
     </div>
     <button class="btn-primary" onclick="saveSaving()">Log Entry</button>
   </div>
@@ -1660,6 +1671,10 @@ function updateSvFeePreview(){
   var fee=Math.round(net*0.1);
   document.getElementById('sv-net-preview').textContent='$'+(net/100).toFixed(2);
   document.getElementById('sv-fee-preview').textContent='$'+(fee/100).toFixed(2);
+  var liveSav=document.getElementById('sv-live-savings');
+  var liveFee=document.getElementById('sv-live-fee');
+  if(liveSav)liveSav.textContent='$'+(net/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+  if(liveFee)liveFee.textContent='$'+(fee/100).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
 }
 
 function openAddSaving(){
@@ -1728,12 +1743,15 @@ async function renderFees(){
     document.getElementById('sps-identified').textContent=savingsStr;
     document.getElementById('sps-fees').textContent=feesStr;
     document.getElementById('sps-entries').textContent=entries.length;
+    function fmtSumCents(c){return '$'+Math.floor((c||0)/100).toLocaleString();}
+    if(document.getElementById('sf-owed'))document.getElementById('sf-owed').textContent=fmtSumCents(summary.owed_cents);
+    if(document.getElementById('sf-invoiced'))document.getElementById('sf-invoiced').textContent=fmtSumCents(summary.invoiced_cents);
+    if(document.getElementById('sf-collected'))document.getElementById('sf-collected').textContent=fmtSumCents(summary.collected_cents);
     var STATUS_BADGE={draft:'muted',booked:'green',invoiced:'gold',paid:'blue',void:'muted'};
     document.getElementById('fees-tbody').innerHTML=entries.length
       ?entries.map(function(e){
         var gross=e.gross_savings_cents||0;
         var fee=e.fee_cents||0;
-        var reportBtn=e.report_token?'<a href="/api/report/'+esc(e.report_token)+'" target="_blank"><button class="btn-sm" style="border-color:rgba(249,115,22,.3);color:var(--accent)">&#9113; Report</button></a> ':' ';
         var invoiceBtn=(e.status==='booked'||e.status==='invoiced'||e.status==='paid')?'<a href="/api/admin/savings/invoice/'+e.id+'" target="_blank"><button class="btn-sm">Invoice</button></a> ':' ';
         return '<tr>'
           +'<td><div class="client-name">'+esc(e.client_name||'—')+'</div><div style="font-size:.75rem;color:var(--muted)">'+esc(e.client_email||'')+'</div></td>'
@@ -1741,11 +1759,25 @@ async function renderFees(){
           +'<td style="font-size:.79rem;color:var(--muted)">'+fmtUsdCents(gross-fee)+'</td>'
           +'<td style="color:var(--green);font-weight:600">'+fmtUsdCents(gross)+'</td>'
           +'<td style="color:var(--gold);font-weight:600">'+fmtUsdCents(fee)+'</td>'
-          +'<td><select class="sv-status-sel" data-id="'+e.id+'" style="font-size:.78rem;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 6px;cursor:pointer"><option value="draft"'+(e.status==='draft'?' selected':'')+'>draft</option><option value="booked"'+(e.status==='booked'?' selected':'')+'>booked</option><option value="invoiced"'+(e.status==='invoiced'?' selected':'')+'>invoiced</option><option value="paid"'+(e.status==='paid'?' selected':'')+'>paid</option><option value="void"'+(e.status==='void'?' selected':'')+'>void</option></select><span class="sv-saved-flash" id="sv-flash-'+e.id+'" style="font-size:.72rem;color:var(--green);margin-left:4px;opacity:0;transition:opacity .3s"></span></td>'
-          +'<td style="display:flex;gap:4px;flex-wrap:wrap">'+reportBtn+invoiceBtn+'<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteSaving('+e.id+')">🗑</button></td></tr>';
+          +'<td><select class="sv-status-sel" data-id="'+e.id+'" style="font-size:.78rem;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:2px 6px;cursor:pointer"><option value="draft"'+(e.status==='draft'?' selected':'')+'>draft</option><option value="booked"'+(e.status==='booked'?' selected':'')+'>booked</option><option value="invoiced"'+(e.status==='invoiced'?' selected':'')+'>invoiced</option><option value="paid"'+(e.status==='paid'?' selected':'')+'>paid</option><option value="void"'+(e.status==='void'?' selected':'')+'>void</option></select><span class="sv-saved-flash" id="sv-flash-'+e.id+'" style="font-size:.72rem;color:var(--green);margin-left:4px;opacity:0;transition:opacity .3s"></span> <button class="btn-sm" title="View Report" style="font-size:.88rem;padding:2px 6px" onclick="openSavingReport('+e.id+')">&#128196;</button></td>'
+          +'<td style="display:flex;gap:4px;flex-wrap:wrap">'+invoiceBtn+'<button class="btn-sm" style="border-color:rgba(239,68,68,.35);color:#ef4444" onclick="deleteSaving('+e.id+')">🗑</button></td></tr>';
       }).join('')
       :'<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--muted)">No entries yet. Click "+ Log Saving" above.</td></tr>';
+    var totalSavCents=entries.reduce(function(s,e){return s+(e.gross_savings_cents||0);},0);
+    var totalFeeCents=entries.reduce(function(s,e){return s+(e.fee_cents||0);},0);
+    var footer=document.getElementById('fees-footer');
+    if(footer)footer.textContent=entries.length+' record'+(entries.length===1?'':'s')+' | Total Savings: $'+Math.floor(totalSavCents/100).toLocaleString()+' | Total Fees: $'+Math.floor(totalFeeCents/100).toLocaleString();
   }catch(err){}
+}
+async function openSavingReport(id){
+  if(!ADMIN_TOKEN)return;
+  try{
+    var res=await fetch('/api/admin/savings/'+id+'/report',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok){toast('Report not available','error');return;}
+    var data=await res.json();
+    var url=data.report_url||('/api/report/'+(data.token||''));
+    window.open(url,'_blank');
+  }catch(e){toast('Could not load report','error');}
 }
 function fmtUsdCents(c){return '$'+Math.floor(c/100).toLocaleString()+'.'+(Math.abs(c)%100<10?'0':'')+(Math.abs(c)%100);}
 document.addEventListener('change',async function(e){
