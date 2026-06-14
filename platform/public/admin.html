@@ -1363,20 +1363,24 @@
     <!-- OPTION CARDS -->
     <div style="border-top:1px solid var(--border);margin:4px 0 16px;padding-top:16px">
       <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:10px">Trip Options</div>
-      <!-- Template skeleton buttons -->
-      <div class="plan-tpl-bar">
-        <div class="plan-tpl-bar-label">Quick templates — click to add a pre-filled option</div>
-        <button class="plan-tpl-btn" onclick="addPlanOption('flight')">✈ Flight Redemption</button>
-        <button class="plan-tpl-btn" onclick="addPlanOption('hotel')">🏨 Hotel Redemption</button>
-        <button class="plan-tpl-btn" onclick="addPlanOption('cash')">💵 Cash Fallback</button>
-        <button class="plan-tpl-btn" onclick="addPlanOption('blank')">+ Blank Option</button>
+      <!-- Template dropdown + add button -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
+        <label style="font-size:.72rem;color:var(--dim);font-weight:600;text-transform:uppercase;white-space:nowrap">Template</label>
+        <select id="plan-tpl-select" style="flex:1;min-width:160px;padding:7px 10px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:.82rem;font-family:var(--font)">
+          <option value="flight">✈ Flight Redemption</option>
+          <option value="hotel">🏨 Hotel Redemption</option>
+          <option value="cash">💵 Cash Fallback</option>
+          <option value="blank">+ Blank</option>
+        </select>
+        <button class="plan-tpl-btn" onclick="addPlanOption(document.getElementById('plan-tpl-select').value)">⊕ Add Option</button>
       </div>
       <div id="plan-options-list"></div>
-      <button class="plan-add-btn" onclick="addPlanOption('blank')">+ Add Another Option</button>
+      <button class="plan-add-btn" onclick="addPlanOption(document.getElementById('plan-tpl-select').value)">+ Add Another Option</button>
     </div>
 
     <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:4px">
       <button class="btn-primary" onclick="sendPlan()">📤 Send Plan to Client Portal</button>
+      <button class="btn-sm" onclick="savePlanDraft()">💾 Save Draft</button>
       <button class="btn-sm" onclick="closePlan()">Cancel</button>
     </div>
   </div>
@@ -2318,44 +2322,94 @@ const _OPT_TEMPLATES={
   cash:{title:'💵 Cash / Revenue Fallback',program:'N/A',points:'—',value:'$900',type:'cash'},
   blank:{title:'Option',program:'',points:'',value:'',type:''},
 };
-function addPlanOption(tpl){
-  const tmpl=_OPT_TEMPLATES[tpl]||_OPT_TEMPLATES.blank;
+function addPlanOption(tpl, vals){
+  const tmpl=Object.assign({},_OPT_TEMPLATES[tpl]||_OPT_TEMPLATES.blank, vals||{});
   const n=++_optCounter;
   const id='opt-'+n;
   const div=document.createElement('div');
   div.className='option-card';
   div.id=id;
+  div.dataset.tpl=tpl||'blank';
   div.innerHTML=
     '<div class="option-card-head">'
     +'<div class="option-card-num">'+n+'</div>'
-    +'<div class="option-card-title" id="'+id+'-label">'+tmpl.title+'</div>'
+    +'<div class="option-card-title" id="'+id+'-label">'+esc(tmpl.title)+'</div>'
     +'<div class="option-card-actions">'
+    +'<button onclick="_moveOpt(\''+id+'\',-1)" title="Move up">↑</button>'
+    +'<button onclick="_moveOpt(\''+id+'\',1)" title="Move down">↓</button>'
+    +'<button onclick="_dupOpt(\''+id+'\')">⊕ Duplicate</button>'
     +'<button onclick="_toggleOptPreview(\''+id+'\')">👁 Preview</button>'
-    +'<button class="danger" onclick="document.getElementById(\''+id+'\').remove()">✕ Remove</button>'
+    +'<button class="danger" onclick="document.getElementById(\''+id+'\').remove();_renumberOpts()">✕ Remove</button>'
     +'</div></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'
     +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Option Title</label>'
     +'<input type="text" id="'+id+'-title" value="'+esc(tmpl.title)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. Business Class via ANA"></div>'
     +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Program</label>'
     +'<input type="text" id="'+id+'-program" value="'+esc(tmpl.program)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. Chase UR"></div>'
+    +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Route / Property</label>'
+    +'<input type="text" id="'+id+'-route" value="'+esc(tmpl.route||'')+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. JFK→NRT or Park Hyatt Tokyo"></div>'
+    +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Cabin / Room Type</label>'
+    +'<input type="text" id="'+id+'-cabin" value="'+esc(tmpl.cabin||'')+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. Business / King Suite"></div>'
     +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Points Required</label>'
     +'<input type="text" id="'+id+'-points" value="'+esc(tmpl.points)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. 60,000"></div>'
     +'<div class="form-group" style="margin:0"><label style="font-size:.7rem">Cash Equivalent</label>'
     +'<input type="text" id="'+id+'-value" value="'+esc(tmpl.value)+'" oninput="_refreshOptPreview(\''+id+'\')" placeholder="e.g. $1,200"></div>'
     +'</div>'
     +'<div class="form-group" style="margin-top:10px;margin-bottom:0"><label style="font-size:.7rem">Notes / Details</label>'
-    +'<textarea id="'+id+'-notes" rows="2" oninput="_refreshOptPreview(\''+id+'\')" placeholder="Routing, availability, caveats…"></textarea></div>'
+    +'<textarea id="'+id+'-notes" rows="2" oninput="_refreshOptPreview(\''+id+'\')" placeholder="Routing, availability, caveats…">'+esc(tmpl.notes||'')+'</textarea></div>'
     +'<div class="opt-preview" id="'+id+'-preview">'
-    +'<div class="opt-preview-label">✦ This is what the client sees</div>'
+    +'<div class="opt-preview-label">✦ Client Preview</div>'
     +'<div class="opt-preview-title" id="'+id+'-pv-title">'+esc(tmpl.title)+'</div>'
+    +'<div style="font-size:.72rem;color:rgba(255,255,255,.55);margin-bottom:8px" id="'+id+'-pv-route">'+esc(tmpl.route||'')+'</div>'
     +'<div class="opt-preview-row">'
     +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Points</div><div class="opt-preview-stat-value" id="'+id+'-pv-points">'+esc(tmpl.points||'—')+'</div></div>'
     +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Program</div><div class="opt-preview-stat-value" id="'+id+'-pv-program">'+esc(tmpl.program||'—')+'</div></div>'
     +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Cash Value</div><div class="opt-preview-stat-value" id="'+id+'-pv-value">'+esc(tmpl.value||'—')+'</div></div>'
+    +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Cabin / Room</div><div class="opt-preview-stat-value" id="'+id+'-pv-cabin">'+esc(tmpl.cabin||'—')+'</div></div>'
     +'</div>'
+    +'<div style="font-size:.73rem;color:rgba(255,255,255,.55);margin-top:6px;font-style:italic" id="'+id+'-pv-notes">'+esc(tmpl.notes||'')+'</div>'
     +'<div class="opt-preview-note">Sent directly to your client portal · District Award Travel</div>'
     +'</div>';
   document.getElementById('plan-options-list').appendChild(div);
+}
+function _renumberOpts(){
+  const cards=document.getElementById('plan-options-list').querySelectorAll('.option-card');
+  cards.forEach(function(c,i){var n=c.querySelector('.option-card-num');if(n)n.textContent=i+1;});
+}
+function _moveOpt(id,dir){
+  const el=document.getElementById(id);
+  const list=document.getElementById('plan-options-list');
+  if(!el||!list)return;
+  if(dir===-1&&el.previousElementSibling){list.insertBefore(el,el.previousElementSibling);}
+  else if(dir===1&&el.nextElementSibling){list.insertBefore(el.nextElementSibling,el);}
+  _renumberOpts();
+}
+function _dupOpt(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const tpl=el.dataset.tpl||'blank';
+  const g=function(f){var e=document.getElementById(id+'-'+f);return e?e.value:'';};
+  addPlanOption(tpl,{title:g('title'),program:g('program'),route:g('route'),cabin:g('cabin'),points:g('points'),value:g('value'),notes:g('notes')});
+}
+function _collectOptionCards(){
+  const cards=document.getElementById('plan-options-list').querySelectorAll('.option-card');
+  const options=[];
+  cards.forEach(function(c){
+    const id=c.id;
+    const g=function(f){var e=document.getElementById(id+'-'+f);return e?e.value.trim():'';};
+    options.push({title:g('title'),program:g('program'),route:g('route'),cabin:g('cabin'),points:g('points'),value:g('value'),notes:g('notes')});
+  });
+  return options;
+}
+async function savePlanDraft(){
+  const tripId=document.getElementById('plan-client').value.split('|')[2];
+  if(!tripId){toast('Select a client with a trip first');return;}
+  const options=_collectOptionCards();
+  const draft={title:document.getElementById('plan-title').value.trim(),overview:document.getElementById('plan-overview').value.trim(),dest:document.getElementById('plan-dest').value.trim(),dates:document.getElementById('plan-dates').value.trim(),options};
+  try{
+    const r=await fetch('/api/admin/trips/'+tripId,{method:'PATCH',headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},body:JSON.stringify({data:JSON.stringify(draft)})});
+    if(r.ok){toast('Draft saved ✓');}else{toast('Save failed: '+r.status);}
+  }catch(e){toast('Save error');}
 }
 function _toggleOptPreview(id){
   const pv=document.getElementById(id+'-preview');
@@ -2365,11 +2419,16 @@ function _toggleOptPreview(id){
 }
 function _refreshOptPreview(id){
   var t=function(f){var el=document.getElementById(id+'-'+f);return el?el.value.trim():'';};
-  var set=function(f,v){var el=document.getElementById(id+'-pv-'+f);if(el)el.textContent=v||'—';};
+  var set=function(f,v,fallback){var el=document.getElementById(id+'-pv-'+f);if(el)el.textContent=v||(fallback===false?'':('—'));};
   set('title',t('title'));
   set('points',t('points'));
   set('program',t('program'));
   set('value',t('value'));
+  set('cabin',t('cabin'));
+  var routeEl=document.getElementById(id+'-pv-route');
+  if(routeEl)routeEl.textContent=t('route');
+  var notesEl=document.getElementById(id+'-pv-notes');
+  if(notesEl)notesEl.textContent=t('notes');
   var lbl=document.getElementById(id+'-label');
   if(lbl)lbl.textContent=t('title')||'Option';
 }
@@ -2379,19 +2438,14 @@ function sendPlan(){
   const overview=document.getElementById('plan-overview').value.trim();
   const dest=document.getElementById('plan-dest').value.trim();
   const dates=document.getElementById('plan-dates').value.trim();
-  const program=document.getElementById('plan-program').value.trim();
-  const points=document.getElementById('plan-points').value.trim();
-  const value=document.getElementById('plan-value').value.trim();
-  const cabin=document.getElementById('plan-cabin').value.trim();
-  const details=document.getElementById('plan-details').value.trim();
+  const options=_collectOptionCards();
 
-  if(!client_email||!title||!details){alert('Client, title, and details are required');return;}
+  if(!client_email||!title){alert('Client and title are required');return;}
 
-  const plan_details={
-    title, dest, dates, program, points, value, cabin, overview
-  };
+  const plan_details={title, dest, dates, overview, options};
   const subject=title;
-  const body=overview+'\n\n'+details+'\n\nProgram: '+program+'\nPoints: '+points+'\nEstimated Value: '+value+'\nCabin: '+cabin;
+  const optSummary=options.map(function(o,i){return (i+1)+'. '+o.title+(o.points?' — '+o.points+' pts':'')+(o.value?' (~'+o.value+')':'');}).join('\n');
+  const body=overview+'\n\n'+(optSummary||'See plan details in your portal.');
 
   document.getElementById('plan-client').disabled=true;
   fetch('/api/admin/send-message',{method:'POST',
