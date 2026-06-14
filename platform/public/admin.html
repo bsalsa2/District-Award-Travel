@@ -4004,7 +4004,11 @@ async function _loadDrawerActivity(email){
       'status_changed':'var(--dim)',
       'message_sent':'var(--green)',
       'message_received':'var(--purple,#a78bfa)',
-      'saving_logged':'var(--green,#16a34a)'
+      'saving_logged':'var(--green,#16a34a)',
+      'message':'var(--accent)',
+      'trip_advance':'#3b82f6',
+      'intake':'#22c55e',
+      'savings':'#a855f7'
     };
     var now=Date.now();
     function relTime(ts){
@@ -4093,6 +4097,10 @@ async function _loadDrawerActivity(email){
       </div>
     </div>
 
+    <!-- ACTIVITY TIMELINE -->
+    <h4 style="color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px;">Activity Timeline</h4>
+    <div id="trip-timeline-list"></div>
+
     <!-- OPTIONS PREVIEW -->
     <div id="td-options-section" style="display:none;margin-bottom:20px">
       <div style="padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px">
@@ -4169,6 +4177,7 @@ function openTripDetail(trip) {
   document.getElementById('td-time-form').style.display = 'none';
   document.getElementById('td-time-logged').style.opacity = '0';
   document.getElementById('trip-detail-overlay').classList.add('open');
+  loadTripTimeline(_tdTripId);
 }
 
 function closeTripDetail() {
@@ -4420,7 +4429,10 @@ async function tdSendQuickMsg() {
   </div>
   <div class="drawer-body" id="client-drawer-content"></div>
   <div class="drawer-quick-reply" id="client-drawer-quick-reply" style="display:none">
-    <textarea id="drawer-reply-input" rows="1" placeholder="Quick message…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();drawerSendQuickReply();}"></textarea>
+    <div style="flex:1;display:flex;flex-direction:column">
+    <textarea id="drawer-reply-input" rows="1" placeholder="Quick message…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();drawerSendQuickReply();}" oninput="(function(el){var ct=document.getElementById('drawer-msg-counter');if(ct)ct.textContent=el.value.length+' / 2000';})(this)"></textarea>
+    <div id="drawer-msg-counter" style="text-align:right;font-size:11px;color:var(--muted);margin-top:2px">0 / 2000</div>
+    </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
       <button class="drawer-quick-send" onclick="drawerSendQuickReply()">Send</button>
       <span class="drawer-quick-sent" id="drawer-reply-sent">✓ Sent</span>
@@ -4710,6 +4722,33 @@ async function tdSendQuickMsg() {
     obs.observe(ovPanel,{childList:true,subtree:true,characterData:true});
   }
 })();
+
+async function loadTripTimeline(tripId){
+  if(!tripId)return;
+  var res=await fetch('/api/admin/trips/'+tripId+'/timeline',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+  if(!res.ok)return;
+  var events=await res.json();
+  var el=document.getElementById('trip-timeline-list');
+  if(!el)return;
+  if(!events.length){el.innerHTML='<p style="color:var(--muted);font-size:13px;">No events yet.</p>';return;}
+  el.innerHTML=events.map(function(ev){
+    var d=new Date(ev.created_at);
+    var label=d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">'
+      +'<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>'
+      +'<div><div style="font-size:12px;color:var(--muted);">'+label+'</div>'
+      +'<div style="font-size:13px;color:var(--text);">'+(ev.from_status||'start')+' → '+(ev.to_status||'?')+(ev.note?' — <em>'+ev.note+'</em>':'')+'</div></div></div>';
+  }).join('');
+}
+
+function mdPreview(txt){
+  return txt
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/^## (.+)$/gm,'<h3 style="color:var(--accent);margin:8px 0 4px;">$1</h3>')
+    .replace(/^- (.+)$/gm,'<li style="margin:2px 0;">$1</li>')
+    .replace(/(<li.*<\/li>)/s,'<ul style="padding-left:18px;margin:4px 0;">$1</ul>');
+}
 </script>
 </body>
 </html>
