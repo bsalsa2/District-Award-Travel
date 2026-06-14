@@ -847,6 +847,7 @@
             <h1>Overview</h1>
             <p>District Award Travel — Advisory Operations</p>
             <p id="ov-last-refresh" style="font-size:.72rem;color:var(--muted);margin-top:2px">—</p>
+            <span class="ov-refresh-ts" id="ov-refresh-ts" style="font-size:.68rem;color:var(--muted);margin-top:1px;display:block"></span>
           </div>
           <div class="header-actions">
             <button class="btn-action ai" onclick="openImportEmail()">✨ Import from Email</button>
@@ -864,7 +865,8 @@
             <div class="metric-card"><div class="metric-label">Total Savings Found</div><div class="metric-val green" id="ov-total-savings">—</div><div class="metric-delta" id="ov-avg-savings">avg per trip: —</div></div>
             <div class="metric-card"><div class="metric-label">Total Trips</div><div class="metric-val" id="ov-total-trips">—</div><div class="metric-delta" id="ov-active-trips">— active</div></div>
             <div class="metric-card"><div class="metric-label">Stale Trips</div><div class="metric-val" id="ov-stale-trips">—</div><div class="metric-delta">no update in 7+ days</div></div>
-            <div class="metric-card"><div class="metric-label">New Clients This Week</div><div class="metric-val blue" id="ov-new-clients">—</div><div class="metric-delta">joined last 7 days</div></div>
+            <div class="metric-card"><div class="metric-label">New This Week</div><div class="metric-val" id="ov-new-clients">—</div><div class="metric-delta">joined last 7 days</div></div>
+            <div class="metric-card"><div class="metric-label">Booking Rate</div><div class="metric-val" id="ov-booking-rate">—</div><div class="metric-delta">booked / total trips</div></div>
           </div>
 
           <!-- FUNNEL SECTION -->
@@ -2753,9 +2755,27 @@ async function loadStats(){
       staleEl.style.color=stale>0?'var(--gold)':'var(--green)';
     }
     const nc=d.new_clients_this_week||0;
-    s('ov-new-clients',nc>0?'🆕 '+nc:nc);
+    const ncEl=document.getElementById('ov-new-clients');
+    if(ncEl){ncEl.textContent=nc;ncEl.style.color=nc>0?'#3b82f6':'var(--muted)';}
+    const bookingRate=Math.round((d.booked_trips||0)/Math.max(d.total_trips||0,1)*100);
+    const brEl=document.getElementById('ov-booking-rate');
+    if(brEl){
+      brEl.textContent=bookingRate+'%';
+      brEl.style.color=bookingRate>=30?'var(--green)':bookingRate>=10?'var(--gold)':'var(--red)';
+    }
+    _lastStatsLoad=Date.now();
+    updateRefreshTs();
   }catch(e){console.warn('loadStats error',e);}
 }
+var _lastStatsLoad=0;
+function updateRefreshTs(){
+  var el=document.getElementById('ov-refresh-ts');
+  if(!el||!_lastStatsLoad)return;
+  var sec=Math.round((Date.now()-_lastStatsLoad)/1000);
+  if(sec<60)el.textContent='Updated '+(sec<=2?'just now':sec+'s ago');
+  else{var m=Math.round(sec/60);el.textContent='Updated '+m+'m ago';}
+}
+setInterval(updateRefreshTs,10000);
 function enterAdmin(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('admin').style.display='block';
