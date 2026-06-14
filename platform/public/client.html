@@ -310,6 +310,23 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .milestone-platinum{background:rgba(148,163,184,.1);color:#cbd5e1;border:1px solid rgba(148,163,184,.25)}
 .milestone-expiring{background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.3)}
 
+/* ── ADD-POINTS FORM ── */
+.pts-add-form{background:#161210;border:1px solid rgba(249,115,22,.15);border-radius:14px;padding:22px 24px;margin-top:18px}
+.pts-add-form h3{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(249,115,22,.8);margin:0 0 16px}
+.pts-field-row{display:flex;gap:12px;flex-wrap:wrap}
+.pts-field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:160px}
+.pts-field label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,.45)}
+.pts-field input{background:#0d0908;border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:10px 13px;font-size:15px;font-weight:600;color:#fff;font-family:inherit;width:100%;box-sizing:border-box;transition:border-color .2s}
+.pts-field input:focus{outline:none;border-color:rgba(249,115,22,.55);box-shadow:0 0 0 2px rgba(249,115,22,.12)}
+.pts-field input::placeholder{color:rgba(255,255,255,.2);font-weight:400}
+.pts-est-value{font-size:12px;color:rgba(255,255,255,.35);margin-top:3px;min-height:16px;font-weight:500}
+.pts-submit-btn{margin-top:16px;background:linear-gradient(135deg,#ea580c,#f97316);color:#fff;border:none;border-radius:8px;padding:11px 26px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .15s;letter-spacing:.02em}
+.pts-submit-btn:hover{opacity:.85;transform:translateY(-1px)}
+.pts-submit-btn:active{transform:translateY(0)}
+.pts-success{font-size:13px;color:#4ade80;font-weight:600;margin-top:10px;min-height:18px}
+@keyframes pts-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.pts-shake{animation:pts-shake .38s ease;border-color:rgba(239,68,68,.7)!important;box-shadow:0 0 0 2px rgba(239,68,68,.2)!important}
+
 /* ── CHAT ── */
 .chat-wrap{background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:420px;overflow:hidden}
 .chat-header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0}
@@ -571,6 +588,40 @@ body.light-mode{
         <div class="phead"><h1>My Points</h1><p>Balances you've shared with us</p></div>
         <div id="points-milestones"></div>
         <div id="points-container"></div>
+
+        <!-- Add Points Program Form -->
+        <div class="pts-add-form">
+          <h3>Add / Update a Program</h3>
+          <div class="pts-field-row">
+            <div class="pts-field">
+              <label for="pts-program-input">Program Name</label>
+              <input type="text" id="pts-program-input" list="program-list" placeholder="e.g. Chase Ultimate Rewards" autocomplete="off" oninput="ptsUpdateEstimate()">
+              <datalist id="program-list">
+                <option value="Chase Ultimate Rewards">
+                <option value="American Express Membership Rewards">
+                <option value="Capital One Miles">
+                <option value="Citi ThankYou Points">
+                <option value="United MileagePlus">
+                <option value="Delta SkyMiles">
+                <option value="American Airlines AAdvantage">
+                <option value="Southwest Rapid Rewards">
+                <option value="Alaska Airlines Mileage Plan">
+                <option value="JetBlue TrueBlue">
+                <option value="Marriott Bonvoy">
+                <option value="Hilton Honors">
+                <option value="World of Hyatt">
+                <option value="IHG One Rewards">
+              </datalist>
+            </div>
+            <div class="pts-field">
+              <label for="pts-balance-input">Current Balance</label>
+              <input type="text" inputmode="numeric" id="pts-balance-input" placeholder="e.g. 125,000" oninput="ptsFormatBalance(this); ptsUpdateEstimate()">
+              <div class="pts-est-value" id="pts-est-value"></div>
+            </div>
+          </div>
+          <button class="pts-submit-btn" onclick="ptsSubmit()">Save Balance</button>
+          <div class="pts-success" id="pts-success"></div>
+        </div>
       </div>
 
       <!-- MESSAGES -->
@@ -1336,6 +1387,81 @@ function renderSavings(rows,totalSave,totalFee,plans){
   el.innerHTML=list+
     `<div class="sv-total"><div><div class="sv-total-label">Total Savings Generated</div><div class="sv-total-sub">Our advisory fee is 10% of this</div></div><div class="sv-total-val">${fmtUsd(totalSave)}</div></div>
      <div class="sv-feebox"><div class="sv-feebox-label">Advisory Fee (10%)</div><div class="sv-feebox-val">${fmtUsd(totalFee)}</div></div>`;
+}
+
+/* ── ADD-POINTS FORM HELPERS ── */
+const PTS_CPP={
+  'chase ultimate rewards':1.5,'american express membership rewards':1.5,'capital one miles':1.5,
+  'citi thankyou points':1.3,
+  'united mileageplus':1.2,'american airlines aadvantage':1.2,'alaska airlines mileage plan':1.2,
+  'delta skymiles':1.1,'southwest rapid rewards':1.1,'jetblue trueblue':1.1,
+  'marriott bonvoy':0.8,
+  'hilton honors':0.5,
+  'world of hyatt':1.7
+};
+function ptsCppRate(prog){
+  const k=(prog||'').toLowerCase().trim();
+  for(const [name,rate] of Object.entries(PTS_CPP)){if(k===name)return rate;}
+  return 1.0;
+}
+function ptsFormatBalance(input){
+  const raw=input.value.replace(/[^0-9]/g,'');
+  if(!raw){input.value='';return;}
+  input.value=Number(raw).toLocaleString('en-US');
+}
+function ptsRawBalance(){
+  return parseInt((document.getElementById('pts-balance-input').value||'').replace(/[^0-9]/g,''),10)||0;
+}
+function ptsUpdateEstimate(){
+  const prog=document.getElementById('pts-program-input').value;
+  const bal=ptsRawBalance();
+  const el=document.getElementById('pts-est-value');
+  if(!el)return;
+  if(!bal){el.textContent='';return;}
+  const rate=ptsCppRate(prog);
+  const val=Math.round(bal*rate/100);
+  el.textContent='≈ $'+val.toLocaleString('en-US')+' estimated value ('+rate+'¢/pt)';
+}
+async function ptsSubmit(){
+  const progInput=document.getElementById('pts-program-input');
+  const balInput=document.getElementById('pts-balance-input');
+  const successEl=document.getElementById('pts-success');
+  const prog=(progInput.value||'').trim();
+  const bal=ptsRawBalance();
+  let invalid=false;
+  // Shake validation
+  [progInput,balInput].forEach(el=>el.classList.remove('pts-shake'));
+  if(!prog){
+    void progInput.offsetWidth; // reflow to restart animation
+    progInput.classList.add('pts-shake');
+    setTimeout(()=>progInput.classList.remove('pts-shake'),400);
+    invalid=true;
+  }
+  if(!bal){
+    void balInput.offsetWidth;
+    balInput.classList.add('pts-shake');
+    setTimeout(()=>balInput.classList.remove('pts-shake'),400);
+    invalid=true;
+  }
+  if(invalid)return;
+  const token=getToken();
+  if(!token)return;
+  // Fetch current points, merge, then PUT
+  try{
+    const meRes=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
+    if(!meRes.ok)throw new Error('fetch failed');
+    const me=await meRes.json();
+    const points=me.points||[];
+    const idx=points.findIndex(p=>(p.program||p.name||'').toLowerCase()===prog.toLowerCase());
+    const entry={program:prog,balance:bal,updated:new Date().toISOString().slice(0,10)};
+    if(idx>=0)points[idx]=entry;else points.push(entry);
+    const putRes=await fetch('/api/client/me',{method:'PUT',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({data:{points}})});
+    if(!putRes.ok)throw new Error('save failed');
+    if(successEl){successEl.textContent='Saved! Your advisor will be notified.';setTimeout(()=>successEl.textContent='',4000);}
+    progInput.value='';balInput.value='';
+    document.getElementById('pts-est-value').textContent='';
+    await refetchMe();
+  }catch(e){if(successEl)successEl.textContent='Error saving — please try again.';}
 }
 
 function renderPoints(points){
