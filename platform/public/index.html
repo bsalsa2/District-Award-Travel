@@ -359,6 +359,32 @@ section{padding:88px 24px}
 .pc-val{font-size:32px;font-weight:900;color:#fff;letter-spacing:-1.5px}
 .pc-sub{font-size:12px;color:#fb923c;font-weight:600;margin-top:6px}
 .pricing-note{max-width:560px;margin:22px auto 0;text-align:center;font-size:15px;color:var(--muted);line-height:1.6}
+/* pricing example calculator */
+.pricing-calc-card{
+  max-width:520px;margin:36px auto 0;
+  background:var(--card);border-radius:var(--r-card);padding:28px 32px;
+  box-shadow:var(--shadow-lg);position:relative;overflow:hidden;
+  animation:pricingGlow 2s ease-out forwards;
+  border:1px solid rgba(249,115,22,.55);
+}
+@keyframes pricingGlow{
+  0%{box-shadow:var(--shadow-lg),0 0 0 3px rgba(249,115,22,.7),0 0 32px rgba(249,115,22,.5)}
+  70%{box-shadow:var(--shadow-lg),0 0 0 3px rgba(249,115,22,.7),0 0 32px rgba(249,115,22,.5)}
+  100%{box-shadow:var(--shadow-lg),0 0 0 2px rgba(249,115,22,.45),0 0 14px rgba(249,115,22,.2);border-color:rgba(249,115,22,.45)}
+}
+.pc-calc-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fb923c;margin-bottom:18px}
+.pc-calc-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px}
+.pc-calc-row:last-child{border-bottom:none}
+.pc-calc-row-label{color:var(--muted)}
+.pc-calc-row-val{font-weight:700;color:var(--text)}
+.pc-calc-savings{color:#4ade80;font-size:17px;font-weight:900;text-shadow:0 0 16px rgba(74,222,128,.3)}
+.pc-calc-fee{color:#f97316;font-size:17px;font-weight:900}
+.pc-calc-net{color:#fff;font-size:19px;font-weight:900;letter-spacing:-.5px}
+.pc-calc-net-row{display:flex;justify-content:space-between;align-items:center;padding:13px 14px;margin-top:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px}
+/* pricing guarantees */
+.pricing-guarantees{max-width:520px;margin:20px auto 0;display:flex;flex-direction:column;gap:8px;text-align:left}
+.pc-guarantee{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted);font-weight:500}
+.pc-guarantee-check{color:#4ade80;font-size:15px;font-weight:800;flex-shrink:0}
 
 /* ── FAQ ── */
 .faq-list{max-width:700px;margin:44px auto 0;display:flex;flex-direction:column;gap:8px}
@@ -883,25 +909,27 @@ details.faq[open] .faq-a{
     <p class="section-sub reveal" style="margin:0 auto 0">A real options plan — route, points math, cash benchmark, and proof — delivered in 24–72 hours.</p>
     <div class="bp-wrap reveal">
       <div class="bp-redacted-watermark" aria-hidden="true">Sample — Redacted</div>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1"><div style="font-size:48px;font-weight:900;color:rgba(249,115,22,.06);transform:rotate(-15deg);letter-spacing:.1em">SAMPLE</div></div>
       <span class="bp-badge">Sample — not a real client</span>
       <div class="bp-card">
         <div class="bp-left">
           <div class="bp-left-label">Award Flight · Business Class</div>
-          <div class="bp-airports">IAD → NRT</div>
-          <div class="bp-airline">ANA Business · Chase UR Transfer</div>
+          <div class="bp-airports">IAD → HND</div>
+          <div class="bp-airline">ANA Business · Tokyo (HND) via ANA</div>
           <div class="bp-pts-row">
             <div>
               <div class="bp-pts-val">75,000</div>
-              <div class="bp-pts-label">Chase Ultimate Rewards</div>
+              <div class="bp-pts-label">pts + $11 taxes</div>
             </div>
           </div>
         </div>
         <div class="bp-tear"></div>
         <div class="bp-right">
-          <div class="bp-row"><span class="bp-row-label">Points used</span><span class="bp-row-val">75k UR</span></div>
-          <div class="bp-row"><span class="bp-row-label">Taxes &amp; fees</span><span class="bp-row-val">$112</span></div>
-          <div class="bp-row"><span class="bp-row-label">Cash price</span><span class="bp-row-val">$4,300</span></div>
-          <div class="bp-savings-row"><span class="bp-savings-label">You save</span><span class="bp-savings-val">$3,550</span></div>
+          <div class="bp-row"><span class="bp-row-label">Points used</span><span class="bp-row-val">75k pts</span></div>
+          <div class="bp-row"><span class="bp-row-label">Taxes &amp; fees</span><span class="bp-row-val">$11</span></div>
+          <div class="bp-row"><span class="bp-row-label">Cash price</span><span class="bp-row-val">$4,280</span></div>
+          <div class="bp-savings-row"><span class="bp-savings-label">You save</span><span class="bp-savings-val">$3,415</span></div>
+          <div style="font-size:10px;font-weight:600;color:rgba(74,222,128,.55);letter-spacing:.07em;text-transform:uppercase;margin-top:8px;text-align:right">Proof of award space (sample)</div>
         </div>
       </div>
       <div class="bp-note">Award space is volatile — availability found at time of research. This is an illustrative example, not a guarantee.</div>
@@ -1089,6 +1117,40 @@ details.faq[open] .faq-a{
         <div class="pc-val">$300</div>
         <div class="pc-sub">10% — after you save</div>
       </div>
+    </div>
+    <!-- Example calculator -->
+    <div class="pricing-calc-card reveal">
+      <div class="pc-calc-title">What you actually pay &mdash; an example</div>
+      <div class="pc-calc-row">
+        <span class="pc-calc-row-label">If we save you</span>
+        <span class="pc-calc-row-val">$3,000</span>
+      </div>
+      <div class="pc-calc-row">
+        <span class="pc-calc-row-label">Cash price</span>
+        <span class="pc-calc-row-val">$3,800</span>
+      </div>
+      <div class="pc-calc-row">
+        <span class="pc-calc-row-label">You paid in points</span>
+        <span class="pc-calc-row-val">$800</span>
+      </div>
+      <div class="pc-calc-row">
+        <span class="pc-calc-row-label">Documented savings</span>
+        <span class="pc-calc-savings">$3,000</span>
+      </div>
+      <div class="pc-calc-row">
+        <span class="pc-calc-row-label">Our fee (10%)</span>
+        <span class="pc-calc-fee">$300</span>
+      </div>
+      <div class="pc-calc-net-row">
+        <span style="font-size:14px;font-weight:700;color:#fff">Your net win</span>
+        <span class="pc-calc-net">$2,700</span>
+      </div>
+    </div>
+    <!-- Guarantees -->
+    <div class="pricing-guarantees reveal">
+      <div class="pc-guarantee"><span class="pc-guarantee-check">✓</span> No savings = no fee, ever</div>
+      <div class="pc-guarantee"><span class="pc-guarantee-check">✓</span> We never touch your accounts</div>
+      <div class="pc-guarantee"><span class="pc-guarantee-check">✓</span> You book &mdash; we guide</div>
     </div>
     <p class="pricing-note">No card pitches, no commissions — our only incentive is maximizing your savings.</p>
   </div>
