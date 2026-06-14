@@ -891,6 +891,14 @@
             <div class="metric-card"><div class="metric-label">New This Week</div><div class="metric-val" id="ov-new-clients">—</div><div class="metric-delta">joined last 7 days</div></div>
             <div class="metric-card"><div class="metric-label">Booking Rate</div><div class="metric-val" id="ov-booking-rate">—</div><div class="metric-delta">booked / total trips</div></div>
             <div class="metric-card" id="waitlist-card" style="cursor:pointer" onclick="loadWaitlist()" title="Click to view waitlist"><div class="metric-label">Waitlist</div><div class="metric-val purple" id="ov-waitlist-count">—</div><div class="metric-delta">emails captured</div></div>
+            <div class="metric-card">
+  <div class="metric-label">Avg. Days to Close</div>
+  <div class="metric-val" id="ov-avg-days">—</div>
+</div>
+<div class="metric-card">
+  <div class="metric-label">Intakes This Week</div>
+  <div class="metric-val" id="ov-intakes-week">0</div>
+</div>
           </div>
 
           <!-- QUICK ACTIONS BAR -->
@@ -2953,6 +2961,24 @@ async function loadStats(){
     _lastStatsLoad=Date.now();
     updateRefreshTs();
   }catch(e){console.warn('loadStats error',e);}
+  // Also fetch combined dashboard endpoint
+  try{
+    var dr=await fetch('/api/admin/dashboard',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN,'X-Admin-Token':ADMIN_TOKEN}});
+    if(dr.ok){
+      var dd=await dr.json();
+      // Populate extra elements if they exist
+      var se=function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+      se('ov-clients-total', dd.clients_total||0);
+      se('ov-intakes-week', dd.intakes_this_week||0);
+      se('ov-avg-days', dd.avg_days_to_close?dd.avg_days_to_close.toFixed(1)+'d':'—');
+      se('ov-booking-rate-pct', (dd.booking_rate_pct||0)+'%');
+      // Populate savings pipeline if elements exist
+      var fmt=function(c){return '$'+(Math.round((c||0)/100)).toLocaleString();};
+      se('savings-owed', fmt(dd.savings_owed_cents));
+      se('savings-invoiced', fmt(dd.savings_invoiced_cents));
+      se('savings-collected', fmt(dd.savings_collected_cents));
+    }
+  }catch(e){console.warn('dashboard fetch error',e);}
 }
 var _lastStatsLoad=0;
 function updateRefreshTs(){
