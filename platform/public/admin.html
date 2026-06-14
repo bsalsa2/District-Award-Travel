@@ -4098,8 +4098,10 @@ async function _loadDrawerActivity(email){
     </div>
 
     <!-- ACTIVITY TIMELINE -->
-    <h4 style="color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin:20px 0 8px;">Activity Timeline</h4>
-    <div id="trip-timeline-list"></div>
+    <div style="margin-top:24px;">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Activity Timeline</div>
+      <div id="trip-timeline-list"></div>
+    </div>
 
     <!-- OPTIONS PREVIEW -->
     <div id="td-options-section" style="display:none;margin-bottom:20px">
@@ -4724,21 +4726,25 @@ async function tdSendQuickMsg() {
 })();
 
 async function loadTripTimeline(tripId){
-  if(!tripId)return;
-  var res=await fetch('/api/admin/trips/'+tripId+'/timeline',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
-  if(!res.ok)return;
-  var events=await res.json();
+  if(!tripId||!ADMIN_TOKEN)return;
   var el=document.getElementById('trip-timeline-list');
   if(!el)return;
-  if(!events.length){el.innerHTML='<p style="color:var(--muted);font-size:13px;">No events yet.</p>';return;}
-  el.innerHTML=events.map(function(ev){
-    var d=new Date(ev.created_at);
-    var label=d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    return '<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);">'
-      +'<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>'
-      +'<div><div style="font-size:12px;color:var(--muted);">'+label+'</div>'
-      +'<div style="font-size:13px;color:var(--text);">'+(ev.from_status||'start')+' → '+(ev.to_status||'?')+(ev.note?' — <em>'+ev.note+'</em>':'')+'</div></div></div>';
-  }).join('');
+  el.innerHTML='<div style="color:var(--muted);font-size:13px;">Loading...</div>';
+  try{
+    var res=await fetch('/api/admin/trips/'+tripId+'/timeline',{headers:{'Authorization':'Bearer '+ADMIN_TOKEN}});
+    if(!res.ok){el.innerHTML='<div style="color:var(--muted);font-size:13px;">No events.</div>';return;}
+    var events=await res.json();
+    if(!events.length){el.innerHTML='<div style="color:var(--muted);font-size:13px;">No events yet.</div>';return;}
+    el.innerHTML=events.map(function(ev){
+      var d=new Date(ev.created_at);
+      var label=d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">'
+        +'<div style="width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:5px;flex-shrink:0;"></div>'
+        +'<div><div style="font-size:11px;color:var(--muted);">'+label+'</div>'
+        +'<div style="font-size:13px;color:var(--text);">'+(ev.from_status||'start')+' → '+(ev.to_status||'?')
+        +(ev.note?' — <em style="color:var(--muted);">'+ev.note+'</em>':'')+'</div></div></div>';
+    }).join('');
+  }catch(e){el.innerHTML='<div style="color:var(--muted);font-size:13px;">Error loading timeline.</div>';}
 }
 
 function mdPreview(txt){
