@@ -4497,17 +4497,17 @@ async function tdSendQuickMsg() {
 </div>
 
 <!-- KEYBOARD SHORTCUTS HELP MODAL -->
-<div id="kb-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeKbModal()">
-  <div style="background:#1a1409;color:#f5f0ea;border-radius:12px;padding:32px 36px;width:100%;max-width:560px;box-shadow:0 8px 48px rgba(0,0,0,.8);border:1px solid rgba(249,115,22,.15);font-family:inherit">
-    <div style="font-size:1.1rem;font-weight:700;margin-bottom:20px;border-bottom:1px solid rgba(249,115,22,.15);padding-bottom:12px;color:#f97316">Keyboard Shortcuts</div>
+<div id="kb-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;" onclick="if(event.target===this)closeKbModal()">
+  <div style="background:var(--card,#1a1409);color:var(--text,#f5f0ea);border:1px solid var(--border,rgba(249,115,22,.18));border-radius:16px;padding:32px;width:90%;max-width:500px;box-shadow:0 8px 48px rgba(0,0,0,.8);font-family:inherit">
+    <div style="font-size:1.1rem;font-weight:700;margin-bottom:20px;border-bottom:1px solid var(--border,rgba(249,115,22,.18));padding-bottom:12px;color:var(--accent,#f97316)">Keyboard Shortcuts</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
       <div>
-        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(245,240,234,.35);margin-bottom:10px;text-transform:uppercase">Navigation</div>
-        <table style="border-collapse:collapse;width:100%"><tbody id="kb-rows-nav"></tbody></table>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--muted,rgba(245,240,234,.45));margin-bottom:10px;text-transform:uppercase">Navigation</div>
+        <div id="kb-rows-nav"></div>
       </div>
       <div>
-        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:rgba(245,240,234,.35);margin-bottom:10px;text-transform:uppercase">Actions</div>
-        <table style="border-collapse:collapse;width:100%"><tbody id="kb-rows-actions"></tbody></table>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--muted,rgba(245,240,234,.45));margin-bottom:10px;text-transform:uppercase">Actions</div>
+        <div id="kb-rows-actions"></div>
       </div>
     </div>
     <div style="margin-top:20px;text-align:right"><button onclick="closeKbModal()" style="background:rgba(249,115,22,.12);color:#f97316;border:1px solid rgba(249,115,22,.3);border-radius:6px;padding:6px 16px;cursor:pointer;font-size:.85rem">Close</button></div>
@@ -4520,29 +4520,29 @@ async function tdSendQuickMsg() {
    ════════════════════════════════════════════ */
 (function(){
   var KB_NAV = [
-    {keys:'g → o', desc:'Overview'},
-    {keys:'g → p', desc:'Pipeline'},
-    {keys:'g → c', desc:'Clients'},
-    {keys:'g → m', desc:'Messages'},
-    {keys:'g → f', desc:'Fees'},
+    {keys:'g o', desc:'Overview'},
+    {keys:'g p', desc:'Pipeline'},
+    {keys:'g c', desc:'Clients'},
+    {keys:'g m', desc:'Messages'},
+    {keys:'g f', desc:'Fees/Savings'},
   ];
   var KB_ACTIONS = [
-    {keys:'n',   desc:'New plan'},
-    {keys:'/',   desc:'Search'},
-    {keys:'?',   desc:'Help'},
-    {keys:'Esc', desc:'Close'},
+    {keys:'?',   desc:'Show this help'},
+    {keys:'/',   desc:'Focus search'},
+    {keys:'n',   desc:'New trip'},
+    {keys:'Esc', desc:'Close modal'},
   ];
 
-  function kbKbd(k){ return '<kbd style="background:#1a1409;border:1px solid rgba(249,115,22,.3);border-radius:4px;padding:2px 6px;font-family:monospace;font-size:12px;color:#f97316">'+k+'</kbd>'; }
-  function populateKbSection(tbodyId, rows){
-    var tbody = document.getElementById(tbodyId);
-    if(!tbody) return;
-    rows.forEach(function(s){
-      var tr = document.createElement('tr');
-      tr.innerHTML = '<td style="padding:5px 0;white-space:nowrap">'+kbKbd(s.keys)+'</td>'
-                   +'<td style="padding:5px 0 5px 10px;color:rgba(245,240,234,.7);font-size:.88rem">'+s.desc+'</td>';
-      tbody.appendChild(tr);
-    });
+  function kbRow(desc, key){
+    return '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border,rgba(249,115,22,.18));font-size:13px;">'
+      +'<span style="color:var(--muted,rgba(245,240,234,.55))">'+desc+'</span>'
+      +'<kbd style="background:rgba(255,255,255,.08);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--text,#f5f0ea);font-family:monospace">'+key+'</kbd>'
+      +'</div>';
+  }
+  function populateKbSection(elId, rows){
+    var el = document.getElementById(elId);
+    if(!el) return;
+    el.innerHTML = rows.map(function(s){ return kbRow(s.desc, s.keys); }).join('');
   }
   populateKbSection('kb-rows-nav', KB_NAV);
   populateKbSection('kb-rows-actions', KB_ACTIONS);
@@ -4650,7 +4650,7 @@ async function tdSendQuickMsg() {
   function hlSearch(text,q){
     if(!q)return text;
     var re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
-    return text.replace(re,'<mark style="background:rgba(249,115,22,.3);border-radius:2px;">$1</mark>');
+    return text.replace(re,'<mark style="background:rgba(249,115,22,.3);color:var(--text);border-radius:2px;">$1</mark>');
   }
   function renderResults(data,q){
     var html='';
