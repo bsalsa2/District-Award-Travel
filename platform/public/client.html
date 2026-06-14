@@ -268,6 +268,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .dep-checklist-item label{cursor:pointer;line-height:1.5;color:var(--text)}
 .dep-checklist-item.checked label{text-decoration:line-through;color:var(--dim)}
 
+/* ── TRIP STATUS STEPPER (buildStepper) ── */
+.trip-stepper{display:flex;align-items:center;gap:0;margin-bottom:14px;}
+.trip-step{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;position:relative;z-index:1;}
+.trip-step.done{background:var(--accent);color:#fff;}
+.trip-step.active{background:var(--accent);color:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.25),0 0 0 6px rgba(249,115,22,.1);}
+.trip-step.future{background:rgba(255,255,255,.08);color:var(--muted);}
+.trip-step-line{flex:1;height:2px;background:rgba(255,255,255,.08);}
+.trip-step-line.done{background:var(--accent);}
+
 /* ── SAVINGS HERO POP animation ── */
 @keyframes savingsPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
 .sh-amount.pop{animation:savingsPop .5s ease-out}
@@ -1573,6 +1582,22 @@ function depChecklistToggle(key,idx,itemEl){
   if(cb.checked)itemEl.classList.add('checked');else itemEl.classList.remove('checked');
 }
 
+function buildStepper(currentStatus){
+  var stages=['new','researching','options_sent','booked','invoiced','closed'];
+  var labels=['New','Research','Options','Booked','Invoice','Done'];
+  var idx=stages.indexOf(currentStatus);
+  var html='<div class="trip-stepper">';
+  stages.forEach(function(s,i){
+    var cls=i<idx?'done':i===idx?'active':'future';
+    html+='<div class="trip-step '+cls+'" title="'+labels[i]+'">'+(i<idx?'✓':(i+1))+'</div>';
+    if(i<stages.length-1){
+      html+='<div class="trip-step-line'+(i<idx?' done':'')+'"></div>';
+    }
+  });
+  html+='</div>';
+  return html;
+}
+
 function renderTrips(trips,plans){
   const el=document.getElementById('trips-container');
   if(!trips.length){
@@ -1599,6 +1624,7 @@ function renderTrips(trips,plans){
     const isBooked=(t.workflow_status||'').toLowerCase()==='booked';
     const checklist=isBooked?renderDepartureChecklist(t.id||t.trip_id||t.destination||String(Math.random())):'';
     return `<div class="trip-card">
+      <div style="padding:14px 24px 0">${buildStepper(t.workflow_status||t.status||'new')}</div>
       <div class="trip-top">
         <div><div class="trip-dest">${esc(t.destination||'Your trip')}</div><div class="trip-route">${route}</div></div>
         <span class="badge ${b[0]}">${b[1]}</span>
@@ -1631,6 +1657,14 @@ function renderSavings(rows,totalSave,totalFee,plans){
   const aggSaved=rows.reduce((s,r)=>s+(r.gross_savings_cents||0),0);
   const aggFee=rows.reduce((s,r)=>s+(r.fee_cents||0),0);
   const aggNet=aggSaved-aggFee;
+  const totalSavedCents=aggSaved;
+  var heroHtml='';
+  if(totalSavedCents>0){
+    heroHtml='<div id="savings-hero-strip" style="text-align:center;padding:24px 0 8px;">'
+      +'<div style="font-size:2.2rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;" id="savings-hero-num">$0</div>'
+      +'<div style="color:var(--muted);font-size:13px;margin-top:4px;">saved with District Award Travel</div>'
+      +'</div>';
+  }
   const headerStrip=`<div style="display:flex;gap:16px;flex-wrap:wrap;background:var(--card);border:1px solid rgba(249,115,22,.12);border-radius:12px;padding:18px 20px;margin-bottom:20px">
     <div style="flex:1;min-width:110px">
       <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">Total Saved</div>
@@ -1678,7 +1712,15 @@ function renderSavings(rows,totalSave,totalFee,plans){
   const hasPending=rows.some(r=>{const s=(r.status||r.workflow_status||'').toLowerCase();return s==='open'||s==='draft';});
   const pendingNotice=hasPending?`<div style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.18);border-radius:10px;padding:13px 16px;font-size:13px;color:var(--muted);margin-bottom:16px">&#128269; Your advisor is documenting savings — updates as your booking is confirmed.</div>`:'';
 
-  el.innerHTML=headerStrip+pendingNotice+cards;
+  el.innerHTML=heroHtml+headerStrip+pendingNotice+cards;
+  (function(){
+    var el2=document.getElementById('savings-hero-num');
+    if(!el2)return;
+    var target=Math.round((totalSavedCents||0)/100);
+    var start=0,dur=1000,startT=null;
+    function step(ts){if(!startT)startT=ts;var p=Math.min((ts-startT)/dur,1);var v=Math.round(start+(target-start)*p);el2.textContent='$'+v.toLocaleString();if(p<1)requestAnimationFrame(step);}
+    requestAnimationFrame(step);
+  })();
 }
 
 /* ── ADD-POINTS FORM HELPERS ── */
