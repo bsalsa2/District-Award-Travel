@@ -268,11 +268,9 @@ section{padding:88px 24px}
   padding:13px 24px;font-family:var(--mono);
 }
 .board-cols{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:rgba(251,191,36,.45);padding-bottom:8px;border-bottom:1px solid rgba(249,115,22,.1)}
-.board-row{border-bottom:1px solid rgba(249,115,22,.06);font-size:13px;opacity:0;transition:background .15s}
-.board-wrap.lit .board-row{animation:rowIn .5s steps(3) forwards}
+.board-row{border-bottom:1px solid rgba(249,115,22,.06);font-size:13px;transition:background .15s}
 .board-row:hover{background:rgba(249,115,22,.05)}
 .board-row:last-child{border-bottom:none}
-@keyframes rowIn{0%{opacity:0}40%{opacity:.4}70%{opacity:.15}100%{opacity:1}}
 .bd-route{color:#fafaf9;font-weight:700;letter-spacing:.02em;line-height:1.4}
 .bd-tag{display:inline-block;font-size:8.5px;letter-spacing:.14em;padding:2px 7px;border-radius:4px;margin-top:4px;font-weight:700}
 .bd-tag-real{background:rgba(249,115,22,.16);color:#fb923c;border:1px solid rgba(249,115,22,.3)}
@@ -518,7 +516,7 @@ nav.scrolled .mobile-menu .mobile-link{color:var(--muted);border-color:var(--bor
   .btn-hero::before{display:none}
   .marquee-track{animation:none}
   .marquee-band{overflow-x:auto}
-  .board-row,.board-wrap.lit .board-row{animation:none;opacity:1}
+  .board-row,.board-wrap.lit .board-row{animation:none;opacity:1;clip-path:none}
   .bp-wrap:hover .bp-card{transform:none}
 }
 /* ── HERO COUNTER ── */
@@ -660,6 +658,26 @@ nav.scrolled .mobile-menu .mobile-link{color:var(--muted);border-color:var(--bor
   user-select:none;
 }
 .bp-savings-val{font-size:28px!important;text-shadow:0 0 24px rgba(74,222,128,.45),0 0 8px rgba(74,222,128,.3)!important}
+
+/* ── BOARD FLIP ANIMATION ── */
+@keyframes board-flip{
+  0%{clip-path:inset(0 0 100% 0)}
+  100%{clip-path:inset(0 0 0% 0)}
+}
+.board-wrap.lit .board-row{
+  animation:board-flip 0.4s ease-out forwards;
+  clip-path:inset(0 0 100% 0);
+}
+.board-wrap.lit .board-row:nth-child(1){animation-delay:0ms}
+.board-wrap.lit .board-row:nth-child(2){animation-delay:100ms}
+.board-wrap.lit .board-row:nth-child(3){animation-delay:200ms}
+.board-wrap.lit .board-row:nth-child(4){animation-delay:300ms}
+.board-wrap.lit .board-row:nth-child(5){animation-delay:400ms}
+.board-wrap.lit .board-row:nth-child(6){animation-delay:500ms}
+.board-wrap.lit .board-row:nth-child(7){animation-delay:600ms}
+.board-wrap.lit .board-row:nth-child(8){animation-delay:700ms}
+.board-wrap.lit .board-row:nth-child(9){animation-delay:800ms}
+.board-wrap.lit .board-row:nth-child(10){animation-delay:900ms}
 
 /* 12. FAQ left border + arrow rotation */
 details.faq[open]{
@@ -1107,6 +1125,14 @@ details.faq[open] .faq-a{
         <summary>How long does it take?</summary>
         <div class="faq-a">Usually 24–72 hours. For complex or unusual routes we'll tell you upfront before you wait.</div>
       </details>
+      <details class="faq">
+        <summary>Do you need access to my airline or hotel accounts?</summary>
+        <div class="faq-a">No — never. We work entirely from screenshots and balances you share with us. Your login credentials are yours alone. We find the strategy, you execute the booking.</div>
+      </details>
+      <details class="faq">
+        <summary>How quickly can you find options for my trip?</summary>
+        <div class="faq-a">Typically 24–48 hours for domestic trips, 48–72 hours for international itineraries. Complex multi-city or premium cabin searches may take a bit longer, but we'll keep you updated throughout.</div>
+      </details>
     </div>
   </div>
 </section>
@@ -1231,31 +1257,65 @@ function countUp(el,target,fmt,dur){var start=null,d=dur||1500;function step(ts)
     }
   }).catch(function(){clearTimeout(tid);showFallback();});
 })();
-/* savings departures board */
-fetch('/api/public/examples').then(function(r){return r.json()}).then(function(rows){
-  if(!Array.isArray(rows)||!rows.length)return;
+/* savings departures board — static illustrative rows load immediately; real API records prepend async */
+(function(){
+  var STATIC=[
+    {route:'IAD → NRT · ANA Business',cash_cents:420000,out_of_pocket_cents:5600,points_used:75000,savings_cents:414400,net_win_cents:373000,real:false},
+    {route:'JFK → LHR · Virgin Upper Class',cash_cents:280000,out_of_pocket_cents:10000,points_used:47500,savings_cents:270000,net_win_cents:243000,real:false},
+    {route:'DCA → CDG · Air France Business',cash_cents:310000,out_of_pocket_cents:8000,points_used:60000,savings_cents:302000,net_win_cents:271800,real:false},
+    {route:'BWI → HNL · Economy Lie-Flat',cash_cents:90000,out_of_pocket_cents:1100,points_used:50000,savings_cents:88900,net_win_cents:80010,real:false}
+  ];
   var box=document.getElementById('board-rows');
-  rows.forEach(function(r,i){
+  var wrap=document.getElementById('board-wrap');
+  if(!box||!wrap)return;
+
+  function makeRow(r,idx){
     var tag=r.real?'<span class="bd-tag bd-tag-real">Documented</span>':'<span class="bd-tag bd-tag-illus">Illustrative</span>';
-    var pay=fmtUsd(r.out_of_pocket_cents)+'+'+Math.round(r.points_used/1000)+'k pts';
+    var pay=fmtUsd(r.out_of_pocket_cents)+' + '+Math.round(r.points_used/1000)+'k pts';
     var row=document.createElement('div');row.className='board-row';
-    row.style.animationDelay=(i*0.12)+'s';
     row.innerHTML='<div class="bd-route"><span></span><br>'+tag+'</div>'+
       '<div class="bd-cash">'+fmtUsd(r.cash_cents)+'</div>'+
       '<div class="bd-pay">'+pay+'</div>'+
       '<div class="bd-save">'+fmtUsd(r.savings_cents)+'</div>'+
       '<div class="bd-net">'+fmtUsd(r.net_win_cents)+'</div>';
     row.querySelector('.bd-route span').textContent=r.route.toUpperCase();
-    box.appendChild(row);
-  });
-  var wrap=document.getElementById('board-wrap');
+    return row;
+  }
+
+  /* render static rows immediately */
+  STATIC.forEach(function(r,i){box.appendChild(makeRow(r,i));});
   wrap.style.display='block';
+
+  /* trigger flip animation on scroll */
+  function activateBoard(){
+    if(wrap.classList.contains('lit'))return;
+    wrap.classList.add('lit');
+  }
   if('IntersectionObserver' in window){
     new IntersectionObserver(function(entries,io){
-      if(entries[0].isIntersecting){wrap.classList.add('lit');io.disconnect();}
+      if(entries[0].isIntersecting){activateBoard();io.disconnect();}
     },{threshold:.2}).observe(wrap);
-  }else{wrap.classList.add('lit');}
-}).catch(function(){});
+  }else{activateBoard();}
+
+  /* async: fetch real records and prepend — non-blocking */
+  fetch('/api/public/examples').then(function(r){return r.json();}).then(function(rows){
+    if(!Array.isArray(rows)||!rows.length)return;
+    var real=rows.filter(function(r){return r.real;});
+    if(!real.length)return;
+    /* prepend real rows in reverse so first real row ends up on top */
+    real.slice().reverse().forEach(function(r){
+      var row=makeRow(r,0);
+      box.insertBefore(row,box.firstChild);
+    });
+    /* if board is already lit, animate only the new rows */
+    if(wrap.classList.contains('lit')){
+      real.forEach(function(_,i){
+        var row=box.children[i];
+        if(row){row.style.animationName='none';void row.offsetWidth;row.style.animationName='';}
+      });
+    }
+  }).catch(function(){});
+})();
 /* sticky CTA on mobile */
 (function(){
   var hero=document.getElementById('hero'),bar=document.getElementById('sticky-cta');
