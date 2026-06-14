@@ -3786,6 +3786,7 @@ var _tdSaveTimer = null;
 
 function openTripDetail(trip) {
   _tdTripId = trip.id;
+  _tdClientEmail = trip.client_email || null;
   document.getElementById('td-title').textContent =
     (trip.destination || '(no destination)') + (trip.client_name ? ' — ' + trip.client_name : '');
   var metaParts = [];
@@ -3800,6 +3801,15 @@ function openTripDetail(trip) {
   ta.value = trip.research_notes || '';
   document.getElementById('td-rn-count').textContent = ta.value.length + ' / 10000';
   document.getElementById('td-rn-saved').style.opacity = '0';
+  // Reset notes to edit mode
+  rnSwitchMode('edit');
+  rnUpdateWordCount();
+  // Options preview
+  tdSetOptions(trip.options || null);
+  // Reset quick message
+  document.getElementById('td-msg-input').value = '';
+  document.getElementById('td-msg-sent').style.opacity = '0';
+  document.getElementById('td-msg-template').value = '';
   setTimeDisplay(trip.time_tracked_minutes || 0);
   document.getElementById('td-time-form').style.display = 'none';
   document.getElementById('td-time-logged').style.opacity = '0';
@@ -3817,6 +3827,7 @@ function onResearchNotesInput() {
   var len = ta.value.length;
   document.getElementById('td-rn-count').textContent = len + ' / 10000';
   document.getElementById('td-rn-saved').style.opacity = '0';
+  rnUpdateWordCount();
   if (_tdSaveTimer) clearTimeout(_tdSaveTimer);
   _tdSaveTimer = setTimeout(saveResearchNotes, 2000);
 }
@@ -3889,6 +3900,151 @@ async function logTime() {
       setTimeout(function(){ badge.style.opacity = '0'; }, 2000);
     }
   } catch(e) {}
+}
+
+/* ── RESEARCH NOTES: word/char count, markdown preview, copy ── */
+function rnUpdateWordCount() {
+  var val = document.getElementById('td-research-notes').value;
+  var words = val.trim() === '' ? 0 : val.trim().split(/\s+/).length;
+  document.getElementById('td-rn-wordcount').textContent = words + ' words · ' + val.length + ' chars';
+}
+
+function rnMarkdownToHtml(text) {
+  var lines = text.split('
+');
+  var html = '';
+  var inList = false;
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    // Headers ## h2
+    if (/^##\s+/.test(line)) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<h3 style="font-size:.9rem;font-weight:700;color:var(--accent);margin:10px 0 4px">' + esc(line.replace(/^##\s+/, '')) + '</h3>';
+    // Bullets - item
+    } else if (/^[-*]\s+/.test(line)) {
+      if (!inList) { html += '<ul style="margin:4px 0 4px 16px;padding:0">'; inList = true; }
+      var itemText = line.replace(/^[-*]\s+/, '');
+      itemText = itemText.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      html += '<li style="margin:2px 0">' + itemText + '</li>';
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      if (line.trim() === '') {
+        html += '<br>';
+      } else {
+        var processed = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        html += '<p style="margin:2px 0">' + processed + '</p>';
+      }
+    }
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
+function rnSwitchMode(mode) {
+  var ta = document.getElementById('td-research-notes');
+  var preview = document.getElementById('td-rn-preview');
+  var editBtn = document.getElementById('td-rn-edit-btn');
+  var prevBtn = document.getElementById('td-rn-preview-btn');
+  if (mode === 'preview') {
+    preview.innerHTML = rnMarkdownToHtml(ta.value);
+    ta.style.display = 'none';
+    preview.style.display = 'block';
+    editBtn.style.background = 'var(--off)';
+    editBtn.style.color = 'var(--text)';
+    editBtn.style.borderColor = 'var(--border2)';
+    prevBtn.style.background = 'var(--accent)';
+    prevBtn.style.color = '#fff';
+    prevBtn.style.borderColor = 'var(--accent)';
+  } else {
+    ta.style.display = '';
+    preview.style.display = 'none';
+    editBtn.style.background = 'var(--accent)';
+    editBtn.style.color = '#fff';
+    editBtn.style.borderColor = 'var(--accent)';
+    prevBtn.style.background = 'var(--off)';
+    prevBtn.style.color = 'var(--text)';
+    prevBtn.style.borderColor = 'var(--border2)';
+  }
+}
+
+function rnCopyNotes() {
+  var text = document.getElementById('td-research-notes').value;
+  navigator.clipboard.writeText(text).then(function() {
+    var el = document.getElementById('td-rn-copy-ok');
+    el.style.opacity = '1';
+    setTimeout(function(){ el.style.opacity = '0'; }, 2000);
+  }).catch(function(){});
+}
+
+/* ── OPTIONS PREVIEW ── */
+var _tdOptionsOpen = false;
+function tdSetOptions(options) {
+  var section = document.getElementById('td-options-section');
+  var badge = document.getElementById('td-options-badge');
+  var list = document.getElementById('td-options-list');
+  _tdOptionsOpen = false;
+  list.style.display = 'none';
+  document.getElementById('td-options-chevron').textContent = '▼';
+  if (!options || !options.length) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  var n = options.length;
+  badge.textContent = n + ' option' + (n !== 1 ? 's' : '') + ' on file';
+  list.innerHTML = options.map(function(o) {
+    var title = (typeof o === 'string') ? o : (o.title || o.name || JSON.stringify(o));
+    return '<div style="padding:5px 0;border-bottom:1px solid var(--border);font-size:.83rem;color:var(--text)">' + esc(title) + '</div>';
+  }).join('');
+}
+
+function tdToggleOptions() {
+  _tdOptionsOpen = !_tdOptionsOpen;
+  document.getElementById('td-options-list').style.display = _tdOptionsOpen ? 'block' : 'none';
+  document.getElementById('td-options-chevron').textContent = _tdOptionsOpen ? '▲' : '▼';
+}
+
+/* ── QUICK MESSAGE FROM MODAL ── */
+var _tdClientEmail = null;
+var _MSG_TEMPLATES = {
+  options_ready: 'Hi! I have put together some award travel options for your upcoming trip. Please take a look and let me know if you have any questions or would like to proceed with any of the options.',
+  need_info: 'Hi! I need a bit more information to continue researching your trip. Could you please provide more details so I can find the best options for you?',
+  advance_notice: 'Hi! Just a heads-up: award space for your travel dates is starting to fill up. I wanted to let you know so we can move forward when you are ready.'
+};
+
+function tdApplyMsgTemplate() {
+  var sel = document.getElementById('td-msg-template');
+  var ta = document.getElementById('td-msg-input');
+  var val = sel.value;
+  if (val && _MSG_TEMPLATES[val]) {
+    ta.value = _MSG_TEMPLATES[val];
+  }
+  sel.value = '';
+}
+
+async function tdSendQuickMsg() {
+  if (!_tdClientEmail || !ADMIN_TOKEN) return;
+  var ta = document.getElementById('td-msg-input');
+  var text = ta.value.trim();
+  if (!text) return;
+  ta.disabled = true;
+  try {
+    var res = await fetch('/api/admin/send-message', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ADMIN_TOKEN},
+      body: JSON.stringify({client_email: _tdClientEmail, subject: '', body: text})
+    });
+    if (res.ok) {
+      ta.value = '';
+      var sent = document.getElementById('td-msg-sent');
+      sent.style.opacity = '1';
+      setTimeout(function(){ sent.style.opacity = '0'; }, 2500);
+    } else {
+      var d = await res.json().catch(function(){ return {}; });
+      toast(d.detail || 'Send failed');
+    }
+  } catch(e) { toast('Network error'); }
+  ta.disabled = false;
 }
 </script>
 
