@@ -1833,8 +1833,14 @@ async function ptsSubmit(){
 function renderPoints(points){
   const el=document.getElementById('points-container');
   const milEl=document.getElementById('points-milestones');
-  if(!points.length){
-    el.innerHTML='<div class="empty"><div class="empty-ico">⬡</div><p>No point balances on file. Share your program balances with your advisor and they\'ll appear here.</p></div>';
+  if(!points||!points.length){
+    el.innerHTML='<div style="text-align:center;padding:32px 20px;color:var(--muted);">'
+      +'<div style="font-size:2rem;margin-bottom:12px;">✈️</div>'
+      +'<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;">No points added yet</div>'
+      +'<div style="font-size:13px;margin-bottom:16px;">Add your balances so we can find the best redemptions</div>'
+      +'<button onclick="document.querySelector(\'.pts-add-form\').scrollIntoView({behavior:\'smooth\'});document.getElementById(\'pts-program-input\').focus();" '
+      +'style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-size:13px;font-weight:600;">+ Add Points Balance</button>'
+      +'</div>';
     if(milEl)milEl.innerHTML='';
     return;
   }
@@ -1849,15 +1855,19 @@ function renderPoints(points){
     const pct=Math.min(bal/MAX_BAR,1)*100;
     let barColor='rgba(168,162,158,.4)'; // muted <25k
     let balColor='rgba(168,162,158,.7)';
-    if(bal>=50000){barColor='#16a34a';balColor='#4ade80';}
-    else if(bal>=25000){barColor='#ca8a04';balColor='#fbbf24';}
+    let borderColor='rgba(168,152,128,.5)'; // muted <25k
+    if(bal>=50000){barColor='#16a34a';balColor='#4ade80';borderColor='#16a34a';}
+    else if(bal>=25000){barColor='#ca8a04';balColor='#fbbf24';borderColor='#ca8a04';}
     const clubBadge=bal>=100000?`<div style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(234,179,8,.12);color:#fbbf24;border:1px solid rgba(234,179,8,.3);margin-top:10px">&#x1F48E; 100K+ Club</div>`:'';
     // mini threshold markers
     const markers=THRESHOLDS.map(t=>{const x=Math.min(t/MAX_BAR,1)*100;return `<div style="position:absolute;left:${x}%;top:-2px;width:1px;height:8px;background:rgba(255,255,255,.15)"></div>`;}).join('');
-    return `<div class="point-card">
-      <div class="point-prog" style="font-size:13px;font-weight:700;letter-spacing:.04em;color:rgba(255,255,255,.6);margin-bottom:12px">${esc(prog)}</div>
-      <div style="font-size:34px;font-weight:900;letter-spacing:-1.5px;color:${balColor};font-variant-numeric:tabular-nums;line-height:1">${fmtNum(bal)}</div>
+    const cpp=p.cpp||ptsCppRate(prog);
+    const cppHtml=cpp&&cpp>0?`<div style="font-size:12px;color:var(--muted);margin-top:4px">≈ $${cpp.toFixed(2)}/point</div>`:'';
+    return `<div class="point-card" style="border-left:3px solid ${borderColor}">
+      <div class="point-prog" style="font-size:15px;font-weight:600;letter-spacing:.02em;color:rgba(255,255,255,.85);margin-bottom:12px">${esc(prog)}</div>
+      <div style="font-size:1.4rem;font-weight:900;letter-spacing:-1px;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1">${fmtNum(bal)}</div>
       <div style="font-size:11px;color:rgba(255,255,255,.3);font-weight:600;margin-top:2px">points</div>
+      ${cppHtml}
       <div style="position:relative;height:4px;background:rgba(255,255,255,.08);border-radius:4px;margin:14px 0 4px;overflow:visible">${markers}<div style="position:absolute;left:0;top:0;height:4px;width:${pct}%;background:${barColor};border-radius:4px;transition:width .6s ease;box-shadow:0 0 8px ${barColor}66"></div></div>
       <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.2);font-weight:600">
         <span>0</span><span>25K</span><span>50K</span><span>100K</span><span>150K</span>
