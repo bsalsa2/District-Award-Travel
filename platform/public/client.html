@@ -531,8 +531,13 @@ body.light-mode{
         <div class="msg-list" id="ov-messages"></div>
         <div class="refer-card">
           <div>
-            <div class="refer-title">Know someone sitting on points? 🎁</div>
-            <div class="refer-sub">Most of our clients come from referrals. Send them our way — they'll thank you after their first business-class redemption.</div>
+            <div class="refer-title">🎁 Refer a Friend</div>
+            <div class="refer-sub">Know someone sitting on points? Send them to District — they only pay if they save, and you'll be their hero.</div>
+            <div id="refer-url-box" style="display:none;margin-top:12px;background:rgba(0,0,0,.3);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:12px;color:rgba(245,240,234,.6);word-break:break-all"></div>
+            <div id="refer-social" style="display:none;margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+              <a id="refer-wa" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;background:#25d366;color:#fff;font-size:12px;font-weight:700;text-decoration:none">WhatsApp</a>
+              <a id="refer-email-link" href="#" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;background:#3b82f6;color:#fff;font-size:12px;font-weight:700;text-decoration:none">Email</a>
+            </div>
           </div>
           <button class="refer-btn" id="refer-btn" onclick="copyReferral()">Copy invite link</button>
         </div>
@@ -841,6 +846,18 @@ function animStat(id,target,fmt){
 function copyReferral(){
   const name=((currentData&&currentData.name)||'').split(' ')[0].toLowerCase();
   const url=location.origin+'/?utm_source=referral&utm_medium=client'+(name?'&utm_campaign='+encodeURIComponent(name):'');
+  const msg=`Hey! I've been using District Award Travel to find award redemptions for my points — they found me business class for way less than cash and only charge 10% of what they save you. No upfront fee. Check it out: ${url}`;
+  // Show URL box and social links
+  const urlBox=document.getElementById('refer-url-box');
+  const social=document.getElementById('refer-social');
+  if(urlBox){urlBox.textContent=url;urlBox.style.display='block';}
+  if(social){
+    social.style.display='flex';
+    const wa=document.getElementById('refer-wa');
+    if(wa)wa.href='https://wa.me/?text='+encodeURIComponent(msg);
+    const em=document.getElementById('refer-email-link');
+    if(em)em.href='mailto:?subject=Award+travel+savings+tool&body='+encodeURIComponent(msg);
+  }
   const btn=document.getElementById('refer-btn');
   function done(){btn.textContent='✓ Copied — send it!';setTimeout(()=>btn.textContent='Copy invite link',2500);}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(done).catch(()=>prompt('Copy your invite link:',url));}

@@ -2817,13 +2817,14 @@ function chatShowList(){
 }
 /* ── Chat template quick-insert ── */
 const CHAT_TEMPLATES={
-  options_ready:"Hi [name], I've put together some travel options for your trip! Take a look and let me know what you think.",
-  chat_nudge:"Hi [name], just checking in on those travel options I sent over. Any questions?",
-  chat_invoice:"Hi [name], attaching your advisory fee invoice for the [destination] booking. Thanks for choosing District!",
-  chat_checkin:"Hi [name], how's everything going with your upcoming trip? Let me know if you need anything!",
-  chat_recommend:"Hi [name], your award travel recommendation is ready! Log into your portal to check it out, and let me know if you have any questions.",
-  chat_balances:"Hi [name], to map the best strategy for your trip I need your current points balances. A quick screenshot works great!",
-  chat_deadline:"Hi [name], heads-up — there's a time-sensitive award window I want to make sure you don't miss. Can we connect soon?"
+  options_ready:"Hi [name]! Your travel options for [destination] are ready 🎉 I've put together a few strategies — log into your portal to review them and let me know which direction excites you most. Happy to answer any questions!",
+  chat_nudge:"Hi [name], just checking in — have you had a chance to look over the options I sent for [destination]? No rush, but I'm here to help if you have any questions or want me to adjust anything.",
+  chat_invoice:"Hi [name]! Congrats on booking your [destination] trip 🎉 Your savings summary is ready in the portal. Per our agreement, the advisory fee is 10% of documented savings. Payment details: [add Venmo/PayPal here]. Thanks for choosing District!",
+  chat_checkin:"Hi [name], just checking in — how's everything going with your upcoming trip to [destination]? Let me know if you need any last-minute help or have questions before you travel!",
+  chat_recommend:"Hi [name], great news — your award travel analysis for [destination] is ready! Log into your portal to review your personalized options. I've found some strong redemptions I think you'll love. Questions? Just reply here.",
+  chat_balances:"Hi [name]! To find the best award strategy for [destination], I need your current points and miles balances. A quick screenshot of your program summaries works great — just attach it to a message here.",
+  chat_deadline:"Hi [name] — heads-up! The award space I identified for [destination] has limited availability and may not last. Could you review your options and let me know by [date]? I want to make sure we don't miss this window.",
+  chat_creds:"Hi [name], to complete your booking for [destination] you'll book directly through the airline/hotel website (I'll guide you step-by-step). Let me know when you're ready and I'll walk you through the exact process."
 };
 function chatTplFirstName(){
   if(!CHAT_EMAIL) return '';
