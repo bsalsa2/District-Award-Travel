@@ -1580,11 +1580,11 @@ function renderMiniStepper(status){
 
 function renderDepartureChecklist(tripId){
   const items=[
-    'Confirm booking details with your advisor',
-    'Check passport expiration (6 months+ validity)',
-    'Review airline/hotel check-in procedures',
-    'Download carrier app for mobile boarding pass',
-    'Review points balance post-booking',
+    'Check award space still available',
+    'Screenshot your booking confirmation',
+    'Note baggage policy for award ticket',
+    'Check visa/passport requirements',
+    'Set calendar reminder 24h before',
   ];
   const key=`dep_checklist_${tripId}`;
   let saved={};
@@ -1657,10 +1657,11 @@ function renderTrips(trips,plans){
     const checklist=isBooked?renderDepartureChecklist(t.id||t.trip_id||t.destination||String(Math.random())):'';
     return `<div class="trip-card">
       <div style="padding:14px 24px 0">${buildStepper(t.workflow_status||t.status||'new')}</div>
+      ${countdown?`<span style="position:absolute;top:12px;right:12px;z-index:2;">${countdown}</span>`:''}
       <div class="trip-top">
         <div><div class="trip-dest">${esc(t.destination||'Your trip')}</div><div class="trip-route">${route}</div></div>
         <span class="badge ${b[0]}">${b[1]}</span>
-      </div>${countdown?`<div class="trip-countdown-row">${countdown}</div>`:''}${renderMiniStepper(t.workflow_status)}${grid}${planBlock}${checklist}</div>`;
+      </div>${renderMiniStepper(t.workflow_status)}${grid}${planBlock}${checklist}</div>`;
   }).join('');
 }
 
