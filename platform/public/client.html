@@ -465,20 +465,25 @@ body.light-mode{
 .prefs-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
 .prefs-title{font-size:15px;font-weight:700}
 .prefs-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;padding:4px}
-.prefs-body{padding:20px;display:flex;flex-direction:column;gap:20px;flex:1}
-.pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.prefs-body{padding:20px;display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto}
+.prefs-section-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.prefs-section-head:first-child{margin-top:0}
+.pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
 .pref-label{font-size:14px;font-weight:500}
 .pref-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.pref-toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.pref-toggle{position:relative;width:40px;height:22px;flex-shrink:0}
 .pref-toggle input{opacity:0;width:0;height:0;position:absolute}
-.pref-slider{position:absolute;inset:0;background:#ccc;border-radius:24px;cursor:pointer;transition:background .2s}
-.pref-slider::before{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s}
+.pref-slider{position:absolute;inset:0;background:#ccc;border-radius:22px;cursor:pointer;transition:background .2s}
+.pref-slider::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s,box-shadow .2s}
 .pref-toggle input:checked+.pref-slider{background:var(--accent)}
-.pref-toggle input:checked+.pref-slider::before{transform:translateX(20px)}
+.pref-toggle input:checked+.pref-slider::before{transform:translateX(18px);box-shadow:0 0 6px rgba(249,115,22,.55),0 0 12px rgba(249,115,22,.25)}
 .prefs-foot{padding:16px 20px;border-top:1px solid var(--border)}
 .btn-save-prefs{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s}
 .btn-save-prefs:hover{background:#ea6c0a}
 .prefs-msg{font-size:12px;text-align:center;margin-top:8px;color:var(--green);min-height:16px}
+
+/* ── COMPACT CHAT ── */
+.compact-chat .msg-bubble{padding:8px 12px;font-size:13px}
 
 /* ── MOBILE ── */
 .mtabs{display:none}
@@ -732,27 +737,49 @@ body.light-mode{
   <!-- PREFERENCES PANEL -->
   <div id="prefs-panel" role="dialog" aria-label="Preferences">
     <div class="prefs-head">
-      <div class="prefs-title">Settings</div>
+      <div class="prefs-title">&#x2699; Settings</div>
       <button class="prefs-close" onclick="closePrefs()" aria-label="Close">&#x2715;</button>
     </div>
     <div class="prefs-body">
+      <div class="prefs-section-head">Display</div>
       <div class="pref-row">
         <div>
           <div class="pref-label">Light mode</div>
           <div class="pref-sub">Switch to a light color scheme</div>
         </div>
         <label class="pref-toggle">
-          <input type="checkbox" id="pref-light-mode">
+          <input type="checkbox" id="pref-light-mode" onchange="onPrefToggle()">
           <span class="pref-slider"></span>
         </label>
       </div>
+      <div class="pref-row">
+        <div>
+          <div class="pref-label">Compact chat</div>
+          <div class="pref-sub">Smaller message bubbles</div>
+        </div>
+        <label class="pref-toggle">
+          <input type="checkbox" id="pref-compact-chat" onchange="onPrefToggle()">
+          <span class="pref-slider"></span>
+        </label>
+      </div>
+      <div class="prefs-section-head">Notifications</div>
       <div class="pref-row">
         <div>
           <div class="pref-label">Email notifications</div>
           <div class="pref-sub">Get notified when there are updates</div>
         </div>
         <label class="pref-toggle">
-          <input type="checkbox" id="pref-email-notifs">
+          <input type="checkbox" id="pref-email-notifs" onchange="onPrefToggle()">
+          <span class="pref-slider"></span>
+        </label>
+      </div>
+      <div class="pref-row">
+        <div>
+          <div class="pref-label">Message sound</div>
+          <div class="pref-sub">Play a tone on new messages</div>
+        </div>
+        <label class="pref-toggle">
+          <input type="checkbox" id="pref-msg-sound" onchange="onPrefToggle()">
           <span class="pref-slider"></span>
         </label>
       </div>
@@ -846,6 +873,10 @@ function requestNotifPermission(){
 }
 
 function maybeNotify(newCount){
+  if(newCount>lastMsgCount){
+    const soundEl=document.getElementById('pref-msg-sound');
+    if(soundEl&&soundEl.checked)playNotifTone();
+  }
   if(typeof Notification==='undefined')return;
   if(Notification.permission!=='granted')return;
   if(newCount<=lastMsgCount)return;
@@ -1802,6 +1833,49 @@ function stopAutoRefresh(){disconnectStream();stopPoll();clearTimeout(reconnectT
 document.addEventListener('visibilitychange',()=>{if(!getToken())return;if(document.hidden)stopAutoRefresh();else{refetchMe();connectStream();}});
 
 /* ── PREFERENCES ── */
+async function savePrefsToBackend(prefs){
+  const token=getToken();
+  if(!token)return;
+  await fetch('/api/client/preferences',{
+    method:'PATCH',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify(prefs)
+  }).catch(()=>{});
+}
+
+function playNotifTone(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.frequency.value=880;gain.gain.value=0.1;
+    osc.start();gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
+    osc.stop(ctx.currentTime+0.3);
+  }catch(e){}
+}
+
+function getCurrentPrefs(){
+  const lightMode=document.getElementById('pref-light-mode');
+  const emailNotifs=document.getElementById('pref-email-notifs');
+  const compactChat=document.getElementById('pref-compact-chat');
+  const msgSound=document.getElementById('pref-msg-sound');
+  return{
+    dark_mode:lightMode?!lightMode.checked:true,
+    email_notifications:emailNotifs?emailNotifs.checked:false,
+    compact_chat:compactChat?compactChat.checked:false,
+    message_sound:msgSound?msgSound.checked:false
+  };
+}
+
+function onPrefToggle(){
+  const prefs=getCurrentPrefs();
+  // Apply display changes immediately
+  if(prefs.dark_mode===false){document.body.classList.add('light-mode');}else{document.body.classList.remove('light-mode');}
+  if(prefs.compact_chat){document.body.classList.add('compact-chat');}else{document.body.classList.remove('compact-chat');}
+  savePrefsToBackend(prefs);
+}
+
 function applyPrefs(prefs){
   if(!prefs)return;
   // dark_mode=true (default) → no class; dark_mode=false → light-mode class
@@ -1814,6 +1888,10 @@ function applyPrefs(prefs){
   }
   const notifEl=document.getElementById('pref-email-notifs');
   if(notifEl)notifEl.checked=prefs.email_notifications===true;
+  const compactEl=document.getElementById('pref-compact-chat');
+  if(compactEl){compactEl.checked=prefs.compact_chat===true;if(prefs.compact_chat)document.body.classList.add('compact-chat');else document.body.classList.remove('compact-chat');}
+  const soundEl=document.getElementById('pref-msg-sound');
+  if(soundEl)soundEl.checked=prefs.message_sound===true;
 }
 
 function openPrefs(){
@@ -1823,8 +1901,7 @@ function openPrefs(){
 function closePrefs(){document.getElementById('prefs-panel').classList.remove('open');}
 
 async function savePrefs(){
-  const lightMode=document.getElementById('pref-light-mode').checked;
-  const emailNotifs=document.getElementById('pref-email-notifs').checked;
+  const prefs=getCurrentPrefs();
   const token=getToken();if(!token)return logout();
   const msgEl=document.getElementById('prefs-msg');
   msgEl.textContent='Saving…';msgEl.style.color='var(--muted)';
@@ -1832,7 +1909,7 @@ async function savePrefs(){
     const res=await fetch('/api/client/preferences',{
       method:'PATCH',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({dark_mode:!lightMode,email_notifications:emailNotifs})
+      body:JSON.stringify(prefs)
     });
     if(res.ok){
       const d=await res.json();
