@@ -1914,13 +1914,49 @@ def list_clients(_: dict = Depends(require_admin), db: Session = Depends(get_db)
 
 @app.get("/api/admin/clients/{email}")
 def get_client(email: str, _: dict = Depends(require_admin), db: Session = Depends(get_db)):
-    """Return full client data including their portal JSON for the admin profile drawer."""
+    """Return full client data including trips (_trip_row), savings_breakdown, point_programs, and last 20 messages."""
     client = db.query(Client).filter(Client.email == email.lower()).first()
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     payload = json.loads(client.data or "{}")
     payload.update({"name": client.name, "tier": client.tier, "email": client.email,
                      "created_at": client.created_at.isoformat()})
+
+    # Full trip rows with workflow flags
+    now = dt.datetime.utcnow()
+    trips = db.query(TripRequest).filter(TripRequest.client_id == client.id).order_by(TripRequest.created_at.desc()).all()
+    payload["trips"] = [_trip_row(t, client, now) for t in trips]
+
+    # Savings breakdown (all statuses visible to admin)
+    savings_recs = db.query(SavingsRecord).filter(
+        SavingsRecord.client_id == client.id
+    ).order_by(SavingsRecord.created_at.desc()).all()
+    savings_breakdown = []
+    for r in savings_recs:
+        gross = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee = calc_fee(gross, r.fee_rate_bps)
+        savings_breakdown.append({
+            "id": r.id,
+            "trip_label": r.trip_label,
+            "cash_benchmark_cents": r.cash_benchmark_cents,
+            "gross_savings_cents": gross,
+            "fee_cents": fee,
+            "points_used": r.points_used,
+            "points_program": r.points_program,
+            "status": r.status,
+            "invoice_number": r.invoice_number,
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "report_url": f"/api/report/{r.report_token}" if r.report_token else None,
+        })
+    payload["savings_breakdown"] = savings_breakdown
+
+    # Point programs from the data JSON
+    payload["point_programs"] = payload.get("points", [])
+
+    # Last 20 messages
+    messages = payload.get("messages", [])
+    payload["messages"] = messages[-20:]
+
     return payload
 
 
@@ -4015,6 +4051,104 @@ def cron_digest(key: str = "", db: Session = Depends(get_db)):
     lines.append(f"Workflow events in last 24h: {digest['workflow_events_24h']}")
     sent = send_email("DAT Daily Digest", "\n".join(lines))
     return {"ok": True, "sent": sent}
+
+
+# ── Admin: CSV exports ──
+@app.get("/api/admin/export/clients")
+def export_clients(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Export all clients as a CSV file with key metrics."""
+    import csv
+    import io
+
+    clients = db.query(Client).order_by(Client.created_at).all()
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["name", "email", "tier", "created_at", "trip_count", "total_points", "latest_trip_status"])
+    for c in clients:
+        trips = db.query(TripRequest).filter(TripRequest.client_id == c.id).order_by(TripRequest.created_at.desc()).all()
+        trip_count = len(trips)
+        latest_trip_status = trips[0].workflow_status if trips else ""
+        cdata = json.loads(c.data or "{}")
+        # Sum all point balances stored in the "points" array (balances may be strings like "50,000")
+        total_points = 0
+        for p in cdata.get("points", []):
+            try:
+                total_points += int(str(p.get("balance", "0")).replace(",", "").replace(" ", ""))
+            except (ValueError, TypeError):
+                pass
+        created_at = c.created_at.isoformat() if c.created_at else ""
+        writer.writerow([c.name, c.email, c.tier, created_at, trip_count, total_points, latest_trip_status])
+
+    from fastapi.responses import Response
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="dat-clients.csv"'},
+    )
+
+
+@app.get("/api/admin/export/savings")
+def export_savings(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Export all savings records as a CSV file."""
+    import csv
+    import io
+
+    recs = db.query(SavingsRecord).order_by(SavingsRecord.created_at).all()
+    client_map = {c.id: c for c in db.query(Client).all()}
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow([
+        "client_email", "trip_label",
+        "cash_benchmark_cents", "savings_cents", "fee_cents",
+        "status", "created_at",
+    ])
+    for r in recs:
+        client = client_map.get(r.client_id)
+        gross_cents = calc_gross_savings(r.cash_benchmark_cents, r.award_taxes_fees_cents, r.other_out_of_pocket_cents)
+        fee_cents = calc_fee(gross_cents, r.fee_rate_bps)
+        writer.writerow([
+            client.email if client else "",
+            r.trip_label,
+            f"${r.cash_benchmark_cents / 100:.2f}",
+            f"${gross_cents / 100:.2f}",
+            f"${fee_cents / 100:.2f}",
+            r.status,
+            r.created_at.isoformat() if r.created_at else "",
+        ])
+
+    from fastapi.responses import Response
+    return Response(
+        content=out.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="dat-savings.csv"'},
+    )
+
+
+# ── Client: preferences ──
+class ClientPreferencesIn(BaseModel):
+    dark_mode: Optional[bool] = None
+    email_notifications: Optional[bool] = None
+
+
+@app.patch("/api/client/preferences")
+def update_client_preferences(body: ClientPreferencesIn, identity: dict = Depends(current_identity), db: Session = Depends(get_db)):
+    """Client updates their UI preferences (dark_mode, email_notifications).
+    Stored in the data JSON column under the 'preferences' key."""
+    if identity.get("role") != "client":
+        raise HTTPException(status_code=403, detail="Client access required")
+    client = db.query(Client).filter(Client.email == identity["sub"]).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    existing = json.loads(client.data or "{}")
+    prefs = existing.get("preferences") or {}
+    if body.dark_mode is not None:
+        prefs["dark_mode"] = body.dark_mode
+    if body.email_notifications is not None:
+        prefs["email_notifications"] = body.email_notifications
+    existing["preferences"] = prefs
+    client.data = json.dumps(existing)
+    db.commit()
+    return {"ok": True, "preferences": prefs}
 
 
 # ──────────────────────────────────────────────────────────────────────────
