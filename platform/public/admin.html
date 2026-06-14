@@ -758,6 +758,18 @@
   .metric-val.counting {
     animation: statCountUp .4s ease forwards;
   }
+  @keyframes skeleton-pulse { 0%,100%{opacity:.4}50%{opacity:.8} }
+  .ss-skeleton-line {
+    height:14px; border-radius:4px;
+    background:rgba(249,115,22,.15);
+    animation:skeleton-pulse 1.5s ease infinite;
+    margin-bottom:10px;
+  }
+  .ss-error-box {
+    background:rgba(220,38,38,.1); border:1px solid rgba(220,38,38,.3);
+    border-radius:8px; padding:14px 16px; color:#ef4444;
+    font-size:.87rem;
+  }
 </style>
 </head>
 <body>
@@ -1450,15 +1462,22 @@
       <div style="font-weight:700;margin-bottom:6px">Gemini is searching…</div>
       <div style="font-size:.83rem">Analyzing points portfolio + checking award sweet spots</div>
     </div>
+    <div id="ss-skeleton" style="display:none;padding:16px 0">
+      <div class="ss-skeleton-line" style="width:80%"></div>
+      <div class="ss-skeleton-line" style="width:60%"></div>
+      <div class="ss-skeleton-line" style="width:70%"></div>
+    </div>
     <div id="ss-results" style="display:none">
       <div id="ss-client-name" style="font-size:.88rem;color:var(--muted);margin-bottom:14px"></div>
       <div class="deal-cards-grid" id="ss-cards"></div>
-      <div style="display:flex;gap:9px;margin-top:6px">
+      <div style="display:flex;gap:9px;margin-top:6px;flex-wrap:wrap">
         <button class="btn-sm" onclick="closeSweetSpots()">Close</button>
         <button class="btn-sm ai" onclick="rerunSweetSpots()">↻ Regenerate</button>
+        <button class="btn-sm" id="ss-copy-btn" onclick="ssCopyResults()">📋 Copy</button>
+        <button class="btn-sm primary" id="ss-insert-btn" onclick="ssInsertToPlan()">📝 Insert into Plan</button>
       </div>
     </div>
-    <div id="ss-error" style="display:none;color:var(--red);font-size:.87rem;padding:16px">Error generating recommendations. Check GEMINI_API_KEY in Render.</div>
+    <div id="ss-error" style="display:none"><div class="ss-error-box" id="ss-error-msg">Error generating recommendations. Check GEMINI_API_KEY in Render.</div></div>
   </div>
 </div>
 
@@ -2092,21 +2111,29 @@ async function saveScanResult(){
 /* ════════════════════════════════════════════
    SWEET SPOT ORACLE (Gemini)
    ════════════════════════════════════════════ */
-let _ssEmail='', _ssName='';
+let _ssEmail='', _ssName='', _ssRawText='';
 async function runSweetSpots(email, name){
-  _ssEmail=email; _ssName=name;
+  _ssEmail=email; _ssName=name; _ssRawText='';
   document.getElementById('sweetspot-overlay').classList.add('open');
-  document.getElementById('ss-loading').style.display='block';
+  document.getElementById('ss-loading').style.display='none';
+  document.getElementById('ss-skeleton').style.display='block';
   document.getElementById('ss-results').style.display='none';
   document.getElementById('ss-error').style.display='none';
   try{
     const res=await fetch('/api/ai/sweet-spots',{method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+ADMIN_TOKEN},
       body:JSON.stringify({client_email:email})});
-    if(!res.ok) throw new Error(res.status);
-    const {recommendations, client_name}=await res.json();
+    const data=await res.json();
+    if(!res.ok || data.ok===false){
+      const msg=data.error||data.message||('Request failed: '+res.status);
+      document.getElementById('ss-skeleton').style.display='none';
+      document.getElementById('ss-error-msg').textContent=msg;
+      document.getElementById('ss-error').style.display='block';
+      return;
+    }
+    const {recommendations, client_name}=data;
     document.getElementById('ss-client-name').textContent='Recommendations for '+client_name+' — pushed live to portal';
-    document.getElementById('ss-cards').innerHTML=recommendations.map(function(r){
+    const cards=recommendations.map(function(r){
       const urgColors={high:'red',medium:'gold',low:'muted'};
       const availBadge=r.seats_available!==undefined
         ?'<span class="deal-avail-badge">'+r.seats_available+' seats found</span>':
@@ -2123,18 +2150,75 @@ async function runSweetSpots(email, name){
         +availBadge
         +'<span class="badge badge-'+(urgColors[r.urgency]||'muted')+'">'+esc(r.urgency||'')+'</span>'
         +'</div>'
-        +'<div class="deal-why">'+esc(r.why||'')+'</div>'
+        +'<div class="deal-why">'+ssRenderMarkdown(r.why||'')+'</div>'
         +'<div class="deal-actions">'+bookBtn+'</div>'
         +'</div>';
-    }).join('');
-    document.getElementById('ss-loading').style.display='none';
+    });
+    document.getElementById('ss-cards').innerHTML=cards.join('');
+    // Build plain-text summary for copy/insert
+    _ssRawText='Sweet Spots for '+client_name+'\n\n'+recommendations.map(function(r,i){
+      return (i+1)+'. '+(r.origin?r.origin+' → ':'')+( r.destination_city||r.destination||'')+'\n'
+        +'   Program: '+r.program+' · '+r.cabin+'\n'
+        +'   Points: '+Number(r.points_needed||0).toLocaleString()+(r.cpp?' ('+Number(r.cpp).toFixed(1)+'cpp)':'')+'\n'
+        +(r.why?'   Why: '+r.why+'\n':'');
+    }).join('\n');
+    document.getElementById('ss-skeleton').style.display='none';
     document.getElementById('ss-results').style.display='block';
     toast('✓ Sweet spots generated for '+client_name);
   }catch(e){
-    document.getElementById('ss-loading').style.display='none';
+    document.getElementById('ss-skeleton').style.display='none';
+    document.getElementById('ss-error-msg').textContent='Network error: '+(e.message||'Failed to reach server. Check connection.');
     document.getElementById('ss-error').style.display='block';
   }
 }
+
+function ssRenderMarkdown(text){
+  if(!text) return '';
+  // Escape HTML first
+  let s=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // ## headings
+  s=s.replace(/^##\s+(.+)$/gm,'<h3 style="font-size:14px;font-weight:700;color:var(--accent);margin:10px 0 4px">$1</h3>');
+  // **bold**
+  s=s.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  // bullet lists: lines starting with - or *
+  s=s.replace(/((?:^[-*]\s+.+\n?)+)/gm,function(block){
+    const items=block.trim().split('\n').map(function(line){
+      return '<li>'+line.replace(/^[-*]\s+/,'')+'</li>';
+    }).join('');
+    return '<ul style="margin:4px 0 4px 16px;padding:0">'+items+'</ul>';
+  });
+  // Line breaks
+  s=s.replace(/\n/g,'<br>');
+  return s;
+}
+
+async function ssCopyResults(){
+  if(!_ssRawText){toast('Nothing to copy');return;}
+  try{
+    await navigator.clipboard.writeText(_ssRawText);
+    const btn=document.getElementById('ss-copy-btn');
+    const orig=btn.textContent;
+    btn.textContent='✓ Copied'; btn.disabled=true;
+    setTimeout(function(){btn.textContent=orig;btn.disabled=false;},2000);
+  }catch(e){toast('Copy failed');}
+}
+
+function ssInsertToPlan(){
+  if(!_ssRawText){toast('No sweet spots to insert');return;}
+  const overlay=document.getElementById('plan-overlay');
+  const isOpen=overlay&&overlay.classList.contains('open');
+  function doInsert(){
+    const ta=document.getElementById('plan-overview');
+    if(ta){ ta.value=_ssRawText; ta.dispatchEvent(new Event('input')); }
+    const btn=document.getElementById('ss-insert-btn');
+    const orig=btn.textContent;
+    btn.textContent='✓ Inserted'; btn.disabled=true;
+    setTimeout(function(){btn.textContent=orig;btn.disabled=false;},2000);
+  }
+  if(isOpen){ doInsert(); }
+  else{ if(typeof openPlan==='function') openPlan(); setTimeout(doInsert,200); }
+}
+
 function closeSweetSpots(){ document.getElementById('sweetspot-overlay').classList.remove('open'); }
 function rerunSweetSpots(){ if(_ssEmail) runSweetSpots(_ssEmail,_ssName); }
 
