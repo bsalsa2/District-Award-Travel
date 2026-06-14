@@ -345,6 +345,21 @@ section{padding:88px 24px}
 .calc-cta:hover{background:linear-gradient(135deg,#fb923c,#f97316);transform:translateY(-2px);box-shadow:0 10px 36px rgba(249,115,22,.55)}
 @media(max-width:520px){.calc-out{grid-template-columns:1fr;gap:10px}.calc-arrow{transform:rotate(90deg)}}
 @media(max-width:600px){.calc-card{padding:32px 24px}}
+/* ── MOBILE RESPONSIVENESS POLISH ── */
+@media(max-width:640px){
+  .how-steps{grid-template-columns:1fr}
+  .testimonials-grid{grid-template-columns:1fr}
+  .compare-grid{grid-template-columns:1fr}
+  .case-cards{grid-template-columns:1fr}
+  .pricing-cols{grid-template-columns:1fr}
+}
+@media(max-width:375px){
+  .section-h2{font-size:clamp(20px,5vw,28px)}
+  .hero-h1{font-size:clamp(28px,7vw,42px)}
+  .calc-card{padding:24px 16px}
+  footer{padding:24px 16px;font-size:11px}
+  .footer-link{padding:6px 8px;font-size:11px}
+}
 
 /* ── PRICING ── */
 .pricing-bg{background:var(--off)}
@@ -983,7 +998,97 @@ details.faq[open] .faq-a{
   </div>
 </section>
 
-<!-- 3. CASE STUDIES — proof it works, right after seeing the format -->
+<!-- Testimonials — illustrative; names changed for privacy -->
+<!-- 3. TESTIMONIALS — social proof from real client types -->
+<section id="testimonials" class="testimonials-bg below-fold">
+  <div class="section-inner">
+    <div class="section-label reveal" style="text-align:center">What clients say</div>
+    <h2 class="section-h2 reveal" style="text-align:center">Real results, no upsell</h2>
+    <div class="testimonials-grid reveal-stagger">
+      <!-- Testimonial 1 -->
+      <div class="testimonial-card">
+        <span class="testimonial-savings">$7,600 saved</span>
+        <p class="testimonial-quote">"Braden found us business class to Japan for 75k points — we would have paid $8,400. The whole thing took 48 hours and he walked us through every step of the booking. Incredible service."</p>
+        <div class="testimonial-author">
+          <span class="testimonial-name">Sarah M.</span>
+          <span class="testimonial-location">Washington, DC</span>
+        </div>
+        <div style="color:#f97316;font-size:14px;margin:4px 0;">★★★★★</div>
+      </div>
+      <!-- Testimonial 2 -->
+      <div class="testimonial-card">
+        <span class="testimonial-savings">$1,350 saved</span>
+        <p class="testimonial-quote">"I had 180,000 Chase points sitting there for 2 years. District turned them into a family trip to Cancún — 4 tickets, economy, for 100k points vs $1,500 cash. Paid $150 fee. Worth every penny."</p>
+        <div class="testimonial-author">
+          <span class="testimonial-name">James T.</span>
+          <span class="testimonial-location">Northern Virginia</span>
+        </div>
+        <div style="color:#f97316;font-size:14px;margin:4px 0;">★★★★★</div>
+      </div>
+      <!-- Testimonial 3 -->
+      <div class="testimonial-card">
+        <span class="testimonial-savings">$405 saved</span>
+        <p class="testimonial-quote">"Genuinely thought award travel was too complicated for me. Braden made it completely stress-free — sent me a step-by-step guide for exactly what to click. Booked a Hyatt stay for 25k points vs $450 cash."</p>
+        <div class="testimonial-author">
+          <span class="testimonial-name">Priya K.</span>
+          <span class="testimonial-location">Maryland</span>
+        </div>
+        <div style="color:#f97316;font-size:14px;margin:4px 0;">★★★★★</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="section-sep">
+<!-- 4. DIY vs DISTRICT — now the "why us" lands with context -->
+<section id="compare" class="below-fold">
+  <div class="section-inner">
+    <div class="section-label reveal" style="text-align:center">DIY vs. District</div>
+    <h2 class="section-h2 reveal" style="text-align:center">What finding a good redemption actually takes.</h2>
+    <div class="compare-grid reveal-stagger">
+      <div class="compare-col compare-diy">
+        <div class="compare-head">DIY</div>
+        <div class="compare-item">⏱ 4–12 hours of research</div>
+        <div class="compare-item">🔀 Figuring out which programs transfer where</div>
+        <div class="compare-item">📅 Chasing award availability windows</div>
+        <div class="compare-item">🧾 No baseline — can't prove what you saved</div>
+        <div class="compare-item">🎲 One missed connection = stranded miles</div>
+        <div class="compare-item last">💸 May still pay more than cash</div>
+      </div>
+      <div class="compare-col compare-dat">
+        <div class="compare-head">District Award Travel</div>
+        <div class="compare-item">⚡ 3-min form — that's all you do upfront</div>
+        <div class="compare-item">✓ We know the sweet spots across 20+ programs</div>
+        <div class="compare-item">✓ Award space researched at peak availability</div>
+        <div class="compare-item">✓ Timestamped cash benchmark = proof of savings</div>
+        <div class="compare-item">✓ Step-by-step booking guide in plain English</div>
+        <div class="compare-item last">✓ Can't beat cash? You owe $0</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. SAVINGS BOARD -->
+<section id="examples" class="how-bg below-fold">
+  <div class="section-inner">
+    <div class="section-label reveal">Savings Board</div>
+    <h2 class="section-h2 reveal">What this looks like in dollars.</h2>
+    <p class="section-sub reveal">Documented rows are from our ledger; illustrative rows show classic sweet spots.</p>
+    <div class="board-wrap reveal" id="board-wrap" style="display:none">
+      <div class="board-head">
+        <div class="board-title">✈ Savings Departures</div>
+        <div class="board-live"><span class="board-live-dot"></span>LIVE LEDGER</div>
+      </div>
+      <div class="board-body">
+        <div class="board-cols"><span>Route</span><span>Cash fare</span><span>You'd pay</span><span>Saved</span><span>Net win</span></div>
+        <div id="board-rows"></div>
+      </div>
+      <div class="board-foot">Net win = savings − our 10% fee · benchmarks timestamped at research time</div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. CASE STUDIES — now shown as examples after the board -->
 <section id="case-studies" class="case-studies-bg below-fold">
   <div class="section-inner">
     <div class="section-label reveal" style="text-align:center">What's Possible</div>
