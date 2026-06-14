@@ -729,6 +729,12 @@ details.faq[open] .faq-a{
   padding:6px 14px;border-radius:20px;white-space:nowrap;
 }
 
+/* ── FAQ SMOOTH ACCORDION (div-based items) ── */
+.faq-answer{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+.faq-answer.open{max-height:400px;}
+.faq-q::after{content:'+';float:right;color:var(--accent);font-size:1.2em;transition:transform .3s;}
+.faq-q.open::after{content:'−';}
+
 /* ── TESTIMONIALS ── */
 .testimonials-bg{background:var(--bg)}
 .testimonials-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px}
@@ -1113,6 +1119,7 @@ details.faq[open] .faq-a{
           <span class="testimonial-name">Sarah M.</span>
           <span class="testimonial-location">Washington, DC</span>
         </div>
+        <div style="color:#f97316;font-size:14px;margin:4px 0;">★★★★★</div>
       </div>
       <!-- Testimonial 2 -->
       <div class="testimonial-card">
@@ -1122,6 +1129,7 @@ details.faq[open] .faq-a{
           <span class="testimonial-name">James T.</span>
           <span class="testimonial-location">Northern Virginia</span>
         </div>
+        <div style="color:#f97316;font-size:14px;margin:4px 0;">★★★★★</div>
       </div>
       <!-- Testimonial 3 -->
       <div class="testimonial-card">
@@ -1131,6 +1139,7 @@ details.faq[open] .faq-a{
           <span class="testimonial-name">Priya K.</span>
           <span class="testimonial-location">Maryland</span>
         </div>
+        <div style="color:#f97316;font-size:14px;margin:4px 0;">★★★★★</div>
       </div>
     </div>
   </div>
@@ -1274,6 +1283,10 @@ details.faq[open] .faq-a{
         <summary>How quickly can you find options for my trip?</summary>
         <div class="faq-a">Typically 24–48 hours for domestic trips, 48–72 hours for international itineraries. Complex multi-city or premium cabin searches may take a bit longer, but we'll keep you updated throughout.</div>
       </details>
+      <div class="faq-item">
+        <div class="faq-q">How long does it take to get my options?</div>
+        <div class="faq-answer"><p>Most clients receive their options within 24–48 hours. Complex international routes or hard-to-find award space may take a bit longer. We'll keep you updated.</p></div>
+      </div>
     </div>
   </div>
 </section>
@@ -1328,7 +1341,9 @@ details.faq[open] .faq-a{
       <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px rgba(74,222,128,.6);display:inline-block"></span>
       <span style="font-size:11px;color:rgba(255,255,255,.4);font-weight:600">All systems operational</span>
     </div>
+    <div style="display:flex;gap:16px;justify-content:center;margin:12px 0;"><a href="#" style="color:var(--muted);text-decoration:none;font-size:16px;" aria-label="Twitter">𝕏</a><a href="#" style="color:var(--muted);text-decoration:none;font-size:16px;" aria-label="Instagram">◻</a><a href="#" style="color:var(--muted);text-decoration:none;font-size:16px;" aria-label="LinkedIn">in</a></div>
     © 2026 District Award Travel<br><span>Not affiliated with any airline or hotel program.</span>
+    <div style="margin-top:8px;font-size:12px;color:var(--muted);"><a href="privacy.html" style="color:var(--muted);">Privacy Policy</a> · <a href="terms.html" style="color:var(--muted);">Terms</a></div>
   </div>
 </footer>
 
@@ -1795,6 +1810,19 @@ function countUp(el,target,fmt,dur){var start=null,d=dur||1500;function step(ts)
     html+='<span style="left:'+x.toFixed(2)+'%;top:'+y.toFixed(2)+'%;--td:'+td+';animation-duration:'+dur+'"></span>';
   }
   container.innerHTML=html;
+})();
+/* FAQ div-based accordion toggle */
+(function(){
+  document.querySelectorAll('.faq-q').forEach(function(q){
+    q.style.cursor='pointer';
+    q.addEventListener('click',function(){
+      var answer=q.nextElementSibling;
+      if(!answer||!answer.classList.contains('faq-answer'))return;
+      var isOpen=answer.classList.contains('open');
+      q.classList.toggle('open',!isOpen);
+      answer.classList.toggle('open',!isOpen);
+    });
+  });
 })();
 /* hidden admin nav — 5 taps on footer logo or Ctrl+Shift+A */
 (function(){
