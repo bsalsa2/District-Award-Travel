@@ -269,14 +269,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .dep-checklist-item label{cursor:pointer;line-height:1.5;color:var(--text)}
 .dep-checklist-item.checked label{text-decoration:line-through;color:var(--dim)}
 
-/* ── TRIP STATUS STEPPER (buildStepper) ── */
-.trip-stepper{display:flex;align-items:center;gap:0;margin-bottom:14px;}
-.trip-step{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;position:relative;z-index:1;}
-.trip-step.done{background:var(--accent);color:#fff;}
-.trip-step.active{background:var(--accent);color:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.25),0 0 0 6px rgba(249,115,22,.1);}
-.trip-step.future{background:rgba(255,255,255,.08);color:var(--muted);}
-.trip-step-line{flex:1;height:2px;background:rgba(255,255,255,.08);}
-.trip-step-line.done{background:var(--accent);}
+/* ── TRIP STATUS STEPPER (buildStepper) — removed; consolidated into .trip-stepper below ── */
 
 /* ── SAVINGS HERO POP animation ── */
 @keyframes savingsPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
@@ -329,12 +322,20 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 /* ── TRIP STEPPER ── */
 .trip-stepper{padding:12px 24px 18px;border-top:1px solid var(--border)}
 .stepper-steps{display:flex;align-items:center;gap:0}
-.step-dot{width:14px;height:14px;border-radius:50%;background:#444;border:2px solid #444;flex-shrink:0;transition:background .2s,border-color .2s}
+/* .trip-step classes used by buildStepper() */
+.trip-step{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;position:relative;z-index:1;}
+.trip-step.done{background:var(--accent);color:#fff;}
+.trip-step.active{background:var(--accent);color:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.25),0 0 0 6px rgba(249,115,22,.1);}
+.trip-step.future{background:var(--border2);color:var(--dim);border:1px solid var(--border2);}
+.trip-step-line{flex:1;height:2px;background:var(--border2);}
+.trip-step-line.done{background:var(--accent);}
+/* Legacy step-dot system */
+.step-dot{width:14px;height:14px;border-radius:50%;background:var(--border2);border:2px solid var(--border2);flex-shrink:0;transition:background .2s,border-color .2s}
 .step-dot.done{background:#f97316;border-color:#f97316}
 .step-dot.active{background:#f97316;border-color:#f97316;box-shadow:0 0 0 4px rgba(249,115,22,.3),0 0 0 8px rgba(249,115,22,.1);animation:stepPulse 1.8s ease-in-out infinite}
 @keyframes stepPulse{0%,100%{box-shadow:0 0 0 4px rgba(249,115,22,.3),0 0 0 8px rgba(249,115,22,.1)}50%{box-shadow:0 0 0 6px rgba(249,115,22,.4),0 0 0 12px rgba(249,115,22,.15)}}
 @media(prefers-reduced-motion:reduce){.step-dot.active{animation:none}}
-.step-line{flex:1;height:2px;background:#444}
+.step-line{flex:1;height:2px;background:var(--border2)}
 .step-line.done{background:#f97316;box-shadow:0 0 6px rgba(249,115,22,.5)}
 .stepper-labels{display:flex;justify-content:space-between;margin-top:5px;padding:0 1px}
 .step-label{font-size:10px;color:var(--dim);text-align:center;width:14px;white-space:nowrap;transform:translateX(-50%);margin-left:7px}
@@ -637,7 +638,7 @@ body.light-mode{
           <div>
             <div class="refer-title">🎁 Refer a Friend</div>
             <div class="refer-sub">Earn $50 credit when your friend books their first trip</div>
-            <div id="refer-url-wrap" style="display:none;margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div id="refer-url-wrap" style="display:none;margin-top:12px;gap:8px;align-items:center;flex-wrap:wrap">
               <input id="refer-url" readonly onclick="navigator.clipboard.writeText(this.value).then(function(){showToast('Copied!','success');});" style="flex:1;min-width:180px;background:rgba(0,0,0,.3);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:12px;color:rgba(245,240,234,.8);cursor:pointer;outline:none" value="">
               <button onclick="var u=document.getElementById('refer-url');if(u)navigator.clipboard.writeText(u.value).then(function(){showToast('Link copied!','success');});" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px;white-space:nowrap;">Copy</button>
             </div>
