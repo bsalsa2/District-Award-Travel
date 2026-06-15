@@ -117,12 +117,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .btn-out{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font);font-weight:500;transition:.15s}
 .btn-out:hover{color:var(--red);background:rgba(220,38,38,.06)}
 
-.main{flex:1;min-width:0;overflow-y:auto}
-.panel{display:none;padding:36px 44px;max-width:960px}
+.main{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column}
+.panel{display:none;padding:32px 24px;flex:1}
 .panel.active{display:block}
-.phead{margin-bottom:28px}
+.phead{margin-bottom:28px;max-width:1000px;margin-left:auto;margin-right:auto}
 .phead h1{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
 .phead p{font-size:14px;color:var(--muted)}
+@media(min-width:768px){.panel{padding:36px 44px}}
+@media(min-width:1280px){.main>*{width:100%;max-width:1140px;margin-left:auto;margin-right:auto;padding-left:44px;padding-right:44px}}
 
 /* ── SAVINGS HERO ── */
 .savings-hero{
@@ -181,14 +183,14 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 @media(max-width:600px){.savings-hero{padding:24px 22px}.sh-amount{font-size:44px}.sh-right{text-align:left}}
 
 /* ── STAT CARDS ── */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
-.stat{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 24px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px}
+.stat{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 18px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden}
 .stat::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--accent);border-radius:12px 0 0 12px}
 .stat:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.1),0 0 0 1px var(--accent-border),0 0 16px rgba(249,115,22,.08)}
-.stat-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px}
-.stat-val{font-size:28px;font-weight:900;letter-spacing:-1.5px;line-height:1}
+.stat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
+.stat-val{font-size:clamp(20px,4vw,28px);font-weight:900;letter-spacing:-1.5px;line-height:1}
 .stat-val.green{color:var(--green)}.stat-val.orange{color:var(--accent)}.stat-val.blue{color:var(--blue)}
-.stat-sub{font-size:12px;color:var(--muted);margin-top:8px}
+.stat-sub{font-size:11px;color:var(--muted);margin-top:6px}
 
 /* ── STATUS BAR ── */
 .status-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-bottom:28px;box-shadow:var(--shadow)}
@@ -213,18 +215,35 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15
 .msg-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
 .msg-time{font-size:12px;color:var(--dim)}
 .msg-body{font-size:14px;color:var(--text);line-height:1.6;white-space:pre-wrap}
-/* ── PLAN CARD ── */
-.plan-card{background:var(--white);border:1px solid var(--accent-border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px}
-.plan-hd{background:linear-gradient(135deg,#fff7ed,#ffedd5);padding:18px 22px;border-bottom:1px solid var(--accent-border)}
+/* ── PLAN CARD (boarding-pass style) ── */
+.plan-card{background:var(--white);border:1px solid var(--accent-border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px;display:grid;grid-template-columns:1fr 28px 1fr}
+.plan-hd{background:linear-gradient(135deg,#fff7ed,#ffedd5);padding:18px 22px;border-bottom:1px solid var(--accent-border);grid-column:1/-1}
 .plan-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:5px;display:flex;align-items:center;gap:7px}
 .plan-eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
 .plan-title{font-size:18px;font-weight:800;letter-spacing:-.3px;line-height:1.25}
 .plan-route{font-size:13px;color:var(--muted);margin-top:3px}
-.plan-body{padding:20px 22px}
-.plan-overview{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap;margin-bottom:18px}
-.plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:16px;padding-top:18px;border-top:1px solid var(--border)}
-.plan-field-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:4px}
-.plan-field-val{font-size:15px;font-weight:700}
+.plan-left{background:linear-gradient(135deg,#fff3e0,#ffe0b2);padding:18px 16px;display:flex;flex-direction:column;justify-content:center}
+.plan-left-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(249,115,22,.7);margin-bottom:4px}
+.plan-route-big{font-size:28px;font-weight:900;letter-spacing:-2px;line-height:1;color:var(--accent);margin-bottom:4px}
+.plan-cabin-txt{font-size:12px;color:var(--muted);margin-bottom:12px}
+.plan-pts-box{display:flex;align-items:center;gap:6px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.25);border-radius:8px;padding:8px 12px}
+.plan-pts-num{font-size:16px;font-weight:900;color:var(--accent);letter-spacing:-1px;line-height:1}
+.plan-pts-lbl{font-size:9px;color:var(--muted);line-height:1.3;font-weight:600}
+.plan-tear{background:var(--card);border-left:2px dashed rgba(249,115,22,.2);border-right:2px dashed rgba(249,115,22,.2);position:relative}
+.plan-tear::before,.plan-tear::after{content:'';position:absolute;width:16px;height:16px;background:var(--white);border-radius:50%;border:1px solid rgba(249,115,22,.15);z-index:1;left:50%;transform:translateX(-50%)}
+.plan-tear::before{top:-8px} .plan-tear::after{bottom:-8px}
+.plan-body{padding:18px 16px;display:flex;flex-direction:column;justify-content:center}
+.plan-body-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.plan-body-row:last-child{border-bottom:none}
+.plan-body-label{color:var(--muted);font-weight:500}
+.plan-body-val{font-weight:700;color:var(--text)}
+.plan-save-box{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-top:8px;background:rgba(34,197,74,.08);border:1px solid rgba(34,197,74,.2);border-radius:8px}
+.plan-save-lbl{font-size:11px;font-weight:700;color:var(--green)}
+.plan-save-val{font-size:16px;font-weight:900;color:var(--green);letter-spacing:-1px}
+.plan-overview{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap;margin-bottom:12px;grid-column:1/-1;padding:0 18px;padding-top:12px;border-top:1px solid var(--border)}
+.plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:12px;padding:12px 18px 0;grid-column:1/-1;border-top:1px solid var(--border)}
+.plan-field-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:4px}
+.plan-field-val{font-size:14px;font-weight:700}
 .plan-field-val.green{color:var(--green)}.plan-field-val.blue{color:var(--blue)}
 .msg-plan-link{margin-top:14px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:8px 14px}
 
@@ -1197,9 +1216,45 @@ function renderStatusBar(elId,status){
 
 function fmtTime(s){if(!s)return '';const d=new Date(s);if(isNaN(d))return esc(s);return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 
-// One advisor plan rendered as a rich card. `compact` drops the overview text.
+// One advisor plan rendered as boarding-pass card. `compact` drops the overview text.
 function renderPlanCard(p,compact){
   const route=p.dest?('Plan for '+esc(p.dest)):'';
+  const ov=(!compact&&p.overview)?`<div class="plan-overview">${esc(p.overview)}</div>`:'';
+
+  // If plan has options array, render each as a boarding-pass card
+  if(p.options&&Array.isArray(p.options)&&p.options.length){
+    const optHTML=p.options.map(opt=>`
+      <div class="plan-card" style="margin-bottom:16px">
+        <div class="plan-hd" style="grid-column:1/-1;padding:16px 18px">
+          <div class="plan-eyebrow"><span class="dot"></span>Option: ${esc(opt.title||'Award option')}</div>
+          <div class="plan-title" style="font-size:16px">${esc(opt.title||'Your award option')}</div>
+        </div>
+        <div class="plan-left">
+          ${opt.type?`<div class="plan-left-label">${esc(opt.type)}</div>`:''}
+          ${opt.route?`<div class="plan-route-big">${esc(opt.route)}</div>`:''}
+          ${opt.cabin?`<div class="plan-cabin-txt">${esc(opt.cabin)}</div>`:''}
+          ${opt.points?`<div class="plan-pts-box"><div class="plan-pts-num">${esc(opt.points)}</div><div class="plan-pts-lbl">pts<br>${opt.program?esc(opt.program):'Points'}</div></div>`:''}
+        </div>
+        <div class="plan-tear"></div>
+        <div class="plan-body">
+          ${opt.program?`<div class="plan-body-row"><span class="plan-body-label">Program</span><span class="plan-body-val">${esc(opt.program)}</span></div>`:''}
+          ${opt.value?`<div class="plan-body-row"><span class="plan-body-label">Cash price</span><span class="plan-body-val">${esc(opt.value)}</span></div>`:''}
+          ${opt.notes?`<div style="font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic">${esc(opt.notes)}</div>`:''}
+        </div>
+      </div>
+    `).join('');
+    return `<div class="plan-card" style="display:block;background:none;border:none;box-shadow:none;margin-bottom:0">
+      <div class="plan-hd" style="grid-column:auto;background:transparent;border:none;padding:0 0 16px 0">
+        <div class="plan-eyebrow"><span class="dot"></span>Your advisor's plan</div>
+        <div class="plan-title">${esc(p.title||'Your award plan')}</div>
+        ${route?`<div class="plan-route">${route}</div>`:''}
+      </div>
+      ${ov}
+      ${optHTML}
+    </div>`;
+  }
+
+  // Fallback: single option or basic plan
   const fields=[];
   if(p.points)fields.push(['Points','blue',fmtNum(String(p.points).replace(/[^0-9]/g,''))||esc(p.points)]);
   if(p.value)fields.push(['Est. Value','green',esc(p.value)]);
@@ -1207,14 +1262,14 @@ function renderPlanCard(p,compact){
   if(p.cabin)fields.push(['Cabin','',esc(p.cabin)]);
   if(p.dates)fields.push(['Dates','',esc(p.dates)]);
   const grid=fields.length?`<div class="plan-grid">${fields.map(f=>`<div><div class="plan-field-label">${f[0]}</div><div class="plan-field-val ${f[1]}">${f[2]}</div></div>`).join('')}</div>`:'';
-  const ov=(!compact&&p.overview)?`<div class="plan-overview">${esc(p.overview)}</div>`:'';
+
   return `<div class="plan-card">
     <div class="plan-hd">
       <div class="plan-eyebrow"><span class="dot"></span>Your advisor's plan</div>
       <div class="plan-title">${esc(p.title||'Your award plan')}</div>
       ${route?`<div class="plan-route">${route}</div>`:''}
     </div>
-    <div class="plan-body">${ov}${grid}</div>
+    ${ov}${grid}
   </div>`;
 }
 
