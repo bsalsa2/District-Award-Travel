@@ -279,18 +279,48 @@
     transition:all .15s; margin-bottom:16px; }
   .plan-add-btn:hover { border-color:var(--accent); color:var(--accent); background:var(--accent-dim); }
   /* option inline preview */
-  .opt-preview { background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); border-radius:10px; padding:14px 16px;
-    margin-top:10px; color:#fff; font-size:.78rem; display:none; }
+  /* ── Boarding-Pass Style Option Preview ── */
+  .opt-preview { display:none; margin-top:14px; }
   .opt-preview.visible { display:block; }
   .opt-preview-label { font-size:.6rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
-    color:rgba(255,255,255,.5); margin-bottom:8px; }
-  .opt-preview-title { font-size:.95rem; font-weight:700; margin-bottom:6px; color:#fff; }
-  .opt-preview-row { display:flex; gap:20px; margin-bottom:4px; }
-  .opt-preview-stat { }
-  .opt-preview-stat-label { font-size:.6rem; color:rgba(255,255,255,.5); text-transform:uppercase; letter-spacing:.06em; }
-  .opt-preview-stat-value { font-size:.88rem; font-weight:700; color:#facc15; margin-top:1px; }
-  .opt-preview-note { font-size:.68rem; color:rgba(255,255,255,.4); margin-top:8px; border-top:1px solid rgba(255,255,255,.1);
-    padding-top:6px; font-style:italic; }
+    color:var(--accent); margin-bottom:8px; }
+  /* boarding pass card inside opt-preview */
+  .opt-bp { border:1px solid rgba(249,115,22,.25); border-radius:14px; overflow:hidden;
+    display:grid; grid-template-columns:1fr 28px 1fr;
+    box-shadow:0 8px 32px rgba(0,0,0,.4),0 0 40px rgba(249,115,22,.05); }
+  .opt-bp-left { background:linear-gradient(135deg,#1c0f05,#2d1507); padding:20px 18px; color:#fff; }
+  .opt-bp-type { font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase;
+    color:rgba(251,146,60,.7); margin-bottom:4px; }
+  .opt-bp-route { font-size:32px; font-weight:900; letter-spacing:-2px; line-height:1;
+    background:linear-gradient(135deg,#fff,rgba(255,255,255,.8));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:4px; }
+  .opt-bp-cabin { font-size:11px; color:rgba(255,255,255,.55); margin-bottom:14px; }
+  .opt-bp-pts { display:flex; align-items:center; gap:7px;
+    background:rgba(249,115,22,.15); border:1px solid rgba(249,115,22,.25);
+    border-radius:8px; padding:8px 12px; }
+  .opt-bp-pts-val { font-size:18px; font-weight:900; color:#fb923c; letter-spacing:-1px; line-height:1; }
+  .opt-bp-pts-lbl { font-size:10px; color:rgba(255,255,255,.55); line-height:1.4; }
+  .opt-bp-tear { background:var(--card);
+    border-left:2px dashed rgba(249,115,22,.2); border-right:2px dashed rgba(249,115,22,.2);
+    position:relative; }
+  .opt-bp-tear::before,.opt-bp-tear::after { content:''; position:absolute;
+    width:18px; height:18px; background:var(--bg); border-radius:50%;
+    border:1px solid rgba(249,115,22,.15); z-index:1; left:50%; transform:translateX(-50%); }
+  .opt-bp-tear::before{top:-9px} .opt-bp-tear::after{bottom:-9px}
+  .opt-bp-right { padding:20px 16px; display:flex; flex-direction:column; justify-content:center; background:var(--card); }
+  .opt-bp-row { display:flex; justify-content:space-between; align-items:center;
+    padding:7px 0; border-bottom:1px solid rgba(255,255,255,.06); font-size:12px; }
+  .opt-bp-row:last-child { border-bottom:none; }
+  .opt-bp-rl { color:var(--muted); }
+  .opt-bp-rv { font-weight:700; color:var(--text); }
+  .opt-bp-save { display:flex; justify-content:space-between; align-items:center;
+    padding:10px 12px; margin-top:8px;
+    background:rgba(74,222,128,.06); border:1px solid rgba(74,222,128,.18); border-radius:8px; }
+  .opt-bp-save-lbl { font-size:11px; font-weight:700; color:#4ade80; }
+  .opt-bp-save-val { font-size:18px; font-weight:900; color:#4ade80; letter-spacing:-1px;
+    text-shadow:0 0 16px rgba(74,222,128,.3); }
+  .opt-bp-notes { font-size:.68rem; color:var(--muted); margin-top:8px; font-style:italic; line-height:1.5; padding-top:6px; border-top:1px solid rgba(255,255,255,.08); }
+  .opt-bp-footer { font-size:.6rem; color:var(--dim); margin-top:6px; text-align:center; }
   /* research notes badge */
   .notes-badge { display:inline-block; font-size:.8rem; cursor:default; position:relative; }
   .notes-badge[title]:hover::after { content:attr(data-tip); position:absolute; left:50%; transform:translateX(-50%);
@@ -2596,17 +2626,27 @@ function addPlanOption(tpl, vals){
     +'</div>'
     +'<img id="'+id+'-img-preview" style="display:none;max-width:100%;max-height:120px;border-radius:8px;margin-top:8px;object-fit:cover" alt="Option image"></div>'
     +'<div class="opt-preview" id="'+id+'-preview">'
-    +'<div class="opt-preview-label">✦ Client Preview</div>'
-    +'<div class="opt-preview-title" id="'+id+'-pv-title">'+esc(tmpl.title)+'</div>'
-    +'<div style="font-size:.72rem;color:rgba(255,255,255,.55);margin-bottom:8px" id="'+id+'-pv-route">'+esc(tmpl.route||'')+'</div>'
-    +'<div class="opt-preview-row">'
-    +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Points</div><div class="opt-preview-stat-value" id="'+id+'-pv-points">'+esc(tmpl.points||'—')+'</div></div>'
-    +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Program</div><div class="opt-preview-stat-value" id="'+id+'-pv-program">'+esc(tmpl.program||'—')+'</div></div>'
-    +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Cash Value</div><div class="opt-preview-stat-value" id="'+id+'-pv-value">'+esc(tmpl.value||'—')+'</div></div>'
-    +'<div class="opt-preview-stat"><div class="opt-preview-stat-label">Cabin / Room</div><div class="opt-preview-stat-value" id="'+id+'-pv-cabin">'+esc(tmpl.cabin||'—')+'</div></div>'
+    +'<div class="opt-preview-label">✦ Boarding Pass Preview — Client View</div>'
+    +'<div class="opt-bp">'
+      +'<div class="opt-bp-left">'
+        +'<div class="opt-bp-type" id="'+id+'-pv-type">'+esc(tmpl.type||'Flight')+'</div>'
+        +'<div class="opt-bp-route" id="'+id+'-pv-route">'+esc(tmpl.route||'—')+'</div>'
+        +'<div class="opt-bp-cabin" id="'+id+'-pv-cabin">'+esc(tmpl.cabin||'—')+'</div>'
+        +'<div class="opt-bp-pts">'
+          +'<div class="opt-bp-pts-val" id="'+id+'-pv-points">'+esc(tmpl.points||'—')+'</div>'
+          +'<div class="opt-bp-pts-lbl">pts<br><span id="'+id+'-pv-program" style="color:rgba(255,255,255,.4);font-size:9px">'+esc(tmpl.program||'—')+'</span></div>'
+        +'</div>'
+      +'</div>'
+      +'<div class="opt-bp-tear"></div>'
+      +'<div class="opt-bp-right">'
+        +'<div class="opt-bp-row"><span class="opt-bp-rl">Option</span><span class="opt-bp-rv" id="'+id+'-pv-title">'+esc(tmpl.title)+'</span></div>'
+        +'<div class="opt-bp-row"><span class="opt-bp-rl">Program</span><span class="opt-bp-rv" id="'+id+'-pv-prog2">'+esc(tmpl.program||'—')+'</span></div>'
+        +'<div class="opt-bp-row"><span class="opt-bp-rl">Cash Price</span><span class="opt-bp-rv" id="'+id+'-pv-value">'+esc(tmpl.value||'—')+'</span></div>'
+        +'<div class="opt-bp-save"><span class="opt-bp-save-lbl">You Save</span><span class="opt-bp-save-val" id="'+id+'-pv-save">—</span></div>'
+        +'<div class="opt-bp-notes" id="'+id+'-pv-notes">'+esc(tmpl.notes||'')+'</div>'
+        +'<div class="opt-bp-footer">District Award Travel · Your portal</div>'
+      +'</div>'
     +'</div>'
-    +'<div style="font-size:.73rem;color:rgba(255,255,255,.55);margin-top:6px;font-style:italic" id="'+id+'-pv-notes">'+esc(tmpl.notes||'')+'</div>'
-    +'<div class="opt-preview-note">Sent directly to your client portal · District Award Travel</div>'
     +'</div>';
   document.getElementById('plan-options-list').appendChild(div);
 }
@@ -2661,18 +2701,29 @@ function _toggleOptPreview(id){
 }
 function _refreshOptPreview(id){
   var t=function(f){var el=document.getElementById(id+'-'+f);return el?el.value.trim():'';};
-  var set=function(f,v,fallback){var el=document.getElementById(id+'-pv-'+f);if(el)el.textContent=v||(fallback===false?'':('—'));};
-  set('title',t('title'));
-  set('points',t('points'));
-  set('program',t('program'));
-  set('value',t('value'));
-  set('cabin',t('cabin'));
-  var routeEl=document.getElementById(id+'-pv-route');
-  if(routeEl)routeEl.textContent=t('route');
-  var notesEl=document.getElementById(id+'-pv-notes');
-  if(notesEl)notesEl.textContent=t('notes');
+  var s=function(sfx,v){var el=document.getElementById(id+'-pv-'+sfx);if(el)el.textContent=v||'—';};
+  var title=t('title'), route=t('route'), cabin=t('cabin'), pts=t('points'), prog=t('program'), val=t('value'), notes=t('notes'), type=t('type');
+  var typeMap={'flight':'✈ Award Flight','hotel':'🏨 Hotel Stay','car':'🚗 Car Rental','cash':'💵 Cash Fallback',''  :'Option'};
+  s('type', typeMap[type]||type);
+  s('route', route||'Route / Property');
+  s('cabin', cabin);
+  s('points', pts);
+  s('program', prog);
+  s('prog2', prog);
+  s('title', title);
+  s('value', val);
+  s('notes', notes);
+  /* compute savings if cash value parses */
+  var saveEl=document.getElementById(id+'-pv-save');
+  if(saveEl){
+    var cashNum=parseFloat((val||'').replace(/[^0-9.]/g,''));
+    saveEl.textContent=(!isNaN(cashNum)&&cashNum>0)?('$'+cashNum.toLocaleString()):'—';
+  }
   var lbl=document.getElementById(id+'-label');
-  if(lbl)lbl.textContent=t('title')||'Option';
+  if(lbl)lbl.textContent=title||'Option';
+  /* update notes visibility */
+  var notesEl=document.getElementById(id+'-pv-notes');
+  if(notesEl)notesEl.style.display=notes?'':'none';
 }
 function _onOptImgChange(id){
   const input=document.getElementById(id+'-img-input');

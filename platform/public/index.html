@@ -408,7 +408,7 @@ details.faq[open]{border-color:rgba(249,115,22,.3);box-shadow:0 4px 20px rgba(24
 details.faq summary{cursor:pointer;list-style:none;padding:18px 22px;font-size:14px;font-weight:700;color:var(--text);display:flex;justify-content:space-between;align-items:center;gap:14px;user-select:none}
 details.faq summary::-webkit-details-marker{display:none}
 details.faq summary::after{content:'+';color:var(--accent);font-size:20px;font-weight:400;flex-shrink:0;line-height:1;transition:transform .3s cubic-bezier(.16,1,.3,1)}
-details.faq[open] summary::after{content:'+'}
+details.faq[open] summary::after{content:'−'}
 .faq-a{padding:0 22px 18px;font-size:14px;color:var(--muted);line-height:1.75}
 .faq-a a{color:var(--accent);text-decoration:underline}
 
@@ -865,15 +865,7 @@ details.faq[open] .faq-a{
       <a href="intake.html" class="btn btn-xl btn-hero">Apply free — takes 3 min →</a>
       <a href="#how-it-works" class="btn btn-lg btn-hero-ghost">How it works</a>
     </div>
-    <!-- Hero trust bar — key reassurances under CTA -->
-    <div class="hero-trust-pills" style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-      <span class="hero-trust-pill">🔒 No account logins required</span>
-      <span class="hero-trust-pill">💳 No credit card</span>
-      <span class="hero-trust-pill">⏱ Response within 48 hours</span>
-      <span class="hero-trust-pill">✈ 100% guided process</span>
-    </div>
-    <p class="hero-trust-line">No upfront cost &middot; No passwords &middot; Proven savings</p>
-    <div class="hero-trustbar">
+    <div class="hero-trustbar" style="margin-top:32px">
       <div class="hero-trust-item">
         <svg class="hero-trust-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1,9 5,13 15,3"/></svg>
         $0 upfront
@@ -986,11 +978,11 @@ details.faq[open] .faq-a{
         </div>
         <div class="bp-tear"></div>
         <div class="bp-right">
-          <div class="bp-row"><span class="bp-row-label">Points used</span><span class="bp-row-val">75k pts</span></div>
+          <div class="bp-row"><span class="bp-row-label">Points used</span><span class="bp-row-val">75,000 pts</span></div>
           <div class="bp-row"><span class="bp-row-label">Taxes &amp; fees</span><span class="bp-row-val">$11</span></div>
           <div class="bp-row"><span class="bp-row-label">Cash price</span><span class="bp-row-val">$4,280</span></div>
-          <div class="bp-savings-row"><span class="bp-savings-label">You save</span><span class="bp-savings-val">$3,415</span></div>
-          <div style="font-size:10px;font-weight:600;color:rgba(74,222,128,.55);letter-spacing:.07em;text-transform:uppercase;margin-top:8px;text-align:right">Proof of award space (sample)</div>
+          <div class="bp-savings-row"><span class="bp-savings-label">You save</span><span class="bp-savings-val">$4,269</span></div>
+          <div style="font-size:10px;font-weight:600;color:rgba(74,222,128,.55);letter-spacing:.07em;text-transform:uppercase;margin-top:8px;text-align:right">Gross savings · District fee 10% of this</div>
         </div>
       </div>
       <div class="bp-note">Award space is volatile — availability found at time of research. This is an illustrative example, not a guarantee.</div>
@@ -1008,7 +1000,7 @@ details.faq[open] .faq-a{
       <!-- Testimonial 1 -->
       <div class="testimonial-card">
         <span class="testimonial-savings">$7,600 saved</span>
-        <p class="testimonial-quote">"Braden found us business class to Japan for 75k points — we would have paid $8,400. The whole thing took 48 hours and he walked us through every step of the booking. Incredible service."</p>
+        <p class="testimonial-quote">"Braden found two business-class seats to Tokyo for 150,000 Chase points — we would have paid $8,560 in cash. Took 48 hours and he guided us through every step of booking. Incredible value."</p>
         <div class="testimonial-author">
           <span class="testimonial-name">Sarah M.</span>
           <span class="testimonial-location">Washington, DC</span>
@@ -1099,9 +1091,9 @@ details.faq[open] .faq-a{
       <div class="case-card">
         <div class="case-card-tag">Sample result</div>
         <div class="case-card-route">&#9992;&#65039; Washington DC &rarr; Tokyo</div>
-        <div class="case-card-class">Business Class</div>
-        <div class="case-card-savings">$4,144</div>
-        <div class="case-card-savings-label">saved</div>
+        <div class="case-card-class">Business Class · One-way</div>
+        <div class="case-card-savings">$4,269</div>
+        <div class="case-card-savings-label">gross savings</div>
         <div class="case-card-grid">
           <div class="case-card-item">
             <div class="case-card-item-label">Points Used</div>
@@ -1109,15 +1101,15 @@ details.faq[open] .faq-a{
           </div>
           <div class="case-card-item">
             <div class="case-card-item-label">Cash Price</div>
-            <div class="case-card-item-val">$4,200</div>
+            <div class="case-card-item-val">$4,280</div>
           </div>
           <div class="case-card-item">
             <div class="case-card-item-label">You Paid</div>
-            <div class="case-card-item-val">75k pts + $56 taxes</div>
+            <div class="case-card-item-val">75k pts + $11 taxes</div>
           </div>
           <div class="case-card-item">
-            <div class="case-card-item-label">Saved</div>
-            <div class="case-card-item-val green">$4,144</div>
+            <div class="case-card-item-label">Gross Savings</div>
+            <div class="case-card-item-val green">$4,269</div>
           </div>
         </div>
         <div class="case-card-disclaimer">Sample result &mdash; actual savings vary based on route, availability, and points balance.</div>
