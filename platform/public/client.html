@@ -2,1370 +2,509 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Client Portal — District Award Travel</title>
 <meta name="theme-color" content="#f97316">
 <meta name="robots" content="noindex">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#fafaf9;--white:#ffffff;--card:#f5f5f4;
+  --bg:#f8f7f5;--white:#ffffff;--card:#f4f3f1;
   --text:#1c1917;--muted:#78716c;--dim:#a8a29e;
-  --accent:#f97316;--accent-dim:rgba(249,115,22,.08);--accent-border:rgba(249,115,22,.2);
+  --accent:#f97316;--accent-dim:rgba(249,115,22,.09);--accent-border:rgba(249,115,22,.2);
   --border:#e7e5e4;--border2:#d6d3d1;
-  --green:#16a34a;--green-dim:rgba(22,163,74,.08);--blue:#2563eb;--red:#dc2626;
-  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --green:#16a34a;--red:#dc2626;
+  --shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.04);
   --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
 }
-body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
 
-/* ── BOOT SPLASH (shown while a saved session revalidates) ── */
+/* ── BOOT SPLASH ── */
 #boot{display:none;position:fixed;inset:0;z-index:999;background:#0c0905;align-items:center;justify-content:center;flex-direction:column;gap:20px}
 #boot.show{display:flex}
-#boot::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(249,115,22,.14),transparent 65%);pointer-events:none}
-.boot-mark{position:relative;width:60px;height:60px;border-radius:17px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:30px;font-weight:800;display:flex;align-items:center;justify-content:center;animation:bootPulse 1.2s ease-in-out infinite;box-shadow:0 8px 32px rgba(249,115,22,.4)}
-@keyframes bootPulse{0%,100%{transform:scale(1);box-shadow:0 8px 32px rgba(249,115,22,.4),0 0 0 0 rgba(249,115,22,.35)}50%{transform:scale(1.05);box-shadow:0 8px 32px rgba(249,115,22,.4),0 0 0 16px rgba(249,115,22,0)}}
-.boot-trail{position:relative;width:180px;height:18px;border-bottom:1px dashed rgba(249,115,22,.25)}
-.boot-plane{position:absolute;bottom:-8px;left:0;font-size:14px;animation:bootFly 2s ease-in-out infinite;filter:drop-shadow(0 0 6px rgba(249,115,22,.5))}
-@keyframes bootFly{0%{left:-8%;opacity:0}18%{opacity:1}82%{opacity:1}100%{left:100%;opacity:0}}
-.boot-txt{position:relative;font-size:13px;color:rgba(255,255,255,.55);font-weight:500}
-@media(prefers-reduced-motion:reduce){.boot-mark,.boot-plane{animation:none}}
+.boot-mark{width:60px;height:60px;border-radius:17px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;animation:bootPulse 1.2s ease-in-out infinite;box-shadow:0 8px 32px rgba(249,115,22,.4)}
+@keyframes bootPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.boot-txt{font-size:13px;color:rgba(255,255,255,.5);font-weight:500}
 
-/* ── REFERRAL CARD ── */
-.gs-card{display:none;background:#111;border-radius:14px;padding:24px 26px;margin-bottom:24px;border-left:4px solid #f97316;color:#fff}
-.gs-card.visible{display:block}
-.gs-title{font-size:16px;font-weight:700;margin-bottom:2px}
-.gs-sub{font-size:13px;color:#a1a1aa;margin-bottom:16px}
-.gs-progress-wrap{background:#333;border-radius:99px;height:4px;margin-bottom:18px;overflow:hidden}
-.gs-progress-bar{height:4px;background:#f97316;border-radius:99px;transition:width .4s}
-.gs-steps{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
-.gs-step{display:flex;align-items:center;gap:10px;font-size:14px}
-.gs-step-icon{width:20px;height:20px;border-radius:50%;border:2px solid #555;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:700}
-.gs-step-icon.done{border-color:#22c55e;background:#22c55e;color:#fff}
-.gs-step-icon.pending{color:transparent}
-.gs-step-label{color:#e5e7eb}
-.gs-step-label.done{color:#a1a1aa;text-decoration:line-through}
-@keyframes confetti-pop{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
-.gs-cta{background:#f97316;color:#fff;border:none;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font)}
-.gs-cta:hover{background:#ea6c10}
-.refer-card{background:linear-gradient(135deg,#1c1917,#292524);border-radius:14px;padding:24px 26px;margin-top:28px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
-.refer-title{font-size:16px;font-weight:800;margin-bottom:4px;letter-spacing:-.3px}
-.refer-sub{font-size:13px;color:#d6d3d1;line-height:1.5;max-width:420px}
-.refer-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:background .15s,transform .1s}
-.refer-btn:hover{background:#ea6c0a}.refer-btn:active{transform:scale(.98)}
-
-/* ── SHARE CARD (post-booking referral) ── */
-.share-card{display:none;background:#fff;border:1px solid var(--accent-border);border-radius:14px;padding:24px 26px;margin-top:28px;position:relative;overflow:hidden}
-.share-card.visible{display:block}
-.share-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f97316,#fbbf24)}
-.share-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:8px}
-.share-title{font-size:16px;font-weight:800;letter-spacing:-.3px;margin-bottom:10px}
-.share-quote{font-size:14px;color:var(--muted);line-height:1.6;background:var(--card);border-left:3px solid var(--accent-border);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:18px;font-style:italic}
-.share-actions{display:flex;gap:10px;flex-wrap:wrap}
-.share-btn{display:inline-flex;align-items:center;gap:7px;border:none;border-radius:9px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font);transition:background .15s,transform .1s}
-.share-btn:active{transform:scale(.98)}
-.share-btn-copy{background:var(--accent);color:#fff}
-.share-btn-copy:hover{background:#ea6c0a}
-.share-btn-email{background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)}
-.share-btn-email:hover{background:rgba(249,115,22,.14)}
-
-/* ── TRIP MILESTONE BADGE ── */
-.trip-count-badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);margin-top:10px;letter-spacing:.01em}
-
-/* ── LOGIN (dark cinematic, matches landing hero) ── */
+/* ── LOGIN ── */
 #login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:#0c0905;position:relative;overflow:hidden}
 #login-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 55% at 50% 25%,rgba(249,115,22,.16),transparent 65%),radial-gradient(ellipse 45% 40% at 15% 80%,rgba(249,115,22,.07),transparent 60%);pointer-events:none}
-.login-paths{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.login-card{position:relative;background:var(--white);border:1px solid rgba(249,115,22,.25);border-radius:18px;padding:40px;width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,.55),0 0 80px rgba(249,115,22,.1)}
-.login-brand{font-size:18px;font-weight:800;margin-bottom:4px}
-.login-brand span{color:var(--accent)}
+.login-card{position:relative;background:#fff;border:1px solid rgba(249,115,22,.25);border-radius:18px;padding:40px;width:100%;max-width:400px;box-shadow:0 24px 80px rgba(0,0,0,.55),0 0 80px rgba(249,115,22,.1)}
+.login-brand{font-size:18px;font-weight:800;margin-bottom:4px}.login-brand span{color:var(--accent)}
 .login-sub{font-size:13px;color:var(--muted);margin-bottom:32px}
-@media(prefers-reduced-motion:reduce){.login-paths{display:none}}
 .field{margin-bottom:16px}
 .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
-.field input{width:100%;border:1px solid var(--border2);border-radius:8px;padding:11px 14px;font-size:14px;font-family:var(--font);color:var(--text);background:var(--white);outline:none;transition:border-color .15s,box-shadow .15s}
+.field input{width:100%;border:1px solid var(--border2);border-radius:8px;padding:11px 14px;font-size:14px;font-family:var(--font);color:var(--text);background:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
 .field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
-.btn-login{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s,transform .1s;margin-top:4px}
-.btn-login:hover{background:#ea6c0a}.btn-login:active{transform:scale(.99)}.btn-login:disabled{opacity:.55;cursor:not-allowed}
+.btn-login{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s;margin-top:4px}
+.btn-login:hover{background:#ea6c0a}.btn-login:disabled{opacity:.55;cursor:not-allowed}
 .login-err{color:var(--red);font-size:13px;margin-top:12px;display:none;text-align:center}
 .login-foot{margin-top:20px;font-size:13px;color:var(--muted);text-align:center}
 .login-foot a{color:var(--accent);font-weight:500}
 
-/* ── PORTAL SHELL ── */
-#portal{display:none}
-.layout{display:flex;min-height:100vh}
-.sidebar{width:230px;flex-shrink:0;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
-.sb-head{padding:22px 20px;border-bottom:1px solid var(--border)}
-.sb-brand{font-size:14px;font-weight:800;line-height:1.3}
-.sb-brand span{color:var(--accent)}
-.sb-client{padding:16px 20px;border-bottom:1px solid var(--border)}
-.sb-client-name{font-size:14px;font-weight:700;margin-bottom:2px}
-.sb-client-tier{font-size:12px;color:var(--accent);font-weight:500}
-.sb-nav{padding:12px 10px;flex:1;display:flex;flex-direction:column;gap:2px}
-.nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font);font-weight:500;transition:.15s}
-.nav-item:hover{background:var(--card);color:var(--text)}
-.nav-item.active{background:var(--accent-dim);color:var(--accent);font-weight:700;border-left:2px solid var(--accent);padding-left:10px}
-.nav-ico{width:18px;text-align:center;flex-shrink:0;font-size:15px}
-.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 5px}
-.sb-foot{padding:14px 10px;border-top:1px solid var(--border)}
-.btn-out{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:var(--font);font-weight:500;transition:.15s}
-.btn-out:hover{color:var(--red);background:rgba(220,38,38,.06)}
+/* ── PORTAL ── */
+#portal{display:none;flex-direction:column;min-height:100vh}
 
-.main{flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column}
-.panel{display:none;padding:32px 24px;flex:1}
+/* Top nav */
+.topnav{background:#fff;border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;height:56px;position:sticky;top:0;z-index:100}
+.nav-brand{font-size:15px;font-weight:800;white-space:nowrap}.nav-brand span{color:var(--accent)}
+.nav-tabs{display:flex;gap:2px}
+.nav-tab{border:none;background:none;padding:8px 14px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;border-radius:8px;font-family:var(--font);transition:.15s;position:relative;white-space:nowrap}
+.nav-tab:hover{background:var(--card);color:var(--text)}
+.nav-tab.active{background:var(--accent-dim);color:var(--accent);font-weight:700}
+.nav-unread{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;vertical-align:top;margin-left:4px;margin-top:-1px}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-name{font-size:13px;font-weight:600;color:var(--text);display:none}
+@media(min-width:500px){.nav-name{display:block}}
+.btn-signout{border:none;background:none;font-size:13px;color:var(--muted);cursor:pointer;padding:6px 10px;border-radius:6px;font-family:var(--font);transition:.15s}
+.btn-signout:hover{background:#fee2e2;color:var(--red)}
+
+/* Panels */
+.panels{flex:1}
+.panel{display:none;max-width:820px;margin:0 auto;padding:32px 20px}
 .panel.active{display:block}
-.phead{margin-bottom:28px;max-width:1000px;margin-left:auto;margin-right:auto}
-.phead h1{font-size:24px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
-.phead p{font-size:14px;color:var(--muted)}
-@media(min-width:768px){.panel{padding:36px 44px}}
-@media(min-width:1280px){.main>*{width:100%;max-width:1140px;margin-left:auto;margin-right:auto;padding-left:44px;padding-right:44px}}
+@media(min-width:640px){.panel{padding:40px 32px}}
 
-/* ── SAVINGS HERO ── */
-.savings-hero{
-  display:none;
-  background:linear-gradient(135deg,#0f0a07 0%,#1c0d04 60%,#0a0908 100%);
-  border-radius:18px;padding:32px 36px;margin-bottom:28px;
-  position:relative;overflow:hidden;
+/* ── HOME ── */
+.home-greeting{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
+.status-pill{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:7px 14px;border-radius:20px;background:var(--card);border:1px solid var(--border);color:var(--text);margin-bottom:28px}
+.status-pill.active{background:rgba(249,115,22,.1);border-color:rgba(249,115,22,.25);color:var(--accent)}
+.status-pill.done{background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.2);color:var(--green)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;animation:sdBlink 1.8s ease-in-out infinite alternate}
+@keyframes sdBlink{0%{opacity:1}100%{opacity:.3}}
+.status-pill.done .status-dot{animation:none}
+
+/* Plan section */
+.section-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:16px}
+.plan-eyebrow{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.plan-eyebrow-dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.plan-eyebrow-txt{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+.plan-title{font-size:20px;font-weight:800;letter-spacing:-.3px;margin-bottom:4px}
+.plan-meta{font-size:13px;color:var(--muted);margin-bottom:20px}
+.plan-overview{font-size:14px;line-height:1.7;color:var(--muted);background:var(--card);border-left:3px solid var(--accent-border);border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:20px}
+
+/* ── BOARDING PASS CARD (client) ── */
+.bp-card{display:grid;grid-template-columns:1fr 28px 1fr;border:1px solid rgba(249,115,22,.2);border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08),0 0 0 1px rgba(249,115,22,.05);margin-bottom:16px}
+.bp-left{background:linear-gradient(135deg,#1c0f05,#2d1507);padding:24px 20px;color:#fff}
+.bp-left-label{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(251,146,60,.7);margin-bottom:6px}
+.bp-route{font-size:clamp(24px,5vw,38px);font-weight:900;letter-spacing:-2px;line-height:1;background:linear-gradient(135deg,#fff,rgba(255,255,255,.8));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:5px}
+.bp-cabin{font-size:12px;color:rgba(255,255,255,.55);margin-bottom:16px}
+.bp-pts-box{background:rgba(249,115,22,.18);border:1px solid rgba(249,115,22,.3);border-radius:9px;padding:9px 12px}
+.bp-pts-num{font-size:18px;font-weight:900;color:#fb923c;letter-spacing:-1px;line-height:1}
+.bp-pts-lbl{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px}
+.bp-pts-prog{font-size:10px;color:rgba(255,255,255,.35);margin-top:1px}
+.bp-tear{background:#f8f7f5;border-left:2px dashed rgba(249,115,22,.2);border-right:2px dashed rgba(249,115,22,.2);position:relative}
+.bp-tear::before,.bp-tear::after{content:'';position:absolute;width:18px;height:18px;background:var(--bg);border-radius:50%;border:1px solid rgba(249,115,22,.12);left:50%;transform:translateX(-50%)}
+.bp-tear::before{top:-9px}.bp-tear::after{bottom:-9px}
+.bp-right{background:#fff;padding:24px 18px;display:flex;flex-direction:column;justify-content:space-between}
+.bp-rows{display:flex;flex-direction:column;gap:0;margin-bottom:12px}
+.bp-row{display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-bottom:1px solid #f0eeec}
+.bp-row:last-child{border-bottom:none}
+.bp-row-lbl{color:var(--muted)}
+.bp-row-val{font-weight:700;color:var(--text)}
+.bp-save{display:flex;justify-content:space-between;align-items:center;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.2);border-radius:9px;padding:11px 14px}
+.bp-save-lbl{font-size:12px;font-weight:700;color:var(--green)}
+.bp-save-val{font-size:18px;font-weight:900;color:var(--green);letter-spacing:-1px}
+.bp-notes{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5;font-style:italic}
+/* mobile stacked */
+@media(max-width:560px){
+  .bp-card{grid-template-columns:1fr;grid-template-rows:auto 20px auto}
+  .bp-tear{width:100%;height:20px;border-left:none;border-right:none;border-top:2px dashed rgba(249,115,22,.2);border-bottom:2px dashed rgba(249,115,22,.2)}
+  .bp-tear::before{top:50%;left:-9px;transform:translateY(-50%)}
+  .bp-tear::after{top:50%;right:-9px;left:auto;transform:translateY(-50%)}
 }
-.savings-hero.has-savings{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
-.savings-hero::before{
-  content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse 60% 80% at 80% 50%,rgba(249,115,22,.12) 0%,transparent 65%);
-  pointer-events:none;
-}
-/* animated shimmer behind the amount */
-.savings-hero::after{
-  content:'';position:absolute;
-  top:50%;left:50%;transform:translate(-50%,-50%);
-  width:340px;height:180px;
-  background:radial-gradient(ellipse 70% 60% at 50% 50%,rgba(74,222,128,.07),transparent 70%);
-  pointer-events:none;
-  animation:heroGlow 3s ease-in-out infinite alternate;
-}
-@keyframes heroGlow{0%{opacity:.5;transform:translate(-50%,-50%) scale(.9)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}}
-@media(prefers-reduced-motion:reduce){.savings-hero::after{animation:none}}
-.sh-left{position:relative;z-index:1}
-.sh-label{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(249,115,22,.65);margin-bottom:8px}
-.sh-amount{
-  font-size:clamp(56px,6vw,72px);font-weight:900;line-height:1;
-  color:#4ade80;
-  text-shadow:0 0 40px rgba(74,222,128,.3);
-  letter-spacing:-3px;font-variant-numeric:tabular-nums;
-  position:relative;
-}
-/* shimmer overlay on the green amount */
-.sh-amount::after{
-  content:attr(data-v);position:absolute;inset:0;
-  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.18) 50%,transparent 65%);
-  background-size:250% 100%;
-  -webkit-background-clip:text;background-clip:text;
-  animation:shShimmer 3.5s linear infinite;
-  pointer-events:none;
-}
-@keyframes shShimmer{0%{background-position:200% center}100%{background-position:-50% center}}
-@media(prefers-reduced-motion:reduce){.sh-amount::after{animation:none}}
-/* confetti burst */
-.confetti-dot{position:absolute;width:7px;height:7px;border-radius:50%;pointer-events:none;animation:confettiFly 1.2s ease-out forwards}
-@keyframes confettiFly{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--cx),var(--cy)) scale(.4);opacity:0}}
-@media(prefers-reduced-motion:reduce){.confetti-dot{display:none}}
-.sh-tagline{font-size:14px;color:rgba(255,255,255,.5);margin-top:10px;font-weight:500}
-.sh-tagline strong{color:rgba(255,255,255,.8)}
-.sh-right{position:relative;text-align:right}
-.sh-fee-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(249,115,22,.55);margin-bottom:6px}
-.sh-fee{font-size:28px;font-weight:900;color:rgba(249,115,22,.9);letter-spacing:-1px}
-.sh-fee-sub{font-size:12px;color:rgba(255,255,255,.35);margin-top:4px}
-@media(max-width:600px){.savings-hero{padding:24px 22px}.sh-amount{font-size:44px}.sh-right{text-align:left}}
 
-/* ── STAT CARDS ── */
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:28px}
-.stat{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 18px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s;position:relative;overflow:hidden}
-.stat::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--accent);border-radius:12px 0 0 12px}
-.stat:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.1),0 0 0 1px var(--accent-border),0 0 16px rgba(249,115,22,.08)}
-.stat-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px}
-.stat-val{font-size:clamp(20px,4vw,28px);font-weight:900;letter-spacing:-1.5px;line-height:1}
-.stat-val.green{color:var(--green)}.stat-val.orange{color:var(--accent)}.stat-val.blue{color:var(--blue)}
-.stat-sub{font-size:11px;color:var(--muted);margin-top:6px}
+/* No plan placeholder */
+.no-plan{background:var(--white);border:2px dashed var(--border2);border-radius:14px;padding:36px 24px;text-align:center;margin-bottom:28px}
+.no-plan-icon{font-size:40px;margin-bottom:12px}
+.no-plan-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.no-plan-sub{font-size:13px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+.btn-msg{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s}
+.btn-msg:hover{background:#ea6c0a}
 
-/* ── STATUS BAR ── */
-.status-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-bottom:28px;box-shadow:var(--shadow)}
-.status-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:16px}
-.status-steps{display:flex;align-items:center;flex-wrap:wrap;gap:0}
-.status-step{display:flex;align-items:center;gap:8px;font-size:13px}
-.status-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
-.status-dot.done{background:var(--green)}.status-dot.active{background:var(--accent);box-shadow:0 0 0 4px var(--accent-dim)}.status-dot.pending{background:var(--border2)}
-.status-sep{width:30px;height:2px;background:var(--border);margin:0 6px;flex-shrink:0}
-.status-step.active-step span{color:var(--accent);font-weight:700}
-.status-step.done-step span{color:var(--green);font-weight:500}
-.status-step.pending-step span{color:var(--dim)}
+/* Recent messages on home */
+.msg-preview-list{display:flex;flex-direction:column;gap:10px;margin-top:4px;margin-bottom:20px}
+.msg-preview{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:.15s}
+.msg-preview:hover{border-color:var(--accent-border);background:#fffcfa}
+.msg-preview.unread{border-left:3px solid var(--accent)}
+.msg-preview-top{display:flex;justify-content:space-between;margin-bottom:4px}
+.msg-preview-from{font-size:13px;font-weight:600}
+.msg-preview-time{font-size:12px;color:var(--dim)}
+.msg-preview-body{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg-preview-tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);margin-right:6px}
+.view-all-btn{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;font-family:var(--font);padding:0;transition:.15s}
+.view-all-btn:hover{opacity:.75}
 
-.sec-head{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:28px 0 14px}
+/* ── MESSAGES (chat) ── */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 56px - 80px);min-height:400px}
+.chat-scroll{flex:1;overflow-y:auto;padding:20px 0;display:flex;flex-direction:column;gap:16px}
+.chat-input-row{padding-top:16px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end}
+.chat-textarea{flex:1;border:1px solid var(--border2);border-radius:10px;padding:11px 14px;font-size:14px;font-family:var(--font);color:var(--text);resize:none;outline:none;transition:border-color .15s;max-height:120px;line-height:1.5}
+.chat-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.chat-send{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s;white-space:nowrap;flex-shrink:0}
+.chat-send:hover{background:#ea6c0a}.chat-send:disabled{opacity:.5;cursor:not-allowed}
+.bubble-row{display:flex;flex-direction:column;gap:3px}
+.bubble-row.me{align-items:flex-end}
+.bubble-with-avatar{display:flex;align-items:flex-end;gap:8px}
+.bubble-row.me .bubble-with-avatar{flex-direction:row-reverse}
+.bubble-avatar{width:28px;height:28px;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border)}
+.bubble-avatar.adv{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border:none}
+.bubble{padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.6;max-width:480px;word-break:break-word}
+.bubble.adv{background:#fff;border:1px solid var(--border);border-radius:14px 14px 14px 4px;color:var(--text)}
+.bubble.me{background:var(--accent);color:#fff;border-radius:14px 14px 4px 14px}
+.bubble-subject{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent);margin-bottom:6px}
+.bubble.me .bubble-subject{color:rgba(255,255,255,.7)}
+.bubble-ts{font-size:11px;color:var(--dim);padding:0 4px}
+.bubble-row.me .bubble-ts{text-align:right}
+.chat-day{text-align:center;margin:8px 0}
+.chat-day-pill{font-size:11px;color:var(--dim);background:var(--card);border:1px solid var(--border);border-radius:20px;padding:3px 10px}
+.bubble-img{max-width:220px;max-height:180px;border-radius:8px;margin-top:6px;cursor:pointer;display:block}
+/* plan card inside chat bubble */
+.bubble-plan-card{background:var(--card);border:1px solid var(--accent-border);border-radius:10px;padding:12px 14px;margin-top:8px;max-width:480px}
+.bubble-plan-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.bubble-plan-meta{font-size:12px;color:var(--muted);margin-bottom:8px}
+.bubble-plan-opts{display:flex;flex-direction:column;gap:8px}
+.bubble-plan-opt{background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center}
+.bubble-plan-opt-name{font-size:13px;font-weight:600}
+.bubble-plan-opt-pts{font-size:13px;font-weight:700;color:var(--accent)}
+.empty-chat{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty-chat-ico{font-size:40px;margin-bottom:12px}
 
-/* ── MESSAGES ── */
-.msg-list{display:flex;flex-direction:column;gap:12px}
-.msg-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px 22px;box-shadow:var(--shadow)}
-.msg-card.unread{border-left:3px solid var(--accent)}
-.msg-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.msg-from{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
-.msg-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0}
-.msg-time{font-size:12px;color:var(--dim)}
-.msg-body{font-size:14px;color:var(--text);line-height:1.6;white-space:pre-wrap}
-/* ── PLAN CARD (boarding-pass style) ── */
-.plan-card{background:var(--white);border:1px solid var(--accent-border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:16px;display:grid;grid-template-columns:1fr 28px 1fr}
-.plan-hd{background:linear-gradient(135deg,#fff7ed,#ffedd5);padding:18px 22px;border-bottom:1px solid var(--accent-border);grid-column:1/-1}
-.plan-eyebrow{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:5px;display:flex;align-items:center;gap:7px}
-.plan-eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
-.plan-title{font-size:18px;font-weight:800;letter-spacing:-.3px;line-height:1.25}
-.plan-route{font-size:13px;color:var(--muted);margin-top:3px}
-.plan-left{background:linear-gradient(135deg,#fff3e0,#ffe0b2);padding:18px 16px;display:flex;flex-direction:column;justify-content:center}
-.plan-left-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(249,115,22,.7);margin-bottom:4px}
-.plan-route-big{font-size:28px;font-weight:900;letter-spacing:-2px;line-height:1;color:var(--accent);margin-bottom:4px}
-.plan-cabin-txt{font-size:12px;color:var(--muted);margin-bottom:12px}
-.plan-pts-box{display:flex;align-items:center;gap:6px;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.25);border-radius:8px;padding:8px 12px}
-.plan-pts-num{font-size:16px;font-weight:900;color:var(--accent);letter-spacing:-1px;line-height:1}
-.plan-pts-lbl{font-size:9px;color:var(--muted);line-height:1.3;font-weight:600}
-.plan-tear{background:var(--card);border-left:2px dashed rgba(249,115,22,.2);border-right:2px dashed rgba(249,115,22,.2);position:relative}
-.plan-tear::before,.plan-tear::after{content:'';position:absolute;width:16px;height:16px;background:var(--white);border-radius:50%;border:1px solid rgba(249,115,22,.15);z-index:1;left:50%;transform:translateX(-50%)}
-.plan-tear::before{top:-8px} .plan-tear::after{bottom:-8px}
-.plan-body{padding:18px 16px;display:flex;flex-direction:column;justify-content:center}
-.plan-body-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
-.plan-body-row:last-child{border-bottom:none}
-.plan-body-label{color:var(--muted);font-weight:500}
-.plan-body-val{font-weight:700;color:var(--text)}
-.plan-save-box{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;margin-top:8px;background:rgba(34,197,74,.08);border:1px solid rgba(34,197,74,.2);border-radius:8px}
-.plan-save-lbl{font-size:11px;font-weight:700;color:var(--green)}
-.plan-save-val{font-size:16px;font-weight:900;color:var(--green);letter-spacing:-1px}
-.plan-overview{font-size:14px;line-height:1.6;color:var(--text);white-space:pre-wrap;margin-bottom:12px;grid-column:1/-1;padding:0 18px;padding-top:12px;border-top:1px solid var(--border)}
-.plan-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:12px;padding:12px 18px 0;grid-column:1/-1;border-top:1px solid var(--border)}
-.plan-field-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:4px}
-.plan-field-val{font-size:14px;font-weight:700}
-.plan-field-val.green{color:var(--green)}.plan-field-val.blue{color:var(--blue)}
-.msg-plan-link{margin-top:14px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--accent);cursor:pointer;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:8px 14px}
-
-/* ── TRIPS (boarding-pass style) ── */
-.trip-card{background:var(--white);border:1px solid var(--border);border-radius:16px;padding:0;margin-bottom:16px;box-shadow:0 8px 40px rgba(0,0,0,.4),0 0 0 1px rgba(249,115,22,.08);overflow:hidden;position:relative;transition:transform .25s,box-shadow .25s}
-.trip-card:hover{transform:translateY(-4px);box-shadow:0 16px 56px rgba(0,0,0,.45),0 0 0 1px rgba(249,115,22,.18),0 0 32px rgba(249,115,22,.12)}
-.trip-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--accent),#fbbf24)}
-.trip-countdown-row{padding:6px 20px 0}
-.countdown-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:.01em}
-.countdown-green{background:rgba(22,163,74,.12);color:#15803d;border:1px solid rgba(22,163,74,.25)}
-.countdown-future{background:#fff3e0;color:#e65100;border:1px solid rgba(230,81,0,.2)}
-.countdown-urgent{background:#ffebee;color:#c62828;border:1px solid rgba(198,40,40,.2)}
-.countdown-today{background:#ffebee;color:#c62828;border:1px solid rgba(198,40,40,.2);animation:pulse-countdown 1s ease-in-out infinite alternate}
-.countdown-past{background:rgba(168,162,158,.1);color:var(--muted);border:1px solid var(--border)}
-@keyframes pulse-countdown{from{opacity:1}to{opacity:.6}}
-
-/* ── MINI STEPPER (on trip cards) ── */
-.mini-stepper{padding:8px 20px 12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:0;flex-wrap:nowrap}
-.mini-step-dot{width:9px;height:9px;border-radius:50%;background:var(--border2);border:2px solid var(--border2);flex-shrink:0;transition:background .2s}
-.mini-step-dot.done{background:#16a34a;border-color:#16a34a}
-.mini-step-dot.active{background:#f97316;border-color:#f97316;box-shadow:0 0 0 3px rgba(249,115,22,.25)}
-.mini-step-line{flex:1;height:2px;background:var(--border)}
-.mini-step-line.done{background:#16a34a}
-.mini-stepper-wrap{padding:8px 20px 12px;border-top:1px solid var(--border)}
-.mini-stepper-labels{display:flex;justify-content:space-between;margin-top:4px;padding:0 2px}
-.mini-step-label{font-size:9px;color:var(--dim);white-space:nowrap}
-.mini-step-label.active{color:var(--accent);font-weight:700}
-.mini-step-label.done{color:#16a34a;font-weight:600}
-.mini-stepper-booked{padding:8px 20px 12px;border-top:1px solid var(--border)}
-.mini-stepper-booked-pill{font-size:10px;font-weight:700;color:#16a34a;padding:3px 9px;background:rgba(22,163,74,.1);border:1px solid rgba(22,163,74,.25);border-radius:20px;display:inline-block}
-
-/* ── DEPARTURE CHECKLIST ── */
-.dep-checklist{margin:0 20px 16px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card)}
-.dep-checklist-head{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;cursor:pointer;user-select:none;gap:8px}
-.dep-checklist-title{font-size:13px;font-weight:700;color:var(--text)}
-.dep-checklist-toggle{font-size:11px;color:var(--muted);transition:transform .2s}
-.dep-checklist-body{padding:0 16px 14px;display:none}
-.dep-checklist-body.open{display:block}
-.dep-checklist-item{display:flex;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
-.dep-checklist-item:last-child{border-bottom:none}
-.dep-checklist-item input[type=checkbox]{margin-top:2px;accent-color:var(--accent);width:14px;height:14px;flex-shrink:0;cursor:pointer}
-.dep-checklist-item label{cursor:pointer;line-height:1.5;color:var(--text)}
-.dep-checklist-item.checked label{text-decoration:line-through;color:var(--dim)}
-
-/* ── TRIP STATUS STEPPER (buildStepper) — removed; consolidated into .trip-stepper below ── */
-
-/* ── SAVINGS HERO POP animation ── */
-@keyframes savingsPop{0%{transform:scale(1)}50%{transform:scale(1.15)}100%{transform:scale(1)}}
-.sh-amount.pop{animation:savingsPop .5s ease-out}
-@media(prefers-reduced-motion:reduce){.sh-amount.pop{animation:none}}
-
-/* ── ACTIVITY TIMELINE ── */
-.activity-timeline{display:flex;flex-direction:column;gap:0}
-.activity-item{display:flex;gap:14px;position:relative;padding-bottom:18px}
-.activity-item:last-child{padding-bottom:0}
-.activity-item:not(:last-child)::before{content:'';position:absolute;left:7px;top:20px;bottom:0;width:1px;background:var(--border)}
-.activity-dot{width:15px;height:15px;border-radius:50%;flex-shrink:0;margin-top:2px;border:2px solid var(--bg);box-shadow:0 0 0 1px var(--border)}
-.activity-dot.trip{background:var(--accent)}
-.activity-dot.savings{background:var(--green)}
-.activity-dot.message{background:var(--blue)}
-.activity-body{flex:1;min-width:0}
-.activity-desc{font-size:13px;color:var(--text);line-height:1.5}
-.activity-time{font-size:11px;color:var(--dim);margin-top:2px}
-
-/* ── POINTS COMPACT LINE ── */
-.sh-points-line{font-size:12px;color:rgba(255,255,255,.4);margin-top:8px;font-weight:500}
-
-/* ── EMPTY STATE float animation ── */
-@keyframes floatPlane{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-12px) rotate(2deg)}}
-.empty-float-plane{animation:floatPlane 3s ease-in-out infinite;display:inline-block}
-@media(prefers-reduced-motion:reduce){.empty-float-plane{animation:none}}
-.trip-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:20px 24px 16px}
-.trip-dest{font-size:24px;font-weight:900;letter-spacing:-.7px;margin-bottom:3px}
-.trip-route{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:7px}
-.trip-route .tr-plane{color:var(--accent);font-size:11px}
-.trip-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;padding:16px 24px 20px;border-top:2px dashed var(--border);position:relative}
-.trip-grid::before,.trip-grid::after{content:'';position:absolute;top:-9px;width:18px;height:18px;border-radius:50%;background:var(--bg);border:1px solid var(--border)}
-.trip-grid::before{left:-10px}
-.trip-grid::after{right:-10px}
-.trip-plan-block{padding:0 24px 20px}
-.trip-field-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:3px}
-.trip-field-val{font-size:14px;font-weight:600}
-.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;white-space:nowrap;letter-spacing:.03em;text-transform:uppercase}
-.badge-new{background:rgba(249,115,22,.15);color:#f97316;border:1px solid rgba(249,115,22,.3)}
-.badge-new::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#f97316;flex-shrink:0}
-.badge-researching{background:rgba(234,179,8,.15);color:#ca8a04;border:1px solid rgba(234,179,8,.3)}
-.badge-researching::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#ca8a04;flex-shrink:0}
-.badge-options{background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.25)}
-.badge-options::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#16a34a;flex-shrink:0}
-.badge-booked{background:rgba(59,130,246,.12);color:#2563eb;border:1px solid rgba(59,130,246,.25)}
-.badge-booked::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#2563eb;flex-shrink:0}
-.badge-done{background:rgba(168,162,158,.12);color:var(--muted);border:1px solid rgba(168,162,158,.2)}
-.badge-done::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);flex-shrink:0}
-
-/* ── TRIP STEPPER ── */
-.trip-stepper{padding:12px 24px 18px;border-top:1px solid var(--border)}
-.stepper-steps{display:flex;align-items:center;gap:0}
-/* .trip-step classes used by buildStepper() */
-.trip-step{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;position:relative;z-index:1;}
-.trip-step.done{background:var(--accent);color:#fff;}
-.trip-step.active{background:var(--accent);color:#fff;box-shadow:0 0 0 3px rgba(249,115,22,.25),0 0 0 6px rgba(249,115,22,.1);}
-.trip-step.future{background:var(--border2);color:var(--dim);border:1px solid var(--border2);}
-.trip-step-line{flex:1;height:2px;background:var(--border2);}
-.trip-step-line.done{background:var(--accent);}
-/* Legacy step-dot system */
-.step-dot{width:14px;height:14px;border-radius:50%;background:var(--border2);border:2px solid var(--border2);flex-shrink:0;transition:background .2s,border-color .2s}
-.step-dot.done{background:#f97316;border-color:#f97316}
-.step-dot.active{background:#f97316;border-color:#f97316;box-shadow:0 0 0 4px rgba(249,115,22,.3),0 0 0 8px rgba(249,115,22,.1);animation:stepPulse 1.8s ease-in-out infinite}
-@keyframes stepPulse{0%,100%{box-shadow:0 0 0 4px rgba(249,115,22,.3),0 0 0 8px rgba(249,115,22,.1)}50%{box-shadow:0 0 0 6px rgba(249,115,22,.4),0 0 0 12px rgba(249,115,22,.15)}}
-@media(prefers-reduced-motion:reduce){.step-dot.active{animation:none}}
-.step-line{flex:1;height:2px;background:var(--border2)}
-.step-line.done{background:#f97316;box-shadow:0 0 6px rgba(249,115,22,.5)}
-.stepper-labels{display:flex;justify-content:space-between;margin-top:5px;padding:0 1px}
-.step-label{font-size:10px;color:var(--dim);text-align:center;width:14px;white-space:nowrap;transform:translateX(-50%);margin-left:7px}
-.step-label:first-child{margin-left:0;transform:none}
-.step-label:last-child{margin-left:0;transform:translateX(-100%)}
-.stepper-complete{font-size:11px;font-weight:700;color:#f97316;padding:4px 10px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);border-radius:20px;display:inline-block}
-.stepper-skipped{font-size:11px;font-weight:600;color:var(--muted);padding:4px 10px;background:var(--card);border:1px solid var(--border);border-radius:20px;display:inline-block}
-
-/* ── SAVINGS ── */
-.sv-row{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px 22px;margin-bottom:12px;box-shadow:var(--shadow);display:flex;justify-content:space-between;align-items:center;gap:16px}
-.sv-label{font-size:14px;font-weight:600;margin-bottom:3px}
-.sv-sub{font-size:12px;color:var(--muted)}
-.sv-amt{text-align:right;flex-shrink:0}
-.sv-save{font-size:16px;font-weight:800;color:var(--green)}
-.sv-fee{font-size:12px;color:var(--accent);margin-top:2px}
-.sv-total{background:var(--green-dim);border:1px solid rgba(22,163,74,.2);border-radius:12px;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;margin-top:8px}
-.sv-total-label{font-size:14px;font-weight:600}
-.sv-total-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.sv-total-val{font-size:28px;font-weight:800;color:var(--green);letter-spacing:-1px}
-.sv-feebox{background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:12px;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;margin-top:12px}
-.sv-feebox-label{font-size:14px;font-weight:600}
-.sv-feebox-val{font-size:22px;font-weight:800;color:var(--accent);letter-spacing:-.5px}
+/* Attach preview */
+.chat-attach-preview{display:none;align-items:center;gap:10px;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.chat-attach-preview.visible{display:flex}
+.attach-thumb{width:40px;height:40px;border-radius:4px;object-fit:cover;cursor:pointer}
+.attach-rm{border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted);padding:0 4px}
+.attach-file-btn{border:1px solid var(--border2);background:var(--white);border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer;font-family:var(--font);color:var(--muted);transition:.15s;flex-shrink:0}
+.attach-file-btn:hover{border-color:var(--accent);color:var(--accent)}
 
 /* ── POINTS ── */
-.points-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
-.point-card{background:#161210;border:1px solid rgba(249,115,22,.12);border-radius:14px;padding:22px 24px;box-shadow:0 4px 24px rgba(0,0,0,.3);position:relative;overflow:hidden;transition:transform .25s,box-shadow .25s,border-color .25s}
-.point-card:hover{transform:translateY(-3px);box-shadow:0 12px 40px rgba(0,0,0,.4),0 0 0 1px rgba(249,115,22,.3),0 0 24px rgba(249,115,22,.1);border-color:rgba(249,115,22,.3)}
-.point-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#fbbf24)}
-/* logo highlight area glow on hover */
-.point-card::after{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;background:radial-gradient(circle,rgba(249,115,22,.15),transparent 70%);opacity:0;transition:opacity .25s}
-.point-card:hover::after{opacity:1}
-.point-prog{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(255,255,255,.45);margin-bottom:10px}
-.point-bal{font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px;font-variant-numeric:tabular-nums}
-.point-unit{font-size:12px;color:rgba(255,255,255,.35);font-weight:600;margin-left:4px}
-/* ── MILESTONE BADGES ── */
-.milestone-badges{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;margin-bottom:4px}
-.milestone-badge{font-size:14px;font-weight:600;padding:5px 13px;border-radius:20px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
-.milestone-gold{background:rgba(234,179,8,.12);color:#fbbf24;border:1px solid rgba(234,179,8,.3)}
-.milestone-platinum{background:rgba(148,163,184,.1);color:#cbd5e1;border:1px solid rgba(148,163,184,.25)}
-.milestone-expiring{background:rgba(249,115,22,.12);color:#fb923c;border:1px solid rgba(249,115,22,.3)}
+.points-add{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:28px}
+.points-add-title{font-size:15px;font-weight:700;margin-bottom:16px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:480px){.form-row{grid-template-columns:1fr}}
+.pts-field label{display:block;font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.pts-field input,.pts-field select{width:100%;border:1px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:14px;font-family:var(--font);color:var(--text);background:var(--white);outline:none;transition:border-color .15s}
+.pts-field input:focus,.pts-field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.pts-est{font-size:12px;color:var(--muted);margin-top:4px;min-height:16px}
+.btn-pts-save{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s}
+.btn-pts-save:hover{background:#ea6c0a}
+.pts-success{font-size:13px;color:var(--green);font-weight:600;margin-left:12px}
+.points-list{display:flex;flex-direction:column;gap:10px}
+.point-row{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between}
+.point-prog{font-size:14px;font-weight:600;color:var(--text)}
+.point-bal{font-size:20px;font-weight:800;color:var(--accent);letter-spacing:-1px}
+.point-updated{font-size:11px;color:var(--dim);margin-top:2px}
+.no-points{text-align:center;padding:40px 24px;color:var(--muted);font-size:14px}
 
-/* ── ADD-POINTS FORM ── */
-.pts-add-form{background:#161210;border:1px solid rgba(249,115,22,.15);border-radius:14px;padding:22px 24px;margin-top:18px}
-.pts-add-form h3{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:rgba(249,115,22,.8);margin:0 0 16px}
-.pts-field-row{display:flex;gap:12px;flex-wrap:wrap}
-.pts-field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:160px}
-.pts-field label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:rgba(255,255,255,.45)}
-.pts-field input{background:#0d0908;border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:10px 13px;font-size:15px;font-weight:600;color:#fff;font-family:inherit;width:100%;box-sizing:border-box;transition:border-color .2s}
-.pts-field input:focus{outline:none;border-color:rgba(249,115,22,.55);box-shadow:0 0 0 2px rgba(249,115,22,.12)}
-.pts-field input::placeholder{color:rgba(255,255,255,.2);font-weight:400}
-.pts-est-value{font-size:12px;color:rgba(255,255,255,.35);margin-top:3px;min-height:16px;font-weight:500}
-.pts-submit-btn{margin-top:16px;background:linear-gradient(135deg,#ea580c,#f97316);color:#fff;border:none;border-radius:8px;padding:11px 26px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .15s;letter-spacing:.02em}
-.pts-submit-btn:hover{opacity:.85;transform:translateY(-1px)}
-.pts-submit-btn:active{transform:translateY(0)}
-.pts-success{font-size:13px;color:#4ade80;font-weight:600;margin-top:10px;min-height:18px}
-@keyframes pts-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-.pts-shake{animation:pts-shake .38s ease;border-color:rgba(239,68,68,.7)!important;box-shadow:0 0 0 2px rgba(239,68,68,.2)!important}
-
-/* ── CHAT ── */
-.chat-wrap{background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:420px;overflow:hidden}
-.chat-header{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border);background:var(--white);flex-shrink:0}
-.chat-avatar{width:38px;height:38px;border-radius:50%;background:var(--accent);color:#fff;font-size:17px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.chat-header-info{flex:1;min-width:0}
-.chat-header-name{font-size:14px;font-weight:700;color:var(--text)}
-.chat-header-status{font-size:12px;color:var(--green);font-weight:500}
-.chat-scroll{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:10px;background-color:#f8f7f5;background-image:radial-gradient(rgba(0,0,0,.04) 1px,transparent 1px);background-size:20px 20px}
-.bubble-row{display:flex;flex-direction:column;align-items:flex-start}
-.bubble-row.me{align-items:flex-end}
-.bubble{max-width:78%;padding:10px 14px;font-size:14px;line-height:1.55;white-space:pre-wrap;box-shadow:0 1px 2px rgba(0,0,0,.08);word-break:break-word}
-.bubble.adv{background:#fff;border:1px solid var(--border);color:var(--text);border-radius:18px 18px 18px 4px}
-.bubble.me{background:var(--accent);color:#fff;border-radius:18px 18px 4px 18px}
-.bubble-subject{font-weight:700;margin-bottom:3px}
-.bubble-ts{font-size:10px;color:var(--dim);opacity:.4;margin-top:4px;padding:0 2px}
-.bubble-row.me .bubble-ts{text-align:right}
-.bubble-receipt{font-size:10px;color:var(--dim);opacity:.4;margin-top:2px;padding:0 2px}
-.bubble-plan{max-width:92%;width:100%}
-.bubble-plan .plan-card{margin-bottom:0;margin-top:8px}
-.chat-day{display:flex;align-items:center;justify-content:center;margin:14px 0 4px}
-.chat-day-pill{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);background:rgba(255,255,255,.75);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(0,0,0,.08);border-radius:20px;padding:3px 12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
-.chat-day::before,.chat-day::after{display:none}
-.bubble-avatar{width:28px;height:28px;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
-.bubble-avatar.adv{background:var(--accent);color:#fff;letter-spacing:.02em}
-.bubble-avatar.me{background:#e7e5e4;color:var(--muted)}
-.bubble-with-avatar{display:flex;align-items:flex-start;gap:8px}
-.bubble-row.me .bubble-with-avatar{flex-direction:row-reverse}
-/* typing indicator */
-.typing-indicator{display:inline-flex;align-items:center;gap:4px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:18px 18px 18px 4px;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.typing-dot{width:7px;height:7px;border-radius:50%;background:var(--dim);opacity:.4;animation:typingBounce 1.2s ease-in-out infinite}
-.typing-dot:nth-child(2){animation-delay:.15s}
-.typing-dot:nth-child(3){animation-delay:.3s}
-@keyframes typingBounce{0%,60%,100%{opacity:.4;transform:translateY(0)}30%{opacity:1;transform:translateY(-5px)}}
-@media(prefers-reduced-motion:reduce){.typing-dot{animation:none;opacity:.6}}
-.chat-compose{display:flex;gap:10px;padding:14px;border-top:1px solid var(--border);background:var(--white);align-items:flex-end}
-.chat-input{flex:1;border:1px solid var(--border2);border-radius:10px;padding:11px 14px;font-size:14px;font-family:var(--font);color:var(--text);resize:none;outline:none;max-height:120px;line-height:1.45;transition:border-color .15s,box-shadow .15s,opacity .15s}
-.chat-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
-.chat-input:disabled{opacity:.5}
-.chat-send{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer;font-family:var(--font);transition:background .15s;display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0}
-.chat-send:hover{background:#ea6c0a}.chat-send:disabled{opacity:.5;cursor:not-allowed}
-.chat-note{text-align:center;font-size:11px;color:var(--dim);padding:6px 0 10px;background:var(--white)}
-/* attachment preview strip */
-.chat-attach-preview{display:none;align-items:flex-start;gap:10px;padding:10px 14px 0;background:var(--white)}
-.chat-attach-preview.visible{display:flex}
-.attach-thumb-wrap{position:relative;display:inline-flex;flex-direction:column;gap:4px}
-.attach-thumb{max-width:120px;max-height:90px;border-radius:8px;border:1px solid var(--border);object-fit:cover;cursor:pointer}
-.attach-meta{font-size:10px;color:var(--dim);max-width:120px;word-break:break-all;line-height:1.3}
-.attach-remove{position:absolute;top:-6px;right:-6px;background:var(--text);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;font-family:var(--font)}
-.chat-attach-btn{background:none;border:1px solid var(--border2);border-radius:10px;padding:0;width:44px;height:44px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--muted);flex-shrink:0;transition:border-color .15s,color .15s}
-.chat-attach-btn:hover{border-color:var(--accent);color:var(--accent)}
-/* image bubble */
-.bubble-img{max-width:200px;border-radius:10px;border:1px solid rgba(255,255,255,.2);margin-top:6px;cursor:pointer;display:block}
-.bubble.adv .bubble-img{border-color:var(--border)}
-
-/* ── HELP BANNER ── */
-.help-banner{background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1px solid var(--accent-border);border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;flex-wrap:wrap}
-.help-txt{font-size:14px;line-height:1.5}
-.help-txt strong{font-weight:700}
-.help-btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:background .15s}
-.help-btn:hover{background:#ea6c0a}
-
-/* ── EMPTY ── */
-.empty{text-align:center;padding:56px 24px;color:var(--muted)}
-.empty-ico{font-size:40px;margin-bottom:14px;opacity:.3}
-.empty p{font-size:14px;max-width:380px;margin:0 auto}
-
-/* ── LIGHT MODE (applied via body.light-mode) ── */
-body.light-mode{
-  --bg:#ffffff;--white:#f8f8f8;--card:#efefef;
-  --text:#111111;--muted:#555555;--border:#d0d0d0;
-}
-
-/* ── SETTINGS GEAR ── */
-.btn-settings{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:8px;font-size:18px;color:var(--muted);cursor:pointer;border:none;background:none;font-family:var(--font);transition:.15s;line-height:1}
-.btn-settings:hover{color:var(--text);background:var(--card)}
-
-/* ── PREFERENCES PANEL ── */
-#prefs-panel{display:none;position:fixed;top:0;right:0;bottom:0;width:300px;background:var(--white);border-left:1px solid var(--border);box-shadow:-4px 0 24px rgba(0,0,0,.12);z-index:200;flex-direction:column;padding:0}
-#prefs-panel.open{display:flex}
-.prefs-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
-.prefs-title{font-size:15px;font-weight:700}
-.prefs-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;padding:4px}
-.prefs-body{padding:20px;display:flex;flex-direction:column;gap:8px;flex:1;overflow-y:auto}
-.prefs-section-head{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:14px 0 6px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.prefs-section-head:first-child{margin-top:0}
-.pref-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0}
-.pref-label{font-size:14px;font-weight:500}
-.pref-sub{font-size:12px;color:var(--muted);margin-top:2px}
-.pref-toggle{position:relative;width:40px;height:22px;flex-shrink:0}
-.pref-toggle input{opacity:0;width:0;height:0;position:absolute}
-.pref-slider{position:absolute;inset:0;background:#ccc;border-radius:22px;cursor:pointer;transition:background .2s}
-.pref-slider::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s,box-shadow .2s}
-.pref-toggle input:checked+.pref-slider{background:var(--accent)}
-.pref-toggle input:checked+.pref-slider::before{transform:translateX(18px);box-shadow:0 0 6px rgba(249,115,22,.55),0 0 12px rgba(249,115,22,.25)}
-.prefs-foot{padding:16px 20px;border-top:1px solid var(--border)}
-.btn-save-prefs{width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s}
-.btn-save-prefs:hover{background:#ea6c0a}
-.prefs-msg{font-size:12px;text-align:center;margin-top:8px;color:var(--green);min-height:16px}
-
-/* ── COMPACT CHAT ── */
-.compact-chat .msg-bubble{padding:8px 12px;font-size:13px}
-
-/* ── MOBILE ── */
-.mtabs{display:none}
-@media(max-width:768px){
-  .sidebar{display:none}
-  .layout{flex-direction:column}
-  .panel{padding:24px 18px 80px}
-  .stats{grid-template-columns:1fr 1fr;gap:10px}
-  .stat-val{font-size:22px}
-  .status-sep{width:14px;margin:0 3px}
-  .chat-wrap{height:calc(100vh - 250px);min-height:340px}
-  .bubble{max-width:88%}
-  .mtabs{display:flex;position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);z-index:100;height:62px;box-shadow:0 -2px 12px rgba(0,0,0,.05)}
-  .mtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;color:var(--muted);border:none;background:none;font-family:var(--font);font-weight:500;cursor:pointer;position:relative}
-  .mtab.active{color:var(--accent)}
-  .mtab-ico{font-size:17px}
-  .mtab-badge{position:absolute;top:8px;right:50%;margin-right:-18px;background:var(--accent);color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
-}
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(12px);background:#1c1917;color:#fff;font-size:13px;font-weight:600;padding:10px 18px;border-radius:10px;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:9999;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 
-<!-- BOOT SPLASH -->
-<div id="boot">
+<div id="boot" role="status" aria-live="polite">
   <div class="boot-mark">D</div>
-  <div class="boot-trail"><span class="boot-plane">✈️</span></div>
   <div class="boot-txt">Loading your portal…</div>
 </div>
 
 <!-- LOGIN -->
 <div id="login-screen">
-  <svg class="login-paths" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-    <path id="lp1" d="M-80,700 C220,580 520,420 800,280 C960,200 1100,140 1300,90" fill="none"/>
-    <path d="M-80,700 C220,580 520,420 800,280 C960,200 1100,140 1300,90" fill="none" stroke="rgba(249,115,22,.16)" stroke-width="1.5" stroke-dasharray="3 11" stroke-linecap="round"/>
-    <g opacity=".55">
-      <path d="M-2,-5 L12,0 L-2,5 L1.5,0 Z" fill="#f97316"/>
-      <animateMotion dur="30s" repeatCount="indefinite" rotate="auto"><mpath href="#lp1"/></animateMotion>
-    </g>
-    <path id="lp2" d="M-60,300 C300,280 620,200 900,120 C1040,80 1180,50 1320,30" fill="none"/>
-    <path d="M-60,300 C300,280 620,200 900,120 C1040,80 1180,50 1320,30" fill="none" stroke="rgba(249,115,22,.08)" stroke-width="1" stroke-dasharray="2 14" stroke-linecap="round"/>
-    <g opacity=".3">
-      <path d="M-1.5,-4 L10,0 L-1.5,4 L1,0 Z" fill="#fb923c"/>
-      <animateMotion dur="46s" repeatCount="indefinite" rotate="auto"><mpath href="#lp2"/></animateMotion>
-    </g>
-  </svg>
   <div class="login-card">
     <div class="login-brand">District <span>Award</span> Travel</div>
-    <div class="login-sub">Client Portal</div>
-    <div class="field">
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <div class="field">
-      <label>Password</label>
-      <input type="password" id="login-pass" placeholder="Your access code" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <button class="btn-login" id="login-btn" onclick="doLogin()">Sign In</button>
-    <div class="login-err" id="login-err">Invalid credentials. Contact your advisor.</div>
-    <div class="login-foot">New client? <a href="intake.html">Apply here →</a></div>
+    <div class="login-sub">Client portal — sign in to see your plan</div>
+    <div class="field"><label>Email</label><input type="email" id="login-email" autocomplete="email" placeholder="you@email.com"></div>
+    <div class="field"><label>Password</label><input type="password" id="login-pass" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <button class="btn-login" id="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="login-err" id="login-err"></div>
+    <div class="login-foot">Questions? <a href="mailto:braden@districtawardtravel.com">Email us</a></div>
   </div>
 </div>
 
 <!-- PORTAL -->
 <div id="portal">
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="sb-head"><div class="sb-brand">District <span>Award</span> Travel</div></div>
-      <div class="sb-client">
-        <div class="sb-client-name" id="sb-name">—</div>
-        <div class="sb-client-tier" id="sb-tier">—</div>
-      </div>
-      <nav class="sb-nav">
-        <button class="nav-item active" data-tab="overview" onclick="switchTab('overview')"><span class="nav-ico">◈</span> Overview</button>
-        <button class="nav-item" data-tab="trips" onclick="switchTab('trips')"><span class="nav-ico">✈</span> My Trips</button>
-        <button class="nav-item" data-tab="savings" onclick="switchTab('savings')"><span class="nav-ico">◎</span> Savings &amp; Fees</button>
-        <button class="nav-item" data-tab="points" onclick="switchTab('points')"><span class="nav-ico">⬡</span> My Points</button>
-        <button class="nav-item" data-tab="messages" onclick="switchTab('messages')"><span class="nav-ico">✉</span> Messages <span class="nav-badge" id="nav-unread" style="display:none">0</span></button>
-      </nav>
-      <div class="sb-foot">
-        <button class="btn-settings" onclick="openPrefs()" title="Settings" aria-label="Settings">⚙</button>
-        <button class="btn-out" onclick="logout()"><span class="nav-ico">↩</span> Sign Out</button>
-      </div>
-    </aside>
-
-    <main class="main">
-      <!-- OVERVIEW -->
-      <div class="panel active" id="panel-overview">
-        <div class="phead"><h1 id="ov-greeting">Welcome back</h1><p id="ov-sub">District Award Travel — Client Portal</p></div>
-        <!-- Getting Started checklist — shown for new clients -->
-        <div class="gs-card" id="gs-card">
-          <div class="gs-title">✈ Getting Started with District</div>
-          <div class="gs-sub">Complete these steps to get your plan</div>
-          <div class="gs-progress-wrap"><div class="gs-progress-bar" id="gs-bar" style="width:0%"></div></div>
-          <div class="gs-steps" id="gs-steps"></div>
-          <button class="gs-cta" id="gs-msg-btn" onclick="switchTab('messages')" style="display:none">Message your advisor →</button>
-        </div>
-        <!-- Savings hero — shown when savings > 0 -->
-        <div class="savings-hero" id="savings-hero">
-          <div class="sh-left">
-            <div class="sh-label">Total Saved with District</div>
-            <div class="sh-amount" id="sh-amount" data-shimmer="1" data-v="$0">$0</div>
-            <div class="sh-tagline"><strong id="sh-trips-saved">0 trips</strong> · documented &amp; verified</div>
-            <div id="sh-trip-milestone"></div>
-            <div class="sh-points-line" id="sh-points-line" style="display:none"></div>
-          </div>
-          <div class="sh-right">
-            <div class="sh-fee-label">Advisory fee</div>
-            <div class="sh-fee" id="sh-fee">$0</div>
-            <div class="sh-fee-sub">10% of savings · paid after</div>
-          </div>
-        </div>
-        <div class="stats">
-          <div class="stat"><div class="stat-label">Total Savings</div><div class="stat-val green" id="st-savings">$0</div><div class="stat-sub">documented & verified</div></div>
-          <div class="stat"><div class="stat-label">Advisory Fee</div><div class="stat-val orange" id="st-fee">$0</div><div class="stat-sub">10% of savings</div></div>
-          <div class="stat"><div class="stat-label">Active Trips</div><div class="stat-val blue" id="st-trips">0</div><div class="stat-sub">in your pipeline</div></div>
-        </div>
-        <div class="status-card" id="ov-status" style="display:none">
-          <div class="status-label">Latest Trip Status</div>
-          <div class="status-steps" id="ov-status-steps"></div>
-        </div>
-        <div id="ov-help"></div>
-        <div id="ov-plan"></div>
-        <div id="ov-empty-cta" style="display:none;margin-bottom:28px">
-          <div style="background:var(--accent);border-radius:16px;padding:28px 32px;position:relative;overflow:hidden">
-            <div style="position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 80% 50%,rgba(255,255,255,.1),transparent 65%);pointer-events:none"></div>
-            <div style="position:relative;z-index:1">
-              <div style="font-size:28px;margin-bottom:10px">🚀</div>
-              <div style="font-size:20px;font-weight:800;color:#fff;letter-spacing:-.4px;margin-bottom:6px">Start Your First Trip</div>
-              <div style="font-size:14px;color:rgba(255,255,255,.82);margin-bottom:20px;line-height:1.55">Tell us where you want to go →</div>
-              <button onclick="openChat()" style="background:#fff;color:var(--accent);border:none;border-radius:10px;padding:12px 24px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:opacity .15s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='1'">Message my advisor</button>
-            </div>
-          </div>
-        </div>
-        <div class="sec-head">Recent Messages</div>
-        <div class="msg-list" id="ov-messages"></div>
-        <div id="ov-activity" style="display:none">
-          <div class="sec-head">Recent Activity</div>
-          <div class="activity-timeline" id="ov-activity-list"></div>
-        </div>
-        <div class="refer-card">
-          <div>
-            <div class="refer-title">🎁 Refer a Friend</div>
-            <div class="refer-sub">Earn $50 credit when your friend books their first trip</div>
-            <div id="refer-url-wrap" style="display:none;margin-top:12px;gap:8px;align-items:center;flex-wrap:wrap">
-              <input id="refer-url" readonly onclick="navigator.clipboard.writeText(this.value).then(function(){showToast('Copied!','success');});" style="flex:1;min-width:180px;background:rgba(0,0,0,.3);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:8px 12px;font-family:monospace;font-size:12px;color:rgba(245,240,234,.8);cursor:pointer;outline:none" value="">
-              <button onclick="var u=document.getElementById('refer-url');if(u)navigator.clipboard.writeText(u.value).then(function(){showToast('Link copied!','success');});" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px;white-space:nowrap;">Copy</button>
-            </div>
-            <div id="refer-social" style="display:none;margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-              <a id="refer-wa" href="#" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;background:#25d366;color:#fff;font-size:12px;font-weight:700;text-decoration:none">WhatsApp</a>
-              <a id="refer-email-link" href="#" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;background:#3b82f6;color:#fff;font-size:12px;font-weight:700;text-decoration:none">Email</a>
-            </div>
-          </div>
-          <button class="refer-btn" id="refer-btn" onclick="copyReferral()">Copy invite link</button>
-        </div>
-        <!-- Share card — only visible after a booked/invoiced/paid trip -->
-        <div class="share-card" id="share-card">
-          <div class="share-eyebrow">✈ Tell a friend about District</div>
-          <div class="share-title">Share the savings</div>
-          <div class="share-quote" id="share-quote">Loading your story…</div>
-          <div class="share-actions">
-            <button class="share-btn share-btn-copy" id="share-copy-btn" onclick="copyShareMsg()">📋 Copy message</button>
-            <button class="share-btn share-btn-email" id="share-email-btn" onclick="emailShareMsg()">✉ Email a friend</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- TRIPS -->
-      <div class="panel" id="panel-trips">
-        <div class="phead"><h1>My Trips</h1><p id="trips-sub">Your trips and where each one stands</p></div>
-        <div id="trips-help"></div>
-        <div id="trips-container"></div>
-      </div>
-
-      <!-- SAVINGS -->
-      <div class="panel" id="panel-savings">
-        <div class="phead"><h1>Savings &amp; Fees</h1><p>Every documented win, and what you owe</p></div>
-        <div id="savings-container"></div>
-      </div>
-
-      <!-- POINTS -->
-      <div class="panel" id="panel-points">
-        <div class="phead"><h1>My Points</h1><p>Balances you've shared with us</p></div>
-        <div id="points-milestones"></div>
-        <div id="points-container"></div>
-
-        <!-- Add Points Program Form -->
-        <div class="pts-add-form">
-          <h3>Add / Update a Program</h3>
-          <div class="pts-field-row">
-            <div class="pts-field">
-              <label for="pts-program-input">Program Name</label>
-              <input type="text" id="pts-program-input" list="program-list" placeholder="e.g. Chase Ultimate Rewards" autocomplete="off" oninput="ptsUpdateEstimate()">
-              <datalist id="program-list">
-                <option value="Chase Ultimate Rewards">
-                <option value="American Express Membership Rewards">
-                <option value="Capital One Miles">
-                <option value="Citi ThankYou Points">
-                <option value="United MileagePlus">
-                <option value="Delta SkyMiles">
-                <option value="American Airlines AAdvantage">
-                <option value="Southwest Rapid Rewards">
-                <option value="Alaska Airlines Mileage Plan">
-                <option value="JetBlue TrueBlue">
-                <option value="Marriott Bonvoy">
-                <option value="Hilton Honors">
-                <option value="World of Hyatt">
-                <option value="IHG One Rewards">
-              </datalist>
-            </div>
-            <div class="pts-field">
-              <label for="pts-balance-input">Current Balance</label>
-              <input type="text" inputmode="numeric" id="pts-balance-input" placeholder="e.g. 125,000" oninput="ptsFormatBalance(this); ptsUpdateEstimate()">
-              <div class="pts-est-value" id="pts-est-value"></div>
-            </div>
-          </div>
-          <button class="pts-submit-btn" onclick="ptsSubmit()">Save Balance</button>
-          <div class="pts-success" id="pts-success"></div>
-        </div>
-      </div>
-
-      <!-- MESSAGES -->
-      <div class="panel" id="panel-messages">
-        <div class="phead"><h1>Messages</h1><p>Chat directly with your advisor</p></div>
-        <div class="chat-wrap">
-          <div class="chat-header">
-            <div class="chat-avatar">D</div>
-            <div class="chat-header-info">
-              <div class="chat-header-name">Braden &mdash; DAT</div>
-              <div class="chat-header-status">&#x25cf; Active</div>
-            </div>
-          </div>
-          <div class="chat-scroll" id="chat-scroll"></div>
-          <div class="chat-attach-preview" id="chat-attach-preview">
-            <div class="attach-thumb-wrap">
-              <img class="attach-thumb" id="attach-thumb" src="" alt="Attachment preview" onclick="openAttachFull()">
-              <div class="attach-meta" id="attach-meta"></div>
-              <button class="attach-remove" onclick="removeAttachment()" aria-label="Remove attachment">&times;</button>
-            </div>
-          </div>
-          <div class="chat-compose">
-            <input type="file" id="chat-file-input" accept="image/*" style="display:none" onchange="handleFileSelect(this)">
-            <button class="chat-attach-btn" id="chat-attach-btn" onclick="document.getElementById('chat-file-input').click()" aria-label="Attach image" title="Attach image">&#128247;</button>
-            <textarea class="chat-input" id="chat-input" rows="1" placeholder="Type a message…" onkeydown="chatKey(event)" oninput="autoGrow(this)"></textarea>
-            <button class="chat-send" id="chat-send" onclick="sendChat()" aria-label="Send message">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-            </button>
-          </div>
-          <div class="chat-note">Messages go straight to Braden — replies usually same day</div>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- PREFERENCES PANEL -->
-  <div id="prefs-panel" role="dialog" aria-label="Preferences">
-    <div class="prefs-head">
-      <div class="prefs-title">&#x2699; Settings</div>
-      <button class="prefs-close" onclick="closePrefs()" aria-label="Close">&#x2715;</button>
+  <nav class="topnav">
+    <div class="nav-brand">District <span>Award</span> Travel</div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" id="tab-home" onclick="switchTab('home')">Home</button>
+      <button class="nav-tab" id="tab-messages" onclick="switchTab('messages')">Messages<span class="nav-unread" id="unread-badge" style="display:none">0</span></button>
+      <button class="nav-tab" id="tab-points" onclick="switchTab('points')">Points</button>
     </div>
-    <div class="prefs-body">
-      <div class="prefs-section-head">Display</div>
-      <div class="pref-row">
-        <div>
-          <div class="pref-label">Light mode</div>
-          <div class="pref-sub">Switch to a light color scheme</div>
+    <div class="nav-right">
+      <span class="nav-name" id="nav-name"></span>
+      <button class="btn-signout" onclick="logout()">Sign out</button>
+    </div>
+  </nav>
+
+  <div class="panels">
+    <!-- HOME -->
+    <div class="panel active" id="panel-home">
+      <div class="home-greeting" id="ov-greeting">Welcome back</div>
+      <div id="ov-status"></div>
+      <div id="ov-plan"></div>
+      <div id="ov-msgs-preview"></div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="panel" id="panel-messages">
+      <div class="chat-wrap">
+        <div id="chat-attach-preview" class="chat-attach-preview">
+          <img class="attach-thumb" id="attach-thumb" src="" alt="" onclick="openAttachFull()">
+          <span id="attach-meta"></span>
+          <button class="attach-rm" onclick="removeAttachment()" title="Remove">✕</button>
         </div>
-        <label class="pref-toggle">
-          <input type="checkbox" id="pref-light-mode" onchange="onPrefToggle()">
-          <span class="pref-slider"></span>
-        </label>
-      </div>
-      <div class="pref-row">
-        <div>
-          <div class="pref-label">Compact chat</div>
-          <div class="pref-sub">Smaller message bubbles</div>
+        <div id="chat-scroll" class="chat-scroll"></div>
+        <div class="chat-input-row">
+          <input type="file" id="file-input" accept="image/*" style="display:none" onchange="handleFileSelect(this)">
+          <button class="attach-file-btn" onclick="document.getElementById('file-input').click()" title="Attach image">📎</button>
+          <textarea class="chat-textarea" id="chat-input" placeholder="Message your advisor…" rows="1" onkeydown="chatKey(event)" oninput="autoGrow(this)"></textarea>
+          <button class="chat-send" id="chat-send" onclick="sendChat()">Send</button>
         </div>
-        <label class="pref-toggle">
-          <input type="checkbox" id="pref-compact-chat" onchange="onPrefToggle()">
-          <span class="pref-slider"></span>
-        </label>
-      </div>
-      <div class="prefs-section-head">Notifications</div>
-      <div class="pref-row">
-        <div>
-          <div class="pref-label">Email notifications</div>
-          <div class="pref-sub">Get notified when there are updates</div>
-        </div>
-        <label class="pref-toggle">
-          <input type="checkbox" id="pref-email-notifs" onchange="onPrefToggle()">
-          <span class="pref-slider"></span>
-        </label>
-      </div>
-      <div class="pref-row">
-        <div>
-          <div class="pref-label">Message sound</div>
-          <div class="pref-sub">Play a tone on new messages</div>
-        </div>
-        <label class="pref-toggle">
-          <input type="checkbox" id="pref-msg-sound" onchange="onPrefToggle()">
-          <span class="pref-slider"></span>
-        </label>
       </div>
     </div>
-    <div class="prefs-foot">
-      <button class="btn-save-prefs" onclick="savePrefs()">Save preferences</button>
-      <div class="prefs-msg" id="prefs-msg"></div>
-    </div>
-  </div>
 
-  <div class="mtabs">
-    <button class="mtab active" data-tab="overview" onclick="switchTab('overview')"><span class="mtab-ico">◈</span>Overview</button>
-    <button class="mtab" data-tab="trips" onclick="switchTab('trips')"><span class="mtab-ico">✈</span>Trips</button>
-    <button class="mtab" data-tab="savings" onclick="switchTab('savings')"><span class="mtab-ico">◎</span>Savings</button>
-    <button class="mtab" data-tab="points" onclick="switchTab('points')"><span class="mtab-ico">⬡</span>Points</button>
-    <button class="mtab" data-tab="messages" onclick="switchTab('messages')"><span class="mtab-ico">✉</span>Messages<span class="mtab-badge" id="mtab-unread" style="display:none">0</span></button>
+    <!-- POINTS -->
+    <div class="panel" id="panel-points">
+      <div class="points-add">
+        <div class="points-add-title">Add or update a points balance</div>
+        <div class="form-row">
+          <div class="pts-field">
+            <label>Loyalty Program</label>
+            <select id="pts-program-input" onchange="ptsUpdateEstimate()">
+              <option value="">Select program…</option>
+              <option>Chase Ultimate Rewards</option>
+              <option>American Express Membership Rewards</option>
+              <option>Capital One Miles</option>
+              <option>Citi ThankYou Points</option>
+              <option>United MileagePlus</option>
+              <option>Delta SkyMiles</option>
+              <option>American Airlines AAdvantage</option>
+              <option>Southwest Rapid Rewards</option>
+              <option>Alaska Airlines Mileage Plan</option>
+              <option>JetBlue TrueBlue</option>
+              <option>Marriott Bonvoy</option>
+              <option>Hilton Honors</option>
+              <option>World of Hyatt</option>
+            </select>
+          </div>
+          <div class="pts-field">
+            <label>Current Balance</label>
+            <input type="text" id="pts-balance-input" placeholder="e.g. 75,000" inputmode="numeric" oninput="ptsFormatBalance(this);ptsUpdateEstimate()">
+            <div class="pts-est" id="pts-est-value"></div>
+          </div>
+        </div>
+        <button class="btn-pts-save" onclick="ptsSubmit()">Save balance</button>
+        <span class="pts-success" id="pts-success"></span>
+      </div>
+      <div class="section-label">Your balances</div>
+      <div class="points-list" id="points-container"></div>
+    </div>
   </div>
 </div>
 
+<div id="toast"></div>
+
 <script>
-function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')}
-function fmtUsd(c){return '$'+Math.round((c||0)/100).toLocaleString('en-US')}
-function fmtNum(n){return Number(n||0).toLocaleString('en-US')}
-// Parse a free-text money string like "$3,550" or "3550.00" → integer cents (0 if unparseable)
-function moneyToCents(s){if(s==null)return 0;const m=String(s).replace(/[^0-9.]/g,'');if(!m)return 0;const v=parseFloat(m);return isNaN(v)?0:Math.round(v*100);}
-// Pull every plan the advisor has sent, newest first, each tagged with its message time
-function extractPlans(msgs){return (msgs||[]).filter(m=>{const p=m.plan||m.plan_details;return p&&(p.title||p.dest||p.overview);}).map(m=>({...(m.plan||m.plan_details),_time:m.time||m.ts||''}));}
+'use strict';
 
-const TOKEN_KEY='dat_client_token';
-const getToken=()=>sessionStorage.getItem(TOKEN_KEY);
-const setToken=t=>sessionStorage.setItem(TOKEN_KEY,t);
-const clearToken=()=>sessionStorage.removeItem(TOKEN_KEY);
+/* ── helpers ── */
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function fmtNum(n){const v=parseInt(n,10);return isNaN(v)?String(n||'—'):v.toLocaleString('en-US');}
+function fmtUsd(cents){if(!cents&&cents!==0)return '—';const v=Math.round(Number(cents)/100);return '$'+v.toLocaleString('en-US');}
+function moneyToCents(s){if(!s)return 0;const v=parseFloat(String(s).replace(/[^0-9.]/g,''));return isNaN(v)?0:Math.round(v*100);}
+function clockTime(ts){if(!ts)return '';try{const d=new Date(ts);if(isNaN(d))return '';return d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});}catch(e){return '';}}
+function dayLabel(ts){if(!ts)return '';try{const d=new Date(ts);if(isNaN(d))return '';const now=new Date();const diff=Math.floor((now-d)/86400000);if(diff===0)return 'Today';if(diff===1)return 'Yesterday';if(diff<7)return d.toLocaleDateString('en-US',{weekday:'long'});return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}catch(e){return '';}}
+function fmtTime(ts){return dayLabel(ts)||'';}
+let _toastTimer=null;
+function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(()=>el.classList.remove('show'),2800);}
 
-const STATUS_STEPS=[
-  {key:'new',label:'Intake received'},
-  {key:'researching',label:'Researching'},
-  {key:'options_sent',label:'Options sent'},
-  {key:'awaiting_decision',label:'Your decision'},
-  {key:'booked',label:'Booked'},
-  {key:'invoiced',label:'Invoiced'},
-  {key:'closed',label:'Done'}
-];
-const BADGE={new:['badge-new','Intake Received'],researching:['badge-researching','Researching'],options_sent:['badge-options','Options Sent'],awaiting_decision:['badge-options','Awaiting Your Decision'],booked:['badge-booked','Booked'],invoiced:['badge-done','Invoiced'],closed:['badge-done','Closed']};
+/* ── Auth token (sessionStorage so tabs don't share) ── */
+function getToken(){return sessionStorage.getItem('dat_client_token')||localStorage.getItem('dat_client_token');}
+function setToken(t){sessionStorage.setItem('dat_client_token',t);localStorage.setItem('dat_client_token',t);}
+function clearToken(){sessionStorage.removeItem('dat_client_token');localStorage.removeItem('dat_client_token');}
+function logout(){clearToken();location.reload();}
 
-function loginErr(msg){const el=document.getElementById('login-err');el.textContent=msg||'Invalid credentials. Contact your advisor.';el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
+/* ── Tab switching ── */
+function switchTab(tab){
+  ['home','messages','points'].forEach(t=>{
+    document.getElementById('panel-'+t).classList.toggle('active',t===tab);
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='messages'){markChatRead();scrollChatBottom();}
+}
+function openChat(){switchTab('messages');}
 
+/* ── Unread badge ── */
+let _unreadCount=0;
+function setUnread(n){
+  _unreadCount=n;
+  const el=document.getElementById('unread-badge');
+  if(el){el.textContent=n;el.style.display=n>0?'':'none';}
+}
+
+/* ── Login ── */
 async function doLogin(){
-  const email=document.getElementById('login-email').value.trim().toLowerCase();
+  const email=document.getElementById('login-email').value.trim();
   const pass=document.getElementById('login-pass').value;
   const btn=document.getElementById('login-btn');
-  if(!email||!pass)return loginErr('Enter your email and password.');
-  btn.disabled=true;btn.textContent='Signing in…';
+  const err=document.getElementById('login-err');
+  err.style.display='none';btn.disabled=true;btn.textContent='Signing in…';
   try{
-    const res=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
-    if(res.ok){
-      const {token}=await res.json();setToken(token);
-      const me=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
-      if(me.ok){const meData=await me.json();applyPrefs(meData.preferences);btn.disabled=false;btn.textContent='Sign In';return showPortal(meData);}
-    }else if(res.status===429){btn.disabled=false;btn.textContent='Sign In';return loginErr('Too many attempts. Try again in a few minutes.');}
-    btn.disabled=false;btn.textContent='Sign In';loginErr('Invalid credentials. Contact your advisor.');
-  }catch(e){btn.disabled=false;btn.textContent='Sign In';loginErr('Could not reach server. Check your connection.');}
+    const res=await fetch('/api/client/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    const data=await res.json();
+    if(res.ok&&data.token){setToken(data.token);showPortal(data);}
+    else{err.textContent=data.detail||'Invalid email or password.';err.style.display='block';}
+  }catch(e){err.textContent='Could not connect — please try again.';err.style.display='block';}
+  btn.disabled=false;btn.textContent='Sign in';
 }
 
-function logout(){clearToken();stopAutoRefresh();document.getElementById('portal').style.display='none';document.getElementById('login-screen').style.display='flex';document.getElementById('login-email').value='';document.getElementById('login-pass').value='';switchTab('overview');}
-
-function showPortal(c){document.getElementById('login-screen').style.display='none';document.getElementById('portal').style.display='block';requestNotifPermission();renderPortal(c);startAutoRefresh();}
-
-function switchTab(id){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  const t=document.getElementById('panel-'+id);if(t)t.classList.add('active');
-  document.querySelectorAll('.nav-item,.mtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id));
-  document.querySelector('.main').scrollTop=0;window.scrollTo(0,0);
-  if(id==='messages'){markChatRead();scrollChatBottom(true);}
-}
-
-// Jump into the chat from anywhere (help banners), optionally pre-filling the box
-function openChat(prefill){
-  switchTab('messages');
-  const inp=document.getElementById('chat-input');
-  if(prefill&&!inp.value)inp.value=prefill;
-  inp.focus();
-}
-
+/* ── Show portal ── */
 let currentData=null;
-let lastMsgCount=0;
-let activeNotification=null;
-
-function requestNotifPermission(){
-  if(typeof Notification==='undefined')return;
-  if(Notification.permission==='default')Notification.requestPermission();
+function showPortal(data){
+  currentData=data;
+  document.getElementById('login-screen').style.display='none';
+  const p=document.getElementById('portal');
+  p.style.display='flex';
+  renderPortal(data);
+  startAutoRefresh();
 }
 
-function maybeNotify(newCount){
-  if(newCount>lastMsgCount){
-    const soundEl=document.getElementById('pref-msg-sound');
-    if(soundEl&&soundEl.checked)playNotifTone();
-  }
-  if(typeof Notification==='undefined')return;
-  if(Notification.permission!=='granted')return;
-  if(newCount<=lastMsgCount)return;
-  if(!document.hidden)return;
-  if(activeNotification)activeNotification.close();
-  try{
-    const n=new Notification('District Award Travel',{body:'New message from your advisor',icon:'/favicon.ico'});
-    activeNotification=n;
-    n.onclick=function(){window.focus();n.close();activeNotification=null;};
-    n.onclose=function(){if(activeNotification===n)activeNotification=null;};
-  }catch(e){}
-}
+function renderPortal(data){
+  currentData=data;
+  const name=(data.name||'').split(' ')[0]||'there';
+  document.getElementById('ov-greeting').textContent='Welcome back, '+name+' 👋';
+  document.getElementById('nav-name').textContent=name;
 
-function renderPortal(c){
-  currentData=c;
-  const name=(c.name||'').split(' ')[0]||'there';
-  document.getElementById('sb-name').textContent=c.name||'Client';
-  document.getElementById('sb-tier').textContent=c.tier||'Client';
-  document.getElementById('ov-greeting').textContent='Hi, '+name+' 👋';
-  document.getElementById('ov-sub').textContent=(c.tier?c.tier+' — ':'')+'District Award Travel';
-
-  // Savings hero banner
-  const lifetimeSavings=c.lifetime_savings_cents||0;
-  const lifetimeFee=c.total_fee_cents||0;
-  const hero=document.getElementById('savings-hero');
-  const prevSavings=Number(hero.dataset.prevSavings||0);
-  if(lifetimeSavings>0){
-    hero.classList.add('has-savings');
-    animStat('sh-amount',lifetimeSavings,fmtUsd);
-    animStat('sh-fee',lifetimeFee,fmtUsd);
-    const tripCount=(c.savings_breakdown||[]).length;
-    document.getElementById('sh-trips-saved').textContent=tripCount+' trip'+(tripCount!==1?'s':'');
-    // Scale pop animation on first render with savings > 0
-    if(prevSavings===0&&lifetimeSavings>0){
-      const amtEl=document.getElementById('sh-amount');
-      if(amtEl){amtEl.classList.remove('pop');void amtEl.offsetWidth;amtEl.classList.add('pop');setTimeout(()=>amtEl.classList.remove('pop'),600);}
-    }
-    // Fire confetti once when savings first appear
-    if(prevSavings===0&&lifetimeSavings>0&&!REDUCED){
-      const colors=['#f97316','#fbbf24','#4ade80','#60a5fa','#f472b6','#a78bfa','#fb923c','#34d399'];
-      const amount=document.getElementById('sh-amount');
-      if(amount){
-        colors.forEach((col,i)=>{
-          const dot=document.createElement('div');
-          dot.className='confetti-dot';
-          const angle=((i/colors.length)*360)*(Math.PI/180);
-          const dist=60+Math.random()*60;
-          dot.style.cssText=`background:${col};left:50%;top:50%;--cx:${Math.cos(angle)*dist}px;--cy:${Math.sin(angle)*dist-80}px;animation-delay:${i*0.05}s`;
-          hero.appendChild(dot);
-          setTimeout(()=>dot.remove(),1400+i*50);
-        });
-      }
-    }
-  }else{hero.classList.remove('has-savings')}
-  hero.dataset.prevSavings=lifetimeSavings;
-
-  // Stats — count up on change
-  animStat('st-savings',lifetimeSavings,fmtUsd);
-  animStat('st-fee',lifetimeFee,fmtUsd);
-  const trips=c.pipeline_trips||[];
-  animStat('st-trips',trips.length,String);
-
-  // Latest trip status bar
-  if(trips.length){
-    renderStatusBar('ov-status-steps',trips[0].workflow_status);
-    document.getElementById('ov-status').style.display='block';
-  }else{document.getElementById('ov-status').style.display='none';}
-
-  // Messages (from data.messages JSON), newest first for the overview preview
-  const msgs=(c.messages||[]).slice().reverse();
+  const msgs=data.messages||[];
   const unread=msgs.filter(m=>m.unread&&m.sender!=='client').length;
   setUnread(unread);
-  const newCount=(c.messages||[]).length;
-  maybeNotify(newCount);
-  lastMsgCount=newCount;
-  renderMessages('ov-messages',msgs.slice(0,3),true);
-  renderChat(c.messages||[]);
-  // If the chat is already open when a new message lands, mark it read right away
-  if(document.getElementById('panel-messages').classList.contains('active')&&unread>0)markChatRead();
 
-  // Plans the advisor has sent (newest first) — surfaced across Overview, Trips, Savings
+  const trips=data.pipeline_trips||[];
+  const status=(trips[0]&&(trips[0].workflow_status||trips[0].status))||'new';
+  renderStatusPill(status);
+
   const plans=extractPlans(msgs);
-  renderOverviewPlan(plans);
-
-  // "I'm here to help" booking nudges on Overview + Trips
-  renderHelpBanners(trips,plans);
-
-  // Trips tab — pass plans so each can show its matching plan inline
-  document.getElementById('trips-sub').textContent=trips.length?(trips.length+' trip'+(trips.length!==1?'s':'')+' in your pipeline'):'No trips yet';
-  renderTrips(trips,plans);
-
-  // Savings tab — real booked records, with projected savings from plans as a fallback
-  renderSavings(c.savings_breakdown||[],c.lifetime_savings_cents||0,c.total_fee_cents||0,plans);
-
-  // Getting started checklist for new clients
-  renderGettingStarted(c);
-
-  // Referral share card (post-booking) + trip milestone badge
-  renderShareCard(c.savings_breakdown||[]);
-  renderTripMilestoneBadge(c.savings_breakdown||[]);
-
-  // Points total compact line in savings hero
-  const pointsArr=c.points||[];
-  const ptsTotalLine=document.getElementById('sh-points-line');
-  if(ptsTotalLine){
-    const ptsTotal=pointsArr.reduce((s,p)=>s+(p.balance||p.points||0),0);
-    if(ptsTotal>0&&lifetimeSavings>0){
-      ptsTotalLine.textContent=fmtNum(ptsTotal)+' total points across '+pointsArr.length+' program'+(pointsArr.length!==1?'s':'');
-      ptsTotalLine.style.display='block';
-    }else{ptsTotalLine.style.display='none';}
-  }
-
-  // Empty CTA if no trips
-  const emptyCta=document.getElementById('ov-empty-cta');
-  if(emptyCta)emptyCta.style.display=trips.length===0?'block':'none';
-
-  // Activity timeline
-  renderActivityTimeline(c);
-
-  // Points tab
-  renderPoints(c.points||[]);
+  renderHomePlan(plans,trips);
+  renderMsgsPreview(msgs.filter(m=>m.sender!=='client').slice(-3).reverse());
+  renderChatMessages(msgs);
+  renderPoints(data.points||[]);
 }
 
-// Animate a stat from its previous value to `target` (no-op when unchanged)
-const REDUCED=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-function animStat(id,target,fmt){
-  const el=document.getElementById(id);if(!el)return;
-  const from=Number(el.dataset.v||0);
-  el.dataset.v=target;
-  if(from===target&&el.textContent!=='—'&&el.textContent!=='$0'&&el.textContent!=='0'){el.textContent=fmt(target);return;}
-  if(REDUCED||from===target){const v=fmt(target);el.textContent=v;if(el.dataset.shimmer)el.setAttribute('data-v',v);return;}
-  const dur=750;let start=null;
-  function step(ts){
-    if(!start)start=ts;
-    const p=Math.min((ts-start)/dur,1),eased=1-Math.pow(1-p,3);
-    const val=fmt(Math.round(from+(target-from)*eased));
-    el.textContent=val;
-    if(el.dataset.shimmer)el.setAttribute('data-v',val);
-    if(p<1)requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
+/* ── Status pill ── */
+const STATUS_INFO={
+  new:        {cls:'',    icon:'📋', text:'Intake received — your advisor will reach out soon'},
+  researching:{cls:'active',icon:'🔬',text:'Research in progress — finding your best options'},
+  options_sent:{cls:'active',icon:'📬',text:'Your plan is ready — see below'},
+  awaiting_decision:{cls:'active',icon:'⏳',text:'Waiting for your decision'},
+  booked:     {cls:'done',icon:'✅',text:'Booked! Have an amazing trip'},
+  invoiced:   {cls:'',    icon:'🧾',text:'Invoice sent'},
+  closed:     {cls:'done',icon:'✅',text:'Complete'},
+};
+function renderStatusPill(status){
+  const s=STATUS_INFO[status]||{cls:'',icon:'📋',text:status||'In progress'};
+  document.getElementById('ov-status').innerHTML=
+    `<div class="status-pill ${s.cls}"><span class="status-dot"></span>${s.icon} ${esc(s.text)}</div>`;
 }
 
-function showToast(msg,type){
-  var t=document.createElement('div');
-  t.textContent=msg;
-  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:'+(type==='success'?'#22c55e':'#374151')+';color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;z-index:9999;pointer-events:none;transition:opacity .3s';
-  document.body.appendChild(t);
-  setTimeout(function(){t.style.opacity='0';setTimeout(function(){t.remove();},320);},1800);
+/* ── Plans ── */
+function extractPlans(msgs){
+  return (msgs||[])
+    .filter(m=>{const p=m.plan||m.plan_details;return p&&(p.title||p.dest||p.overview||p.options);})
+    .map(m=>({...(m.plan||m.plan_details),_time:m.time||m.ts||''}));
 }
 
-function copyReferral(){
-  const name=((currentData&&currentData.name)||'').split(' ')[0].toLowerCase();
-  const url=location.origin+'/?utm_source=referral&utm_medium=client'+(name?'&utm_campaign='+encodeURIComponent(name):'');
-  const msg=`Hey! I've been using District Award Travel to find award redemptions for my points — they found me business class for way less than cash and only charge 10% of what they save you. No upfront fee. Check it out: ${url}`;
-  // Show URL box and social links
-  const urlWrap=document.getElementById('refer-url-wrap');
-  const urlInput=document.getElementById('refer-url');
-  const social=document.getElementById('refer-social');
-  if(urlWrap&&urlInput){urlInput.value=url;urlWrap.style.display='flex';}
-  if(social){
-    social.style.display='flex';
-    const wa=document.getElementById('refer-wa');
-    if(wa)wa.href='https://wa.me/?text='+encodeURIComponent(msg);
-    const em=document.getElementById('refer-email-link');
-    if(em)em.href='mailto:?subject=Award+travel+savings+tool&body='+encodeURIComponent(msg);
-  }
-  const btn=document.getElementById('refer-btn');
-  function done(){btn.textContent='✓ Copied — send it!';setTimeout(()=>btn.textContent='Copy invite link',2500);}
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(url).then(done).catch(()=>prompt('Copy your invite link:',url));}
-  else prompt('Copy your invite link:',url);
-}
-
-// Build a share message from the client's best (largest) saving
-function buildShareMessage(savings){
-  const booked=(savings||[]).filter(r=>['booked','invoiced','paid'].includes((r.status||r.workflow_status||'').toLowerCase()));
-  if(!booked.length)return null;
-  const best=booked.reduce((a,b)=>(b.gross_savings_cents||0)>(a.gross_savings_cents||0)?b:a,booked[0]);
-  const dest=best.trip_label||best.destination||null;
-  const saved=best.gross_savings_cents?fmtUsd(best.gross_savings_cents):null;
-  const pts=best.points_used?fmtNum(best.points_used):null;
-  const prog=best.points_program||null;
-  let msg='I just booked a trip through District Award Travel';
-  if(dest)msg+=' to '+dest;
-  if(saved)msg+=' and saved '+saved;
-  if(pts&&prog)msg+=' — '+pts+' '+prog+' points instead of paying cash';
-  else if(pts)msg+=' — '+pts+' points for the whole thing';
-  msg+='. If you\'ve got points sitting around, check out '+location.origin+'/';
-  return msg;
-}
-
-function renderGettingStarted(c){
-  const card=document.getElementById('gs-card');
-  const stepsEl=document.getElementById('gs-steps');
-  const bar=document.getElementById('gs-bar');
-  const msgBtn=document.getElementById('gs-msg-btn');
-  if(!card||!stepsEl||!bar)return;
-
-  const trips=c.pipeline_trips||[];
-  const savings=c.savings_breakdown||[];
-  const points=c.points||c.point_programs||[];
-
-  const s1=true; // account created
-  const s2=points.some(p=>(p.balance||p.points_balance||0)>0);
-  const s3=trips.length>0;
-  const s4=trips.some(t=>{
-    const ws=(t.workflow_status||'').toLowerCase();
-    const order=['options_sent','option_selected','booking','booked','invoiced','paid','closed'];
-    return order.includes(ws);
-  });
-  const s5=savings.some(r=>['booked','invoiced','paid'].includes((r.status||r.workflow_status||'').toLowerCase()));
-
-  const steps=[
-    {label:'Account created',done:s1},
-    {label:'Share your points balances',done:s2},
-    {label:'Submit your trip request',done:s3},
-    {label:'Review your options when ready',done:s4},
-    {label:'Book and save!',done:s5},
-  ];
-  const completed=steps.filter(s=>s.done).length;
-
-  // Hide entirely if all done OR if client is already active (2+ trips and any booked savings)
-  if(completed===5||(trips.length>=2&&s5)){card.classList.remove('visible');return;}
-
-  window.gsUpdateBar=function(){
-    var checked=card.querySelectorAll('.gs-cb:checked').length;
-    var total=5;
-    bar.style.width=(checked/total*100)+'%';
-    if(checked===total){
-      card.style.borderLeftColor='#22c55e';
-      card.style.animation='confetti-pop .4s ease';
-      setTimeout(function(){card.style.animation='';},400);
-    } else {
-      card.style.borderLeftColor='#f97316';
-    }
-  };
-
-  stepsEl.innerHTML=steps.map((s,i)=>{
-    const savedChecked=s.done||localStorage.getItem('dat_checklist_'+i)==='1';
-    return `<div class="gs-step">
-      <input type="checkbox" class="gs-cb" data-idx="${i}" ${savedChecked?'checked':''} style="accent-color:#f97316;width:15px;height:15px;flex-shrink:0;cursor:pointer;margin-right:4px" onchange="localStorage.setItem('dat_checklist_${i}',this.checked?'1':'0');var lbl=this.nextElementSibling;if(lbl){lbl.style.textDecoration=this.checked?'line-through':'none';lbl.style.color=this.checked?'#6b7280':'';}gsUpdateBar();">
-      <span class="gs-step-label ${s.done?'done':''}" style="${savedChecked?'text-decoration:line-through;color:#6b7280;':''}">${s.label}</span>
+function renderHomePlan(plans,trips){
+  const el=document.getElementById('ov-plan');
+  if(!plans||!plans.length){
+    const dest=(trips&&trips[0]&&trips[0].destination)||null;
+    el.innerHTML=`<div class="no-plan">
+      <div class="no-plan-icon">✈️</div>
+      <div class="no-plan-title">${dest?'Research underway for '+esc(dest):'No plan yet'}</div>
+      <div class="no-plan-sub">Your advisor is researching the best award redemptions for you. You'll see your options right here when they're ready — usually within 24–72 hours.</div>
+      <button class="btn-msg" onclick="openChat()">Message my advisor →</button>
     </div>`;
-  }).join('');
-
-  // Initial bar update based on restored state
-  gsUpdateBar();
-
-  msgBtn.style.display=s2?'none':'inline-block';
-  card.classList.add('visible');
-}
-
-function renderShareCard(savings){
-  const card=document.getElementById('share-card');
-  const quoteEl=document.getElementById('share-quote');
-  if(!card||!quoteEl)return;
-  const msg=buildShareMessage(savings);
-  if(!msg){card.classList.remove('visible');return;}
-  card.classList.add('visible');
-  quoteEl.textContent=msg;
-}
-
-function copyShareMsg(){
-  const msg=document.getElementById('share-quote').textContent;
-  const btn=document.getElementById('share-copy-btn');
-  function done(){btn.textContent='✓ Copied!';setTimeout(()=>btn.innerHTML='📋 Copy message',2000);}
-  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(msg).then(done).catch(()=>prompt('Copy this message:',msg));}
-  else prompt('Copy this message:',msg);
-}
-
-function emailShareMsg(){
-  const msg=document.getElementById('share-quote').textContent;
-  const subject=encodeURIComponent('Check out District Award Travel');
-  const body=encodeURIComponent(msg);
-  window.location.href='mailto:?subject='+subject+'&body='+body;
-}
-
-function renderTripMilestoneBadge(savings){
-  const el=document.getElementById('sh-trip-milestone');
-  if(!el)return;
-  const completed=(savings||[]).filter(r=>{const s=(r.status||r.workflow_status||'').toLowerCase();return s==='booked'||s==='closed'||s==='invoiced'||s==='paid';}).length;
-  if(completed>=2){
-    el.innerHTML='<span class="trip-count-badge">&#x2708; '+completed+'-Trip Traveler</span>';
-  }else{
-    el.innerHTML='';
+    return;
   }
-}
+  const p=plans[0];
+  const opts=p.options&&Array.isArray(p.options)&&p.options.length?p.options:null;
+  let html=`<div style="margin-bottom:28px">
+    <div class="plan-eyebrow"><div class="plan-eyebrow-dot"></div><div class="plan-eyebrow-txt">Your advisor's plan</div></div>
+    <div class="plan-title">${esc(p.title||'Your Award Options')}</div>
+    ${(p.dest||p.dates)?`<div class="plan-meta">${[p.dest,p.dates].filter(Boolean).map(esc).join(' · ')}</div>`:''}
+    ${p.overview?`<div class="plan-overview">${esc(p.overview)}</div>`:''}`;
 
-function setUnread(n){
-  ['nav-unread','mtab-unread'].forEach(id=>{const el=document.getElementById(id);if(!el)return;if(n>0){el.textContent=n;el.style.display='flex';}else{el.style.display='none';}});
-}
-
-function renderStatusBar(elId,status){
-  const c=document.getElementById(elId);
-  let idx=STATUS_STEPS.findIndex(s=>s.key===status);
-  if(idx<0)idx=0;
-  c.innerHTML=STATUS_STEPS.map((s,i)=>{
-    let cls,dot;
-    if(i<idx){cls='done-step';dot='done';}else if(i===idx){cls='active-step';dot='active';}else{cls='pending-step';dot='pending';}
-    const sep=i<STATUS_STEPS.length-1?'<div class="status-sep"></div>':'';
-    return `<div class="status-step ${cls}"><div class="status-dot ${dot}"></div><span>${esc(s.label)}</span></div>${sep}`;
-  }).join('');
-}
-
-function fmtTime(s){if(!s)return '';const d=new Date(s);if(isNaN(d))return esc(s);return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
-
-// One advisor plan rendered as boarding-pass card. `compact` drops the overview text.
-function renderPlanCard(p,compact){
-  const route=p.dest?('Plan for '+esc(p.dest)):'';
-  const ov=(!compact&&p.overview)?`<div class="plan-overview">${esc(p.overview)}</div>`:'';
-
-  // If plan has options array, render each as a boarding-pass card
-  if(p.options&&Array.isArray(p.options)&&p.options.length){
-    const optHTML=p.options.map(opt=>`
-      <div class="plan-card" style="margin-bottom:16px">
-        <div class="plan-hd" style="grid-column:1/-1;padding:16px 18px">
-          <div class="plan-eyebrow"><span class="dot"></span>Option: ${esc(opt.title||'Award option')}</div>
-          <div class="plan-title" style="font-size:16px">${esc(opt.title||'Your award option')}</div>
+  if(opts){
+    opts.forEach(opt=>{
+      const savings=moneyToCents(opt.value);
+      html+=`<div class="bp-card">
+        <div class="bp-left">
+          <div class="bp-left-label">${esc(opt.type||'Award Option')}</div>
+          <div class="bp-route">${esc(opt.route||opt.title||'—')}</div>
+          <div class="bp-cabin">${esc(opt.cabin||'—')}</div>
+          ${opt.points?`<div class="bp-pts-box">
+            <div class="bp-pts-num">${esc(opt.points)}</div>
+            <div class="bp-pts-lbl">points required</div>
+            ${opt.program?`<div class="bp-pts-prog">${esc(opt.program)}</div>`:''}
+          </div>`:''}
         </div>
-        <div class="plan-left">
-          ${opt.type?`<div class="plan-left-label">${esc(opt.type)}</div>`:''}
-          ${opt.route?`<div class="plan-route-big">${esc(opt.route)}</div>`:''}
-          ${opt.cabin?`<div class="plan-cabin-txt">${esc(opt.cabin)}</div>`:''}
-          ${opt.points?`<div class="plan-pts-box"><div class="plan-pts-num">${esc(opt.points)}</div><div class="plan-pts-lbl">pts<br>${opt.program?esc(opt.program):'Points'}</div></div>`:''}
+        <div class="bp-tear"></div>
+        <div class="bp-right">
+          <div class="bp-rows">
+            ${opt.program?`<div class="bp-row"><span class="bp-row-lbl">Program</span><span class="bp-row-val">${esc(opt.program)}</span></div>`:''}
+            ${opt.cabin?`<div class="bp-row"><span class="bp-row-lbl">Cabin / Room</span><span class="bp-row-val">${esc(opt.cabin)}</span></div>`:''}
+            ${opt.value?`<div class="bp-row"><span class="bp-row-lbl">Cash price</span><span class="bp-row-val">${esc(opt.value)}</span></div>`:''}
+          </div>
+          ${savings>0?`<div class="bp-save"><span class="bp-save-lbl">You save</span><span class="bp-save-val">${fmtUsd(savings)}</span></div>`:''}
+          ${opt.notes?`<div class="bp-notes">${esc(opt.notes)}</div>`:''}
         </div>
-        <div class="plan-tear"></div>
-        <div class="plan-body">
-          ${opt.program?`<div class="plan-body-row"><span class="plan-body-label">Program</span><span class="plan-body-val">${esc(opt.program)}</span></div>`:''}
-          ${opt.value?`<div class="plan-body-row"><span class="plan-body-label">Cash price</span><span class="plan-body-val">${esc(opt.value)}</span></div>`:''}
-          ${opt.notes?`<div style="font-size:12px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-style:italic">${esc(opt.notes)}</div>`:''}
-        </div>
+      </div>`;
+    });
+  } else {
+    /* simple fallback card */
+    html+=`<div style="background:#fff;border:1px solid var(--accent-border);border-radius:14px;padding:20px 22px;margin-bottom:16px">
+      ${p.points?`<div style="font-size:24px;font-weight:800;color:var(--accent);margin-bottom:4px">${esc(p.points)} pts</div>`:''}
+      ${p.program?`<div style="font-size:13px;color:var(--muted);margin-bottom:12px">${esc(p.program)}</div>`:''}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        ${p.cabin?`<div><div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Cabin</div><div style="font-size:14px;font-weight:700">${esc(p.cabin)}</div></div>`:''}
+        ${p.value?`<div><div style="font-size:11px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px">Est. Value</div><div style="font-size:14px;font-weight:700;color:var(--green)">${esc(p.value)}</div></div>`:''}
       </div>
-    `).join('');
-    return `<div class="plan-card" style="display:block;background:none;border:none;box-shadow:none;margin-bottom:0">
-      <div class="plan-hd" style="grid-column:auto;background:transparent;border:none;padding:0 0 16px 0">
-        <div class="plan-eyebrow"><span class="dot"></span>Your advisor's plan</div>
-        <div class="plan-title">${esc(p.title||'Your award plan')}</div>
-        ${route?`<div class="plan-route">${route}</div>`:''}
-      </div>
-      ${ov}
-      ${optHTML}
     </div>`;
   }
 
-  // Fallback: single option or basic plan
-  const fields=[];
-  if(p.points)fields.push(['Points','blue',fmtNum(String(p.points).replace(/[^0-9]/g,''))||esc(p.points)]);
-  if(p.value)fields.push(['Est. Value','green',esc(p.value)]);
-  if(p.program)fields.push(['Program','',esc(p.program)]);
-  if(p.cabin)fields.push(['Cabin','',esc(p.cabin)]);
-  if(p.dates)fields.push(['Dates','',esc(p.dates)]);
-  const grid=fields.length?`<div class="plan-grid">${fields.map(f=>`<div><div class="plan-field-label">${f[0]}</div><div class="plan-field-val ${f[1]}">${f[2]}</div></div>`).join('')}</div>`:'';
-
-  return `<div class="plan-card">
-    <div class="plan-hd">
-      <div class="plan-eyebrow"><span class="dot"></span>Your advisor's plan</div>
-      <div class="plan-title">${esc(p.title||'Your award plan')}</div>
-      ${route?`<div class="plan-route">${route}</div>`:''}
-    </div>
-    ${ov}${grid}
-  </div>`;
+  html+=`<button class="btn-msg" style="background:none;color:var(--accent);border:1px solid var(--accent-border);margin-top:4px" onclick="openChat()">Questions? Message your advisor →</button></div>`;
+  el.innerHTML=html;
 }
 
-function renderMessages(elId,msgs,preview){
-  const el=document.getElementById(elId);
-  if(!msgs.length){el.innerHTML='<div class="empty"><div class="empty-ico">✉</div><p>No messages yet. Your advisor will reach out as soon as there\'s an update.</p></div>';return;}
-  el.innerHTML=msgs.map(m=>{
-    const pd=m.plan||m.plan_details;
-    const hasPlan=pd&&(pd.title||pd.dest||pd.overview);
-    const plan=(!preview&&hasPlan)?renderPlanCard(pd,false):'';
-    const body=esc(m.text||m.body||'');
-    const shown=preview&&body.length>160?body.slice(0,160)+'…':body;
-    const planTag=preview&&hasPlan?' <span class="msg-plan-link" style="padding:2px 8px;font-size:11px">📋 Plan attached</span>':'';
-    return `<div class="msg-card ${m.unread?'unread':''}">
-      <div class="msg-meta"><div class="msg-from">${m.unread?'<span class="msg-dot"></span>':''}${esc(m.from||'District Award Travel')}${planTag}</div><div class="msg-time">${fmtTime(m.time||m.ts)}</div></div>
-      ${m.subject&&!preview?`<div class="sv-label" style="margin-bottom:6px">${esc(m.subject)}</div>`:''}
-      <div class="msg-body">${shown}</div>${plan}</div>`;
+/* ── Messages preview on Home ── */
+function renderMsgsPreview(msgs){
+  const el=document.getElementById('ov-msgs-preview');
+  if(!msgs||!msgs.length){el.innerHTML='';return;}
+  const items=msgs.map(m=>{
+    const hasPlan=!!(m.plan||m.plan_details);
+    const body=m.text||m.body||'';
+    return `<div class="msg-preview ${m.unread?'unread':''}" onclick="openChat()">
+      <div class="msg-preview-top">
+        <div class="msg-preview-from">${esc(m.from||'District Award Travel')}</div>
+        <div class="msg-preview-time">${fmtTime(m.time||m.ts)}</div>
+      </div>
+      <div class="msg-preview-body">${hasPlan?'<span class="msg-preview-tag">📋 Plan</span>':''}${esc(body.slice(0,120))}${body.length>120?'…':''}</div>
+    </div>`;
   }).join('');
+  el.innerHTML=`<div class="section-label" style="margin-top:32px">Recent messages</div>
+    <div class="msg-preview-list">${items}</div>
+    <button class="view-all-btn" onclick="openChat()">Open messages →</button>`;
 }
 
-function buildActivityTimeline(c){
-  const items=[];
-  const now=Date.now();
-  // Trip workflow transitions — approximate with current status
-  const trips=c.pipeline_trips||[];
-  trips.forEach(t=>{
-    const dest=t.destination||'your trip';
-    const status=(t.workflow_status||'new');
-    const statusLabels={new:'Intake received',researching:'Research started',options_sent:'Options sent to you',awaiting_decision:'Awaiting your decision',booked:'Booked',invoiced:'Invoiced',closed:'Complete'};
-    const label=statusLabels[status]||status;
-    const ts=t.updated_at||t.created_at||null;
-    items.push({type:'trip',desc:'Your '+esc(dest)+' trip moved to: <strong>'+esc(label)+'</strong>',time:ts,sort:ts?new Date(ts).getTime():0});
-  });
-  // Savings events
-  const savings=c.savings_breakdown||[];
-  savings.forEach(r=>{
-    if(!(r.gross_savings_cents>0))return;
-    const label=r.trip_label||r.destination||'your trip';
-    const ts=r.booked_at||r.updated_at||r.created_at||null;
-    items.push({type:'savings',desc:'Your advisor documented <strong>'+esc(fmtUsd(r.gross_savings_cents))+'</strong> in savings on '+esc(label),time:ts,sort:ts?new Date(ts).getTime():0});
-  });
-  // Unread messages from advisor
-  const msgs=(c.messages||[]).filter(m=>m.unread&&m.sender!=='client');
-  msgs.forEach(m=>{
-    const ts=m.time||m.ts||null;
-    items.push({type:'message',desc:'New message from your advisor',time:ts,sort:ts?new Date(ts).getTime():0});
-  });
-  // Sort newest first, take max 5
-  items.sort((a,b)=>b.sort-a.sort);
-  return items.slice(0,5);
-}
-
-function fmtTimeAgo(s){
-  if(!s)return '';
-  const d=new Date(s);if(isNaN(d))return esc(s);
-  const diff=Math.round((Date.now()-d.getTime())/1000);
-  if(diff<60)return 'just now';
-  if(diff<3600)return Math.floor(diff/60)+'m ago';
-  if(diff<86400)return Math.floor(diff/3600)+'h ago';
-  if(diff<7*86400)return Math.floor(diff/86400)+'d ago';
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-}
-
-function renderActivityTimeline(c){
-  const wrap=document.getElementById('ov-activity');
-  const list=document.getElementById('ov-activity-list');
-  if(!wrap||!list)return;
-  const items=buildActivityTimeline(c);
-  if(!items.length){wrap.style.display='none';return;}
-  wrap.style.display='block';
-  list.innerHTML=items.map(it=>`<div class="activity-item">
-    <div class="activity-dot ${it.type}"></div>
-    <div class="activity-body">
-      <div class="activity-desc">${it.desc}</div>
-      ${it.time?`<div class="activity-time">${fmtTimeAgo(it.time)}</div>`:''}
-    </div>
-  </div>`).join('');
-}
-
-/* ── CHAT (WhatsApp-style thread with the advisor) ── */
-function dayLabel(s){
-  if(!s)return '';
-  const d=new Date(s);if(isNaN(d))return '';
-  const today=new Date();const yd=new Date();yd.setDate(today.getDate()-1);
-  const same=(a,b)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
-  if(same(d,today))return 'Today';
-  if(same(d,yd))return 'Yesterday';
-  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
-}
-function clockTime(s){const d=new Date(s);return isNaN(d)?'':d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});}
-
-function renderChat(msgs){
+/* ── Chat ── */
+function renderChatMessages(msgs){
   const el=document.getElementById('chat-scroll');
-  const nearBottom=el.scrollHeight-el.scrollTop-el.clientHeight<80||!el.innerHTML;
-  if(!msgs.length){
-    el.innerHTML='<div class="empty"><div class="empty-ico">💬</div><p>No messages yet — say hi! I\'m here to help with anything, especially when it\'s time to book.</p></div>';
+  if(!msgs||!msgs.length){
+    el.innerHTML='<div class="empty-chat"><div class="empty-chat-ico">💬</div><p>No messages yet — say hi!</p></div>';
     return;
   }
   let html='',lastDay='';
@@ -1374,95 +513,82 @@ function renderChat(msgs){
     const day=dayLabel(m.time||m.ts);
     if(day&&day!==lastDay){html+=`<div class="chat-day"><span class="chat-day-pill">${esc(day)}</span></div>`;lastDay=day;}
     const pd=m.plan||m.plan_details;
-    const hasPlan=pd&&(pd.title||pd.dest||pd.overview);
-    const subj=(!mine&&m.subject)?`<div class="bubble-subject">${esc(m.subject)}</div>`:'';
-    const ts=clockTime(m.time||m.ts);
-    const receipt=!mine?`<div class="bubble-receipt">&#x2713; Delivered</div>`:'';
-    // Image attachment
-    let attachHtml='';
-    if(m.attachment&&m.attachment.type==='image'&&m.attachment.data){
-      const fname=m.attachment.filename?esc(m.attachment.filename):'image';
-      attachHtml=`<img class="bubble-img" src="${esc(m.attachment.data)}" alt="${fname}" onclick="window.open(this.src,'_blank')" loading="lazy">`;
+    const hasPlan=pd&&(pd.title||pd.dest||pd.overview||pd.options);
+    const clientInitial=(currentData&&currentData.name)?currentData.name.trim()[0].toUpperCase():'C';
+    const avatar=mine?`<div class="bubble-avatar me">${clientInitial}</div>`:`<div class="bubble-avatar adv">DAT</div>`;
+    const subject=(!mine&&m.subject)?`<div class="bubble-subject">${esc(m.subject)}</div>`:'';
+    const body=esc(m.text||m.body||'');
+    const imgHtml=m.attachment&&m.attachment.type==='image'&&m.attachment.data
+      ?`<img class="bubble-img" src="${esc(m.attachment.data)}" alt="image" onclick="window.open(this.src,'_blank')" loading="lazy">`:'';
+    let planHtml='';
+    if(!mine&&hasPlan){
+      const opts=pd.options&&Array.isArray(pd.options)&&pd.options.length?pd.options:null;
+      planHtml=`<div class="bubble-plan-card">
+        <div class="bubble-plan-title">${esc(pd.title||'Your Award Plan')}</div>
+        ${pd.dest||pd.dates?`<div class="bubble-plan-meta">${[pd.dest,pd.dates].filter(Boolean).map(esc).join(' · ')}</div>`:''}
+        ${opts?`<div class="bubble-plan-opts">`+opts.map(o=>`<div class="bubble-plan-opt"><span class="bubble-plan-opt-name">${esc(o.title||o.route||'Option')}</span><span class="bubble-plan-opt-pts">${o.points?esc(o.points)+' pts':''}</span></div>`).join('')+'</div>':
+          (pd.points?`<div style="font-size:13px;font-weight:700;color:var(--accent)">${esc(pd.points)} pts · ${pd.program?esc(pd.program):''}</div>`:'')}
+        <button onclick="switchTab('home')" style="margin-top:10px;font-size:12px;font-weight:600;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;font-family:var(--font)">View full plan →</button>
+      </div>`;
     }
-    const clientName=(currentData&&currentData.name)||'';
-    const clientInitial=clientName?clientName.trim()[0].toUpperCase():'C';
-    const advAvatar=`<div class="bubble-avatar adv">DAT</div>`;
-    const meAvatar=`<div class="bubble-avatar me">${clientInitial}</div>`;
-    const checkmark=`<span style="color:rgba(255,255,255,.6);font-size:10px;margin-left:4px">&#10003;</span>`;
-    html+=`<div class="bubble-row ${mine?'me':''} ${hasPlan?'bubble-plan':''}">
+    const checkmark=mine?`<span style="color:rgba(255,255,255,.6);font-size:10px;margin-left:4px">✓</span>`:'';
+    html+=`<div class="bubble-row ${mine?'me':''}">
       <div class="bubble-with-avatar">
-        ${mine?meAvatar:advAvatar}
+        ${avatar}
         <div>
-          <div class="bubble ${mine?'me':'adv'}">${subj}${esc(m.text||m.body||'')}${attachHtml}${mine?checkmark:''}</div>
-          ${hasPlan?renderPlanCard(pd,false):''}
+          <div class="bubble ${mine?'me':'adv'}">${subject}${body}${checkmark}${imgHtml}</div>
+          ${planHtml}
         </div>
       </div>
-      <div class="bubble-ts" style="padding-left:${mine?'0':'36px'}">${ts}</div>
+      <div class="bubble-ts">${clockTime(m.time||m.ts)}</div>
     </div>`;
   });
   el.innerHTML=html;
-  if(nearBottom)scrollChatBottom();
+  scrollChatBottom();
 }
-function scrollChatBottom(force){
+
+function scrollChatBottom(){
   const el=document.getElementById('chat-scroll');
   if(el)requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});
 }
 function autoGrow(t){t.style.height='auto';t.style.height=Math.min(t.scrollHeight,120)+'px';}
 function chatKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}}
 
-/* ── Image attachment helpers ── */
-let pendingAttachment=null; // {type,data,filename} or null
-
+/* Attachment */
+let pendingAttachment=null;
 function handleFileSelect(input){
-  const file=input.files&&input.files[0];
-  if(!file)return;
-  // Reset input so the same file can be re-selected after removal
-  input.value='';
-  if(!file.type.startsWith('image/')){alert('Please select an image file (JPG, PNG, etc.).');return;}
-  if(file.size>5*1024*1024){alert('Image must be under 5 MB. Please choose a smaller file.');return;}
+  const file=input.files&&input.files[0];if(!file)return;input.value='';
+  if(!file.type.startsWith('image/')){alert('Please select an image file.');return;}
+  if(file.size>5*1024*1024){alert('Image must be under 5 MB.');return;}
   const reader=new FileReader();
-  reader.onload=function(ev){compressImage(ev.target.result,file.name,file.size);};
+  reader.onload=e=>compressImage(e.target.result,file.name);
   reader.readAsDataURL(file);
 }
-
-function compressImage(dataUrl,filename,origSize){
+function compressImage(dataUrl,filename){
   const img=new Image();
   img.onload=function(){
-    const MAX=1200;
-    let w=img.width,h=img.height;
+    const MAX=1200;let w=img.width,h=img.height;
     if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}
-    const canvas=document.createElement('canvas');
-    canvas.width=w;canvas.height=h;
-    const ctx=canvas.getContext('2d');
-    ctx.drawImage(img,0,0,w,h);
-    const compressed=canvas.toDataURL('image/jpeg',0.7);
-    const bytes=Math.round((compressed.length*3)/4);
-    const kb=Math.round(bytes/1024);
-    pendingAttachment={type:'image',data:compressed,filename:filename};
-    // Show preview
-    const preview=document.getElementById('chat-attach-preview');
-    const thumb=document.getElementById('attach-thumb');
-    const meta=document.getElementById('attach-meta');
-    thumb.src=compressed;
-    meta.textContent='Attached: '+filename+' ('+kb+' KB)';
-    preview.classList.add('visible');
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    const data=c.toDataURL('image/jpeg',.7);
+    const kb=Math.round((data.length*3/4)/1024);
+    pendingAttachment={type:'image',data,filename};
+    const prev=document.getElementById('chat-attach-preview');
+    document.getElementById('attach-thumb').src=data;
+    document.getElementById('attach-meta').textContent=filename+' ('+kb+' KB)';
+    prev.classList.add('visible');
   };
   img.src=dataUrl;
 }
-
 function removeAttachment(){
   pendingAttachment=null;
-  const preview=document.getElementById('chat-attach-preview');
-  preview.classList.remove('visible');
+  document.getElementById('chat-attach-preview').classList.remove('visible');
   document.getElementById('attach-thumb').src='';
   document.getElementById('attach-meta').textContent='';
 }
-
 function openAttachFull(){
-  if(pendingAttachment&&pendingAttachment.data){
-    const win=window.open();
-    if(win){win.document.write('<img src="'+pendingAttachment.data+'" style="max-width:100%">');win.document.close();}
-  }
+  if(pendingAttachment&&pendingAttachment.data){const w=window.open();w&&(w.document.write('<img src="'+pendingAttachment.data+'" style="max-width:100%">'),w.document.close());}
 }
 
 async function sendChat(){
@@ -1474,24 +600,21 @@ async function sendChat(){
   const token=getToken();if(!token)return logout();
   btn.disabled=true;inp.disabled=true;
   try{
-    const payload={body:text};
-    if(attachment)payload.attachment=attachment;
-    const res=await fetch('/api/client/message',{method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify(payload)});
+    const payload={body:text};if(attachment)payload.attachment=attachment;
+    const res=await fetch('/api/client/message',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify(payload)});
     if(res.ok){
-      inp.value='';autoGrow(inp);
-      removeAttachment();
-      // Optimistic append so the bubble shows instantly
-      if(currentData){currentData.messages=currentData.messages||[];
+      inp.value='';autoGrow(inp);removeAttachment();
+      if(currentData){
+        currentData.messages=currentData.messages||[];
         const msg={sender:'client',from:'You',time:new Date().toISOString(),text};
         if(attachment)msg.attachment=attachment;
         currentData.messages.push(msg);
-        renderChat(currentData.messages);scrollChatBottom(true);}
+        renderChatMessages(currentData.messages);
+      }
       refetchMe();
     }else if(res.status===401){logout();}
-    else{const d=await res.json().catch(()=>({}));alert(d.detail||'Could not send — try again.');}
-  }catch(e){alert('Could not reach server. Check your connection.');}
+    else{const d=await res.json().catch(()=>({}));alert(d.detail||'Could not send.');}
+  }catch(e){alert('Network error — please try again.');}
   btn.disabled=false;inp.disabled=false;inp.focus();
 }
 
@@ -1505,460 +628,74 @@ async function markChatRead(){
   try{await fetch('/api/client/messages/read',{method:'POST',headers:{'Authorization':'Bearer '+token}});}catch(e){}
 }
 
-/* ── "I'm here to help" booking nudges ── */
-function renderHelpBanners(trips,plans){
-  const latest=trips&&trips.length?trips[0].workflow_status:null;
-  const bookingPhase=plans.length>0||['options_sent','awaiting_decision','booked'].includes(latest);
-  const banner=(txt,btn)=>`<div class="help-banner"><div class="help-txt">${txt}</div><button class="help-btn" onclick="openChat()">${btn}</button></div>`;
-  document.getElementById('ov-help').innerHTML=bookingPhase
-    ?banner('💬 <strong>Need a hand booking?</strong> I\'m here to help — if anything in your plan is confusing, just send me a message and we\'ll walk through it together.','Message Braden →')
-    :banner('💬 <strong>Questions?</strong> I\'m here to help — message me anytime, about anything.','Message Braden →');
-  document.getElementById('trips-help').innerHTML=bookingPhase
-    ?banner('✈️ <strong>Ready to book?</strong> Booking award flights can be tricky — I\'m here to help every step of the way. Message me and I\'ll guide you through it.','Get booking help →')
-    :'';
-}
-
-// Highlight the most recent plan on the Overview so the client never misses it.
-function renderOverviewPlan(plans){
-  const el=document.getElementById('ov-plan');
-  if(!plans||!plans.length){el.innerHTML='';return;}
-  el.innerHTML='<div class="sec-head">Your Latest Plan</div>'+renderPlanCard(plans[0],false);
-}
-
-// Match a plan to a trip by destination text (case-insensitive substring either way).
-function planForTrip(t,plans){
-  if(!t.destination)return null;
-  const d=t.destination.toLowerCase();
-  return (plans||[]).find(p=>{const pd=(p.dest||'').toLowerCase();return pd&&(pd.includes(d)||d.includes(pd));})||null;
-}
-
-function renderStepper(status){
-  const s=(status||'').toLowerCase();
-  if(s==='closed'||s==='booked'){
-    return `<div class="trip-stepper"><span class="stepper-complete">&#10003; Complete</span></div>`;
-  }
-  if(s==='declined'||s==='lost'){
-    return `<div class="trip-stepper"><span class="stepper-skipped">Not pursued</span></div>`;
-  }
-  const STAGES=['new','researching','options_sent','awaiting_decision','booked'];
-  const LABELS=['New','Research','Options','Decide','Booked'];
-  // map common aliases
-  const alias={researching:'researching',research:'researching',options:'options_sent','options sent':'options_sent','options_sent':'options_sent','awaiting decision':'awaiting_decision','awaiting_decision':'awaiting_decision',decision:'awaiting_decision',booked:'booked',new:'new'};
-  const cur=alias[s]||s;
-  const idx=STAGES.indexOf(cur);
-  const activeIdx=idx>=0?idx:0;
-  let dots='';
-  for(let i=0;i<STAGES.length;i++){
-    if(i>0){
-      const lDone=i<=activeIdx;
-      dots+=`<div class="step-line${lDone?' done':''}"></div>`;
-    }
-    const cls=i<activeIdx?'done':i===activeIdx?'active':'';
-    dots+=`<div class="step-dot${cls?' '+cls:''}"></div>`;
-  }
-  const labels=LABELS.map((l,i)=>{
-    const extra=i===0?'style="margin-left:0;transform:none"':i===LABELS.length-1?'style="margin-left:0;transform:translateX(-100%)"':'';
-    return `<span class="step-label" ${extra}>${l}</span>`;
-  }).join('');
-  return `<div class="trip-stepper"><div class="stepper-steps">${dots}</div><div class="stepper-labels">${labels}</div></div>`;
-}
-
-function parseTripDate(datesStr){
-  if(!datesStr)return null;
-  // Try ISO / standard date first
-  const d1=new Date(datesStr);
-  if(!isNaN(d1.getTime()))return d1;
-  // Try to extract "MonthName DD, YYYY" or "MonthName DD-DD, YYYY" patterns
-  const months={jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
-  const m=datesStr.match(/([a-z]{3})[a-z]*\.?\s+(\d{1,2})[\s\-–,]*(?:\d{1,2})?[,\s]+(\d{4})/i);
-  if(m){
-    const mo=months[(m[1]||'').toLowerCase()];
-    if(mo!==undefined){
-      const d=new Date(parseInt(m[3]),mo,parseInt(m[2]));
-      if(!isNaN(d.getTime()))return d;
-    }
-  }
-  // Try YYYY + month name anywhere in string
-  const m2=datesStr.match(/(\d{4})[\s\-\/]?([a-z]{3})[a-z]*\.?[\s\-\/]?(\d{1,2})/i);
-  if(m2){
-    const mo=months[(m2[2]||'').toLowerCase()];
-    if(mo!==undefined){
-      const d=new Date(parseInt(m2[1]),mo,parseInt(m2[3]));
-      if(!isNaN(d.getTime()))return d;
-    }
-  }
-  return null;
-}
-
-function tripCountdownBadge(datesStr,workflowStatus){
-  const dep=parseTripDate(datesStr);
-  if(!dep)return '';
-  const now=new Date();
-  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
-  const depDay=new Date(dep.getFullYear(),dep.getMonth(),dep.getDate());
-  const diffMs=depDay-today;
-  const diffDays=Math.round(diffMs/(1000*60*60*24));
-  if(diffDays<0)return '<span class="countdown-badge countdown-past">Completed</span>';
-  if(diffDays===0)return '<span class="countdown-badge countdown-today">✈ Today!</span>';
-  if(diffDays<=7)return `<span class="countdown-badge countdown-urgent">${diffDays} days — almost there! 🎉</span>`;
-  if(diffDays<=30)return `<span class="countdown-badge countdown-future">✈ ${diffDays} days — getting close!</span>`;
-  return `<span class="countdown-badge countdown-green">✈ ${diffDays} days to go</span>`;
-}
-
-function renderMiniStepper(status){
-  const s=(status||'').toLowerCase();
-  const STAGES=['new','researching','options_sent','awaiting_decision','booked'];
-  const LABELS=['New','Research','Options','Decide','Booked'];
-  const alias={researching:'researching',research:'researching',options:'options_sent','options sent':'options_sent','options_sent':'options_sent','awaiting decision':'awaiting_decision','awaiting_decision':'awaiting_decision',decision:'awaiting_decision',booked:'booked',new:'new',closed:'booked'};
-  const cur=alias[s]||s;
-  if(s==='declined'||s==='lost')return '';
-  const idx=STAGES.indexOf(cur);
-  const activeIdx=idx>=0?idx:0;
-  let dots='';
-  for(let i=0;i<STAGES.length;i++){
-    if(i>0){
-      const lDone=i<=activeIdx;
-      dots+=`<div class="mini-step-line${lDone?' done':''}"></div>`;
-    }
-    const cls=i<activeIdx?'done':i===activeIdx?'active':'';
-    dots+=`<div class="mini-step-dot${cls?' '+cls:''}"></div>`;
-  }
-  const labels=LABELS.map((l,i)=>{
-    const cls=i<activeIdx?'done':i===activeIdx?'active':'';
-    return `<span class="mini-step-label${cls?' '+cls:''}">${l}</span>`;
-  }).join('');
-  const isBooked=cur==='booked'||s==='booked'||s==='closed';
-  if(isBooked){
-    return `<div class="mini-stepper-booked"><span class="mini-stepper-booked-pill">✓ Booked</span></div>`;
-  }
-  return `<div class="mini-stepper-wrap"><div class="mini-stepper">${dots}</div><div class="mini-stepper-labels">${labels}</div></div>`;
-}
-
-function renderDepartureChecklist(tripId){
-  const items=[
-    'Check award space still available',
-    'Screenshot your booking confirmation',
-    'Note baggage policy for award ticket',
-    'Check visa/passport requirements',
-    'Set calendar reminder 24h before',
-  ];
-  const key=`dep_checklist_${tripId}`;
-  let saved={};
-  try{saved=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}
-  const checkboxes=items.map((item,i)=>{
-    const checked=!!saved[i];
-    return `<div class="dep-checklist-item${checked?' checked':''}">
-      <input type="checkbox" id="dep_${tripId}_${i}" ${checked?'checked':''} onchange="depChecklistToggle('${key}',${i},this.closest('.dep-checklist-item'))">
-      <label for="dep_${tripId}_${i}">${esc(item)}</label>
-    </div>`;
-  }).join('');
-  return `<div class="dep-checklist">
-    <div class="dep-checklist-head" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.dep-checklist-toggle').textContent=this.nextElementSibling.classList.contains('open')?'▲':'▼'">
-      <span class="dep-checklist-title">✈ Prepare for departure</span>
-      <span class="dep-checklist-toggle">▼</span>
-    </div>
-    <div class="dep-checklist-body">${checkboxes}</div>
-  </div>`;
-}
-
-function depChecklistToggle(key,idx,itemEl){
-  let saved={};
-  try{saved=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}
-  const cb=itemEl.querySelector('input');
-  saved[idx]=cb.checked;
-  localStorage.setItem(key,JSON.stringify(saved));
-  if(cb.checked)itemEl.classList.add('checked');else itemEl.classList.remove('checked');
-}
-
-function buildStepper(currentStatus){
-  var stages=['new','researching','options_sent','booked','invoiced','closed'];
-  var labels=['New','Research','Options','Booked','Invoice','Done'];
-  var idx=stages.indexOf(currentStatus);
-  var html='<div class="trip-stepper">';
-  stages.forEach(function(s,i){
-    var cls=i<idx?'done':i===idx?'active':'future';
-    html+='<div class="trip-step '+cls+'" title="'+labels[i]+'">'+(i<idx?'✓':(i+1))+'</div>';
-    if(i<stages.length-1){
-      html+='<div class="trip-step-line'+(i<idx?' done':'')+'"></div>';
-    }
-  });
-  html+='</div>';
-  return html;
-}
-
-function renderTrips(trips,plans){
-  const el=document.getElementById('trips-container');
-  if(!trips.length){
-    el.innerHTML=`<div style="text-align:center;padding:72px 24px 56px">
-      <div class="empty-float-plane" style="font-size:72px;margin-bottom:24px;filter:drop-shadow(0 0 28px rgba(249,115,22,.4))">✈</div>
-      <h2 style="font-size:22px;font-weight:800;letter-spacing:-.4px;margin-bottom:10px;color:var(--text)">Your first trip is waiting</h2>
-      <p style="font-size:14px;color:var(--muted);max-width:340px;margin:0 auto 24px;line-height:1.65">Share your points balances → your advisor will find your best redemption.</p>
-      <button onclick="switchTab('messages')" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:13px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:background .15s;box-shadow:0 4px 16px rgba(249,115,22,.35)" onmouseover="this.style.background='#ea6c0a'" onmouseout="this.style.background='var(--accent)'">Message my advisor</button>
-    </div>`;
-    return;
-  }
-  el.innerHTML=trips.map(t=>{
-    const b=BADGE[t.workflow_status]||BADGE.new;
-    const fields=[];
-    if(t.dates)fields.push(['Dates',esc(t.dates)]);
-    if(t.passengers)fields.push(['Passengers',esc(t.passengers)]);
-    if(t.cabin)fields.push(['Cabin',esc(t.cabin)]);
-    if(t.origin)fields.push(['From',esc(t.origin)]);
-    const grid=fields.length?`<div class="trip-grid">${fields.map(f=>`<div><div class="trip-field-label">${f[0]}</div><div class="trip-field-val">${f[1]}</div></div>`).join('')}</div>`:'';
-    const p=planForTrip(t,plans);
-    const planBlock=p?`<div class="trip-plan-block">${renderPlanCard(p,true)}</div>`:'';
-    const route=t.origin?`${esc(t.origin)} <span class="tr-plane">✈</span> ${esc(t.destination||'')}`:esc(t.destination||'');
-    const countdown=t.dates?tripCountdownBadge(t.dates,t.workflow_status):'';
-    const isBooked=(t.workflow_status||'').toLowerCase()==='booked';
-    const checklist=isBooked?renderDepartureChecklist(t.id||t.trip_id||t.destination||String(Math.random())):'';
-    return `<div class="trip-card">
-      <div style="padding:14px 24px 0">${buildStepper(t.workflow_status||t.status||'new')}</div>
-      ${countdown?`<span style="position:absolute;top:12px;right:12px;z-index:2;">${countdown}</span>`:''}
-      <div class="trip-top">
-        <div><div class="trip-dest">${esc(t.destination||'Your trip')}</div><div class="trip-route">${route}</div></div>
-        <span class="badge ${b[0]}">${b[1]}</span>
-      </div>${renderMiniStepper(t.workflow_status)}${grid}${planBlock}${checklist}</div>`;
-  }).join('');
-}
-
-function renderSavings(rows,totalSave,totalFee,plans){
-  const el=document.getElementById('savings-container');
-  if(!rows.length){
-    // No documented (booked) savings yet — show projected savings from the plans
-    // your advisor has sent, so the page is never empty once a plan exists.
-    const proj=(plans||[]).map(p=>({label:p.title||(p.dest?'Plan for '+p.dest:'Award plan'),cents:moneyToCents(p.value),program:p.program})).filter(x=>x.cents>0);
-    if(!proj.length){
-      el.innerHTML=`<div class="empty" style="text-align:center;padding:48px 24px"><div style="font-size:56px;margin-bottom:16px">✈</div><div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:8px">No savings recorded yet</div><p style="color:var(--muted);font-size:14px;max-width:340px;margin:0 auto">Once you book an award option your advisor finds and we verify the cash benchmark, your documented savings will appear here.</p></div>`;
-      return;
-    }
-    const projTotal=proj.reduce((s,x)=>s+x.cents,0);
-    const list=proj.map(x=>`
-      <div class="sv-row">
-        <div><div class="sv-label">${esc(x.label)}</div><div class="sv-sub">${x.program?esc(x.program)+' · ':''}estimated — not yet booked</div></div>
-        <div class="sv-amt"><div class="sv-save" style="color:var(--blue)">${fmtUsd(x.cents)}</div><div class="sv-fee">projected</div></div>
-      </div>`).join('');
-    el.innerHTML=`<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:13px 16px;font-size:13px;color:var(--muted);margin-bottom:16px">These are <strong style="color:var(--text)">projected</strong> savings from plans your advisor sent. They become documented savings once you book and we verify the cash price.</div>`+list+
-      `<div class="sv-total" style="background:rgba(37,99,235,.06);border-color:rgba(37,99,235,.2)"><div><div class="sv-total-label">Projected Savings</div><div class="sv-total-sub">Estimated across your open plans</div></div><div class="sv-total-val" style="color:var(--blue)">${fmtUsd(projTotal)}</div></div>`;
-    return;
-  }
-
-  // Aggregate header strip
-  const aggSaved=rows.reduce((s,r)=>s+(r.gross_savings_cents||0),0);
-  const aggFee=rows.reduce((s,r)=>s+(r.fee_cents||0),0);
-  const aggNet=aggSaved-aggFee;
-  const totalSavedCents=aggSaved;
-  var heroHtml='';
-  if(totalSavedCents>0){
-    heroHtml='<div id="savings-hero-strip" style="text-align:center;padding:24px 0 8px;">'
-      +'<div style="font-size:2.2rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;" id="savings-hero-num">$0</div>'
-      +'<div style="color:var(--muted);font-size:13px;margin-top:4px;">saved with District Award Travel</div>'
-      +'</div>';
-  }
-  const headerStrip=`<div style="display:flex;gap:16px;flex-wrap:wrap;background:var(--card);border:1px solid rgba(249,115,22,.12);border-radius:12px;padding:18px 20px;margin-bottom:20px">
-    <div style="flex:1;min-width:110px">
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">Total Saved</div>
-      <div style="font-size:26px;font-weight:800;color:var(--green)">${fmtUsd(aggSaved)}</div>
-    </div>
-    <div style="flex:1;min-width:110px">
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">DAT Fee</div>
-      <div style="font-size:20px;font-weight:700;color:var(--accent)">${fmtUsd(aggFee)}</div>
-    </div>
-    <div style="flex:1;min-width:110px">
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">Your Net Win</div>
-      <div style="font-size:20px;font-weight:700;color:var(--text)">${fmtUsd(aggNet)}</div>
-    </div>
-  </div>`;
-
-  // Status badge helper
-  function svBadge(status){
-    const s=(status||'').toLowerCase();
-    if(s==='booked'||s==='paid')return`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.3)">${s.toUpperCase()}</span>`;
-    if(s==='invoiced')return`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3)">INVOICED</span>`;
-    return`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(255,255,255,.07);color:var(--muted);border:1px solid rgba(255,255,255,.1)">${(s||'DRAFT').toUpperCase()}</span>`;
-  }
-
-  // Per-record premium cards
-  const cards=rows.map(r=>{
-    const status=r.status||r.workflow_status||'draft';
-    return`<div style="background:var(--card);border:1px solid rgba(249,115,22,.12);border-radius:12px;padding:18px 20px;margin-bottom:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px">
-        <div style="font-size:15px;font-weight:700;color:var(--text)">${esc(r.trip_label||'Trip')}</div>
-        ${svBadge(status)}
-      </div>
-      <div style="font-size:28px;font-weight:800;color:var(--green);margin-bottom:12px">You saved ${fmtUsd(r.gross_savings_cents||0)}</div>
-      <div style="font-size:12px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <span>Points: ${fmtNum(r.points_used||0)}</span>
-        <span style="opacity:.4">·</span>
-        <span>Cash Cost: ${fmtUsd(r.cash_benchmark_cents||0)}</span>
-        <span style="opacity:.4">·</span>
-        <span>Fee: ${fmtUsd(r.fee_cents||0)}</span>
-        ${r.report_url?`<span style="opacity:.4">·</span><a href="${esc(r.report_url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none">&#128196; View Report</a>`:''}
-      </div>
-    </div>`;
-  }).join('');
-
-  // Pending notice
-  const hasPending=rows.some(r=>{const s=(r.status||r.workflow_status||'').toLowerCase();return s==='open'||s==='draft';});
-  const pendingNotice=hasPending?`<div style="background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.18);border-radius:10px;padding:13px 16px;font-size:13px;color:var(--muted);margin-bottom:16px">&#128269; Your advisor is documenting savings — updates as your booking is confirmed.</div>`:'';
-
-  el.innerHTML=heroHtml+headerStrip+pendingNotice+cards;
-  (function(){
-    var el2=document.getElementById('savings-hero-num');
-    if(!el2)return;
-    var target=Math.round((totalSavedCents||0)/100);
-    var start=0,dur=1000,startT=null;
-    function step(ts){if(!startT)startT=ts;var p=Math.min((ts-startT)/dur,1);var v=Math.round(start+(target-start)*p);el2.textContent='$'+v.toLocaleString();if(p<1)requestAnimationFrame(step);}
-    requestAnimationFrame(step);
-  })();
-}
-
-/* ── ADD-POINTS FORM HELPERS ── */
-const PTS_CPP={
-  'chase ultimate rewards':1.5,'american express membership rewards':1.5,'capital one miles':1.5,
-  'citi thankyou points':1.3,
-  'united mileageplus':1.2,'american airlines aadvantage':1.2,'alaska airlines mileage plan':1.2,
-  'delta skymiles':1.1,'southwest rapid rewards':1.1,'jetblue trueblue':1.1,
-  'marriott bonvoy':0.8,
-  'hilton honors':0.5,
-  'world of hyatt':1.7
-};
-function ptsCppRate(prog){
-  const k=(prog||'').toLowerCase().trim();
-  for(const [name,rate] of Object.entries(PTS_CPP)){if(k===name)return rate;}
-  return 1.0;
-}
-function ptsFormatBalance(input){
-  const raw=input.value.replace(/[^0-9]/g,'');
-  if(!raw){input.value='';return;}
-  input.value=Number(raw).toLocaleString('en-US');
-}
-function ptsRawBalance(){
-  return parseInt((document.getElementById('pts-balance-input').value||'').replace(/[^0-9]/g,''),10)||0;
-}
+/* ── Points ── */
+const PTS_CPP={'chase ultimate rewards':1.5,'american express membership rewards':1.5,'capital one miles':1.5,'citi thankyou points':1.3,'united mileageplus':1.2,'american airlines aadvantage':1.2,'alaska airlines mileage plan':1.2,'delta skymiles':1.1,'southwest rapid rewards':1.1,'jetblue trueblue':1.1,'marriott bonvoy':0.8,'hilton honors':0.5,'world of hyatt':1.7};
+function ptsCppRate(prog){const k=(prog||'').toLowerCase().trim();return PTS_CPP[k]||1.0;}
+function ptsFormatBalance(input){const raw=input.value.replace(/[^0-9]/g,'');input.value=raw?Number(raw).toLocaleString('en-US'):'';}
+function ptsRawBalance(){return parseInt((document.getElementById('pts-balance-input').value||'').replace(/[^0-9]/g,''),10)||0;}
 function ptsUpdateEstimate(){
   const prog=document.getElementById('pts-program-input').value;
   const bal=ptsRawBalance();
-  const el=document.getElementById('pts-est-value');
-  if(!el)return;
+  const el=document.getElementById('pts-est-value');if(!el)return;
   if(!bal){el.textContent='';return;}
   const rate=ptsCppRate(prog);
-  const val=Math.round(bal*rate/100);
-  el.textContent='≈ $'+val.toLocaleString('en-US')+' estimated value ('+rate+'¢/pt)';
+  el.textContent='≈ $'+Math.round(bal*rate/100).toLocaleString('en-US')+' est. value';
 }
 async function ptsSubmit(){
-  const progInput=document.getElementById('pts-program-input');
-  const balInput=document.getElementById('pts-balance-input');
-  const successEl=document.getElementById('pts-success');
-  const prog=(progInput.value||'').trim();
+  const prog=(document.getElementById('pts-program-input').value||'').trim();
   const bal=ptsRawBalance();
-  let invalid=false;
-  // Shake validation
-  [progInput,balInput].forEach(el=>el.classList.remove('pts-shake'));
-  if(!prog){
-    void progInput.offsetWidth; // reflow to restart animation
-    progInput.classList.add('pts-shake');
-    setTimeout(()=>progInput.classList.remove('pts-shake'),400);
-    invalid=true;
-  }
-  if(!bal){
-    void balInput.offsetWidth;
-    balInput.classList.add('pts-shake');
-    setTimeout(()=>balInput.classList.remove('pts-shake'),400);
-    invalid=true;
-  }
-  if(invalid)return;
-  const token=getToken();
-  if(!token)return;
-  // Fetch current points, merge, then PUT
+  const successEl=document.getElementById('pts-success');
+  if(!prog||!bal){showToast('Please fill in program and balance');return;}
+  const token=getToken();if(!token)return;
   try{
     const meRes=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
-    if(!meRes.ok)throw new Error('fetch failed');
+    if(!meRes.ok)throw new Error();
     const me=await meRes.json();
     const points=me.points||[];
     const idx=points.findIndex(p=>(p.program||p.name||'').toLowerCase()===prog.toLowerCase());
     const entry={program:prog,balance:bal,updated:new Date().toISOString().slice(0,10)};
     if(idx>=0)points[idx]=entry;else points.push(entry);
-    const putRes=await fetch('/api/client/me',{method:'PUT',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({data:{points}})});
-    if(!putRes.ok)throw new Error('save failed');
-    if(successEl){successEl.textContent='Saved! Your advisor will be notified.';setTimeout(()=>successEl.textContent='',4000);}
-    progInput.value='';balInput.value='';
+    const put=await fetch('/api/client/me',{method:'PUT',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({data:{points}})});
+    if(!put.ok)throw new Error();
+    document.getElementById('pts-program-input').value='';
+    document.getElementById('pts-balance-input').value='';
     document.getElementById('pts-est-value').textContent='';
+    if(successEl){successEl.textContent='Saved!';setTimeout(()=>successEl.textContent='',3000);}
     await refetchMe();
-  }catch(e){if(successEl)successEl.textContent='Error saving — please try again.';}
+  }catch(e){if(successEl)successEl.textContent='Error — try again.';}
 }
 
 function renderPoints(points){
   const el=document.getElementById('points-container');
-  const milEl=document.getElementById('points-milestones');
   if(!points||!points.length){
-    el.innerHTML='<div style="text-align:center;padding:32px 20px;color:var(--muted);">'
-      +'<div style="font-size:2rem;margin-bottom:12px;">✈️</div>'
-      +'<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px;">No points added yet</div>'
-      +'<div style="font-size:13px;margin-bottom:16px;">Add your balances so we can find the best redemptions</div>'
-      +'<button onclick="document.querySelector(\'.pts-add-form\').scrollIntoView({behavior:\'smooth\'});document.getElementById(\'pts-program-input\').focus();" '
-      +'style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;font-size:13px;font-weight:600;">+ Add Points Balance</button>'
-      +'</div>';
-    if(milEl)milEl.innerHTML='';
+    el.innerHTML='<div class="no-points">No balances added yet. Use the form above to add your first one.</div>';
     return;
   }
-  const total=points.reduce((s,p)=>s+(p.balance||p.points||0),0);
-  const totalHtml=total>0?`<div style="margin-bottom:18px;padding:20px 24px;background:linear-gradient(135deg,#1a0f06,#0f0a07);border:1px solid rgba(249,115,22,.2);border-radius:14px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:rgba(249,115,22,.65)">Total Points</div><div style="font-size:32px;font-weight:900;letter-spacing:-1.5px;background:linear-gradient(90deg,#f97316,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-variant-numeric:tabular-nums">${fmtNum(total)}</div></div>`:'';
-  // Per-program premium cards with bar and color coding
-  const THRESHOLDS=[25000,50000,100000,150000];
-  const MAX_BAR=150000;
-  const cardHtml=points.map(p=>{
+  el.innerHTML=points.map(p=>{
     const bal=p.balance||p.points||0;
     const prog=p.program||p.name||'Program';
-    const pct=Math.min(bal/MAX_BAR,1)*100;
-    let barColor='rgba(168,162,158,.4)'; // muted <25k
-    let balColor='rgba(168,162,158,.7)';
-    let borderColor='rgba(168,152,128,.5)'; // muted <25k
-    if(bal>=50000){barColor='#16a34a';balColor='#4ade80';borderColor='#16a34a';}
-    else if(bal>=25000){barColor='#ca8a04';balColor='#fbbf24';borderColor='#ca8a04';}
-    const clubBadge=bal>=100000?`<div style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(234,179,8,.12);color:#fbbf24;border:1px solid rgba(234,179,8,.3);margin-top:10px">&#x1F48E; 100K+ Club</div>`:'';
-    // mini threshold markers
-    const markers=THRESHOLDS.map(t=>{const x=Math.min(t/MAX_BAR,1)*100;return `<div style="position:absolute;left:${x}%;top:-2px;width:1px;height:8px;background:rgba(255,255,255,.15)"></div>`;}).join('');
-    const cpp=p.cpp||ptsCppRate(prog);
-    const cppHtml=cpp&&cpp>0?`<div style="font-size:12px;color:var(--muted);margin-top:4px">≈ $${cpp.toFixed(2)}/point</div>`:'';
-    return `<div class="point-card" style="border-left:3px solid ${borderColor}">
-      <div class="point-prog" style="font-size:15px;font-weight:600;letter-spacing:.02em;color:rgba(255,255,255,.85);margin-bottom:12px">${esc(prog)}</div>
-      <div style="font-size:1.4rem;font-weight:900;letter-spacing:-1px;color:var(--accent);font-variant-numeric:tabular-nums;line-height:1">${fmtNum(bal)}</div>
-      <div style="font-size:11px;color:rgba(255,255,255,.3);font-weight:600;margin-top:2px">points</div>
-      ${cppHtml}
-      <div style="position:relative;height:4px;background:rgba(255,255,255,.08);border-radius:4px;margin:14px 0 4px;overflow:visible">${markers}<div style="position:absolute;left:0;top:0;height:4px;width:${pct}%;background:${barColor};border-radius:4px;transition:width .6s ease;box-shadow:0 0 8px ${barColor}66"></div></div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:rgba(255,255,255,.2);font-weight:600">
-        <span>0</span><span>25K</span><span>50K</span><span>100K</span><span>150K</span>
-      </div>
-      ${clubBadge}
+    const upd=p.updated?'Updated '+p.updated:'';
+    return `<div class="point-row">
+      <div><div class="point-prog">${esc(prog)}</div><div class="point-updated">${esc(upd)}</div></div>
+      <div class="point-bal">${fmtNum(bal)}</div>
     </div>`;
   }).join('');
-  el.innerHTML=totalHtml+'<div class="points-grid">'+cardHtml+'</div>';
-  // Milestone badges
-  if(milEl){
-    const now=Date.now();
-    const soon90=points.some(p=>{
-      if(!p.expiration_date)return false;
-      const exp=new Date(p.expiration_date).getTime();
-      return !isNaN(exp)&&exp>now&&exp-now<=90*24*60*60*1000;
-    });
-    const badges=[];
-    if(total>=500000)badges.push('<span class="milestone-badge milestone-platinum">&#x1F48E; 500K Elite</span>');
-    else if(total>=100000)badges.push('<span class="milestone-badge milestone-gold">&#x2708; 100K Club</span>');
-    if(soon90)badges.push('<span class="milestone-badge milestone-expiring">&#x26A0; Points Expiring</span>');
-    milEl.innerHTML=badges.length?'<div class="milestone-badges">'+badges.join('')+'</div>':'';
-  }
 }
 
 /* ── SSE + polling ── */
 let evtSource=null,pollTimer=null,reconnectTimer=null,reconnectDelay=2000,sseFailures=0;
 async function refetchMe(){
   const token=getToken();if(!token||document.hidden)return;
-  try{const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
-    if(res.ok)renderPortal(await res.json());else if(res.status===401)logout();}catch(e){}
+  try{
+    const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
+    if(res.ok)renderPortal(await res.json());
+    else if(res.status===401)logout();
+  }catch(e){}
 }
 function connectStream(){
   const token=getToken();if(!token||document.hidden)return;disconnectStream();
-  try{evtSource=new EventSource('/api/client/stream?token='+encodeURIComponent(token));
+  try{
+    evtSource=new EventSource('/api/client/stream?token='+encodeURIComponent(token));
     evtSource.addEventListener('hello',()=>{sseFailures=0;reconnectDelay=2000;stopPoll();});
     evtSource.addEventListener('changed',refetchMe);
     evtSource.addEventListener('bye',()=>{disconnectStream();scheduleReconnect();});
@@ -1973,110 +710,16 @@ function startAutoRefresh(){connectStream();}
 function stopAutoRefresh(){disconnectStream();stopPoll();clearTimeout(reconnectTimer);}
 document.addEventListener('visibilitychange',()=>{if(!getToken())return;if(document.hidden)stopAutoRefresh();else{refetchMe();connectStream();}});
 
-/* ── PREFERENCES ── */
-async function savePrefsToBackend(prefs){
-  const token=getToken();
-  if(!token)return;
-  await fetch('/api/client/preferences',{
-    method:'PATCH',
-    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-    body:JSON.stringify(prefs)
-  }).catch(()=>{});
-}
-
-function playNotifTone(){
-  try{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const osc=ctx.createOscillator();
-    const gain=ctx.createGain();
-    osc.connect(gain);gain.connect(ctx.destination);
-    osc.frequency.value=880;gain.gain.value=0.1;
-    osc.start();gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
-    osc.stop(ctx.currentTime+0.3);
-  }catch(e){}
-}
-
-function getCurrentPrefs(){
-  const lightMode=document.getElementById('pref-light-mode');
-  const emailNotifs=document.getElementById('pref-email-notifs');
-  const compactChat=document.getElementById('pref-compact-chat');
-  const msgSound=document.getElementById('pref-msg-sound');
-  return{
-    dark_mode:lightMode?!lightMode.checked:true,
-    email_notifications:emailNotifs?emailNotifs.checked:false,
-    compact_chat:compactChat?compactChat.checked:false,
-    message_sound:msgSound?msgSound.checked:false
-  };
-}
-
-function onPrefToggle(){
-  const prefs=getCurrentPrefs();
-  // Apply display changes immediately
-  if(prefs.dark_mode===false){document.body.classList.add('light-mode');}else{document.body.classList.remove('light-mode');}
-  if(prefs.compact_chat){document.body.classList.add('compact-chat');}else{document.body.classList.remove('compact-chat');}
-  savePrefsToBackend(prefs);
-}
-
-function applyPrefs(prefs){
-  if(!prefs)return;
-  // dark_mode=true (default) → no class; dark_mode=false → light-mode class
-  if(prefs.dark_mode===false){
-    document.body.classList.add('light-mode');
-    const el=document.getElementById('pref-light-mode');if(el)el.checked=true;
-  }else{
-    document.body.classList.remove('light-mode');
-    const el=document.getElementById('pref-light-mode');if(el)el.checked=false;
-  }
-  const notifEl=document.getElementById('pref-email-notifs');
-  if(notifEl)notifEl.checked=prefs.email_notifications===true;
-  const compactEl=document.getElementById('pref-compact-chat');
-  if(compactEl){compactEl.checked=prefs.compact_chat===true;if(prefs.compact_chat)document.body.classList.add('compact-chat');else document.body.classList.remove('compact-chat');}
-  const soundEl=document.getElementById('pref-msg-sound');
-  if(soundEl)soundEl.checked=prefs.message_sound===true;
-}
-
-function openPrefs(){
-  document.getElementById('prefs-panel').classList.add('open');
-  document.getElementById('prefs-msg').textContent='';
-}
-function closePrefs(){document.getElementById('prefs-panel').classList.remove('open');}
-
-async function savePrefs(){
-  const prefs=getCurrentPrefs();
-  const token=getToken();if(!token)return logout();
-  const msgEl=document.getElementById('prefs-msg');
-  msgEl.textContent='Saving…';msgEl.style.color='var(--muted)';
-  try{
-    const res=await fetch('/api/client/preferences',{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify(prefs)
-    });
-    if(res.ok){
-      const d=await res.json();
-      applyPrefs(d.preferences);
-      msgEl.textContent='Saved!';msgEl.style.color='var(--green)';
-      setTimeout(()=>{msgEl.textContent='';closePrefs();},1200);
-    }else if(res.status===401){logout();}
-    else{msgEl.textContent='Could not save.';msgEl.style.color='var(--red)';}
-  }catch(e){msgEl.textContent='Network error.';msgEl.style.color='var(--red)';}
-}
-
+/* ── Boot: revalidate saved token ── */
 (async function(){
   const token=getToken();if(!token)return;
-  const boot=document.getElementById('boot');
-  boot.classList.add('show');                      // branded splash instead of a login flash
-  try{const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
-    if(res.ok){const data=await res.json();applyPrefs(data.preferences);showPortal(data);}else clearToken();}catch(e){clearToken();}
+  const boot=document.getElementById('boot');boot.classList.add('show');
+  try{
+    const res=await fetch('/api/client/me',{headers:{'Authorization':'Bearer '+token}});
+    if(res.ok)showPortal(await res.json());else clearToken();
+  }catch(e){clearToken();}
   boot.classList.remove('show');
 })();
 </script>
-
-<footer style="background:#0a0908;border-top:1px solid rgba(255,255,255,.07);padding:28px 20px;text-align:center;font-size:12px;color:rgba(255,255,255,.35)">
-  &copy; 2026 District Award Travel &nbsp;&middot;&nbsp;
-  <a href="terms.html" style="color:rgba(255,255,255,.45);text-decoration:none" onmouseover="this.style.color='rgba(255,255,255,.8)'" onmouseout="this.style.color='rgba(255,255,255,.45)'">Terms</a>
-  &nbsp;&middot;&nbsp;
-  <a href="privacy.html" style="color:rgba(255,255,255,.45);text-decoration:none" onmouseover="this.style.color='rgba(255,255,255,.8)'" onmouseout="this.style.color='rgba(255,255,255,.45)'">Privacy</a>
-</footer>
 </body>
 </html>
